@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationcanvasediting.cpp
 Original SHA-256: 86ae100130f53fbd21bcc365842cdb7360a0751afed4e39d4433b8bf9f24d275
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: e6b78590c3c586824ae89880f2d843d5832bb03c7c550e34062fa9487e785e3f
+Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
@@ -17,7 +17,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -65,8 +65,8 @@ Original expression:
   QVERIFY(lane.valid())
 
 A002 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:78
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original asserts native input delivery geometry, that the delivered window point lies inside the QQuick automation input item (bounds().contains(mapFromScene(blankWindow))). A Swift presenter predicate cannot establish converted-window hit delivery and no converted-window evidence is registered for this retired suite (source deleted at 31ea635f, compiled into no current target).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvasediting.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original asserts native input delivery geometry, that the delivered window point lies inside the QQuick automation input item (bounds().contains(mapFromScene(blankWindow))). A Swift presenter predicate cannot establish converted-window hit delivery and no converted-window evidence is registered for this retired suite (source deleted at 31ea635f, compiled into no current target).
 Original expression:
   QVERIFY(
           automationInput().bounds().contains(automationInput().mapFromScene(QPointF(blankWindow))))
@@ -266,14 +266,14 @@ Original expression:
   QVERIFY(lane.valid())
 
 A026 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:185
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original observes QQuickWindow mouse-grab ownership after a press under the ungrab route (QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput())). Grabber identity is a Quick delivery mechanism with no Swift presenter ingress; the cancellation outcome it guards is asserted at S005 and S019. Source deleted at 31ea635f and compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvasediting.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original observes QQuickWindow mouse-grab ownership after a press under the ungrab route (QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput())). Grabber identity is a Quick delivery mechanism with no Swift presenter ingress; the cancellation outcome it guards is asserted at S005 and S019. Source deleted at 31ea635f and compiled into no current target.
 Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput())
 
 A027 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:187
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original observes that QQuickWindow mouse-grab ownership is released by an explicit ungrabMouse (QTRY_VERIFY(!quickWindow().mouseGrabberItem())). Grabber identity is a Quick delivery mechanism with no Swift presenter ingress; the resulting cancelled-gesture state is asserted at S004, S005 and S019. Source deleted at 31ea635f and compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvasediting.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original observes that QQuickWindow mouse-grab ownership is released by an explicit ungrabMouse (QTRY_VERIFY(!quickWindow().mouseGrabberItem())). Grabber identity is a Quick delivery mechanism with no Swift presenter ingress; the resulting cancelled-gesture state is asserted at S004, S005 and S019. Source deleted at 31ea635f and compiled into no current target.
 Original expression:
   QTRY_VERIFY(!quickWindow().mouseGrabberItem())
 
@@ -625,58 +625,58 @@ Swift expression:
       }).count == 1 ? ["0:127"] : [], cppID: drawerAutomationContextID,
                          what: "the selection marks exactly the points inside its range")
 
-S047 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:183
+S047 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:186-187
 Swift expression:
-  report.expect((fixture.page.projection?.points ?? []).allSatisfy { !$0.selected },
-                    cppID: drawerAutomationContextID, message: "clearing the selection clears every indicator")
+  report.expect(cleared.allSatisfy { !$0.selected },
+                cppID: drawerAutomationContextID, message: "clearing the selection clears every indicator")
 
-S048 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:185
+S048 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:188
 Swift expression:
   report.expect(fixture.page.contentBuildCount > builds, cppID: drawerAutomationContextID,
                     message: "the content builds accumulated across the case")
 
-S049 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:192
+S049 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:195
 Swift expression:
   report.expect(fixture.page.hover?.hasPoint == true, cppID: drawerAutomationContextID,
                     message: "a hover on a node publishes the node")
 
-S050 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:194
+S050 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:197
 Swift expression:
   report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a node hover reads out the node's value")
 
-S051 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:200
+S051 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:203
 Swift expression:
   report.expect(fixture.page.hover?.hasPoint == false, cppID: drawerAutomationContextID,
                     message: "a hover on the background publishes the tick")
 
-S052 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:202
+S052 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:205
 Swift expression:
   report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a background hover reads the value the lane holds there")
 
-S053 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:204
+S053 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:207
 Swift expression:
   report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
                     message: "the hover publications are counted")
 
-S054 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:215
+S054 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:218
 Swift expression:
   report.expect(fixture.page.hover == nil, cppID: drawerAutomationContextID,
                     message: "leaving the plot clears the hover")
 
-S055 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:224
+S055 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:227
 Swift expression:
   report.expect(fixture.page.projection == nil && fixture.page.rows.isEmpty
                         && fixture.page.selection == nil,
                     cppID: drawerAutomationContextID, message: "detaching drops every published value")
 
-S056 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:231
+S056 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:234
 Swift expression:
   report.expect(copyAvailable, cppID: drawerAutomationContextID,
                     message: "a retained command subscriber observes selection after page reattachment")
 
-S057 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:48
+S057 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:55
 Swift expression:
   report.expect(page.selection == nil, cppID: id,
                   message: "outside right press clears selection before opening a menu")
@@ -696,86 +696,86 @@ Swift expression:
   report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
                        what: "the inactive parameter's selection indicator survives the switch")
 
-S061 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:307
+S061 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:616
 Swift expression:
   report.expect(fixture.page.handleEscape(), cppID: selID,
                 message: "Escape with only an explicit selection claims it")
 
-S062 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:309
+S062 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:618
 Swift expression:
   report.expect(fixture.page.selection == nil, cppID: selID,
                 message: "Escape clears the explicit time selection")
 
-S063 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:311
+S063 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:620
 Swift expression:
   report.expectEqual(selected, fixture.snapshot, cppID: selID,
                      what: "clearing the selection writes nothing")
 
-S064 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:323
+S064 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:632
 Swift expression:
   report.expect(precedence.page.handleEscape(), cppID: selID,
                 message: "Escape with a live gesture claims it")
 
-S065 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:325
+S065 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:634
 Swift expression:
   report.expect(!precedence.page.hasGesture, cppID: selID,
                 message: "Escape cancels the gesture first")
 
-S066 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:327
+S066 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:636
 Swift expression:
   report.expect(precedence.page.selection != nil, cppID: selID,
                 message: "the selection survives a gesture-first Escape")
 
-S067 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:329
+S067 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:638
 Swift expression:
   report.expectEqual(grabbed, precedence.snapshot, cppID: selID,
                      what: "a gesture-first Escape writes nothing")
 
-S068 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:336
+S068 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:645
 Swift expression:
   report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
                      cppID: keyID, what: "the Delete key routes to the active time selection")
 
-S069 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:338
+S069 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:647
 Swift expression:
   report.expectEqual(EditKeyDecision.decline,
                      EditKeyArbiter.decide(command: nil, surface: armed), cppID: keyID,
                      what: "an unbound key stays host-owned")
 
-S070 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:344
+S070 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:653
 Swift expression:
   report.expectEqual(EditKeyDecision.consume,
                      EditKeyArbiter.decide(command: .delete, surface: held), cppID: keyID,
                      what: "a live gesture swallows the Delete key without acting")
 
-S071 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:352
+S071 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:661
 Swift expression:
   report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
                      what: "quiescing an idle page writes nothing")
 
-S072 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:364
+S072 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:673
 Swift expression:
   report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
 
-S073 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:366
+S073 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:675
 Swift expression:
   report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
 
-S074 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:367
+S074 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:676
 Swift expression:
   report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 
-S075 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:372
+S075 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:681
 Swift expression:
   report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
                      what: "dropping the band writes nothing")
 
-S076 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:368
+S076 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:677
 Swift expression:
   report.expect(!band.page.isPanning, cppID: bandID,
                   message: "no pan owns the band scenario")
 
-S077 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:370
+S077 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:679
 Swift expression:
   report.expect(!band.page.hasGesture, cppID: bandID,
                   message: "no gesture owns the band scenario")

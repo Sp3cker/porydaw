@@ -5,7 +5,7 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
+Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -63,8 +63,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:330
-Disposition: NATIVE
-Mapping/reason: Requires the native Quick window on the retired canvas host.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -400,8 +400,8 @@ Original expression:
                     QStringLiteral("native Quick timeline host is unavailable"));
 
 A002 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:335
-Disposition: NATIVE
-Mapping/reason: Requires native window flags on the retired Quick window.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native window flags on the retired Quick window.
 Source context since previous assertion:
       if (!quickHost || !quickHost->quickWindow())
           return;
@@ -411,8 +411,8 @@ Original expression:
                     QStringLiteral("native Quick timeline host accepts pointer input"));
 
 A003 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:337
-Disposition: NATIVE
-Mapping/reason: Requires native accessibility description on the retired automation host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native accessibility description on the retired automation host.
 Source context since previous assertion:
 Original expression:
       probe.require(!rig.automationHost().accessibilityDescription().isEmpty(),
@@ -432,8 +432,8 @@ Original expression:
               QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A005 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:365
-Disposition: NATIVE
-Mapping/reason: Requires native hover visibility on the retired Quick host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover visibility on the retired Quick host.
 Source context since previous assertion:
       };
 
@@ -460,8 +460,8 @@ Original expression:
                                    "guide"));
 
 A006 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:368
-Disposition: NATIVE
-Mapping/reason: Requires native hover content coordinates within one pixel on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover content coordinates within one pixel on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(std::abs(quickHost->hoverRootContentX() - expectedRootX) <= layout::singlePixel(),
@@ -471,8 +471,8 @@ Original expression:
                         .arg(expectedRootX));
 
 A007 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:373
-Disposition: NATIVE
-Mapping/reason: Requires the native hover layer revision to advance on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native hover layer revision to advance on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(hoverLayer.revision > idle.revision,
@@ -480,8 +480,8 @@ Original expression:
                                    "layer"));
 
 A008 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:379
-Disposition: NATIVE
-Mapping/reason: Requires filled-node pixels on the retired framebuffer.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires filled-node pixels on the retired framebuffer.
 Source context since previous assertion:
       const HoverObservation routed = observeHover(rig);
       const QPointF insertionCenter =
@@ -518,16 +518,16 @@ Original expression:
       probe.require(isClear(cleared), QStringLiteral("hover survived its pointer leave"));
 
 A011 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:396
-Disposition: NATIVE
-Mapping/reason: Requires the native cursor-clear counter on the retired automation host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native cursor-clear counter on the retired automation host.
 Source context since previous assertion:
 Original expression:
       probe.require(rig.automationHost().cursorClears() > cursorClearsBeforeLeave,
                     QStringLiteral("pointer leave did not clear the automation cursor"));
 
 A012 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:405
-Disposition: NATIVE
-Mapping/reason: Requires native focus requests on the retired automation host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native focus requests on the retired automation host.
 Source context since previous assertion:
 
       // FocusLost is a no-op while a press is live: native menus temporarily
@@ -543,8 +543,8 @@ Original expression:
                                    "the host"));
 
 A013 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:412
-Disposition: NATIVE
-Mapping/reason: Requires the native grab-release counter on the retired automation host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native grab-release counter on the retired automation host.
 Source context since previous assertion:
       rig.canvas().inputCancelled(songview::TimelineInputCancelReason::FocusLost);
       rig.pump();
@@ -554,8 +554,8 @@ Original expression:
                     QStringLiteral("focus-lost cancellation released the pointer grab"));
 
 A014 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:420
-Disposition: NATIVE
-Mapping/reason: Requires the retired rig to report idle after hover routing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the retired rig to report idle after hover routing.
 Source context since previous assertion:
 
       // Strong cancellation: releases the grab, clears hover and gesture, and
@@ -568,8 +568,8 @@ Original expression:
                     QStringLiteral("window-deactivation cancellation left a live gesture"));
 
 A015 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:422
-Disposition: NATIVE
-Mapping/reason: Requires the native grab-release counter on the retired automation host.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native grab-release counter on the retired automation host.
 Source context since previous assertion:
 Original expression:
       probe.require(rig.automationHost().grabReleases() > grabsBefore,
@@ -591,8 +591,8 @@ Original expression:
                     QStringLiteral("hover survived strong window-deactivation cancellation"));
 
 A017 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:446
-Disposition: NATIVE
-Mapping/reason: Requires native hover visibility and layer revision on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover visibility and layer revision on the retired surface.
 Source context since previous assertion:
 
       // Cancellation must not latch passive hover off.
@@ -627,8 +627,8 @@ Original expression:
           QStringLiteral("hidden or ungrab cancellation mutated the document or left a gesture"));
 
 A019 | runCase | src/checks/automationgesturecheck/hover.cpp:467
-Disposition: NATIVE
-Mapping/reason: Fixture guard: requires the lane body on the retired canvas stack.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       leaveCanvas(rig);
   }
@@ -667,8 +667,8 @@ Original expression:
               QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A022 | runCase | src/checks/automationgesturecheck/hover.cpp:480
-Disposition: NATIVE
-Mapping/reason: Requires the native framebuffer readiness flag on the retired surface.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/hover.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       };
 Original expression:
@@ -676,8 +676,8 @@ Original expression:
                     QStringLiteral("Quick automation framebuffer was unavailable"));
 
 A023 | runCase | src/checks/automationgesturecheck/hover.cpp:502
-Disposition: NATIVE
-Mapping/reason: Requires the native insertion-line topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native insertion-line topology flag on the retired surface.
 Source context since previous assertion:
       const auto geometry = rig.geometry();
       const QPointF insertionCenter =
@@ -704,24 +704,24 @@ Original expression:
                     QStringLiteral("inter-node hover did not retain its Quick insertion line"));
 
 A024 | runCase | src/checks/automationgesturecheck/hover.cpp:504
-Disposition: NATIVE
-Mapping/reason: Requires the native held-ghost topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native held-ghost topology flag on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(topology.heldGhost,
                     QStringLiteral("inter-node hover did not retain its Quick held-value ghost"));
 
 A025 | runCase | src/checks/automationgesturecheck/hover.cpp:506
-Disposition: NATIVE
-Mapping/reason: Requires the native insertion-label topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native insertion-label topology flag on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(topology.insertionLabel,
                     QStringLiteral("inter-node hover did not retain its Quick value text"));
 
 A026 | runCase | src/checks/automationgesturecheck/hover.cpp:514
-Disposition: NATIVE
-Mapping/reason: Requires the native no-repeat-churn topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native no-repeat-churn topology flag on the retired surface.
 Source context since previous assertion:
 
       rig.mouseMove(lane.insertionPos, Qt::NoButton);
@@ -734,8 +734,8 @@ Original expression:
                     QStringLiteral("repeat hover at the same coordinate churned Quick state"));
 
 A027 | runCase | src/checks/automationgesturecheck/hover.cpp:537
-Disposition: NATIVE
-Mapping/reason: Requires the native node-ring topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native node-ring topology flag on the retired surface.
 Source context since previous assertion:
 
       rig.mouseMove(lane.nodePos, Qt::NoButton);
@@ -763,24 +763,24 @@ Original expression:
                     QStringLiteral("existing-node hover did not retain its Quick node ring"));
 
 A028 | runCase | src/checks/automationgesturecheck/hover.cpp:539
-Disposition: NATIVE
-Mapping/reason: Requires the native node-label topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native node-label topology flag on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(topology.nodeLabel,
                     QStringLiteral("existing-node hover did not retain its Quick value text"));
 
 A029 | runCase | src/checks/automationgesturecheck/hover.cpp:541
-Disposition: NATIVE
-Mapping/reason: Requires the native no-insertion-ghost topology flag on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native no-insertion-ghost topology flag on the retired surface.
 Source context since previous assertion:
 Original expression:
       probe.require(topology.noInsertionGhost,
                     QStringLiteral("existing-node hover retained an insertion ghost"));
 
 A030 | runCase | src/checks/automationgesturecheck/hover.cpp:564
-Disposition: NATIVE
-Mapping/reason: Requires leave-cleared pixels on the retired framebuffer.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires leave-cleared pixels on the retired framebuffer.
 Source context since previous assertion:
 
       leaveCanvas(rig);

@@ -12,7 +12,7 @@ Additional Swift SHA-256: cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff5
 Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
 Additional Swift SHA-256: aa19a567b5814cabcc2f47eb8d613cd1ac19e34efeef5461d02dd0d8fcc26dd0
 Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
-Additional Swift SHA-256: 0377880eedfe6537c922ab8b81f4d2f41d1550f1c996b652a1fd3ee861fc8a80
+Additional Swift SHA-256: 4f9a048e25b546e945d57892906bb06122bd45b24adc8a078756d2d5f54245ce
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
@@ -1272,10 +1272,10 @@ S113 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityCli
 S114 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:311
   report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a late release previews nothing")
 
-S115 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:89
+S115 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:86
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, square.mode.rawValue, cppID: drawerVelocityPsgID,
                      what: "a PSG voice uses the intrinsic level ruler")
 
-S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:94
+S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:91
   report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
                      what: "Programmable Wave publishes five volume levels")

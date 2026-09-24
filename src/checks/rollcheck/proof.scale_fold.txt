@@ -45,8 +45,8 @@ and closes with the undo-index plus smf restoration guards.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:48
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_fold.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -136,8 +136,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A005 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_fold.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
   }

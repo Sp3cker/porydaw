@@ -338,8 +338,8 @@ QVERIFY2(doc.findNote(track, cell.tick, uint8_t(cell.key), &note),
              "pencil draw produced no note")
 
 A016 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:177
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 ;
     const qreal dpr = beforeImage.devicePixelRatio();
@@ -361,8 +361,8 @@ Original expression:
 QCOMPARE(QColor(image.pixel(interior)), expectedNoteColor)
 
 A017 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:184
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation: the escape scan compares captureQuickFramebuffer() pixels at and below the drawn note's black box. Retained native obligation; the live shell note-visuals lane samples note-border pixels (S014) but performs no escape scan.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the escape scan compares captureQuickFramebuffer() pixels at and below the drawn note's black box. Retained native obligation; the live shell note-visuals lane samples note-border pixels (S014) but performs no escape scan.
 Source context since previous assertion:
 ;
     const int boxBottom = toPixel(box.bottom());
@@ -376,8 +376,8 @@ Original expression:
 QVERIFY2(!escaped, "note color escaped past its black box")
 
 A018 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:195
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation: the rest-gap scan compares captureQuickFramebuffer() columns across the two abutting notes. Retained native obligation; the Swift suite asserts the projected note pair (S010) but not the painted gap columns.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the rest-gap scan compares captureQuickFramebuffer() columns across the two abutting notes. Retained native obligation; the Swift suite asserts the projected note pair (S010) but not the painted gap columns.
 Source context since previous assertion:
 ;
 

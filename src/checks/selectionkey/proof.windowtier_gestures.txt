@@ -4,7 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_gestures.cpp
 Original SHA-256: d08f023d6430a3e030f732d87e75754bd16bc6291765f8c86357bb3ae78ee064
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -136,8 +136,8 @@ Original expression:
                "the reserved tick-2400 note pair could not be inserted and resolved")
 
 A002 | SelectionWindowTierTest::resizeDragProtectsSelectedNotes | src/checks/selectionkey/windowtier_gestures.cpp:107
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view);
@@ -148,8 +148,8 @@ Original expression:
                "the Quick surface is missing for pointer gesture checks")
 
 A003 | SelectionWindowTierTest::resizeDragProtectsSelectedNotes | src/checks/selectionkey/windowtier_gestures.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       EditorDrawer *const drawer = view.editorDrawer();
@@ -167,8 +167,8 @@ Original expression:
                "nudge Right/Delete have no single-key bindings")
 
 A004 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:141
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       const std::vector<NoteId> selected{pair->ids[0], pair->ids[1]};
@@ -198,8 +198,8 @@ Original expression:
                "the automation resize grip input is missing or never mapped into the window")
 
 A005 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:143
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -209,8 +209,8 @@ Original expression:
                               .arg(quickFocusState(quick))))
 
 A006 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:148
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection(selected);
@@ -221,8 +221,8 @@ Original expression:
                "the second selected note vanished before the resize gesture baseline")
 
 A007 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:159
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray beforeGrip = document.smf().write();
@@ -247,8 +247,8 @@ Original expression:
                               .arg(dragDistance)))
 
 A008 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:170
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QPointF gripPoint = itemCenter(grip);
@@ -259,8 +259,8 @@ Original expression:
                "could not deliver the press and drag onto the automation resize grip")
 
 A009 | selectionkey::sendMouseEvent | src/checks/selectionkey/windowtier_gestures.cpp:173
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       trackPointer(dragPoint.toPoint());
@@ -271,8 +271,8 @@ Original expression:
                               .arg(quickFocusState(quick))))
 
 A010 | async_wait::waitUntil | src/checks/selectionkey/windowtier_gestures.cpp:185
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const bool resizeGestureActive = quick->gestureActive();
@@ -304,8 +304,8 @@ Original expression:
                               .arg(quickFocusState(quick))))
 
 A011 | async_wait::waitUntil | src/checks/selectionkey/windowtier_gestures.cpp:201
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -314,8 +314,8 @@ Original expression:
                "the live resize drag mutated the document or dropped the selection")
 
 A012 | async_wait::waitUntil | src/checks/selectionkey/windowtier_gestures.cpp:205
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow, nudge->key(), nudge->keyboardModifiers());
@@ -337,8 +337,8 @@ Original expression:
                "gesture Escape cleared the selection instead of canceling the resize drag")
 
 A014 | async_wait::waitUntil | src/checks/selectionkey/windowtier_gestures.cpp:213
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const int heightAfterCancel = view.drawerSectionHeight(EditorDrawerPage::Automations);
@@ -349,8 +349,8 @@ Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), heightAfterCancel)
 
 A015 | async_wait::waitUntil | src/checks/selectionkey/windowtier_gestures.cpp:217
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_gestures.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       releaseAt(gripPoint);

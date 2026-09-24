@@ -179,8 +179,8 @@ Original expression:
   QVERIFY(!layout::initialize(*m_application, *baseFontPx + 1));
 
 A008 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:53
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the successful
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_font.cpp) no longer builds or runs. Previous native note: Original native application-state obligation: the successful
 re-initialize must leave the native stylesheet byte-identical. No stylesheet
 layer exists in the Swift shell; a presenter check cannot observe the native
 stylesheet. Stable styling is covered by S001 and the shell-typography
@@ -590,8 +590,8 @@ Original expression:
   QCOMPARE(noteNameInfo.pixelSize(), captionInfo.pixelSize());
 
 A047 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:143
-Disposition: NATIVE
-Mapping/reason: Original native font-metric obligation: the note-name
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_font.cpp) no longer builds or runs. Previous native note: Original native font-metric obligation: the note-name
 ascent plus descent must fit the caption height, measured with native font
 metrics.
 Source context since previous assertion:
@@ -651,8 +651,8 @@ Original expression:
   QVERIFY(typography::bodyFont().has_value());
 
 A052 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:165
-Disposition: NATIVE
-Mapping/reason: QWidget window-visibility mechanics: no QWidget layer exists
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_font.cpp) no longer builds or runs. Previous native note: QWidget window-visibility mechanics: no QWidget layer exists
 in the Swift app. The observable behavior (body text adopts the Next family
 once mounted) is covered by S031.
 Source context since previous assertion:

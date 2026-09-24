@@ -4,7 +4,7 @@ Reference revision: 1d2d8a819b851071e8b1ec5767832a17d9fc271e
 Original: src/checks/selectionkey/gesturevelocity.cpp
 Original SHA-256: 99548723bce4d9dad860a17c2fee784155745104e8fb44efe34362fda4004d32
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -56,8 +56,8 @@ captured selection, second Escape clears the remaining selection.
 Original assertion inventory and source sequence
 
 A001 | SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem | src/checks/selectionkey/gesturevelocity.cpp:57
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the node-pixel paint observation requires native framebuffer
 capture and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -121,8 +121,8 @@ Original expression:
   QTest::qFail(message, __FILE__, __LINE__)
 
 A002 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:69
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the stem/node geometry probe depends on native production layout
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -143,8 +143,8 @@ Original expression:
                "production velocity geometry did not expose the test stems and node")
 
 A003 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:92
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the zoomed-geometry probe depends on native production layout and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -175,8 +175,8 @@ Original expression:
                "zoomed velocity geometry did not expose the overlapping stem and node")
 
 A004 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:102
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the restored-geometry probe depends on native production layout
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -194,8 +194,8 @@ Original expression:
                "restored velocity geometry did not expose the overlapping stem and node")
 
 A005 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:117
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the live overlap-drag targeting observation requires native mouse
 delivery and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -218,8 +218,8 @@ Original expression:
                    "beginning an overlap-node drag did not target the visible following node")
 
 A006 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:124
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; cancelling the overlap drag through production VelocityArea
 cancellation requires native delivery and cannot be established by a
 presenter-level Swift check.
@@ -285,8 +285,8 @@ Original expression:
                "arrow after overlap-node click did not target only the following note")
 
 A010 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:151
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/gesturevelocity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the tie-fixture assembly guard records its own native failure and
 a presenter-level Swift check cannot establish this native fixture
 precondition.
@@ -315,8 +315,8 @@ Original expression:
                "node-overlap tie fixture did not retain both coincident-velocity notes")
 
 A012 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:160
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; tied-node exposure depends on native production geometry and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -384,8 +384,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A016 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:192
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the stem/node geometry probe depends on native production layout
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -400,8 +400,8 @@ Original expression:
                "production velocity geometry did not expose the test stems and node")
 
 A017 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:207
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the captured-selection retention observation requires a live
 native drag and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -443,8 +443,8 @@ Original expression:
                "an edit key mutated selection or notes during a live velocity gesture")
 
 A019 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:219
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturevelocity.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; first-Escape gesture cancellation through production code
 requires native delivery and cannot be established by a presenter-level Swift
 check.

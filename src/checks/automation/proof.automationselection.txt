@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationselection.cpp
 Original SHA-256: 589378ab1a0351dd4c2b1963fb45a91b9973abf2ea95ae2456cb8cb11d706ef8
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
+Swift SHA-256: 37ac484181e8abead7bf7b5ce96b36c6e2b66160ce6131224b2c465a5d661339
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 Additional Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
@@ -19,7 +19,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -83,14 +83,14 @@ Original expression:
   QVERIFY(panLane.valid())
 
 A004 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:196
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationselection.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Original expression:
   QVERIFY(!laneBody(tempoLane).isEmpty())
 
 A005 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:197
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationselection.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original reads the painted lane-body rectangle (QRect) from the native canvas. The Swift page publishes plot geometry, not per-row body rectangles, and no converted-window rendering evidence is registered for this retired suite. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Original expression:
   QVERIFY(!laneBody(panLane).isEmpty())
 
@@ -1498,268 +1498,268 @@ Swift expression:
   report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
                          what: "undo restores secondary Tempo lane")
 
-S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:34
+S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:41
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: id,
                     message: "the drag records exactly one history entry")
 
-S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:42
+S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:49
 Swift expression:
   report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                          what: "stationary selection click deletes grabbed node only")
 
-S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:44
+S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:51
 Swift expression:
   report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                          what: "stationary selection click preserves other lanes")
 
-S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:48
+S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:55
 Swift expression:
   report.expect(page.selection == nil, cppID: id,
                     message: "outside right press clears selection before opening a menu")
 
-S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:62
+S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:69
 Swift expression:
   report.expect(page.selection == nil, cppID: id,
                     message: "activated zero-width band clears selection")
 
-S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:68
+S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:75
 Swift expression:
   report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                     cppID: id, message: "zoomable lane consumes range choice")
 
-S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:70
+S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:77
 Swift expression:
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                          what: "range choice changes displayed maximum")
 
-S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:72
+S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:79
 Swift expression:
   report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
                          what: "range choice changes neither document nor history")
 
-S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:76
+S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:83
 Swift expression:
   report.expect(!page.menuRowActions.contains(AutomationMenuAction.valueRange.rawValue),
                     cppID: id, message: "centered lane has no value range submenu")
 
-S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:80
+S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:87
 Swift expression:
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                          what: "range persists independently across parameter switches")
 
-S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:88
+S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:95
 Swift expression:
   report.expect(synthetic.page.publishedMenuRows.first {
               $0.actionId == AutomationMenuAction.deleteNode.rawValue
           }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
 
-S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:92
+S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:99
 Swift expression:
   report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
                         message: "Set Value promotes the synthetic default")
 
-S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:94
+S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:101
 Swift expression:
   report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
                              what: "promoted value is a written tick-zero event")
 
-S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:99
+S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:106
 Swift expression:
   report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
                         message: "a prompt cannot follow a primary-track change")
 
-S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:101
+S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:108
 Swift expression:
   report.expectEqual(stale, synthetic.snapshot, cppID: id,
                              what: "stale prompt leaves document and history untouched")
 
-S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:104
+S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:111
 Swift expression:
   report.fail(id, "synthetic default projection missing")
 
-S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:113
+S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:120
 Swift expression:
   report.expect(hover.page.consumeHoverDelete(), cppID: id,
                     message: "pencil blank hover consumes deletion without falling through")
 
-S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:115
+S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:122
 Swift expression:
   report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
                          what: "blank hover deletion changes nothing")
 
-S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:118
+S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:125
 Swift expression:
   report.expect(!hover.page.consumeHoverDelete(), cppID: id,
                     message: "time selection retains semantic delete priority")
 
-S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:122
+S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:129
 Swift expression:
   report.expect(!hover.page.consumeHoverDelete(), cppID: id,
                     message: "arrow hover cannot claim pencil deletion")
 
-S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:154
+S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:161
 Swift expression:
   report.expect(emptyRange.page.consumeSelectionCommand(command: .nudgeRight), cppID: id,
                     message: "an empty range owns its nudge command")
 
-S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:156
+S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:163
 Swift expression:
   report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
                         && emptyRange.page.selection?.range.span == 48, cppID: id,
                     message: "an empty range advances on the camera grid without changing its span")
 
-S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:159
+S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:166
 Swift expression:
   report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
                          what: "empty-band movement creates no document edit or history")
 
-S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:164
+S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:171
 Swift expression:
   report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
                     message: "range duplicate is consumed through the canonical command seam")
 
-S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:166
+S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:173
 Swift expression:
   report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
                          cppID: id, what: "duplicate moves the band onto the inserted span")
 
-S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:168
+S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:175
 Swift expression:
   report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
                          what: "duplicate advances the edit cursor to the new span end")
 
-S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:170
+S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:177
 Swift expression:
   report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
                     message: "duplicate remains one undo entry")
 
-S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:172
+S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:179
 Swift expression:
   report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
                          what: "undo restores the original range contents")
 
-S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:189
+S036 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:196
 Swift expression:
   report.expect(page.selection?.tempo == true
                       && page.selection?.lanes == Set([AutomationParameter.tempo]),
                   cppID: id, message: "a band on Tempo selects Tempo alone")
 
-S037 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:192
+S037 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:199
 Swift expression:
   report.expect(page.selection?.scope == .lanes, cppID: id,
                   message: "the band publishes a lane-scoped range")
 
-S038 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:194
+S038 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:201
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "banding writes nothing")
 
-S039 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:196
+S039 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:203
 Swift expression:
   report.expect(fixture.drag(.tempo, from: (48, 100), to: 120, modifiers: 0),
                   cppID: id, message: "the pointer route takes the tempo drag")
 
-S040 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:198
+S040 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:205
 Swift expression:
   report.expectEqual(["48:120"], fixture.tempoValues, cppID: id,
                        what: "the tempo drag moves the tempo point")
 
-S041 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:200
+S041 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:207
 Swift expression:
   report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
                        what: "the tempo drag leaves the CC lane alone")
 
-S042 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:202
+S042 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:209
 Swift expression:
   report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
 
-S043 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:208
+S043 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:215
 Swift expression:
   report.expect(page.selection?.tempo == false
                       && page.selection?.lanes == Set([fixture.panLane]),
                   cppID: id, message: "a band on Pan selects the Pan lane alone")
 
-S044 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:225
+S044 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:232
 Swift expression:
   report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
                        what: "the grabbed lane moves with the selection")
 
-S045 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:227
+S045 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:234
 Swift expression:
   report.expectEqual(["48:80"], fixture.values(fixture.modulationLane), cppID: id,
                        what: "the second selected lane shares the delta")
 
-S046 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:229
+S046 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:236
 Swift expression:
   report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                        what: "the unselected volume lane is excluded")
 
-S047 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:231
+S047 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:238
 Swift expression:
   report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
                        what: "tempo is excluded from the CC drag")
 
-S048 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:233
+S048 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:240
 Swift expression:
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "the multi-lane drag is one revision")
 
-S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:235
+S049 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:242
 Swift expression:
   report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
 
-S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:236
+S050 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:243
 Swift expression:
   report.expectEqual(["24:60"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the grabbed lane")
 
-S051 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:238
+S051 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:245
 Swift expression:
   report.expectEqual(["48:70"], fixture.values(fixture.modulationLane), cppID: id,
                        what: "undo restores the second selected lane")
 
-S052 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:240
+S052 | drawerAutomationMultiCcDragExcludesOthers | src/checks/automation/automationselection.swift:247
 Swift expression:
   report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the drag recorded exactly one history entry")
 
-S053 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:255
+S053 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:262
 Swift expression:
   report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
                   message: "a lane with events pins as a ghost")
 
-S054 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:257
+S054 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:264
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "pinning a ghost writes nothing")
 
-S055 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:259
+S055 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:266
 Swift expression:
   report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "the page publishes the pinned ghost")
 
-S056 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:261
+S056 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:268
 Swift expression:
   report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
                        what: "pinning keeps the active parameter")
 
-S057 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:265
+S057 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:272
 Swift expression:
   report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "the ghost survives parameter activation")
 
-S058 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:267
+S058 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:274
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "activation around a ghost writes nothing")
 
-S059 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:269
+S059 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:276
 Swift expression:
   report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
                   message: "the pin toggles off again")
 
-S060 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:271
+S060 | drawerAutomationGhostViewOnlyAndSurvives | src/checks/automation/automationselection.swift:278
 Swift expression:
   report.expect(!page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "unpinning drops the ghost")
@@ -1799,71 +1799,71 @@ Swift expression:
   report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                        what: "redo restores the committed lane")
 
-S068 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:250
+S068 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:559
 Swift expression:
   report.expect(!page.hasGesture, cppID: rebuildID,
                   message: "the document rebuild cancels the drag synchronously")
 
-S069 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:254
+S069 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:563
 Swift expression:
   report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
                        what: "releasing the cancelled drag commits nothing")
 
-S070 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:277
+S070 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:586
 Swift expression:
   report.expect(!switched.page.hasGesture, cppID: switchID,
                   message: "switching parameters cancels the drag")
 
-S071 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:279
+S071 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:588
 Swift expression:
   report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
                        what: "the cancelled drag writes nothing")
 
-S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:463
+S072 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:470
 Swift expression:
   report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "the Delete command removes the covered span")
 
-S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:465
+S073 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:472
 Swift expression:
   report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "Delete keeps CC points outside the span")
 
-S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:467
+S074 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:474
 Swift expression:
   report.expect(fixture.tempoValues.isEmpty, cppID: id,
                   message: "Delete removes the covered tempo point")
 
-S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:469
+S075 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:476
 Swift expression:
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one Delete is one revision")
 
-S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:471
+S076 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:478
 Swift expression:
   report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
 
-S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:472
+S077 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:479
 Swift expression:
   report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the covered CC point")
 
-S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:474
+S078 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:481
 Swift expression:
   report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
                        what: "undo restores the covered tempo point")
 
-S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:478
+S079 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:485
 Swift expression:
   report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "Delete with no selection commits nothing")
 
-S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:480
+S080 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift:487
 Swift expression:
   report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
                        what: "an empty Delete writes nothing")
 
-S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:336
+S081 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:645
 Swift expression:
   report.expectEqual(EditKeyDecision.execute, EditKeyArbiter.decide(command: .delete, surface: armed),
                      cppID: keyID, what: "the Delete key routes to the active time selection")

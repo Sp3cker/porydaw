@@ -10,7 +10,7 @@ Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e65
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift SHA-256: cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e
 Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
-Additional Swift SHA-256: 0377880eedfe6537c922ab8b81f4d2f41d1550f1c996b652a1fd3ee861fc8a80
+Additional Swift SHA-256: 4f9a048e25b546e945d57892906bb06122bd45b24adc8a078756d2d5f54245ce
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -22,7 +22,7 @@ established; NATIVE-SETUP identifies a retained C++ loader/window/input precondi
 RETIRED-REPRESENTATION marks a C++ mechanism with no Swift ingress whose
 consumer-visible effect is carried by the predicates cited in its mapping.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -46,7 +46,7 @@ the controller handoff for this tree; not re-run by the ledger writer.
 Command: deno task verify:qml
 Result: PASS - editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not
 re-run by the ledger writer.
-Tally: MATCHED 15, PARTIAL 112, GAP 0, NATIVE-SETUP 4, RETIRED-REPRESENTATION 9.
+Tally: MATCHED 15, PARTIAL 112, GAP 4, NATIVE-SETUP 0, RETIRED-REPRESENTATION 9.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -144,14 +144,14 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A009 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:55
-Disposition: NATIVE-SETUP
-Mapping/reason: NATIVE-SETUP: retained native input precondition; the window-to-item mapping must place the press point inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454) and the check presses on the page's own published handle, so the widget-bounds guard has no Swift counterpart.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/velocity/velocitydetentdragging.cpp) no longer builds or runs. Previous native note: NATIVE-SETUP: retained native input precondition; the window-to-item mapping must place the press point inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454) and the check presses on the page's own published handle, so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(pressLocal))
 
 A010 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:56
-Disposition: NATIVE-SETUP
-Mapping/reason: NATIVE-SETUP: retained native input precondition; the moved window point must stay inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/velocity/velocitydetentdragging.cpp) no longer builds or runs. Previous native note: NATIVE-SETUP: retained native input precondition; the moved window point must stay inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(moveLocal))
 
@@ -402,14 +402,14 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A052 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:157
-Disposition: NATIVE-SETUP
-Mapping/reason: NATIVE-SETUP: retained native input precondition; the delivered press point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454), so the widget-bounds guard has no Swift counterpart.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/velocity/velocitydetentdragging.cpp) no longer builds or runs. Previous native note: NATIVE-SETUP: retained native input precondition; the delivered press point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(deliveredPressLocal))
 
 A053 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:158
-Disposition: NATIVE-SETUP
-Mapping/reason: NATIVE-SETUP: retained native input precondition; the delivered move point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/velocity/velocitydetentdragging.cpp) no longer builds or runs. Previous native note: NATIVE-SETUP: retained native input precondition; the delivered move point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(deliveredMoveLocal))
 

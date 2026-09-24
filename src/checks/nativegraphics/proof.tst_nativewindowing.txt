@@ -63,8 +63,8 @@ captures around 256-rect and 506-triangle chunk loads.
 Original assertion inventory and source sequence
 
 A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
-Disposition: NATIVE
-Mapping/reason: freshRig constructs the C++ Rig (SongDocument + SongView + RewriteWindow host); the Swift scene has no Rig counterpart. The Swift-side open path is covered by NativeScene::open inside the ported checks below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: freshRig constructs the C++ Rig (SongDocument + SongView + RewriteWindow host); the Swift scene has no Rig counterpart. The Swift-side open path is covered by NativeScene::open inside the ported checks below.
 Source context since previous assertion:
   #include "checks/nativegraphics/nativegraphics_fixture.h"
 
@@ -184,8 +184,8 @@ Original expression:
   QTest::qFail(qPrintable(error), __FILE__, __LINE__)
 
 A002 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:130
-Disposition: NATIVE
-Mapping/reason: Win32-only: asserts WM_ERASEBKGND suppression on the native window proc; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: Win32-only: asserts WM_ERASEBKGND suppression on the native window proc; no Swift-side observation exists.
 Source context since previous assertion:
   ;
           return rig;
@@ -206,8 +206,8 @@ Original expression:
   QVERIFY(dc)
 
 A003 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:141
-Disposition: NATIVE
-Mapping/reason: Win32-only: asserts the native window proc is subclassed for background erase handling; no Swift-side observation exists.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       const auto releaseDc = qScopeGuard([dc] { DeleteDC(dc); });
@@ -270,8 +270,8 @@ Original expression:
   QVERIFY(!quick->isExposed())
 
 A008 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:164
-Disposition: NATIVE
-Mapping/reason: Win32-only: WM_ERASEBKGND must answer TRUE so the native window never white-erases; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: Win32-only: WM_ERASEBKGND must answer TRUE so the native window never white-erases; no Swift-side observation exists.
 Source context since previous assertion:
   ;
           for (const QColor &color : {background, background.lighter(150)}) {
@@ -503,8 +503,8 @@ Original expression:
   QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)))
 
 A030 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:246
-Disposition: NATIVE
-Mapping/reason: The voice picker is a C++ QDialog (VoicePickerDialog); the Swift scene has no picker widget — the request boundary is covered at A029.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The voice picker is a C++ QDialog (VoicePickerDialog); the Swift scene has no picker widget — the request boundary is covered at A029.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
@@ -512,24 +512,24 @@ Original expression:
   QVERIFY(picker.root->isVisible())
 
 A031 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:247
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog widget visibility is C++-only; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog widget visibility is C++-only; no Swift-side observation exists.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(picker.list->isVisible())
 
 A032 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:248
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog windowTitle is a C++ widget property; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog windowTitle is a C++ widget property; no Swift-side observation exists.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(picker.search->hasActiveFocus())
 
 A033 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:251
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog program list is a C++ widget; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog program list is a C++ widget; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("127"));
@@ -538,8 +538,8 @@ Original expression:
                   checks::voicepicker::row(picker, 127)->isVisible())
 
 A034 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:255
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog current-row selection is a C++ widget; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog current-row selection is a C++ widget; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
@@ -547,8 +547,8 @@ Original expression:
   QTRY_VERIFY(!picker.accept->property("enabled").toBool())
 
 A035 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:258
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog accept() is a C++ widget path; the Swift picker request boundary is covered at A029.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog accept() is a C++ widget path; the Swift picker request boundary is covered at A029.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QString());
@@ -557,8 +557,8 @@ Original expression:
                   checks::voicepicker::row(picker, 0)->isVisible())
 
 A036 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:261
-Disposition: NATIVE
-Mapping/reason: VoicePickerDialog close/destruction is a C++ widget path; no Swift-side observation exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: VoicePickerDialog close/destruction is a C++ widget path; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       QTest::keyClick(picker.window, Qt::Key_Escape);
@@ -632,8 +632,8 @@ Original expression:
   QVERIFY(roll)
 
 A043 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:290
-Disposition: NATIVE
-Mapping/reason: ThemeDialog is a C++ QDialog with gridLineContrastSlider/themeApplyButton/themeCloseButton widgets; the Swift scene has no theme dialog — the controller-level preview/commit contract is covered by gridContrastPreviewAndApply.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       themes::ThemeDialog dialog(controller);
@@ -677,8 +677,8 @@ Original expression:
   QVERIFY2(strong != soft, "Dragging contrast must repaint the existing Quick grid")
 
 A047 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:304
-Disposition: NATIVE
-Mapping/reason: ThemeController::commit writes theme/grid-line-contrast through the C++ settings path; the Swift scene has no theme controller — the palette->repaint contract is covered by the rollqml check.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: ThemeController::commit writes theme/grid-line-contrast through the C++ settings path; the Swift scene has no theme controller — the palette->repaint contract is covered by the rollqml check.
 Source context since previous assertion:
   ;
       apply->click();
@@ -739,8 +739,8 @@ Original expression:
   QVERIFY(band.width() >= 160.0 && band.height() >= 120.0)
 
 A053 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:389
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *item = new songview::TimelineQuickItem(quick->rootObject());
@@ -812,8 +812,8 @@ Original expression:
   QVERIFY2(!baseline.isNull(), qPrintable(captureError))
 
 A054 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:404
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       const auto matchesBaseline = [&](const QImage &image, const QPointF &rootPoint) {
@@ -834,16 +834,16 @@ Original expression:
   QVERIFY2(!populated.isNull(), qPrintable(captureError))
 
 A055 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:405
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(nearColor(averageColor(populated, inBand(point(oldSolid))), oldSolidColor))
 
 A056 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:406
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -851,8 +851,8 @@ Original expression:
           nearColor(averageColor(populated, inBand(trianglePoint(oldTriangle))), oldTriangleColor))
 
 A057 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:413
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -863,40 +863,40 @@ Original expression:
   QVERIFY2(!shrunken.isNull(), qPrintable(captureError))
 
 A058 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:414
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(nearColor(averageColor(shrunken, inBand(point(marker))), markerColor))
 
 A059 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:415
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(shrunken, point(oldSolid)))
 
 A060 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:416
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(shrunken, point(oldGradient)))
 
 A061 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:417
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(shrunken, trianglePoint(oldTriangle)))
 
 A062 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:421
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -905,32 +905,32 @@ Original expression:
   QVERIFY2(!cleared.isNull(), qPrintable(captureError))
 
 A063 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:422
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(cleared, point(marker)))
 
 A064 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:423
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(cleared, point(oldSolid)))
 
 A065 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:424
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(cleared, trianglePoint(oldTriangle)))
 
 A066 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:432
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -943,24 +943,24 @@ Original expression:
   QVERIFY2(!partial.isNull(), qPrintable(captureError))
 
 A067 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:433
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(nearColor(averageColor(partial, inBand(trianglePoint(newTriangle))), newTriangleColor))
 
 A068 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:434
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(partial, marker.topLeft() + QPointF{15.0, 15.0}))
 
 A069 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:445
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -976,8 +976,8 @@ Original expression:
   QVERIFY2(!reactivated.isNull(), qPrintable(captureError))
 
 A070 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:451
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       const QColor gradientLeft = averageColor(
@@ -989,8 +989,8 @@ Original expression:
   QVERIFY(nearColor(averageColor(reactivated, inBand(point(newSolid))), newSolidColor))
 
 A071 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:452
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -998,56 +998,56 @@ Original expression:
           nearColor(averageColor(reactivated, inBand(trianglePoint(newTriangle))), newTriangleColor))
 
 A072 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:454
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!nearColor(gradientMiddle, averageColor(baseline, inBand(point(newGradient))), 5))
 
 A073 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:455
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(channelBetween(gradientMiddle.red(), gradientLeft.red(), gradientRight.red()))
 
 A074 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:456
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(channelBetween(gradientMiddle.green(), gradientLeft.green(), gradientRight.green()))
 
 A075 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:457
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(channelBetween(gradientMiddle.blue(), gradientLeft.blue(), gradientRight.blue()))
 
 A076 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:458
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(reactivated, point(oldSolid)))
 
 A077 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:459
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(matchesBaseline(reactivated, point(oldGradient)))
 
 A078 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:460
-Disposition: NATIVE
-Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/nativegraphics/tst_nativewindowing.cpp) no longer builds or runs. Previous native note: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:

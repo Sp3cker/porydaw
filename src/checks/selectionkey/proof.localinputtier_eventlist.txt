@@ -4,7 +4,7 @@ Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
 Original: src/checks/selectionkey/localinputtier_eventlist.cpp
 Original SHA-256: 74a64bf51297047af55fef6040172fe77411c8086268eca5cb8680b1347162c3
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -56,8 +56,8 @@ selectRow(-1) before selecting the two victims.
 Original assertion inventory and source sequence
 
 A001 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:57
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the event-list page surface precondition requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -121,8 +121,8 @@ Original expression:
   QVERIFY2(controller && controller->isVisible(), "the event list page is unavailable")
 
 A002 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:59
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the page-model assembly precondition is native production-object
 setup a presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -132,8 +132,8 @@ Original expression:
   QVERIFY2(model != nullptr, "the event list model is missing")
 
 A003 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:61
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the tab Quick-window precondition requires the native surface
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -156,8 +156,8 @@ Original expression:
   QVERIFY2(rows >= 4, "the event-list fixture has too few rows")
 
 A005 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:83
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; native Quick-window focus acquisition requires the native window
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -258,8 +258,8 @@ Original expression:
   QVERIFY2(!fixtureNotes.empty(), "the fixture has no note for the unrelated selection")
 
 A011 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:115
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; native Quick-window focus reacquisition requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -331,8 +331,8 @@ Original expression:
   QVERIFY2(copy.has_value(), "Copy has no single-key binding")
 
 A016 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:135
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; native Quick-window focus acquisition for Copy requires the
 native window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -343,8 +343,8 @@ Original expression:
                "the event-list input did not acquire native Quick-window focus for Copy")
 
 A017 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:139
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the exactly-once window Copy count observes the native window
 action owner and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -443,8 +443,8 @@ Original expression:
   QCOMPARE(int(victimRows.size()), 2)
 
 A022 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:193
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_eventlist.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; native Quick-window focus acquisition for Delete requires the
 native window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:

@@ -34,8 +34,8 @@ Their helper expectations execute on every call and are inventoried below.
 Original assertion inventory and source sequence
 
 A001 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:48
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -140,8 +140,8 @@ Original expression:
                   0.0)
 
 A007 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:74
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
           }
@@ -475,8 +475,8 @@ Original expression:
   QTRY_COMPARE(doc.engineTrackCount(), int(fixture.tracks().size()))
 
 A040 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:179
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp) no longer builds or runs. Previous native note: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
   ;
           checks::support::pumpQuick();
@@ -491,8 +491,8 @@ Original expression:
   QVERIFY2(source, qPrintable(error))
 
 A041 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:183
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -531,8 +531,8 @@ Original expression:
   QFAIL("unchanged song reset or reordered TrackHeaderModel records")
 
 A044 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:207
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp) no longer builds or runs. Previous native note: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
   ;
           }
@@ -547,8 +547,8 @@ Original expression:
   QVERIFY2(source, qPrintable(error))
 
 A045 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:211
-Disposition: NATIVE-SETUP
-Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheadermodel.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -925,31 +925,31 @@ S050 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheaderm
   report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersStructuralID,
                          what: "cancelled rename leaves no extra history entry")
 
-S051 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:64
+S051 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:82
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts press")
 
-S052 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:66
+S052 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:84
   report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
 
-S053 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:68
+S053 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:86
   report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts release")
 
-S054 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:73
+S054 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:91
   report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
                              what: "\(phase): rows follow engine track order")
 
-S055 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:76
+S055 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:94
   report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
                              what: "\(phase): rows display ordered numbered track names")
 
-S056 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:78
+S056 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:96
   report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
                              what: "\(phase): one row per track plus add-track row")
 
-S057 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:81
+S057 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:99
   report.expectEqual([names.count], addRows, cppID: cppID,
                              what: "\(phase): add-track row remains last")
 

@@ -30,7 +30,7 @@ clipboard command; they are recorded beside the affected site as supplementary
 evidence and never counted as that site's replacement predicate, so no native
 key-delivery, selection, cursor or clipboard round-trip site is reclassified by
 them.
-Tally: MATCHED 49, PARTIAL 8, GAP 23, NATIVE 8, RETIRED-REPRESENTATION 11.
+Tally: MATCHED 49, PARTIAL 8, GAP 23, NATIVE 0, RETIRED-REPRESENTATION 19.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -74,8 +74,8 @@ follow them.
 Original assertion inventory and source sequence
 
 A001 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:35
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; the Swift suite builds a model DocumentSession and never constructs the native rig.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/clipboard/clipcheck_test.h"
 
@@ -158,8 +158,8 @@ Original expression:
   QVERIFY(clipcheck_support::sameClip(copied->clip, expected));
 
 A007 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:49
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   std::unique_ptr<ClipTabRig> target = ClipTabRig::create(24, error);
@@ -229,8 +229,8 @@ Original expression:
   QCOMPARE(target->view().editCursorTick(), uint64_t{72});
 
 A015 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:70
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -329,8 +329,8 @@ Original expression:
   QCOMPARE(rig->view().editCursorTick(), uint64_t{72});
 
 A026 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:97
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -403,8 +403,8 @@ Original expression:
   QCOMPARE(rig->view().editCursorTick(), uint64_t{72});
 
 A034 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:117
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -521,8 +521,8 @@ Original expression:
   QVERIFY(clipcheck_support::sameClip(copied->clip, expected));
 
 A047 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:148
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -649,8 +649,8 @@ Original expression:
   QVERIFY(clipcheck_support::sameClip(copied->clip, expected));
 
 A060 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:186
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   std::unique_ptr<ClipTabRig> target = ClipTabRig::create(24, error);
@@ -804,8 +804,8 @@ Original expression:
   QVERIFY((lanesOf(target->document(), 0, DOC_CC_VOICE) == std::vector<LaneSpec>{{0, 0}}));
 
 A079 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:216
-Disposition: NATIVE
-Mapping/reason: Native ClipTabRig window/harness setup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/clipcheck_copy.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }

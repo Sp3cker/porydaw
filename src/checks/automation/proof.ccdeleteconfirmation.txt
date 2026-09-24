@@ -9,7 +9,7 @@ Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
 Additional Swift SHA-256: 74b18a0c7b24abb1cd5b8c8e2881f42d87ffe07db114d6878d5acce44dd536bc
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: e6b78590c3c586824ae89880f2d843d5832bb03c7c550e34062fa9487e785e3f
+Additional Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -444,8 +444,8 @@ Original expression:
   QVERIFY(retained.valid());
 
 A024 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:205
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering; the Swift predicate asserts catalogue membership ([S147]) but not the plot.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering; the Swift predicate asserts catalogue membership ([S147]) but not the plot.
 Source context since previous assertion:
 
 
@@ -759,8 +759,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A053 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:292
-Disposition: NATIVE
-Mapping/reason: The rendered confirmation frame item is native rendering.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
 
@@ -772,8 +772,8 @@ Original expression:
   QVERIFY(frame);
 
 A054 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:296
-Disposition: NATIVE
-Mapping/reason: The outside witness geometry relative to the rendered frame is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The outside witness geometry relative to the rendered frame is native rendering.
 Source context since previous assertion:
 
       const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -784,8 +784,8 @@ Original expression:
   QVERIFY2(!frameScene.contains(outside), "the outside witness sat inside the confirmation");
 
 A055 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:297
-Disposition: NATIVE
-Mapping/reason: The window rectangle containment of the witness is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The window rectangle containment of the witness is native rendering.
 Source context since previous assertion:
 
 
@@ -793,8 +793,8 @@ Original expression:
   QVERIFY(QRect(QPoint{}, m_quickWindow->size()).contains(outside));
 
 A056 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:301
-Disposition: NATIVE
-Mapping/reason: An outside right press dismissing the confirmation is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: An outside right press dismissing the confirmation is native pointer delivery.
 Source context since previous assertion:
 
 
@@ -817,8 +817,8 @@ Original expression:
   QVERIFY(cc.valid());
 
 A058 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:306
-Disposition: NATIVE
-Mapping/reason: The rendered lane plot body is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane plot body is native rendering.
 Source context since previous assertion:
 
 
@@ -826,8 +826,8 @@ Original expression:
   QTRY_VERIFY2(!laneBody(cc).isEmpty(), "the lane plot never rendered");
 
 A059 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:311
-Disposition: NATIVE
-Mapping/reason: The swallowed outside right release is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The swallowed outside right release is native pointer delivery.
 Source context since previous assertion:
 
       QTest::mouseRelease(m_quickWindow, Qt::RightButton, Qt::NoModifier,
@@ -839,8 +839,8 @@ Original expression:
   QVERIFY2(session && !session->isOpen(), "the swallowed outside right release opened a popup");
 
 A060 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:313
-Disposition: NATIVE
-Mapping/reason: The shared popup session state after the swallowed release is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The shared popup session state after the swallowed release is native popup rendering.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1018,8 +1018,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A076 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:368
-Disposition: NATIVE
-Mapping/reason: The rendered accept button item is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered accept button item is native rendering.
 Source context since previous assertion:
 
 
@@ -1201,8 +1201,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A092 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:424
-Disposition: NATIVE
-Mapping/reason: The quick view root object is native rendering and view ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
 
@@ -1216,8 +1216,8 @@ Original expression:
   QVERIFY(root);
 
 A093 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:427
-Disposition: NATIVE
-Mapping/reason: The ruler input item is a native child of the quick view.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       auto *const rulerInput =
@@ -1227,8 +1227,8 @@ Original expression:
   QVERIFY(rulerInput);
 
 A094 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:429
-Disposition: NATIVE
-Mapping/reason: The ruler interaction object is native.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       auto *const ruler = dynamic_cast<songview::TimeRuler *>(rulerInput->interaction());
@@ -1237,8 +1237,8 @@ Original expression:
   QVERIFY(ruler);
 
 A095 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:432
-Disposition: NATIVE
-Mapping/reason: The ruler division control item is native.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       QQuickItem *const division =
@@ -1248,8 +1248,8 @@ Original expression:
   QVERIFY(division);
 
 A096 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:437
-Disposition: NATIVE
-Mapping/reason: The shared popup session pointer is retired native popup rendering.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       ruler->openDivisionMenu(
@@ -1261,8 +1261,8 @@ Original expression:
   QVERIFY(live);
 
 A097 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:438
-Disposition: NATIVE
-Mapping/reason: The foreign ruler menu publication over the pending confirmation is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The foreign ruler menu publication over the pending confirmation is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1274,8 +1274,8 @@ Original expression:
                "the foreign ruler menu did not publish over the pending confirmation");
 
 A098 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:443
-Disposition: NATIVE
-Mapping/reason: The shared session content item is retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The shared session content item is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1283,8 +1283,8 @@ Original expression:
   QVERIFY(live->contentItem() == nullptr);
 
 A099 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:444
-Disposition: NATIVE
-Mapping/reason: The confirmation content item absence is retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The confirmation content item absence is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1292,8 +1292,8 @@ Original expression:
   QVERIFY(quick_popup::promptItem(*live, QLatin1String("ccDeleteConfirm")) == nullptr);
 
 A100 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:451
-Disposition: NATIVE
-Mapping/reason: The surviving foreign menu open state is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The surviving foreign menu open state is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1307,8 +1307,8 @@ Original expression:
   QVERIFY2(live->isOpen(), "the canvas rewrite cancelled the foreign ruler menu");
 
 A101 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:452
-Disposition: NATIVE
-Mapping/reason: The surviving rendered panel is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The surviving rendered panel is native rendering.
 Source context since previous assertion:
 
 
@@ -1316,8 +1316,8 @@ Original expression:
   QVERIFY(quick_popup::menuPanel(*live));
 
 A102 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:463
-Disposition: NATIVE
-Mapping/reason: The foreign division rows belong to the shared native popup model.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The foreign division rows belong to the shared native popup model.
 Source context since previous assertion:
 
       const uint64_t revisionAfterWrite = songTab.document().revision();
@@ -1335,8 +1335,8 @@ Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
 
 A103 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:464
-Disposition: NATIVE
-Mapping/reason: The rendered foreign row click is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
 Source context since previous assertion:
 
 
@@ -1345,8 +1345,8 @@ Original expression:
                "the foreign division row did not receive a real click");
 
 A104 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:467
-Disposition: NATIVE
-Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
 Source context since previous assertion:
 
       QCoreApplication::processEvents();
@@ -1355,8 +1355,8 @@ Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open");
 
 A105 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:468
-Disposition: NATIVE
-Mapping/reason: The foreign division pick grid selection has no Swift predicate in this family.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The foreign division pick grid selection has no Swift predicate in this family.
 Source context since previous assertion:
 
 
@@ -1392,8 +1392,8 @@ Original expression:
                "Return on the focused ruler control did not reopen the foreign menu");
 
 A108 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:486
-Disposition: NATIVE
-Mapping/reason: The shared popup session state after the explicit cancel is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The shared popup session state after the explicit cancel is native popup rendering.
 Source context since previous assertion:
 
 
@@ -1406,8 +1406,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A109 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:488
-Disposition: NATIVE
-Mapping/reason: The shared popup session state after the explicit cancel is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The shared popup session state after the explicit cancel is native popup rendering.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1416,8 +1416,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A110 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:489
-Disposition: NATIVE
-Mapping/reason: The confirmation content item absence is retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The confirmation content item absence is retired native popup rendering.
 Source context since previous assertion:
 
 
@@ -1552,8 +1552,8 @@ Original expression:
   QVERIFY(volume.valid());
 
 A123 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:521
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1651,8 +1651,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A132 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:548
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1851,8 +1851,8 @@ Original expression:
   QVERIFY(retained.valid());
 
 A150 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:604
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 
@@ -1917,8 +1917,8 @@ Original expression:
   QVERIFY(findRow(volumeRow).valid());
 
 A157 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:614
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/ccdeleteconfirmation.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering.
 Source context since previous assertion:
 
 

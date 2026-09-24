@@ -22,7 +22,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -161,14 +161,14 @@ src/checks/drawerpresentation/drawer.cpp:617 | QVERIFY(checks::support::quickWin
 Original assertion inventory
 
 A001 | makeDrawerFixture | src/checks/drawerpresentation/drawer.cpp:36
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   qFatal("%s", qPrintable(error))
 
 A002 | sendWindowMouse | src/checks/drawerpresentation/drawer.cpp:57
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   Q_ASSERT(window)
 
@@ -203,8 +203,8 @@ Original expression:
   QVERIFY(voice)
 
 A008 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:105
-Disposition: NATIVE
-Mapping/reason: Native Quick window creation; retained native window obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(fixture.quick->quickWindow())
 
@@ -215,8 +215,8 @@ Original expression:
   QCOMPARE(drawer->minimumSectionHeight(), layout::fontPx(17.0 / 5.0))
 
 A010 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:107
-Disposition: NATIVE
-Mapping/reason: quickWindowIsUnmasked is a native window property; retained native window obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: quickWindowIsUnmasked is a native window property; retained native window obligation.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
@@ -433,14 +433,14 @@ Original expression:
   QCOMPARE(chrome.hoveredHandle(), static_cast<int>(DrawerChromeTarget::VoiceChangesHandle))
 
 A046 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:211
-Disposition: NATIVE
-Mapping/reason: Cursor shape delivery is engine-native: the production grip MouseArea declares cursorShape Qt.SizeVerCursor (EditorDrawer.qml:287) and the OS cursor is unobservable in the offscreen lane, so no QML predicate can assert it. Ingress evidence: S091 (tst_EditorDrawer.qml:904) proves native hover reaches the grip surface through the same delivery the cursor rides.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: Cursor shape delivery is engine-native: the production grip MouseArea declares cursorShape Qt.SizeVerCursor (EditorDrawer.qml:287) and the OS cursor is unobservable in the offscreen lane, so no QML predicate can assert it. Ingress evidence: S091 (tst_EditorDrawer.qml:904) proves native hover reaches the grip surface through the same delivery the cursor rides.
 Original expression:
   QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor)
 
 A047 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:215
-Disposition: NATIVE
-Mapping/reason: Cursor shape delivery is engine-native from the declared grip cursorShape (EditorDrawer.qml:287) and unobservable offscreen. Note the semantics delta: after release-while-hovering the engine keeps SizeVerCursor where the retired C++ cleared to Arrow; the QML behavior is the platform-idiomatic one.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: Cursor shape delivery is engine-native from the declared grip cursorShape (EditorDrawer.qml:287) and unobservable offscreen. Note the semantics delta: after release-while-hovering the engine keeps SizeVerCursor where the retired C++ cleared to Arrow; the QML behavior is the platform-idiomatic one.
 Original expression:
   QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor)
 
@@ -556,8 +556,8 @@ Original expression:
                   fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A064 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:269
-Disposition: NATIVE
-Mapping/reason: Native Quick window handle; retained native window obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(quickWindow)
 
@@ -586,8 +586,8 @@ Original expression:
   QVERIFY(bodyBefore)
 
 A069 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:300
-Disposition: NATIVE
-Mapping/reason: Native item window precondition; retained native obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(handle->window())
 
@@ -604,8 +604,8 @@ Original expression:
   QCOMPARE(view.drawerSectionHeight(page), storedBefore)
 
 A072 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:308
-Disposition: NATIVE
-Mapping/reason: mouseGrabberItem is native input delivery; retained native obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: mouseGrabberItem is native input delivery; retained native obligation.
 Original expression:
   QCOMPARE(handle->window()->mouseGrabberItem(), handle)
 
@@ -628,8 +628,8 @@ Original expression:
   QCOMPARE(drawer->overlayRect().bottom(), overlay.bottom())
 
 A076 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:316
-Disposition: NATIVE
-Mapping/reason: mouseGrabberItem release is native input delivery; retained native obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: mouseGrabberItem release is native input delivery; retained native obligation.
 Original expression:
   QVERIFY(!handle->window()->mouseGrabberItem())
 
@@ -1042,15 +1042,15 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A144 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:529
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band; the request target is matched by S064 (drawer_state.swift:61) and the QML focus landing by S100 (tst_EditorDrawer.qml:1238).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band; the request target is matched by S064 (drawer_state.swift:61) and the QML focus landing by S100 (tst_EditorDrawer.qml:1238).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A145 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:532
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native bar active focus; the QML blank-chrome case S104 (tst_EditorDrawer.qml:2303) asserts the drawer takes focus.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native bar active focus; the QML blank-chrome case S104 (tst_EditorDrawer.qml:2303) asserts the drawer takes focus.
 Original expression:
   QTRY_VERIFY(fixture.bar->hasActiveFocus())
 
@@ -1061,8 +1061,8 @@ Original expression:
   QVERIFY(!view.focusedTimelineBand())
 
 A147 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:535
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band; the request target for the first remaining visible section is matched by S057 (drawer_state.swift:10).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band; the request target for the first remaining visible section is matched by S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
@@ -1074,29 +1074,29 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
 A149 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:539
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band after showing voice changes; related request targets are S063 (drawer_state.swift:54) and S066 (drawer_state.swift:95).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band after showing voice changes; related request targets are S063 (drawer_state.swift:54) and S066 (drawer_state.swift:95).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
 
 A150 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:542
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band after hiding voice changes; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band after hiding voice changes; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A151 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:545
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band after hiding velocity; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band after hiding velocity; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Automation)
 
 A152 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:548
-Disposition: NATIVE
-Mapping/reason: QTRY polling of the native focused band after hiding the last section; the related roll request is S064 (drawer_state.swift:61).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: QTRY polling of the native focused band after hiding the last section; the related roll request is S064 (drawer_state.swift:61).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
@@ -1192,8 +1192,8 @@ Original expression:
   QVERIFY(input)
 
 A168 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:596
-Disposition: NATIVE
-Mapping/reason: Native item window precondition; retained native obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/drawer.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(input->window())
 
@@ -1210,14 +1210,14 @@ Original expression:
   QVERIFY(input->bounds().contains(point))
 
 A171 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:603
-Disposition: NATIVE
-Mapping/reason: mouseGrabberItem is native input delivery; retained native obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: mouseGrabberItem is native input delivery; retained native obligation.
 Original expression:
   QCOMPARE(input->window()->mouseGrabberItem(), input)
 
 A172 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:605
-Disposition: NATIVE
-Mapping/reason: mouseGrabberItem release is native input delivery; retained native obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: mouseGrabberItem release is native input delivery; retained native obligation.
 Original expression:
   QVERIFY(!input->window()->mouseGrabberItem())
 
@@ -1253,8 +1253,8 @@ Original expression:
   QVERIFY(automationBand.contains(QPoint(automationBand.left(), automationBand.center().y())))
 
 A178 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:617
-Disposition: NATIVE
-Mapping/reason: quickWindowIsUnmasked is a native window property; retained native window obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/drawer.cpp) no longer builds or runs. Previous native note: quickWindowIsUnmasked is a native window property; retained native window obligation.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
@@ -1973,7 +1973,7 @@ Swift expression:
   Each helper asserts the named geometry fields (bodyX/bodyY/bodyWidth/bodyHeight, handleY/handleHeight,
   or toggleX/toggleY/toggleSize) for its kind; the calls occupy lines 150-188.
 
-S088 | EditorDrawerLane.test_noPageContributesNothing | src/checks/editorqml/tst_EditorDrawer.qml:785
+S088 | EditorDrawerLane.test_noPageContributesNothing | src/checks/editorqml/tst_EditorDrawer.qml:926
 QML expression:
   compare(testCase.presenter().height, 0, "no page contributes no height")
   compare(testCase.presenter().barVisible, false, "no page claims a bar")
@@ -1981,7 +1981,7 @@ QML expression:
   compare(testCase.rollBand().height, testCase.editorHeight(), "the roll fills the editor above the persistent status strip")
   compare(testCase.rollInput().height, testCase.editorHeight() - testCase.surface.gridModel.rulerHeight, "the roll input fills the editor below the ruler and above the persistent status strip")
 
-S089 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:847
+S089 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:979
 QML expression:
   testCase.verifyRect(testCase.bar(), presenter.barX, presenter.barY, presenter.barWidth, presenter.barHeight, "bar")
   testCase.verifyRect(testCase.toggle(kind), state.toggleX, state.toggleY, state.toggleSize, state.toggleSize, what + " toggle")
@@ -1989,7 +1989,7 @@ QML expression:
   testCase.verifyRect(loader, state.bodyX, state.bodyY, state.bodyWidth, state.bodyHeight, what + " body")
   verifyRect maps the item into the drawer item and fuzzy-compares x, y, width and height (helper at line 543).
 
-S090 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:883
+S090 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:1016
 QML expression:
   compare(presenter.plotOrigin, testCase.surface.timelineSplitX, "the container publishes the combined gutter")
   fuzzyCompare(presenter.height, aggregate, 0.01, "the container fits its sections and bar")
@@ -1998,14 +1998,14 @@ QML expression:
   verify(barRect.y >= rects.automation.y + rects.automation.height - 0.01, "the bar sits below every body")
   fuzzyCompare(barRect.y + barRect.height, presenter.height, 0.01, "the bar closes the container")
 
-S091 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:904
+S091 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:1038
 QML expression:
   mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
   tryVerify(function() { return String(hoverGrip.color).toUpperCase() === String(testCase.drawerPalette().selectionRing).toUpperCase() }, 1000, "a hovered handle highlights")
   mouseMove(testCase.bar(), 2, 2)
   tryVerify(function() { return String(hoverGrip.color).toUpperCase() === String(testCase.drawerPalette().outline).toUpperCase() }, 1000, "leaving the handle returns its outline")
 
-S092 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:919
+S092 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:1052
 QML expression:
   keyClick(Qt.Key_Return)
   compare(testCase.section(testCase.voiceChangesKind).visible, false, "Return hides the section")
@@ -2016,7 +2016,7 @@ QML expression:
   compare(testCase.spacePropagations, 1, "bare Space propagates unclaimed")
   compare(testCase.section(testCase.automationKind).visible, true, "Space does not toggle")
 
-S093 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:942
+S093 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:1083
 QML expression:
   testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().windowBackground, "unchecked toggle")
   testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().selectionRing, "checked toggle")
@@ -2036,7 +2036,7 @@ QML expression:
   toggle rectangles with a scale-aware ring; the bar input MouseArea paints nothing and bodies are disjoint by
   S090, so each surviving pixel is attributed to the bar fill and border, proving alpha 255.
 
-S094 | EditorDrawerLane.verifyToggleAccessibility | src/checks/editorqml/tst_EditorDrawer.qml:578
+S094 | EditorDrawerLane.verifyToggleAccessibility | src/checks/editorqml/tst_EditorDrawer.qml:580
 QML expression:
   compare(control.Accessible.role, Accessible.Button, name + ": role")
   compare(control.Accessible.name, name, name + ": name")
@@ -2046,7 +2046,7 @@ QML expression:
   verifyGripAccessibility (helper at line 587) asserts the Grip role, the name, the resize description and
   focusable; both helpers are called for all three kinds at lines 897-902.
 
-S095 | EditorDrawerLane.test_toggleRetainsStoredHeight | src/checks/editorqml/tst_EditorDrawer.qml:987
+S095 | EditorDrawerLane.test_toggleRetainsStoredHeight | src/checks/editorqml/tst_EditorDrawer.qml:1113
 QML expression:
   compare(testCase.section(kind).visible, false, "the click hides the section")
   compare(presenter.height, barRow, "a hidden section releases its height")
@@ -2059,7 +2059,7 @@ QML expression:
   compare(presenter.height, barRow, "the container is the bar row")
   fuzzyCompare(testCase.section(kind).bodyHeight, stored, 0.01, "re-showing restores the same body height")
 
-S096 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1030
+S096 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1167
 QML expression:
   fuzzyCompare(testCase.section(kind).bodyHeight, stored + 40, 1, "the drag grows the body by its delta")
   fuzzyCompare(presenter.height, openHeight + 40, 1, "the container grows with the body")
@@ -2068,7 +2068,7 @@ QML expression:
   fuzzyCompare(presenter.height, testCase.editorHeight(), 0.01, "the container clamps above the status strip")
   fuzzyCompare(testCase.section(kind).bodyHeight, applied, 0.01, "releasing after a cancellation keeps the applied height")
 
-S097 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1048
+S097 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1185
 QML expression:
   fuzzyCompare(testCase.section(kind).bodyHeight, floorHeight, 0.01, "the keyboard path shares the minimum body")
   verify(step > 0, "Up grows the body by the resize step")
@@ -2077,14 +2077,14 @@ QML expression:
   compare(testCase.leftPropagations, 0, "the grip consumes the cross-axis arrows")
   fuzzyCompare(testCase.section(kind).bodyHeight, beforeStep + step, 0.01, "the cross-axis arrows resize nothing")
 
-S098 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1100
+S098 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1233
 QML expression:
   mousePress(rightGrip, rightGrip.width / 2, rightGrip.height / 2, Qt.RightButton)
   mouseMove(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
   mouseRelease(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
   fuzzyCompare(testCase.section(kind).bodyHeight, rightStart, 0.01, "a right-button drag on the handle resizes nothing")
 
-S099 | EditorDrawerLane.test_voiceChangesSpillAndDetach | src/checks/editorqml/tst_EditorDrawer.qml:1143
+S099 | EditorDrawerLane.test_voiceChangesSpillAndDetach | src/checks/editorqml/tst_EditorDrawer.qml:1272
 QML expression:
   fuzzyCompare(voiceStart, 60, 0.01, "the stored voice-changes height is restored")
   fuzzyCompare(testCase.section(voiceKind).bodyHeight, 90, 0.01, "the voice-changes body stops at its declared maximum")
@@ -2094,14 +2094,14 @@ QML expression:
   fuzzyCompare(testCase.section(automationKind).bodyHeight, automationStart + overshoot, 1, "the excess alone moves the automations body")
   compare(bootstrap.pageCancelCount, cancels + 1, "the release cancels the page once")
 
-S100 | EditorDrawerLane.test_focusReturnAndPageCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1238
+S100 | EditorDrawerLane.test_focusReturnAndPageCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1375
 QML expression:
   tryVerify(function() { return testCase.focusIsIn(testCase.rollInput()) }, 1000, "hiding the only visible section returns focus to the roll input")
   compare(bootstrap.pageCancelCount, cancels + 1, "hiding cancels the page once")
   tryVerify(function() { return testCase.focusIsIn(automationPage) }, 1000, "showing focuses the page item's own scope")
   compare(bootstrap.pageCancelCount, cancels + 2, "losing the active slot cancels once")
 
-S101 | EditorDrawerLane.test_preferencesRoundTrip | src/checks/editorqml/tst_EditorDrawer.qml:1310
+S101 | EditorDrawerLane.test_preferencesRoundTrip | src/checks/editorqml/tst_EditorDrawer.qml:1447
 QML expression:
   testCase.compareSnapshots(testCase.snapshotStore(location), seeded, "mounting writes nothing back")
   compare(testCase.section(velocityKind).visible, true, "the stored visibility applies")
@@ -2110,7 +2110,7 @@ QML expression:
   compare(written.activePage, "string:velocity", "the page keeps its historical name")
   compare(testCase.snapshotStore(location).velocityHeight, "number:0", "an unset height is written as 0")
 
-S102 | EditorDrawerLane.test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2806
+S102 | EditorDrawerLane.test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3148
 QML expression:
   verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
   fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
@@ -2123,7 +2123,7 @@ QML expression:
   verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5, "parameter ... stays inside the widened gutter")
   compare(scroller.clip, true, "the selector clips its scrolling content")
 
-S103 | EditorDrawerLane.test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3961
+S103 | EditorDrawerLane.test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4303
 QML expression:
   compare(page.objectName, "automationPage", "the hosted item is the production page")
   verify(gutter && plot, "the page composed its selector column and plot")
@@ -2132,21 +2132,21 @@ QML expression:
   fuzzyCompare(plot.width, page.width - gutter.width, 0.01, "the plot spans the body beside the selector")
   fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
-S104 | EditorDrawerLane.test_productionDrawerBlankBarFocus | src/checks/editorqml/tst_EditorDrawer.qml:2303
+S104 | EditorDrawerLane.test_productionDrawerBlankBarFocus | src/checks/editorqml/tst_EditorDrawer.qml:2644
 QML expression:
   mouseClick(bar, bar.width - 3, bar.height / 2, Qt.LeftButton)
   tryVerify(function() { return testCase.drawer().activeFocus }, 1000, "blank drawer chrome takes focus from the roll")
   compare(bootstrap.automationDocumentRevision(), revision, "blank chrome does not execute a document command")
   testCase.compareSnapshots(testCase.snapshotStore(location), before, "blank chrome changes no section preference")
 
-S105 | EditorDrawerLane.test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2278
+S105 | EditorDrawerLane.test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2620
 QML expression:
   verify(detent, "the drawer composed its original detent control")
   compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
   compare(detent.Accessible.checkable, true, "the detent control is checkable")
   compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled, "the detent control shows the page's own preference")
 
-S106 | EditorDrawerLane.test_quickSurfacePublishesAndRendersHeaders | src/checks/editorqml/tst_EditorDrawer.qml:2012
+S106 | EditorDrawerLane.test_quickSurfacePublishesAndRendersHeaders | src/checks/editorqml/tst_EditorDrawer.qml:2354
 QML expression:
   verify(band && input && rows && scrollbar, "the production header surface is mounted")
   verify(band.visible && input.visible, "the header band and its input are visible")
@@ -2201,4 +2201,4 @@ Swift expression:
   The block builds a fresh harness, attaches a velocity stub page and applies no restore preferences, so the
   predicate reads the untouched layout default rather than a restored preference.
 
-Tally: MATCHED 78, PARTIAL 69, GAP 3, NATIVE 19, NATIVE-SETUP 2, RETIRED-REPRESENTATION 7
+Tally: MATCHED 78, PARTIAL 69, GAP 18, NATIVE 0, NATIVE-SETUP 0, RETIRED-REPRESENTATION 13

@@ -163,8 +163,8 @@ Original expression:
   QVERIFY(fx.view().selectionModel().primaryTrack() != fx.sourceTrack())
 
 A003 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:119
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -343,8 +343,8 @@ Original expression:
                "Duplicate track stayed enabled at track capacity")
 
 A021 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:170
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray capacityBytes = doc.smf().write();
@@ -405,8 +405,8 @@ Original expression:
   QVERIFY(row)
 
 A027 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const uint64_t revision = doc.revision();
@@ -436,8 +436,8 @@ Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.voiceTrack())
 
 A030 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:198
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -446,8 +446,8 @@ Original expression:
                "the Change voice row did not receive a real click")
 
 A031 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:204
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -486,8 +486,8 @@ Original expression:
   QTRY_VERIFY(picker.search->hasActiveFocus())
 
 A035 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:215
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       // Keyboard continuity: filter keys land in the picker that took focus.
@@ -513,8 +513,8 @@ Original expression:
   QVERIFY(checks::voicepicker::dismissOutside(picker))
 
 A038 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -561,8 +561,8 @@ Original expression:
   QVERIFY(row)
 
 A043 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QString original = doc.trackName(fx.sourceTrack());
@@ -585,8 +585,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A045 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:242
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -614,16 +614,16 @@ Original expression:
   QCOMPARE(fx.headers().renamingTrack(), fx.sourceTrack())
 
 A048 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:250
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fx.rename().isVisible())
 
 A049 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:251
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -657,8 +657,8 @@ Original expression:
   QCOMPARE(doc.trackName(fx.sourceTrack()), original)
 
 A053 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:258
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -690,8 +690,8 @@ Original expression:
   QCOMPARE(fx.headers().renamingTrack(), -1)
 
 A057 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:263
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -733,8 +733,8 @@ Original expression:
   QVERIFY2(voiceMenu.session, qUtf8Printable(voiceMenu.diagnostic))
 
 A061 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:281
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const uint64_t beforeReveal = doc.revision();
@@ -830,8 +830,8 @@ Original expression:
   QVERIFY2(!sourceNotes.empty(), "the duplicate fixture track carried no content to copy")
 
 A071 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:305
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -972,8 +972,8 @@ Original expression:
   QVERIFY2(deleteMenu.session, qUtf8Printable(deleteMenu.diagnostic))
 
 A087 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:337
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray beforeDelete = doc.smf().write();
@@ -1067,8 +1067,8 @@ Original expression:
   QVERIFY(voiceRow)
 
 A097 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:364
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const quick_popup::PromptGuard guard(fx.view());
@@ -1209,8 +1209,8 @@ Original expression:
   QVERIFY(doc.moveTrack(victim, destination))
 
 A110 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:414
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
               afterRemap = doc.smf().write();
@@ -1352,8 +1352,8 @@ Original expression:
   QVERIFY(doc.moveTrack(victim, destination))
 
 A123 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:466
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
               afterRemap = doc.smf().write();
@@ -1449,8 +1449,8 @@ Original expression:
   QVERIFY(doc.moveTrack(destination, victim))
 
 A133 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:493
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
               duplicateAfterRemap = doc.smf().write();
@@ -1519,8 +1519,8 @@ Original expression:
   QVERIFY(row)
 
 A140 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:516
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -1575,8 +1575,8 @@ Original expression:
   QVERIFY2(!opened.session->isOpen(), "an outside press did not dismiss the header menu")
 
 A145 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:533
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1640,8 +1640,8 @@ Original expression:
   QVERIFY2(!reopened.session->isOpen(), "an outside right press did not dismiss the menu")
 
 A152 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:551
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QTest::mouseRelease(reopened.session->window(), Qt::RightButton, Qt::NoModifier, outsideScene);
@@ -1719,117 +1719,117 @@ S010 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackhe
 S011 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:41
   report.expect(!h.menuOpen, cppID: id, message: "dismiss closes the capacity menu")
 
-S012 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:54
+S012 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:91
   report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before picker request")
 
-S013 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:58
+S013 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:95
   report.expectEqual(1, fx.session.selectedTrack, cppID: id,
                          what: "right press selects the voice track")
 
-S014 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:61
+S014 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:98
   report.expectEqual([1], requests, cppID: id, what: "change voice requests selected track picker")
 
-S015 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:65
+S015 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:102
   report.expectEqual(1, fx.session.selectedTrack, cppID: id,
                          what: "cancelled picker retains the voice track selection")
 
-S016 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:70
+S016 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:107
   report.expectEqual([127], fx.document.lanePoints(track: 1, lane: .voice).map(\.value),
                          cppID: id, what: "accepted picker edits captured track program")
 
-S017 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:72
+S017 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:109
   report.expectEqual([0], fx.document.lanePoints(track: 0, lane: .voice).map(\.value),
                          cppID: id, what: "voice edit leaves other track untouched")
 
-S018 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:74
+S018 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:111
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "voice acceptance creates one edit")
 
-S019 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:88
+S019 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:125
   report.expect(!h.menuOpen && h.renamingTrack == 0, cppID: id,
                     message: "rename editor replaces closed menu synchronously")
 
-S020 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:90
+S020 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:127
   report.expectEqual("Lead", h.renameDraft, cppID: id, what: "editor starts with editable track name")
 
-S021 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:94
+S021 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:131
   report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
-S022 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:111
+S022 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:148
   report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before reveal")
 
-S023 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:119
+S023 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:156
   report.expectEqual([1], reveals, cppID: id, what: "reveal addresses requested track")
 
-S024 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:120
+S024 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:157
   report.expectEqual([42], revealedPrograms, cppID: id,
                          what: "track-addressed menu request resolves to current voice program")
 
-S025 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:124
+S025 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:161
   report.expect(!notes.isEmpty, cppID: id,
                     message: "the duplicate fixture track carries content to copy")
 
-S026 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:128
+S026 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:165
   report.expect(!h.menuOpen, cppID: id, message: "duplicate closes menu")
 
-S027 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:129
+S027 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:166
   report.expectEqual(3, fx.trackRows.count, cppID: id, what: "duplicate adds one track")
 
-S028 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:130
+S028 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:167
   report.expectEqual(notes, fx.document.notes(in: 2).map {
           "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
       }, cppID: id, what: "duplicate copies content rather than creating an empty slot")
 
-S029 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:133
+S029 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:170
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "duplicate is one edit")
 
-S030 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:135
+S030 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:172
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "duplicate undo succeeds")
 
-S031 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:136
+S031 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:173
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes duplicate")
 
-S032 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:140
+S032 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:177
   report.expect(!h.menuOpen, cppID: id, message: "delete closes menu")
 
-S033 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:142
+S033 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:179
   report.expectEqual(beforeDelete + 1, fx.document.revision, cppID: id, what: "delete is one edit")
 
-S034 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:143
+S034 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:180
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "delete undo succeeds")
 
-S035 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:144
+S035 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:181
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "undo restores deleted music")
 
-S036 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:158
+S036 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:195
   report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "open menu target remaps")
 
-S037 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:160
+S037 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:197
   report.expect(!h.menuOpen && h.renamingTrack == -1, cppID: id,
                     message: "structural remap cancels menu without starting editor")
 
-S038 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:164
+S038 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:201
   report.expectEqual(0, pickers, cppID: id, what: "late stale action cannot open picker")
 
-S039 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:167
+S039 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:204
   report.expectEqual(5, h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
 
-S040 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:181
+S040 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:218
   report.expect(fx.document.moveTrack(1, to: 0), cppID: id,
                         message: "action \(action): remap precedes delayed activation")
 
-S041 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:186
+S041 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:223
   report.expect(!h.menuOpen, cppID: id, message: "action \(action): stale menu stays closed")
 
-S042 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:206
+S042 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:243
   report.expect(!h.menuOpen, cppID: id, message: "outside button \(button) dismisses without reopening")
 
-S043 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:207
+S043 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:244
   report.expectEqual(0, fx.session.selectedTrack, cppID: id,
                              what: "outside button \(button) never clicks through to selection")
 
-S044 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:209
+S044 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:246
   report.expectEqual(0, reveals, cppID: id, what: "outside button \(button) never reveals a voice")
 
 S045 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:57
@@ -1852,22 +1852,22 @@ S049 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheaderm
 
 S050-S055 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_headerMenuFrameHasOutsideInputPoint, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
 
-S050 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:226
+S050 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:322
   compare(panel.rowObjectNamePrefix, "headerMenuRow_")
 
-S051 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:227
+S051 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:323
   var frame = findChild(panel, "quickMenuFrame")
 
-S052 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:228
+S052 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:324
   verify(frame !== null)
 
-S053 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:229
+S053 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:325
   tryVerify(function() { return frame.visible && frame.width > 0 && frame.height > 0 },
                     5000, "visible=" + frame.visible + " width=" + frame.width
                           + " height=" + frame.height + " count=" + panel.rowCount
                           + " menuOpen=" + h.menuOpen)
 
-S054 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:233
+S054 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:329
   var outside = null
   for (var row = 0; row < item("timelineTrackHeaderRows").count && !outside; ++row) {
       for (var fraction of [0.08, 0.5, 0.92]) {
@@ -1885,7 +1885,7 @@ S054 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRo
       }
   }
 
-S055 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:249
+S055 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:345
   verify(outside !== null)
 
 Shared helper: src/checks/trackheaders/headerfixture.swift

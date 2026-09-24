@@ -21,7 +21,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
@@ -233,8 +233,8 @@ Original expression:
   QVERIFY(unlock != Qt::NoModifier)
 
 A008 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:52
-Disposition: NATIVE-SETUP
-Mapping/reason: Legacy QML quick-view loader precondition; the velocity Swift suite drives the page directly and constructs no QML view.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocitydetentpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     const Qt::KeyboardModifiers pressModifiers = unlockOnPress ? unlock : Qt::NoModifier;
@@ -245,8 +245,8 @@ Original expression:
   QVERIFY(quickView)
 
 A009 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:54
-Disposition: NATIVE-SETUP
-Mapping/reason: Legacy QML quick-view root-object precondition; the Swift velocity suite has no QML root to resolve.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocitydetentpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QObject *const quickRoot = quickView->rootObject();
@@ -255,8 +255,8 @@ Original expression:
   QVERIFY(quickRoot)
 
 A010 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:58
-Disposition: NATIVE-SETUP
-Mapping/reason: Legacy timelineVelocityGutterInput lookup: the Swift page owns its ruler surface and inRuler geometry, so no QML input item exists to find.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocitydetentpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *const gutterInput =
@@ -267,8 +267,8 @@ Original expression:
   QVERIFY(gutterInput)
 
 A011 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:59
-Disposition: NATIVE-SETUP
-Mapping/reason: Legacy input-item window identity precondition; the Swift suite has no quick window to compare an input item against.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocitydetentpainting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -1384,7 +1384,7 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Swift executable assertion index
-Tally: MATCHED 43, PARTIAL 66, NATIVE-SETUP 4, RETIRED-REPRESENTATION 6, GAP 2. All 121
+Tally: MATCHED 43, PARTIAL 66, NATIVE-SETUP 0, RETIRED-REPRESENTATION 10, GAP 2. All 121
 sites are dispositioned; every PARTIAL names the unproved condition, and no MATCHED claim
 rests on a related case alone. The two remaining GAPs are the legacy chrome detent-checkbox
 checked-state readbacks (A005, A006): the control has no Swift ingress, and the paired

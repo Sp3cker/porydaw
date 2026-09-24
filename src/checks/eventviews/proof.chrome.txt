@@ -255,8 +255,8 @@ Original expression:
 QCOMPARE(cell.letterSpacing(), -0.5)
 
 A015 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:124
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
         }
@@ -270,8 +270,8 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, 0, eventlist::EventTableMode
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A016 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:127
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const QFont editorFont = editor->property("font").value<QFont>();
@@ -280,8 +280,8 @@ Original expression:
 QCOMPARE(QFontInfo(editorFont).family(), expectedInfo.family())
 
 A017 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:128
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -289,8 +289,8 @@ Original expression:
 QCOMPARE(editorFont.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A018 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:129
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -325,8 +325,8 @@ Original expression:
 QVERIFY(widgets)
 
 A021 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:143
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QQuickItem *const handle = checks::eventviews::visualItem(
@@ -346,8 +346,8 @@ Original expression:
 QVERIFY(initial.size() >= 2)
 
 A023 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:160
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -369,8 +369,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->columnWidths().value(1) > initial.value(1) + 20.0)
 
 A024 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:161
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -405,8 +405,8 @@ Original expression:
 QVERIFY(widgets)
 
 A027 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:175
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     auto *drawer = widgets.quickWindow->findChild<songview::TimelineInputItem *>(
@@ -427,8 +427,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A029 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:180
-Disposition: NATIVE
-Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
 Source context since previous assertion:
 ;
 
@@ -437,8 +437,8 @@ Original expression:
 QVERIFY(checks::eventviews::focusSurface(widgets, *drawer))
 
 A030 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:183
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     QTest::keyClick(widgets.quickWindow, Qt::Key_Down);
@@ -448,8 +448,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A031 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:184
-Disposition: NATIVE
-Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
 Source context since previous assertion:
 ;
 
@@ -457,8 +457,8 @@ Original expression:
 QVERIFY(drawer->hasActiveFocus())
 
 A032 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:187
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     QTest::keyClick(widgets.quickWindow, Qt::Key_Up);
@@ -468,8 +468,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), 0)
 
 A033 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:188
-Disposition: NATIVE
-Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
 Source context since previous assertion:
 ;
 
@@ -503,8 +503,8 @@ Original expression:
 QVERIFY(widgets)
 
 A036 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:201
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     auto *scrollbar =
@@ -514,8 +514,8 @@ Original expression:
 QVERIFY(scrollbar)
 
 A037 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:203
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QQuickItem *const table = checks::eventviews::eventListTable(widgets);
@@ -524,8 +524,8 @@ Original expression:
 QVERIFY(table)
 
 A038 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:204
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -533,8 +533,8 @@ Original expression:
 QTRY_VERIFY(scrollbar->property("maximum").toReal() > 0)
 
 A039 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:211
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const qreal maximum = scrollbar->property("maximum").toReal();
@@ -548,8 +548,8 @@ Original expression:
 QTRY_COMPARE(table->property("contentY").toReal(), maximum)
 
 A040 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:215
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -742,8 +742,8 @@ Original expression:
 QVERIFY(widgets)
 
 A053 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:307
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -756,8 +756,8 @@ Original expression:
 QVERIFY(filterButton)
 
 A054 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:312
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const QPointF buttonCenter = filterButton->mapToScene(
@@ -769,8 +769,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A055 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:314
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
@@ -779,8 +779,8 @@ Original expression:
 QVERIFY(panel)
 
 A056 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:316
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     songview::QuickMenuModel *model = quick_popup::menuModel(*panel);
@@ -799,8 +799,8 @@ Original expression:
 QCOMPARE(rows, 7)
 
 A058 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:326
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ; // the fixture's fixed filter-category ledger
 
@@ -815,8 +815,8 @@ Original expression:
 QVERIFY(delegate)
 
 A059 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:327
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -824,8 +824,8 @@ Original expression:
 QCOMPARE(tickRenderedChecked(*delegate), rowChecked(row))
 
 A060 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:336
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
         }
@@ -841,8 +841,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A061 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:342
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -855,8 +855,8 @@ Original expression:
 QCOMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A062 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:345
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
@@ -866,8 +866,8 @@ Original expression:
 QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterMeta))
 
 A063 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:346
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -875,8 +875,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A064 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:348
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     panel = checks::eventviews::activeMenuPanel(widgets);
@@ -885,8 +885,8 @@ Original expression:
 QVERIFY(panel)
 
 A065 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:349
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -894,8 +894,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
 
 A066 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:370
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     ticksMirrorCheckedRole(); // rebuilt: only Meta renders unchecked
@@ -923,8 +923,8 @@ Original expression:
 QCOMPARE(panel->property("highlightedRow").toInt(), 0)
 
 A067 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:372
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     QTest::keyClick(&window, Qt::Key_Return);
@@ -933,8 +933,8 @@ Original expression:
 QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterNotes))
 
 A068 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:373
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -942,8 +942,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A069 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:378
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -955,8 +955,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A070 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:379
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -964,8 +964,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A071 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:380
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -973,8 +973,8 @@ Original expression:
 QCOMPARE(controller.filterMask(), maskBeforeCancel)
 
 A072 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:385
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -986,8 +986,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A073 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:386
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -995,8 +995,8 @@ Original expression:
 QVERIFY(!controller.isEditing())
 
 A074 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:388
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
@@ -1016,8 +1016,8 @@ Original expression:
 QVERIFY(!tablePoint.isNull())
 
 A076 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:393
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, tablePoint.toPoint());
@@ -1026,8 +1026,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A077 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:394
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1035,8 +1035,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A078 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:395
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1044,8 +1044,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), 0)
 
 A079 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:396
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1053,8 +1053,8 @@ Original expression:
 QVERIFY(!controller.isEditing())
 
 A080 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:397
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1114,8 +1114,8 @@ Original expression:
 QVERIFY(!cell.isNull())
 
 A085 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:421
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mousePress(&window, Qt::RightButton, Qt::NoModifier, cell.toPoint());
@@ -1126,8 +1126,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A086 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:422
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1135,8 +1135,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), row)
 
 A087 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:424
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ; // the pressed row owns the menu
     QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
@@ -1156,8 +1156,8 @@ Original expression:
 QVERIFY(!insertCenter.isNull())
 
 A089 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:429
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mouseMove(&window, insertCenter.toPoint());
@@ -1166,8 +1166,8 @@ Original expression:
 QTRY_COMPARE(panel->property("highlightedRow").toInt(), 0)
 
 A090 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:431
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, insertCenter.toPoint());
@@ -1176,8 +1176,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A091 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:432
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1185,8 +1185,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A092 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:433
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1194,8 +1194,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->rowCount(), rowsBefore + 1)
 
 A093 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:434
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1203,8 +1203,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1)
 
 A094 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:448
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1225,8 +1225,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A095 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:449
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1234,8 +1234,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A096 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:451
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     controller.selectRow(1, Qt::NoModifier);
@@ -1244,8 +1244,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A097 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:452
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1253,8 +1253,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A098 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:454
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1263,8 +1263,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A099 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:455
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1272,8 +1272,8 @@ Original expression:
 QVERIFY(checks::eventviews::selectChunk(controller, 1))
 
 A100 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:456
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1281,8 +1281,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A101 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:457
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1290,8 +1290,8 @@ Original expression:
 QVERIFY(checks::eventviews::selectChunk(controller, 0))
 
 A102 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:458
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1299,8 +1299,8 @@ Original expression:
 QTRY_COMPARE(controller.chunk(), 0)
 
 A103 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:461
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1310,8 +1310,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 0)
 
 A104 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:462
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1319,8 +1319,8 @@ Original expression:
 QVERIFY(openRowMenu())
 
 A105 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:465
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const int revisionBeforeInsert = opened.fixture->document().revision();
@@ -1330,8 +1330,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A106 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:466
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1339,8 +1339,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().revision(), revisionBeforeInsert + 1)
 
 A107 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:472
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -1353,8 +1353,8 @@ Original expression:
 QVERIFY(filterButton)
 
 A108 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:476
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const QPointF filterCenter = filterButton->mapToScene(
@@ -1365,8 +1365,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A109 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:478
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     controller.selectRow(2, Qt::NoModifier);
@@ -1375,8 +1375,8 @@ Original expression:
 QTRY_COMPARE(controller.currentRow(), 2)
 
 A110 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:479
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1384,8 +1384,8 @@ Original expression:
 QVERIFY(controller.menuOpen())
 
 A111 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:480
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1393,8 +1393,8 @@ Original expression:
 QVERIFY(checks::eventviews::activeMenuPanel(widgets))
 
 A112 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:482
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::keyClick(&window, Qt::Key_Escape);
@@ -1456,8 +1456,8 @@ Original expression:
 QVERIFY(!source.isNull())
 
 A117 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:506
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1467,8 +1467,8 @@ Original expression:
 QTRY_VERIFY(controller.menuOpen())
 
 A118 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:507
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1486,8 +1486,8 @@ Original expression:
 QVERIFY(retargeted.isValid())
 
 A120 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:511
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/chrome.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QQuickItem *const panel = checks::eventviews::activeMenuPanel(widgets);
@@ -1496,8 +1496,8 @@ Original expression:
 QVERIFY(panel)
 
 A121 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:513
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QObject *const menuOwner = panel->property("host").value<QObject *>();
@@ -1506,8 +1506,8 @@ Original expression:
 QVERIFY2(menuOwner, "the open menu panel did not expose its owning host")
 
 A122 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:516
-Disposition: NATIVE
-Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QQuickItem *const frame =
@@ -1539,8 +1539,8 @@ Original expression:
 QVERIFY(targetRow >= 0)
 
 A124 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:533
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1550,8 +1550,8 @@ Original expression:
 QTRY_COMPARE(retargeted.count(), 1)
 
 A125 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:535
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const QList<QVariant> arguments = retargeted.takeFirst();
@@ -1561,8 +1561,8 @@ QVERIFY2(arguments.constFirst().value<QObject *>() == menuOwner,
              "the dismissed right press reported a foreign owner")
 
 A126 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:537
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1570,8 +1570,8 @@ Original expression:
 QCOMPARE(arguments.at(1).toPointF(), QPointF(target.toPoint()))
 
 A127 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:538
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1579,8 +1579,8 @@ Original expression:
 QTRY_VERIFY(!controller.menuOpen())
 
 A128 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:539
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1588,8 +1588,8 @@ Original expression:
 QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A129 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:540
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1597,8 +1597,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), sourceRow)
 
 A130 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:544
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1609,8 +1609,8 @@ Original expression:
 QVERIFY(!controller.menuOpen())
 
 A131 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:545
-Disposition: NATIVE
-Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1618,8 +1618,8 @@ Original expression:
 QVERIFY(!checks::eventviews::activeMenuPanel(widgets))
 
 A132 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:546
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1627,8 +1627,8 @@ Original expression:
 QCOMPARE(controller.currentRow(), sourceRow)
 
 A133 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:547
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 

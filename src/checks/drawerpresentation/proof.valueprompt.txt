@@ -26,8 +26,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   // Inline Quick value prompt coverage for the automation drawer (drawer plan
   // Cleanup phase 4): the Tempo and CC prompt families behind NodeLane publish
@@ -150,8 +150,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qUtf8Printable(error))
 
 A002 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:120
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DrawerChrome &chrome = fixture.chrome();
@@ -161,8 +161,8 @@ Original expression:
   QVERIFY(canvas)
 
 A003 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       QQuickWindow *const window = fixture.quick->quickWindow();
@@ -171,8 +171,8 @@ Original expression:
   QVERIFY(window)
 
 A004 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:124
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *const input = automationInput(fixture);
@@ -223,8 +223,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex)
 
 A009 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -232,8 +232,8 @@ Original expression:
   QCOMPARE(chrome.valuePromptTitle(), QStringLiteral("Set tempo"))
 
 A010 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:136
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -241,8 +241,8 @@ Original expression:
   QCOMPARE(chrome.valuePromptLabel(), QStringLiteral("BPM:"))
 
 A011 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:137
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -250,8 +250,8 @@ Original expression:
   QCOMPARE(chrome.valuePromptMinimum(), CoreTimeDefaults::kMinTempoBpm)
 
 A012 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -268,8 +268,8 @@ Original expression:
   QCOMPARE(chrome.valuePromptInitialValue(), 140)
 
 A014 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:144
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -281,8 +281,8 @@ Original expression:
   QVERIFY2(prompt, "the tempo prompt did not take active focus")
 
 A015 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:145
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -328,8 +328,8 @@ Original expression:
   QCOMPARE(tempoBpmAt(document, kNodeTick), 90)
 
 A020 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:152
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -431,8 +431,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 3)
 
 A031 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:173
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -446,8 +446,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qUtf8Printable(error))
 
 A032 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:176
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DrawerChrome &chrome = fixture.chrome();
@@ -457,8 +457,8 @@ Original expression:
   QVERIFY(canvas)
 
 A033 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:178
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       QQuickWindow *const window = fixture.quick->quickWindow();
@@ -467,8 +467,8 @@ Original expression:
   QVERIFY(window)
 
 A034 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:182
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -523,8 +523,8 @@ Original expression:
   QCOMPARE(document.revision(), revision)
 
 A039 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:195
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -532,8 +532,8 @@ Original expression:
   QCOMPARE(chrome.valuePromptMinimum(), -64)
 
 A040 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:196
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -708,8 +708,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 3)
 
 A058 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -723,8 +723,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qUtf8Printable(error))
 
 A059 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:237
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DrawerChrome &chrome = fixture.chrome();
@@ -734,8 +734,8 @@ Original expression:
   QVERIFY(window)
 
 A060 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       auto *const input = automationInput(fixture);
@@ -744,8 +744,8 @@ Original expression:
   QVERIFY(input)
 
 A061 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:245
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -758,8 +758,8 @@ Original expression:
   QVERIFY(canvas)
 
 A062 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -799,8 +799,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 A066 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:256
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QQuickItem *const prompt = automation_valueprompt::focusedTextInput(*window);
@@ -809,8 +809,8 @@ Original expression:
   QVERIFY2(prompt, "the insertion prompt did not take active focus")
 
 A067 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:259
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -829,8 +829,8 @@ Original expression:
   QCOMPARE(snapshot(document), before)
 
 A069 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -838,8 +838,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(*window, *input))
 
 A070 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:268
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -853,8 +853,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qUtf8Printable(error))
 
 A071 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:271
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DrawerChrome &chrome = fixture.chrome();
@@ -864,8 +864,8 @@ Original expression:
   QVERIFY(window)
 
 A072 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:273
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       auto *const input = automationInput(fixture);
@@ -900,8 +900,8 @@ Original expression:
   QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
 
 A075 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:286
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       auto *const roll = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
@@ -1079,8 +1079,8 @@ Original expression:
   QCOMPARE(snapshot(document), afterLaneGrew)
 
 A093 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:325
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -1094,8 +1094,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qUtf8Printable(error))
 
 A094 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:328
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DrawerChrome &chrome = fixture.chrome();
@@ -1105,8 +1105,8 @@ Original expression:
   QVERIFY(window)
 
 A095 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:330
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       auto *const input = automationInput(fixture);
@@ -1160,8 +1160,8 @@ Original expression:
   QCOMPARE(snapshot(document), before)
 
 A100 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:344
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1169,8 +1169,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(*window, *input))
 
 A101 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:349
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/valueprompt.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 

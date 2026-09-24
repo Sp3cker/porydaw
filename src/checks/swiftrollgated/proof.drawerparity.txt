@@ -6,7 +6,7 @@ Original SHA-256: 0699e32c19617c3dd1d0ef0033b3cbbbc0c194b84e29fe5bdaf14a35dda745
 Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
 Swift SHA-256: 4e8a64ed35f57faa8ff7578ec1e4c4e325f19f74bcb4b481f47dbd8e77ca32e2
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Swift SHA-256: bbe0aaffd68c126118a8d3e0a7c7cd55e6642fe29a3d9092ebef63cbdc823169
+Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

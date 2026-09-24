@@ -60,8 +60,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | ThemeLayoutTest::init | src/checks/themelayout/themelayoutcheck.cpp:44
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the shared QApplication instance
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must exist before the vanilla theme apply and the font/palette/stylesheet
 save. No QWidget/QApplication layer exists in the Swift shell, whose owners
 need no application object. Value behavior at the lane base is covered by the
@@ -115,8 +115,8 @@ Original expression:
   QVERIFY(m_application);
 
 A002 | ThemeLayoutFontTest::init | src/checks/themelayout/themelayoutcheck.cpp:68
-Disposition: NATIVE
-Mapping/reason: Native harness precondition for the fontcheck lane, same
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 obligation as A001: the shared QApplication instance must exist before the
 vanilla theme apply and the font/palette/stylesheet save. No
 QWidget/QApplication layer exists in the Swift shell; no Swift counterpart
@@ -151,8 +151,8 @@ Original expression:
   QVERIFY(m_application);
 
 A003 | ThemeLayoutDarkBaseTest::init | src/checks/themelayout/themelayoutcheck.cpp:90
-Disposition: NATIVE
-Mapping/reason: Native harness precondition for the darkbasecheck lane: the
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/themelayoutcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 shared QApplication instance must exist before the font/palette/stylesheet
 save (the poison palette is applied by the lane runner before init). No
 QWidget/QApplication layer exists in the Swift shell; no Swift counterpart

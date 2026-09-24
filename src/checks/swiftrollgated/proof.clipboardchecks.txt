@@ -4,15 +4,15 @@ Reference revision: 682095474e862b90227de941d9a0a5b29ad5926c
 Original: src/checks/swiftrollgated/clipboardchecks.cpp
 Original SHA-256: 92728ca83d8d3cc97380a5d887d682ecac2c7047077aed46cd5a6b0a3cc6ab57
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
+Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: 93db81e39293714fcfacff95dafdbaebfe857e7bb39bddff9fed0fb60be5f3fe
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
 Additional Swift SHA-256: 043f58b9ffa588ffc12a32f2ab6680d27d984be1fbf926d24bb68c4b54baf718
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
-Additional Swift SHA-256: e0c9cc3ad823ccc25682cdf0ce487992296d447cb4ef4ad87b0a6fcd10af1c18
+Additional Swift SHA-256: 46f3edd6dff05f10da2e18d038266b4918b07575120845212bb135a0afb9b89f
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -458,8 +458,8 @@ Original expression:
     QCOMPARE(initialMime->data(QLatin1String(kClipMimeType)), sentinelBytes);
 
 A017 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:308
-Disposition: NATIVE
-Mapping/reason: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -513,8 +513,8 @@ Original expression:
     QCOMPARE(duringMime->data(QLatin1String(kClipMimeType)), sentinelBytes);
 
 A023 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:324
-Disposition: NATIVE
-Mapping/reason: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -874,8 +874,8 @@ Original expression:
                                       Q_ARG(bool, true)));
 
 A060 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:442
-Disposition: NATIVE
-Mapping/reason: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Replacement surface exposure is MATCHED by S059. No QWidget layer exists in the Swift app.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Replacement surface exposure is MATCHED by S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1495,7 +1495,7 @@ S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:571
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
-S046 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1224
+S046 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1225
     report.expect(crossDecoded == DecodedPorydawClip(
         ticksPerBeat: 24, clip: crossExpected) &&
         crossTarget.notes(in: 0).map(noteShape) == ["0:70:24"] &&
@@ -1504,7 +1504,7 @@ S046 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1224
         cppID: "clipcheck/ClipCheckTest::crossViewNoteCopyPaste",
         message: "exact zero-span 24-TPQN payload retargets across documents without changing the source track")
 
-S047 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1250
+S047 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1251
     report.expect(sameDecoded == DecodedPorydawClip(
         ticksPerBeat: 24, clip: sameExpected) &&
         sameDocument.notes(in: 0).map(noteShape) == ["24:60:24", "48:60:24"] &&
@@ -1512,33 +1512,33 @@ S047 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1250
         cppID: "clipcheck/ClipCheckTest::sameViewNoteCopyPaste",
         message: "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note")
 
-S048 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1283
-    report.expect(forward == ["0:70:24", "24:60:48"] &&
-        result?.nextCursor == 72 && undone,
-        cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
-        message: "TPQN rescaling feeds production note paste and records one reversible edit")
+S048 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1292-1295
+  report.expect(forward == ["0:70:24:90", "24:60:48:100"] &&
+      result?.nextCursor == 72 && undone,
+      cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
+      message: "TPQN rescaling feeds production note paste and records one reversible edit")
 
-S049 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1374
+S049 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1402
     report.expect(clip == expected && expanded && result?.nextCursor == 96 && oneUndo,
         cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
         message: "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically")
 
-S050 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1426
+S050 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1463
     report.expect(merged && oneUndo,
         cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
         message: "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically")
 
-S051 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1444
+S051 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1483
     report.expect(emptyResult == nil && coreTimeBytes(emptyDocument) == emptyBefore &&
         emptyDocument.history.currentIdentity == emptyIdentity,
         cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
         message: "an empty lane merge returns no cursor and changes neither document nor history")
 
-S052 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1460
-    report.expect(forward == ["0:60:24", "96:60:24"] &&
-        first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,
-        cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
-        message: "time paste advances by span and each tile is one undo entry")
+S052 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1510-1513
+  report.expect(forward == ["0:60:24:100", "96:60:24:100"] &&
+      first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,
+      cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
+      message: "time paste advances by span and each tile is one undo entry")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
 

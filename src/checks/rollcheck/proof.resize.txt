@@ -430,8 +430,8 @@ Original expression:
 QVERIFY2(narrowRight - narrowLeft <= 3, "narrow-zoom fixture note is unexpectedly wide")
 
 A022 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:207
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
 Source context since previous assertion:
 ;
     const QRectF narrowBox =
@@ -448,8 +448,8 @@ Original expression:
 QVERIFY2(qAlpha(topPixel) != 0, "narrow note missing at minimum zoom")
 
 A023 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:208
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
 Source context since previous assertion:
 ;
 
@@ -457,8 +457,8 @@ Original expression:
 QVERIFY2(top != face, "narrow note shed its outline at minimum zoom")
 
 A024 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:211
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/resize.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation: the sample is a pixel of captureQuickFramebuffer() on the legacy Quick surface at its narrow zoom, so the outcome depends on that surface's rasterization. Retained native obligation. The live shell note-visuals lane samples the same small-note pixel family (S026), but not at this slot's four-pixels-per-beat zoom.
 Source context since previous assertion:
 ;
     const bool centerSwallowed = qAlpha(centerPixel) > 240 && qRed(centerPixel) < 16 &&

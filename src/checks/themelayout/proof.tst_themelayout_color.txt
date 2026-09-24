@@ -589,8 +589,8 @@ Original expression:
                                 theme.color(static_cast<themes::Role>(surface))) >= 3.0);
 
 A040 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:252
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_color.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the repair case writes into it. A presenter check cannot
 establish the native temporary directory.
 Source context since previous assertion:
@@ -661,8 +661,8 @@ Original expression:
   QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 80);
 
 A047 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:287
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_color.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the write/read round-trip.
 Source context since previous assertion:
   ;
@@ -732,17 +732,17 @@ Each predicate below executes under swiftcore suite 12 (themeColor slot) or
 the shell-theme QML entry. Preserve their surrounding setup and order in the
 paired source.
 
-S001 | themeColorMathChecks | src/checks/themecolor/ThemeColorChecks.swift:81
+S001 | themeColorMathChecks | src/checks/themecolor/ThemeColorChecks.swift:93
 Counterpart expression:
   report.expect(abs(actual.lightness - expected.l) < themeColorEpsilon, ...)
   over the same nine color rows, plus contrastRatio against the reference.
 
-S002 | themeModeAndContrastValidation | src/checks/themecolor/ThemeColorChecks.swift:122
+S002 | themeModeAndContrastValidation | src/checks/themecolor/ThemeColorChecks.swift:129
 Counterpart expression:
   report.expectEqual("vanilla", ShellAppearance.mode("custom"), ...)
   with contrast fallback/clamp rows (themecontroller.cpp:89-104 rules).
 
-S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
+S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:246
 Counterpart expression:
   report.expectEqual(row.window, palette.windowBackground, ...)
   per theme row for every applied GridPalette field (:246-281), plus the
@@ -764,12 +764,12 @@ Counterpart expression:
   report.expect(onLight || onDark, ..., message: piano-key surface floor)
   over all sixteen identity fills.
 
-S007 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:419
+S007 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:432
 Counterpart expression:
   report.expectEqual("#037384", reverted.selectionEdge, ...)
   with commit, preview and determinism rows.
 
-S008 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:119
+S008 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:126
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", data.mode)
   with canonical settings writeback per mode row (vanilla/50,
@@ -780,17 +780,17 @@ Counterpart expression:
   verify(strengthened contrast > baseline contrast, ...)
   with alpha-direction and pinned-value restoration rows.
 
-S010 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:193
+S010 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:209
 Counterpart expression:
   compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA", ...)
   with highlight and cross-theme switch rows.
 
-S011 | test_themeRepair | src/checks/editorqml/tst_Theme.qml:142
+S011 | test_themeRepair | src/checks/editorqml/tst_Theme.qml:149
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", "vanilla")
   repairing empty mode and unparseable contrast to vanilla/50.
 
-S012 | test_bThemeRepairThroughProductionShell | src/checks/editorqml/tst_ShellWindow.qml:183
+S012 | test_bThemeRepairThroughProductionShell | src/checks/editorqml/tst_ShellWindow.qml:225
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", "vanilla")
   repairing custom/#000000/#FFFFFF/80 (see proof.shellwindow.txt:50-56).

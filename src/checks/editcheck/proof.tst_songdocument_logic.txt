@@ -5,7 +5,7 @@ Reference revision: f2b0b0451b911e7f7faef860f26f04f63f460ffe
 Original: src/checks/editcheck/tst_songdocument_logic.cpp
 Original SHA-256: f7b940c2e589c8fc69d2a17ab0ab4db3e424db7d8d3bfbdff8c99995d2fe7c39
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: e7ada9cf04da28f75315d5f02c474d2e018e5d34ebcf36dfc8d2dc116147bf18
+Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 Swift counterpart: src/checks/editcheck/NoteIdentityChecks.swift
 Swift SHA-256: 52513cd651c0e220145da4c8c78667e3429d86c90416f205d0a83d4176a5c696
 Covered native implementation: src/core/noteid.h, src/core/miditimeline.cpp :: note ID assignment, adoption reminting, timeline transport.
@@ -445,44 +445,44 @@ Original expression:
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in adoptionAndPairing and noteIdentityContracts; identity cppID constants are declared at NoteIdentityChecks.swift:3-6.
 
-S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:41
+S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
   report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:44
+S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:48
   report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "first following matching ends pair exactly")
 
-S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:47
+S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
   report.expect(notes[2].isUnterminated,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "unterminated note is preserved")
 
-S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:50
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:54
   report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
                     cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
                     message: "adoption remints unique document identities")
 
-S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:53
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:57
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                     cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                     message: "typed tempo is removed from raw chunks")
 
-S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:56
+S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
   report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
                          document.state.tempo,
                          cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                          what: "valid conductor tempo becomes typed state")
 
-S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:62
+S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:66
   report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
           .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
           cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
           message: "serialized MIDI carries no note identity")
 
-S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:66
+S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:70
   report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")

@@ -4,7 +4,7 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/gesturecommands.cpp
 Original SHA-256: ed999f71cc95f95de23e9a70c0cad201260977fb484e9fc2c6ee6f09395e6e8d
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -25,8 +25,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:42
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   // Roll and automation gesture scenarios for the selection-keyboard-routing
   // Qt Test: a roll note drag and an automation middle-button pan are both
@@ -74,8 +74,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A002 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:46
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       if (!stageWorld("roll-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
@@ -86,8 +86,8 @@ Original expression:
   QVERIFY2(mRollInput && !mRollInput->bounds().isEmpty(), "roll Quick input is unavailable")
 
 A003 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:47
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -127,8 +127,8 @@ Original expression:
           "the roll view model never exposed the fixture note for the gesture")
 
 A005 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:83
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -148,8 +148,8 @@ Original expression:
                "production roll geometry did not expose the fixture note for the drag")
 
 A006 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:92
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QPoint rollPress = windowPoint(*mRollInput, rollPoint);
@@ -164,8 +164,8 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "roll note drag did not become a live gesture")
 
 A007 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
@@ -179,8 +179,8 @@ Original expression:
                "roll gesture did not block Delete and restore selection on Escape")
 
 A008 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -193,8 +193,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A009 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:111
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       if (!stageWorld("automation-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
@@ -209,8 +209,8 @@ Original expression:
                "automation Quick input is unavailable")
 
 A010 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QString diagnostics;
@@ -221,8 +221,8 @@ Original expression:
   QVERIFY2(probe.has_value(), qPrintable(diagnostics))
 
 A011 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -230,8 +230,8 @@ Original expression:
   QVERIFY2(probe->activateParameter(&diagnostics), qPrintable(diagnostics))
 
 A012 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:119
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -240,8 +240,8 @@ Original expression:
                "automation pan surface did not own live Quick and native focus")
 
 A013 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:132
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/gesturecommands.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -260,8 +260,8 @@ Original expression:
   QTRY_VERIFY2(laneRow().has_value(), "automation fixture lane was not presented")
 
 A014 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:137
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QRect body = automation->canvas()->laneBody(*laneRow());
@@ -274,8 +274,8 @@ Original expression:
                "production automation geometry did not expose the gesture point")
 
 A015 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view().selectionModel().setTimeSelection(automationSelection());
@@ -290,8 +290,8 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "automation pan did not become a live gesture")
 
 A016 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:150
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());

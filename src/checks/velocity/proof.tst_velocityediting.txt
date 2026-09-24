@@ -6,7 +6,7 @@ Original SHA-256: 3e4a4992d28bc5e1443b055ea741e59fff79643504e57a2f0889ea60c84bc0
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
 Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
-Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
+Additional Swift SHA-256: 683e47a7dc048626180d7d0c8a0643753020c6759ab2d24ef21389351fa2e0cc
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
 Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 
@@ -18,7 +18,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original

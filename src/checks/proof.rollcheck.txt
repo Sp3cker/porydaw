@@ -33,8 +33,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::init | src/checks/rollcheck.cpp:27
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/fwd.hpp"
   #include "checks/rollcheck/tst_pianoroll.h"
@@ -66,8 +66,8 @@ Original expression:
   QVERIFY2(m_project, qPrintable(error));
 
 A002 | PianoRollTest::init | src/checks/rollcheck.cpp:31
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       const std::unique_ptr<checks::LoadedSong> loaded =
           checks::LoadedSong::load(m_project->root(), m_songLabel, error);
@@ -75,16 +75,16 @@ Original expression:
   QVERIFY2(loaded, qPrintable(error));
 
 A003 | PianoRollTest::init | src/checks/rollcheck.cpp:34
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       const std::optional<SongName> name = SongName::create(m_songLabel);
 Original expression:
   QVERIFY(name.has_value());
 
 A004 | PianoRollTest::init | src/checks/rollcheck.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck.cpp) no longer builds or runs. Previous native note: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
 Source context since previous assertion:
       m_bank = std::make_unique<LoadedVoiceGroup>();
       m_bank->voices[0].type = VOICE_DIRECTSOUND;
@@ -100,8 +100,8 @@ Original expression:
   QVERIFY2(m_tab->presentationError().isEmpty(), qPrintable(m_tab->presentationError()));
 
 A005 | PianoRollTest::init | src/checks/rollcheck.cpp:49
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       const std::optional<VoicegroupId> bankId =
           VoicegroupId::create(QStringLiteral("sound/voicegroups/rollcheck.inc"), QString());
@@ -109,8 +109,8 @@ Original expression:
   QVERIFY(bankId.has_value());
 
 A006 | PianoRollTest::init | src/checks/rollcheck.cpp:53
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck.cpp) no longer builds or runs. Previous native note: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
 Source context since previous assertion:
       m_tab->applyBankView(
           LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString(), false, {}});
@@ -119,8 +119,8 @@ Original expression:
   QTRY_VERIFY(m_tab->isReady());
 
 A007 | PianoRollTest::init | src/checks/rollcheck.cpp:57
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       checks::support::bindEditActionsForTest(m_tab->view());
       m_fixture = std::make_unique<checks::rollcheck::PianoRollFixture>(*m_tab, m_songLabel);

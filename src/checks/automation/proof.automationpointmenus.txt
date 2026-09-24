@@ -14,7 +14,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -488,14 +488,14 @@ Original expression:
                    "the miss dismissal did not restore the automation band focus")
 
 A069 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:331
-Disposition: NATIVE
-Mapping/reason: Native pointer delivery and the shared time-selection menu only; no Swift predicate in this family covers the plot-miss fallback menu.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY2(fallback.session, qUtf8Printable(fallback.diagnostic))
 
 A070 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:332
-Disposition: NATIVE
-Mapping/reason: The time-selection fallback rows belong to the shared native popup model; no Swift predicate in this family covers them.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The time-selection fallback rows belong to the shared native popup model; no Swift predicate in this family covers them.
 Original expression:
   QVERIFY2(fallback.model->rowForId(int(songview::TimeSelectionAction::Clear)) >= 0,
                "the fallback menu offered no time-selection rows")
@@ -520,8 +520,8 @@ Original expression:
                "a selection change did not dismiss the owned point menu")
 
 A074 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:353
-Disposition: NATIVE
-Mapping/reason: The shared popup session ownership and its replacement popup are retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session ownership and its replacement popup are retired native popup rendering.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "point-menu invalidation left a replacement popup open")
@@ -661,8 +661,8 @@ Original expression:
           {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}))
 
 A096 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:426
-Disposition: NATIVE
-Mapping/reason: The rendered lane body is native rendering; the Swift predicate asserts the parameter stays in the catalogue ([S076]) but not its plot.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering; the Swift predicate asserts the parameter stays in the catalogue ([S076]) but not its plot.
 Original expression:
   QTRY_VERIFY(!laneBody(volume).isEmpty())
 
@@ -712,14 +712,14 @@ Original expression:
                "the synthetic default's Set Value row rendered disabled")
 
 A104 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:456
-Disposition: NATIVE
-Mapping/reason: The rendered menu panel is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered menu panel is native popup rendering.
 Original expression:
   QVERIFY2(menuPanel, "the synthetic default's point menu lost its rendered panel")
 
 A105 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:458
-Disposition: NATIVE
-Mapping/reason: The accessibility interface of the rendered delegate is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The accessibility interface of the rendered delegate is native rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&menuPanel, &menu, &deleteAccessible] {
                    QQuickItem *const rowItem =
@@ -885,8 +885,8 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A131 | AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget | src/checks/automation/automationpointmenus.cpp:530
-Disposition: NATIVE
-Mapping/reason: The rendered Delete row centre the original presses is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered Delete row centre the original presses is native rendering.
 Original expression:
   QVERIFY2(!deleteCenter.isNull(), "the Delete row never rendered")
 
@@ -970,38 +970,38 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A145 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:583
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(root)
 
 A146 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:586
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(rulerInput)
 
 A147 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:588
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(ruler)
 
 A148 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:591
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A149 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:596
-Disposition: NATIVE
-Mapping/reason: The shared popup session pointer is retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session pointer is retired native popup rendering.
 Original expression:
   QVERIFY(live)
 
 A150 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:597
-Disposition: NATIVE
-Mapping/reason: The foreign ruler menu publication over the pending point menu is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu publication over the pending point menu is native popup rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -1010,27 +1010,27 @@ Original expression:
                "the foreign ruler menu did not publish over the pending point menu")
 
 A151 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:608
-Disposition: NATIVE
-Mapping/reason: The foreign division menu rows belong to the shared native popup model.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign division menu rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator")
 
 A152 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:609
-Disposition: NATIVE
-Mapping/reason: The rendered foreign row click is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the foreign division row did not receive a real click")
 
 A153 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:612
-Disposition: NATIVE
-Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open")
 
 A154 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:613
-Disposition: NATIVE
-Mapping/reason: The foreign division pick grid selection has no Swift predicate in this family; the ruler division route is native.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign division pick grid selection has no Swift predicate in this family; the ruler division route is native.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
@@ -1097,8 +1097,8 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A165 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:650
-Disposition: NATIVE
-Mapping/reason: The node menu model of the rendered panel is native popup rendering.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(nodeModel)
 
@@ -1109,70 +1109,70 @@ Original expression:
   QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu")
 
 A167 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:656
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(root)
 
 A168 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:659
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(rulerInput)
 
 A169 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:661
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(ruler)
 
 A170 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:664
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A171 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:676
-Disposition: NATIVE
-Mapping/reason: The re-entrant foreign publication is the native popup reset seam; the Swift presenter has no shared popup session to publish over.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The re-entrant foreign publication is the native popup reset seam; the Swift presenter has no shared popup session to publish over.
 Original expression:
   QVERIFY(foreignPublication)
 
 A172 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:690
-Disposition: NATIVE
-Mapping/reason: The surviving foreign menu open state is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign menu open state is native popup rendering.
 Original expression:
   QVERIFY2(live && live->isOpen(),
                "the callback-published division menu did not survive the open")
 
 A173 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:693
-Disposition: NATIVE
-Mapping/reason: The surviving rendered panel is native rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving rendered panel is native rendering.
 Original expression:
   QVERIFY2(survivor, "the surviving division menu lost its rendered panel")
 
 A174 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:699
-Disposition: NATIVE
-Mapping/reason: The surviving foreign division rows belong to the shared native popup model.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign division rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A175 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:700
-Disposition: NATIVE
-Mapping/reason: The rendered foreign row click is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A176 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:703
-Disposition: NATIVE
-Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A177 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:704
-Disposition: NATIVE
-Mapping/reason: The foreign pick grid selection has no Swift predicate in this family.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign pick grid selection has no Swift predicate in this family.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
@@ -1245,38 +1245,38 @@ Original expression:
   QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick")
 
 A189 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:744
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(root)
 
 A190 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:747
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(rulerInput)
 
 A191 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:749
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationpointmenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(ruler)
 
 A192 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:752
-Disposition: NATIVE
-Mapping/reason: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
 Original expression:
   QVERIFY(division)
 
 A193 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:756
-Disposition: NATIVE
-Mapping/reason: The shared popup session pointer is retired native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session pointer is retired native popup rendering.
 Original expression:
   QVERIFY(live)
 
 A194 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:757
-Disposition: NATIVE
-Mapping/reason: The foreign ruler menu publication over the pending prompt is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu publication over the pending prompt is native popup rendering.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -1309,8 +1309,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A199 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:774
-Disposition: NATIVE
-Mapping/reason: The foreign ruler menu survival across the switch is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu survival across the switch is native popup rendering.
 Original expression:
   QVERIFY2(live->isOpen(), "the parameter switch cancelled the foreign ruler menu")
 
@@ -1321,27 +1321,27 @@ Original expression:
   QVERIFY(frozenDocumentState() == before)
 
 A201 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:784
-Disposition: NATIVE
-Mapping/reason: The surviving foreign division rows belong to the shared native popup model.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign division rows belong to the shared native popup model.
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A202 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:785
-Disposition: NATIVE
-Mapping/reason: The rendered foreign row click is native pointer delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A203 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:788
-Disposition: NATIVE
-Mapping/reason: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A204 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:789
-Disposition: NATIVE
-Mapping/reason: The foreign pick grid selection has no Swift predicate in this family.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign pick grid selection has no Swift predicate in this family.
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))

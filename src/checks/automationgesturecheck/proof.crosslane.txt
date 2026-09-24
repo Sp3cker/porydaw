@@ -5,13 +5,13 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/crosslane.cpp
 Original SHA-256: d64dd8505c67f3f32f8c513e8f18ecf7ed6a2d3aef4db374b71e0ab98bc1da03
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: d651f10e23d47da379a39447f659f276580244134775262b3b6810a706be3d4d
+Swift SHA-256: 37ac484181e8abead7bf7b5ce96b36c6e2b66160ce6131224b2c465a5d661339
 Additional Swift counterpart: src/checks/automation/domain/xcmdRanges.swift
 Additional Swift SHA-256: 1c3a629660321519a711cc8d1d1ecad1dce918541ca5bedd5a6ecdb53941f7b9
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
-Additional Swift SHA-256: 5c57b1ca8d62ccec7ffef66c3d5d95f863495eba10021966910e99c772230615
+Additional Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
+Additional Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -222,8 +222,8 @@ Original expression:
           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A002 | requirePanLfo | src/checks/automationgesturecheck/crosslane.cpp:156
-Disposition: NATIVE
-Mapping/reason: Fixture guard: requires native pan or LFO lane bodies on the retired canvas stack.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/crosslane.cpp) no longer builds or runs. Previous native note: Fixture guard: requires native pan or LFO lane bodies on the retired canvas stack.
 Source context since previous assertion:
   }
 
@@ -235,8 +235,8 @@ Original expression:
       ctx.check.require(false, QStringLiteral("pan or LFO lane body is missing"));
 
 A003 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:177
-Disposition: NATIVE
-Mapping/reason: Fixture guard: requires native Tempo, pan, and LFO lane bodies on the retired canvas stack.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automationgesturecheck/crosslane.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       return false;
   }
@@ -1028,12 +1028,12 @@ Counterpart expression:
       report.expectEqual(["0:120"], lanes.tempoValues, cppID: drawerAutomationContractParityID,
                          what: "a CC range edit preserves Tempo")
 
-S023 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:952
+S023 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:951
 Counterpart expression:
       report.expectEqual(["24:60"], lanes.values(lanes.panLane), cppID: drawerAutomationContractParityID,
                          what: "one undo restores the mixed delete's lanes")
 
-S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:954
+S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:953
 Counterpart expression:
       report.expectEqual(["48:10"], lanes.values(lanes.modulationLane), cppID: drawerAutomationContractParityID,
                          what: "one undo restores the covered modulation lane")

@@ -153,23 +153,23 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are representative Swift predicates executed through this exact relay by the swiftcore lane. Their presence alone does not close the NATIVE relay obligation. Preserve their surrounding setup and order in the paired source.
 
-S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:491
+S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:531
 Counterpart expression:
           report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
                              what: "independent canonical byte vector")
 
-S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:568
+S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:794
 Counterpart expression:
       report.expectEqual("B-2", midiKeyName(-1), cppID: m4aSemanticsID,
                          what: "row=key-negative floor modulo")
 
-S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift:35
+S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift:45
 Counterpart expression:
       report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S004 | runMidiImportSuite | src/checks/editcheck/EventChecks.swift:54
+S004 | runMidiImportSuite | src/checks/editcheck/EventChecks.swift:76
 Counterpart expression:
       report.expectEqual(2, added,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",

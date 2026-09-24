@@ -4,7 +4,7 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/keyboard.cpp
 Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
 Swift counterpart: src/checks/rollcheck/keyboard.swift
-Swift SHA-256: 6db4784f8cd68510a8e4791ad0d6f772db480fde64718efdd0d174baab9220cd
+Swift SHA-256: 9614afe485ce2e87806d725f20cee0397388fc3f9c9ab73c65e56db15f88f3ab
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
@@ -464,8 +464,8 @@ Original expression:
                "time-scoped ghost note is outside the horizontal viewport");
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
-Disposition: NATIVE
-Mapping/reason: NATIVE — framebuffer pixel observation: isSelectionRingColor at device pixels. Swift predicates assert model state (tick/pitch/duration), never rendered pixels.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — framebuffer pixel observation: isSelectionRingColor at device pixels. Swift predicates assert model state (tick/pitch/duration), never rendered pixels.
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
       const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
@@ -498,8 +498,8 @@ Original expression:
                "time-scoped secondary header did not publish its selection role");
 
 A032 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:270
-Disposition: NATIVE
-Mapping/reason: NATIVE — header-band framebuffer capture: Swift asserts model state, never captured band pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/keyboard.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       const QImage selectedHeaderFrame = headercheck::captureBand(check, view);
 Original expression:
@@ -507,8 +507,8 @@ Original expression:
                "could not capture the time-scoped secondary header");
 
 A033 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:275
-Disposition: NATIVE
-Mapping/reason: NATIVE — header-band framebuffer recapture: Swift asserts model state, never captured band pixels.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — header-band framebuffer recapture: Swift asserts model state, never captured band pixels.
 Source context since previous assertion:
       if (plainHeaderFrame == selectedHeaderFrame) {
           QCoreApplication::processEvents();
@@ -518,8 +518,8 @@ Original expression:
                    "could not recapture the time-scoped secondary header");
 
 A034 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:277
-Disposition: NATIVE
-Mapping/reason: NATIVE — header repaint pixel comparison: Swift has no repaint observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — header repaint pixel comparison: Swift has no repaint observation.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -557,8 +557,8 @@ Original expression:
                "right-dragging the timeline ruler still created a time selection");
 
 A037 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:302
-Disposition: NATIVE
-Mapping/reason: NATIVE — native ruler-menu popup session open via host window events: Swift invokes command handlers directly and never opens a native menu.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — native ruler-menu popup session open via host window events: Swift invokes command handlers directly and never opens a native menu.
 Source context since previous assertion:
       checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
                                 Qt::NoButton, Qt::NoModifier);
@@ -571,8 +571,8 @@ Original expression:
                "releasing the right-drag did not open the shared ruler menu");
 
 A038 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:307
-Disposition: NATIVE
-Mapping/reason: NATIVE — host Escape key delivery (QTest::keyClick) dismissing the native ruler menu: Swift has no native window or host key path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host Escape key delivery (QTest::keyClick) dismissing the native ruler menu: Swift has no native window or host key path.
 Source context since previous assertion:
       QTest::keyClick(live->window(), Qt::Key_Escape);
       QCoreApplication::processEvents();
@@ -631,8 +631,8 @@ Original expression:
   QVERIFY2(trackEvent, "timeline fixture has no track-colored other-events marker");
 
 A043 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:351
-Disposition: NATIVE
-Mapping/reason: NATIVE — strip framebuffer pixel invariance: Swift asserts model state, never band pixels.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — strip framebuffer pixel invariance: Swift asserts model state, never band pixels.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -656,8 +656,8 @@ Original expression:
                "moving a time selection changed the other-events strip pixels");
 
 A044 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:371
-Disposition: NATIVE
-Mapping/reason: NATIVE — strip framebuffer marker positioning at device pixels: Swift has no rendered-strip observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — strip framebuffer marker positioning at device pixels: Swift has no rendered-strip observation.
 Source context since previous assertion:
       const qreal stripDpr = afterStripImage.devicePixelRatioF();
       const qreal plotOffset = otherEvents->plotRect.left() - otherEvents->rect.left();
@@ -681,8 +681,8 @@ Original expression:
                "track-colored other-events marker was not positioned in the plot");
 
 A045 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:373
-Disposition: NATIVE
-Mapping/reason: NATIVE — rendered diamond pixel search in the strip framebuffer: Swift has no rendered-strip observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — rendered diamond pixel search in the strip framebuffer: Swift has no rendered-strip observation.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -713,8 +713,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A048 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:404
-Disposition: NATIVE
-Mapping/reason: NATIVE — full-framebuffer repaint comparison: Swift asserts document and history state, never framebuffer pixels.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — full-framebuffer repaint comparison: Swift asserts document and history state, never framebuffer pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -788,8 +788,8 @@ Original expression:
                "time shortcut seed did not reach the expected post-transpose state");
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
-Disposition: NATIVE
-Mapping/reason: NATIVE — framebuffer selection-ring pixel observation on a time-selected note: Swift asserts model state, never rendered pixels.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — framebuffer selection-ring pixel observation on a time-selected note: Swift asserts model state, never rendered pixels.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
       band.startTick = d.tick + snapCell;
@@ -853,8 +853,8 @@ Original expression:
                "left-clicking empty space inside the time selection did not clear it");
 
 A057 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:474
-Disposition: NATIVE
-Mapping/reason: NATIVE — host key delivery: sendKeyStroke Up with an active time selection transposing the covered note. Swift drives grid.performCommand on the note selection directly and models no time-covered key routing; only the native host path establishes this site.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Up with an active time selection transposing the covered note. Swift drives grid.performCommand on the note selection directly and models no time-covered key routing; only the native host path establishes this site.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection(band);
       sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
@@ -863,8 +863,8 @@ Original expression:
                "time-selection Up did not transpose the covered note");
 
 A058 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:477
-Disposition: NATIVE
-Mapping/reason: NATIVE — host key delivery: sendKeyStroke Right with an active time selection nudging the covered note. Swift models no time-covered key routing; only the native host path establishes this site.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Right with an active time selection nudging the covered note. Swift models no time-covered key routing; only the native host path establishes this site.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
 Original expression:
@@ -928,8 +928,8 @@ Original expression:
                "duplicate-time seed did not reach the expected post-transpose state");
 
 A064 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:522
-Disposition: NATIVE
-Mapping/reason: NATIVE — host key delivery: sendKeyStroke Ctrl+D duplicating a time range and advancing the time selection plus edit cursor. Swift models no time-range duplication, time selection, or edit cursor; only the native host path establishes this site.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Ctrl+D duplicating a time range and advancing the time selection plus edit cursor. Swift models no time-range duplication, time selection, or edit cursor; only the native host path establishes this site.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -967,8 +967,8 @@ Original expression:
                "first duplicated range was not made visible");
 
 A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
-Disposition: NATIVE
-Mapping/reason: NATIVE — host key delivery: repeated sendKeyStroke Ctrl+D duplicating the newest copy. Swift models no time-range duplication; only the native host path establishes this site.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: repeated sendKeyStroke Ctrl+D duplicating the newest copy. Swift models no time-range duplication; only the native host path establishes this site.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
       const Tick secondStart = firstEnd;
@@ -1741,93 +1741,93 @@ report.expect(
     session.document.revision == revisionBeforePress && session.document.note(a) != nil,
     cppID: id, message: "releasing a zero-delta press commits nothing")
 
-S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:86
+S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:87
 Counterpart expression:
 report.expect(document.note(noteID).map {
     $0.track == track && $0.tick == tick && Int($0.pitch) == pitch
         && $0.duration == duration
 } == true, cppID: id, message: "the seeded keyboard note is present")
 
-S044 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:108
+S044 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:109
 Counterpart expression:
 report.expect(session.document.note(seed.id).map {
     $0.tick == seed.tick && Int($0.pitch) == seed.pitch + 1
 } == true, cppID: id, message: "Up transposes the selected note one semitone")
 
-S045 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:112
+S045 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:113
 Counterpart expression:
 report.expect(session.document.note(seed.id).map {
     $0.tick == seed.tick && Int($0.pitch) == seed.pitch - 11
 } == true, cppID: id, message: "Shift+Down transposes down an octave")
 
-S046 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:116
+S046 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:117
 Counterpart expression:
 report.expect(session.document.note(seed.id).map {
     $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
 } == true, cppID: id, message: "Right nudges one snap cell without changing pitch")
 
-S047 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:122
+S047 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:123
 Counterpart expression:
 report.expect(session.document.note(seed.id).map {
     $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
 } == true, cppID: id, message: "Left snaps the off-grid note back to the lattice")
 
-S048 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:53
+S048 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:54
 Counterpart expression:
 report.expect(document.state == before && document.history.currentIdentity == identity
     && session.camera.snapshot == originalCamera,
     cppID: id, message: "undo restores the original song, camera, and history position")
 
-S049 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:148
+S049 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:149
 Counterpart expression:
 report.expect(seed.duration != laterDuration
     && session.document.note(second)?.duration == laterDuration,
     cppID: id, message: "the batch fixture has two different durations")
 
-S050 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:162
+S050 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:163
 Counterpart expression:
 report.expect(session.document.note(seed.id)?.duration == seed.duration + 2 * seed.snap
     && session.document.note(second)?.duration == laterDuration + 2 * seed.snap,
     cppID: id, message: "two Shift+Right presses extend both notes by two snap cells")
 
-S051 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:167
+S051 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:168
 Counterpart expression:
 report.expect(session.document.state == baseline
     && session.document.history.currentIdentity == resizeIdentity,
     cppID: id, message: "one undo restores both different durations")
 
-S052 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:181
+S052 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:182
 Counterpart expression:
 report.expect(shrink > 0 && nextA.duration == a.duration - shrink
     && nextB.duration == b.duration - shrink,
     cppID: id, message: "Shift+Left shortens both notes by the same step")
 
-S053 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:185
+S053 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:186
 Counterpart expression:
 report.expect(min(session.document.note(seed.id)?.duration ?? 0,
                   session.document.note(second)?.duration ?? 0) == 1,
               cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
 
-S054 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:192
+S054 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:193
 Counterpart expression:
 report.expect(session.document.state == atFloor
     && session.document.history.currentIdentity == floorIdentity
     && session.document.revision == floorRevision,
     cppID: id, message: "an extra Shift+Left at the floor is a document and history no-op")
 
-S055 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:196
+S055 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:197
 Counterpart expression:
 report.expect(session.document.history.undoDocument()
     && session.document.state == baseline, cppID: id,
     message: "the shrink sequence merges and one undo restores the fixture")
 
-S056 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:209
+S056 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:210
 Counterpart expression:
 report.expect(session.document.note(seed.id).map {
     $0.tick == start && Int($0.pitch) == seed.pitch - 10
 } == true, cppID: id, message: "track insertion seed reaches its shortcut position")
 
-S057 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:234
+S057 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:235
 Counterpart expression:
 report.expect(session.document.insertBlankTime(range, scope: TimeScope(tracks: [seed.track]))
     && session.document.notes(in: seed.track).contains(where: {
@@ -1839,14 +1839,14 @@ report.expect(session.document.insertBlankTime(range, scope: TimeScope(tracks: [
     } == true, cppID: id,
     message: "track-scoped blank insertion shifts only the selected track")
 
-S058 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:243
+S058 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:244
 Counterpart expression:
 report.expect(session.document.history.undoDocument()
     && session.document.state == baseline
     && session.document.history.currentIdentity == history,
     cppID: id, message: "undo restores the track-scoped insertion")
 
-S059 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:271
+S059 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:272
 Counterpart expression:
 report.expect(session.document.insertBlankTime(range, scope: scope)
     && session.document.lanePoints(track: seed.track, lane: lane).contains(where: {
@@ -1858,7 +1858,7 @@ report.expect(session.document.insertBlankTime(range, scope: scope)
     } == true, cppID: id,
     message: "lane-scoped blank insertion shifts CC7 without moving the note")
 
-S060 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:280
+S060 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:281
 Counterpart expression:
 report.expect(session.document.history.undoDocument()
     && session.document.state == baseline

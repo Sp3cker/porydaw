@@ -4,13 +4,13 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_lifetime.cpp
 Original SHA-256: 47d589471dbc0075cb36225ef0f79df0eb818a96a61bfc963a79ab67f4e8d8d6
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: aef988778b56b851301cff37fb9ad9781de638aa4cba36e5f24511baf13103e8
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-Tally: MATCHED 29, PARTIAL 1, GAP 3, NATIVE 22.
+Tally: MATCHED 29, PARTIAL 1, GAP 21, NATIVE 0, RETIRED-REPRESENTATION 4.
 The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired counterparts, listed after the inventory. The pan-lane row lookup, the tick-5760 insertion-prompt open, the document-switch close, and the late-acceptance no-op sites are MATCHED by S009 and S014 through S017. The frozen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml :: test_dCopyFromOneSongTabPastesIntoAnother, S018-S021, with the real tab-retarget rows of test_eTimeAndTracksMenuContainment and test_cWindowShortcutsAndNumericOwnership, S022-S023) drives a real key-delivered Paste across the same two-song fixture (mus_route101 first, mus_littleroot_test second), so the tab-selection round trip A018 and the cross-tab document isolation A024 are MATCHED by executed predicates. The two-document pair inserts, the parameter-row retention, the nudge/transpose isolation pairs, the hidden-drawer routing, the second engine track, the track-1 pair, the primary-track clear and retarget, the track-1 prompt transaction, the track-0 lane equality, and the fresh-page volume default are MATCHED by the lifetime rows S025 through S050, with native key delivery, band focus, and tab lifecycle noted as ingress differences where the production document and layout APIs stand in. A017 stays PARTIAL, naming its unproved condition. The remaining tab/workspace lifecycle, undo, close, and reopen observations stay NATIVE or GAP: no tab lifecycle is simulated (A043-A048, A050, A052, A055 NATIVE; A049, A053, A054 GAP). MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
 
 Verification
@@ -38,8 +38,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:61
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   // Selection keyboard routing, window tier: lifecycle scenario. A/B tab
   // switching, drawer hide/show, a primary-track change, and closing plus
@@ -106,8 +106,8 @@ Original expression:
   QVERIFY2(m_tab, "the first song tab is missing")
 
 A002 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:63
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       SongTab *const tabA = workspace.songTabFor(*SongName::create(m_songA));
@@ -116,8 +116,8 @@ Original expression:
   QCOMPARE(tabA, m_tab.data())
 
 A003 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:70
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       SongView &viewA = tabA->view();
@@ -131,8 +131,8 @@ Original expression:
   QVERIFY2(windowA, "the first tab Quick window is missing")
 
 A004 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:73
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       AutomationCanvas *const canvasA = automationCanvas(viewA);
@@ -142,8 +142,8 @@ Original expression:
   QVERIFY(clickParameter(viewA, panA))
 
 A005 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:81
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -187,8 +187,8 @@ Original expression:
   QVERIFY(canvasA->openValuePromptForInsertion(*laneA, kPanTick, 64))
 
 A008 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:93
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -198,8 +198,8 @@ Original expression:
   QVERIFY2(tabB, qUtf8Printable(error))
 
 A009 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:94
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -229,8 +229,8 @@ Original expression:
                "the reserved tick-960 note pair could not be inserted on the second tab")
 
 A011 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:108
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       songview::TimelineQuickView *const quickB = selectionkey::quickCanvas(viewB);
@@ -240,8 +240,8 @@ Original expression:
   QVERIFY2(windowB, "the second tab Quick window is missing")
 
 A012 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:111
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       AutomationCanvas *const canvasB = automationCanvas(viewB);
@@ -275,8 +275,8 @@ Original expression:
   QCOMPARE(documentA.smf().write(), documentAClean)
 
 A015 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:116
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       viewB.selectionModel().setNoteSelection({pairB->ids[0], pairB->ids[1]});
@@ -357,8 +357,8 @@ Original expression:
                "the reserved tick-3840 note pair could not be inserted on the first tab")
 
 A022 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:133
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       viewA.selectionModel().setNoteSelection({pairA->ids[0], pairA->ids[1]});
@@ -490,8 +490,8 @@ Original expression:
   QVERIFY(laneTrackOne.has_value())
 
 A032 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:166
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -594,8 +594,8 @@ Original expression:
   QCOMPARE(documentB.smf().write(), documentBAfterMove)
 
 A041 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:182
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       viewA.selectionModel().setNoteSelection({pairT1->ids[0], pairT1->ids[1]});
@@ -620,8 +620,8 @@ Original expression:
                "the Up arrow did not transpose the new primary track's selection")
 
 A043 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -637,8 +637,8 @@ Original expression:
                qUtf8Printable(error))
 
 A044 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:200
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       workspace.selectSongTab(tabB);
@@ -652,8 +652,8 @@ Original expression:
                qUtf8Printable(error))
 
 A045 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:213
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QPointer<SongTab> closingTab = tabB;
@@ -670,8 +670,8 @@ Original expression:
                "the clean second tab did not close and destroy its session")
 
 A046 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:215
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -679,8 +679,8 @@ Original expression:
   QVERIFY(closingCanvas.isNull())
 
 A047 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QByteArray documentABeforeReopen = documentA.smf().write();
@@ -691,8 +691,8 @@ Original expression:
   QVERIFY2(reopened, qUtf8Printable(error))
 
 A048 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:220
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -719,8 +719,8 @@ Original expression:
                "the reserved tick-960 note pair could not be inserted on the reopened tab")
 
 A050 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:234
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       songview::TimelineQuickView *const quickR = selectionkey::quickCanvas(viewR);
@@ -743,8 +743,8 @@ Original expression:
   QCOMPARE(canvasR->parameterRow(canvasR->activeParameter()), std::optional{volume})
 
 A052 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       viewR.selectionModel().setNoteSelection({pairR->ids[0], pairR->ids[1]});
@@ -773,8 +773,8 @@ Original expression:
   QCOMPARE(documentA.smf().write(), documentABeforeReopen)
 
 A055 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:244
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -987,7 +987,7 @@ S056 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expect(second.session.selectedNotes == Set(pairT1) && second.session.selectedTrack == primaryBeforeOutOfRange && publications.isEmpty, cppID: lifetimeID,
                 message: "out-of-range primary-track selects keep the track, notes, and publications")
 
-S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:405
+S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:459
   compare(selected.length, 1, "one source note is selected")
   keySequence(StandardKey.Copy)
   compare(JSON.parse(bootstrap.copiedClipSummary())[2], selected[0].pitch,
@@ -996,7 +996,7 @@ S018 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_Shel
   // openTwoSongShell (:88); ShellQmlLane stages both songs
   // (src/checks/editorqml/ShellQmlTests.swift:46).
 
-S019 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:425
+S019 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:479
   keySequence(StandardKey.Paste)
   verify(waitForNative(function() {
       var notes = JSON.parse(destination.gridModel.noteSummary)
@@ -1010,24 +1010,24 @@ S019 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_Shel
   compare(destination.gridModel.editCursorTick, inserted[0].tick + inserted[0].duration,
           "Paste advances the destination edit cursor past the inserted note")
 
-S020 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:446
+S020 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:500
   compare(selectedSurface().gridModel.noteSummary, sourceSummary,
           "cross-tab Paste leaves the source song unchanged")
 
-S021 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:452
+S021 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:506
   compare(shell.shellPresenter.session.documentDirty, true,
           "only the pasted destination has unsaved changes")
 
-S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:538
+S022 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml:592
   mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
   tryCompare(shell.shellPresenter.session.songTabs, "selectedId", firstId)
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:220
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:248
   mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
   tryCompare(tabs, "selectedId", firstId, 3000,
              "a real first-tab click retargets the selected workspace")
 
-S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:631
+S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:685
   keyClick(Qt.Key_Up)
   compare(selectedNote().pitch, original.pitch + 1, "Up transposes one semitone")
 

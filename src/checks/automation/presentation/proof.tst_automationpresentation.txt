@@ -14,8 +14,8 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-Tally: MATCHED 9, PARTIAL 2, GAP 0, NATIVE 27, RETIRED-REPRESENTATION 8.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Tally: MATCHED 9, PARTIAL 2, GAP 15, NATIVE 0, RETIRED-REPRESENTATION 20.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -53,98 +53,98 @@ src/checks/automation/presentation/tst_automationpresentation.cpp:408 | mouseMov
 Original assertion inventory
 
 A001 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:176
-Disposition: NATIVE
-Mapping/reason: Native EditorRig adoption of the presentation SMF (fallible adoptSmf into a shown EditorRig window); the Swift/QML lane constructs the document directly and mounts the production page (S031), so no fallible adoption ingress exists to assert.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native EditorRig adoption of the presentation SMF (fallible adoptSmf into a shown EditorRig window); the Swift/QML lane constructs the document directly and mounts the production page (S031), so no fallible adoption ingress exists to assert.
 Original expression:
   QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error))
 
 A002 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:192
-Disposition: NATIVE
-Mapping/reason: Native EditorRig creation precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY2(m_rig, qPrintable(error))
 
 A003 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:195
-Disposition: NATIVE
-Mapping/reason: Native rig quickRoot resolution precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(root)
 
 A004 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:200
-Disposition: NATIVE
-Mapping/reason: Native timelineAutomationInput item lookup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(m_plotInput)
 
 A005 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:201
-Disposition: NATIVE
-Mapping/reason: Native timelineAutomationGutterInput item lookup precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(m_gutterInput)
 
 A006 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:203
-Disposition: NATIVE
-Mapping/reason: Native QQuickWindow resolution from the input item; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(m_quickWindow)
 
 A007 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:204
-Disposition: NATIVE
-Mapping/reason: Native window exposure precondition (visible and exposed); see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
 
 A008 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:205
-Disposition: NATIVE
-Mapping/reason: Native plot input bounds precondition; see A001.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native plot input bounds precondition; see A001.
 Original expression:
   QTRY_VERIFY(!m_plotInput->bounds().isEmpty())
 
 A009 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:206
-Disposition: NATIVE
-Mapping/reason: Native gutter input bounds precondition; see A001.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native gutter input bounds precondition; see A001.
 Original expression:
   QTRY_VERIFY(!m_gutterInput->bounds().isEmpty())
 
 A010 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:207
-Disposition: NATIVE
-Mapping/reason: Native rig page/canvas resolution precondition (page() && page()->canvas()); see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QTRY_VERIFY(page() && page()->canvas())
 
 A011 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:208
-Disposition: NATIVE
-Mapping/reason: Native input-item/window identity precondition; see A001.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item/window identity precondition; see A001.
 Original expression:
   QCOMPARE(m_gutterInput->window(), m_quickWindow.data())
 
 A012 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:209
-Disposition: NATIVE
-Mapping/reason: Native TimelineInputItem to AutomationCanvas interaction wiring, retired with the rig; AutomationPage owns pointer input and the QML lane drives the production plot input.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native TimelineInputItem to AutomationCanvas interaction wiring, retired with the rig; AutomationPage owns pointer input and the QML lane drives the production plot input.
 Original expression:
   QVERIFY(m_plotInput->interaction() == page()->canvas())
 
 A013 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:210
-Disposition: NATIVE
-Mapping/reason: Native input-item to canvas interaction wiring; see A012.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item to canvas interaction wiring; see A012.
 Original expression:
   QVERIFY(m_gutterInput->interaction() == page()->canvas())
 
 A014 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:211
-Disposition: NATIVE
-Mapping/reason: Native quick scene resolution precondition; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QTRY_VERIFY(quickScene())
 
 A015 | AutomationPresentationTest::cleanup | src/checks/automation/presentation/tst_automationpresentation.cpp:232
-Disposition: NATIVE
-Mapping/reason: Native mouse-grab cleanup precondition (Escape, release and ungrab until no grabber remains).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native mouse-grab cleanup precondition (Escape, release and ungrab until no grabber remains).
 Original expression:
   QVERIFY(mouseGrabCleared)
 
 A016 | AutomationPresentationTest::mouseMove | src/checks/automation/presentation/tst_automationpresentation.cpp:307
-Disposition: NATIVE
-Mapping/reason: Native input-item window identity inside the mouse-move helper; see A011.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item window identity inside the mouse-move helper; see A011.
 Original expression:
   QCOMPARE(input.window(), m_quickWindow.data())
 
@@ -161,14 +161,14 @@ Original expression:
   QVERIFY(activateParameter(panRow))
 
 A019 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:330
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup: no Swift handle exists to validate; the pencil predicate drives the Pan lane by AutomationParameter (S027).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native AutomationCanvas LaneHandle row lookup: no Swift handle exists to validate; the pencil predicate drives the Pan lane by AutomationParameter (S027).
 Original expression:
   QVERIFY(pan.valid())
 
 A020 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:332
-Disposition: NATIVE
-Mapping/reason: Native canvas lane-body geometry (a non-empty lane body rect for the Pan row).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native canvas lane-body geometry (a non-empty lane body rect for the Pan row).
 Original expression:
   QVERIFY(!plot.isEmpty())
 
@@ -203,8 +203,8 @@ Original expression:
   QVERIFY(automationPage)
 
 A026 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:352
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A019.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(pan.valid())
 
@@ -227,32 +227,32 @@ Original expression:
   QVERIFY(automationPage)
 
 A030 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:365
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas interaction object; see A012.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
 A031 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:366
-Disposition: NATIVE
-Mapping/reason: Native timelineAutomationInput item precondition; see A004.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(m_plotInput)
 
 A032 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:367
-Disposition: NATIVE
-Mapping/reason: Native input-item to canvas interaction wiring; see A012.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native input-item to canvas interaction wiring; see A012.
 Original expression:
   QVERIFY(m_plotInput->interaction() == canvas)
 
 A033 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:370
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A019.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Native AutomationCanvas LaneHandle row lookup; see A019.
 Original expression:
   QVERIFY(pan.valid())
 
 A034 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:378
-Disposition: NATIVE
-Mapping/reason: Retired canvas input route: canvas->pointerMove through the injected TimelineInputHost has no Swift counterpart; the Swift page's pointerMove is driven by the QML lane and by the pencil predicate, neither of which asserts the accepted flag.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route: canvas->pointerMove through the injected TimelineInputHost has no Swift counterpart; the Swift page's pointerMove is driven by the QML lane and by the pencil predicate, neither of which asserts the accepted flag.
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
@@ -269,8 +269,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(pixmapAtOne.devicePixelRatio(), 1.0))
 
 A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
-Disposition: NATIVE
-Mapping/reason: Retired canvas input route; see A034.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route; see A034.
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
@@ -287,8 +287,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(pixmapAtTwo.devicePixelRatio(), 2.0))
 
 A040 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:390
-Disposition: NATIVE
-Mapping/reason: Retired canvas input route; see A034.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp) no longer builds or runs. Previous native note: Retired canvas input route; see A034.
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
@@ -311,8 +311,8 @@ Original expression:
   QVERIFY(automationPage)
 
 A044 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:402
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A019.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/tst_automationpresentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(pan.valid())
 
@@ -487,7 +487,7 @@ Swift expression:
                              cppID: drawerAutomationCursorKindID,
                              what: "releasing the drag reverts to the arrow")
 
-S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2852
+S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:3014
 QML expression:
   verify(bootstrap.attachProductionSection(testCase.automationKind),
                  "the production Automation page attaches to its slot")

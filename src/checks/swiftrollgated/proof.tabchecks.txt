@@ -4,11 +4,11 @@ Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
 Original: src/checks/swiftrollgated/tabchecks.cpp
 Original SHA-256: cbd7d2960bdc5b0b6923b7aea1bb34095687b40eb39ae269a515b186b609a489
 Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
-Swift SHA-256: d0c6828caee6b9075f0b348d929897fac65847e6f7bb24f0edeb03466746218b
+Swift SHA-256: d5875c0c5d83b79f1ab4f0bda4d25127de7d5a71e3af4fab57fd3f3e63c5055f
 Additional Swift counterpart: src/checks/editorqml/TabsDrawerProbe.swift
 Swift SHA-256: 21e07f8d90aed7739b1791ed2905ca7c5b9107eaa4879d7201aaba2c0f63adc9
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Swift SHA-256: bbe0aaffd68c126118a8d3e0a7c7cd55e6642fe29a3d9092ebef63cbdc823169
+Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

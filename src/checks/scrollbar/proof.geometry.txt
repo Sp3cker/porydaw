@@ -200,16 +200,16 @@ Original expression:
   QVERIFY(roll->plotRect.right() < verticalRect.left() + kTolerance);
 
 A014 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:67
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
 
 A015 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:68
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
   ;
 Original expression:
@@ -380,8 +380,8 @@ Original expression:
   QTRY_VERIFY(songView.verticalScrollbarRect().isEmpty());
 
 A034 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
   ;
 Original expression:
@@ -396,8 +396,8 @@ Original expression:
   QTRY_VERIFY(!songView.horizontalScrollbarRect().isEmpty());
 
 A036 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:119
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
   ;
 Original expression:
@@ -431,8 +431,8 @@ Original expression:
   QTRY_VERIFY(!songView.verticalScrollbarRect().isEmpty());
 
 A040 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/geometry.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
   ;
 Original expression:

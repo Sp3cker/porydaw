@@ -4,9 +4,9 @@ Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
 Original: src/checks/swiftrollgated/gesturechecks.cpp
 Original SHA-256: 23f74a1e29e13c8b004ef4daddd2e30bd688c4fbd91fd6f3e543d7b6be1b0936
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: 93db81e39293714fcfacff95dafdbaebfe857e7bb39bddff9fed0fb60be5f3fe
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
 Additional Swift SHA-256: 043f58b9ffa588ffc12a32f2ab6680d27d984be1fbf926d24bb68c4b54baf718
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
@@ -436,16 +436,16 @@ Original expression:
     QVERIFY(rendered != nullptr && rendered->isVisible());
 
 A010 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:338
-Disposition: NATIVE
-Mapping/reason: Native framebuffer grab (QQuickView::grabWindow null check) has no offscreen-QML counterpart; the rendered-face follow it guards is MATCHED by S051. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     const QImage frame = fixture.view()->grabWindow();
 Original expression:
     QVERIFY(!frame.isNull());
 
 A011 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:342
-Disposition: NATIVE
-Mapping/reason: Native framebuffer pixel diff (pixelAt/colorsNear) cannot run offscreen; the face-follow observable is MATCHED by S051 (gridNote_ face exists, visible, tracks the moved tick). No QWidget layer exists in the Swift app.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Native framebuffer pixel diff (pixelAt/colorsNear) cannot run offscreen; the face-follow observable is MATCHED by S051 (gridNote_ face exists, visible, tracks the moved tick). No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QColor expected(rendered->property("fillColor").toString());
     const QColor actual = gridcheck::pixelAt(
@@ -1012,8 +1012,8 @@ Original expression:
                                           Q_ARG(QString, fixture.songLabel()), Q_ARG(bool, false)));
 
 A065 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:567
-Disposition: NATIVE
-Mapping/reason: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058. No QWidget layer exists in the Swift app.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1035,8 +1035,8 @@ Original expression:
         QVERIFY(finalGrid && finalGrid->property("renderedNoteCount").toInt() > 0);
 
 A067 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:580
-Disposition: NATIVE
-Mapping/reason: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
 Source context since previous assertion:
     }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -1045,8 +1045,8 @@ Original expression:
     QVERIFY(finalView.isNull());
 
 A068 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
-Disposition: NATIVE
-Mapping/reason: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1285,8 +1285,8 @@ Original expression:
     QVERIFY(playPause != nullptr && playPause->isEnabled());
 
 A094 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:655
-Disposition: NATIVE
-Mapping/reason: QSignalSpy validity is test machinery, not behavior; transport activation itself is MATCHED by S061 (playing transitions). No signal identity is claimed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     QSignalSpy triggered(playPause, &QAction::triggered);
 Original expression:

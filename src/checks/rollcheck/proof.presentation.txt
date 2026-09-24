@@ -58,8 +58,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native/QML input guard: the slot requires the automation-lanes TimelineInputItem alongside the roll input. The Swift pan check drives PianoGrid directly and hosts no automation input item.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/presentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -166,8 +166,8 @@ Original expression:
 QCOMPARE(doc.smf().write(), before)
 
 A006 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:79
-Disposition: NATIVE
-Mapping/reason: Original native Quick-header guard: requires the live TrackHeaderModel on the retired SongView. The Swift check constructs TrackHeadersPresenter without a hosted Quick view.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/presentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 }
@@ -184,8 +184,8 @@ Original expression:
 QFAIL("Quick track-header model was not found")
 
 A007 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:85
-Disposition: NATIVE
-Mapping/reason: Original native input precondition: focusTimelineBand on the Quick SongView. The swiftcore roll lane has no focusable timeline band.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native input precondition: focusTimelineBand on the Quick SongView. The swiftcore roll lane has no focusable timeline band.
 Source context since previous assertion:
 ;
         return;
@@ -199,8 +199,8 @@ QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherF
              "the Quick track-header input was unavailable")
 
 A008 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:87
-Disposition: NATIVE
-Mapping/reason: Original native focus observation: focusedTimelineBand() == TrackHeaders after the Quick focus route. No Swift roll predicate observes focus routing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native focus observation: focusedTimelineBand() == TrackHeaders after the Quick focus route. No Swift roll predicate observes focus routing.
 Source context since previous assertion:
 ;
 
@@ -430,8 +430,8 @@ Original expression:
 QCOMPARE(doc.smf().write(), before)
 
 A025 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:193
-Disposition: NATIVE
-Mapping/reason: Original native Quick-header guard: requires the live TrackHeaderModel on the retired SongView.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/presentation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 }
@@ -450,8 +450,8 @@ Original expression:
 QVERIFY2(headers, "Quick track-header model was not found")
 
 A026 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:213
-Disposition: NATIVE
-Mapping/reason: Original native action-binding precondition: the canonical SoloTracks QAction bound to the Quick view. The Swift check dispatches EditCommand.soloTracks through PianoGrid.performCommand and does not assert the action binding.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/presentation.cpp) no longer builds or runs. Previous native note: Original native action-binding precondition: the canonical SoloTracks QAction bound to the Quick view. The Swift check dispatches EditCommand.soloTracks through PianoGrid.performCommand and does not assert the action binding.
 Source context since previous assertion:
 ;
 

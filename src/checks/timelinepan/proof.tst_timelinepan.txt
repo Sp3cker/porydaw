@@ -307,8 +307,8 @@ Original expression:
   QTRY_VERIFY(m_fixture.isReady(false))
 
 A003 | TimelinePanTest::dashPhasePreservesClip | src/checks/timelinepan/tst_timelinepan.cpp:288
-Disposition: NATIVE
-Mapping/reason: Asserts equality of the C++ timeline_quick::addDashedHorizontal/addDashedVertical builders against hand-built addHorizontalLine/addVerticalLine segments. The Swift scene has no dashed-line primitive builder: GridScene.addDashedFrame is a private selection-band frame helper with no segment-builder counterpart, so no Swift-side observation of this builder equality can exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Asserts equality of the C++ timeline_quick::addDashedHorizontal/addDashedVertical builders against hand-built addHorizontalLine/addVerticalLine segments. The Swift scene has no dashed-line primitive builder: GridScene.addDashedFrame is a private selection-band frame helper with no segment-builder counterpart, so no Swift-side observation of this builder equality can exist.
 Source context since previous assertion:
   ;
   }
@@ -359,8 +359,8 @@ Original expression:
   QVERIFY(orderedRects(reference, layer) == orderedRects(bounded, layer))
 
 A004 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:300
-Disposition: NATIVE
-Mapping/reason: Render-thread QSGNode pooling: the site drives timeline_quick::syncLayerNode reuse under QQuickWindow::beforeSynchronizing. The Swift scene publishes QListModel rows to QML delegates and owns no QSGNode pool, so no Swift-side observation can exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Render-thread QSGNode pooling: the site drives timeline_quick::syncLayerNode reuse under QQuickWindow::beforeSynchronizing. The Swift scene publishes QListModel rows to QML delegates and owns no QSGNode pool, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
   }
@@ -379,8 +379,8 @@ Original expression:
   QVERIFY(window)
 
 A005 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:384
-Disposition: NATIVE
-Mapping/reason: Same QSGNode render-thread pooling harness as A004: the done flag tracks syncLayerNode stage completion, which has no Swift counterpart.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       // Create, inspect and destroy all scene graph objects on the render thread.
@@ -471,8 +471,8 @@ Original expression:
   QTRY_VERIFY(result->done.load(std::memory_order_acquire))
 
 A006 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:386
-Disposition: NATIVE
-Mapping/reason: Same QSGNode pooling harness: the 8-stage count enumerates syncLayerNode reuse transitions that do not exist in the Swift scene.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same QSGNode pooling harness: the 8-stage count enumerates syncLayerNode reuse transitions that do not exist in the Swift scene.
 Source context since previous assertion:
   ;
       disconnect(connection);
@@ -481,8 +481,8 @@ Original expression:
   QCOMPARE(result->stages.size(), std::size_t(8))
 
 A007 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:388
-Disposition: NATIVE
-Mapping/reason: Same QSGNode pooling harness: each stage asserts colored-vertex equality inside a reused QSGGeometryNode, which the Swift scene does not have.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same QSGNode pooling harness: each stage asserts colored-vertex equality inside a reused QSGGeometryNode, which the Swift scene does not have.
 Source context since previous assertion:
   ;
       for (std::size_t stage = 0; stage < result->stages.size(); ++stage)
@@ -634,8 +634,8 @@ Original expression:
   QCOMPARE(coalesced, full)
 
 A018 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:480
-Disposition: NATIVE
-Mapping/reason: QSignalSpy validity on the C++ TimelineQuickTextModel. The Swift QListModel publishes the same label rows but reset() always emits modelReset, so the zero-signal obligation this spy guards has no Swift counterpart.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -690,8 +690,8 @@ Original expression:
   QTRY_VERIFY(closeEnough(songView.quickView()->horizontalScrollValue(), before + expectedDelta))
 
 A021 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:486
-Disposition: NATIVE
-Mapping/reason: Zero-signal obligation on the C++ gutter text model after an empty wheel event. The Swift QListModel reset() emits modelReset on every rebuild, so no equivalent zero-signal assertion can exist; the ported check asserts unchanged cameraScrollX and noteSummary instead.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Zero-signal obligation on the C++ gutter text model after an empty wheel event. The Swift QListModel reset() emits modelReset on every rebuild, so no equivalent zero-signal assertion can exist; the ported check asserts unchanged cameraScrollX and noteSummary instead.
 Source context since previous assertion:
   ;
 
@@ -701,8 +701,8 @@ Original expression:
   QCOMPARE(voiceChanges.signalCount(), 0)
 
 A022 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:495
-Disposition: NATIVE
-Mapping/reason: QSignalSpy validity on the C++ TimelineQuickTextModel; see A018. The Swift QListModel has no zero-structural-signal guarantee.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -729,8 +729,8 @@ Original expression:
   QVERIFY(closeEnough(panOnce(kLegacyPanPixelDelta), 8.0))
 
 A024 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:500
-Disposition: NATIVE
-Mapping/reason: Zero structural-change obligation on the C++ gutter text model; see A018. Swift QListModel::reset always emits modelReset.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Zero structural-change obligation on the C++ gutter text model; see A018. Swift QListModel::reset always emits modelReset.
 Source context since previous assertion:
   ;
 
@@ -776,8 +776,8 @@ Original expression:
   QVERIFY(timeline)
 
 A028 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:517
-Disposition: NATIVE
-Mapping/reason: Per-track program guard for drum-pad classification. The Swift session publishes no per-track program surface and GridScene.rebuildKeyboardText emits only note names, so no Swift-side observation can exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Per-track program guard for drum-pad classification. The Swift session publishes no per-track program surface and GridScene.rebuildKeyboardText emits only note names, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -832,8 +832,8 @@ Original expression:
   QVERIFY2(padKeys.has_value(), "Fixture must expose an accidental and two natural pad rows")
 
 A033 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:546
-Disposition: NATIVE
-Mapping/reason: Drum-pad label record lookup. The Swift pianoKeyboardTextModel emits only natural-C note names (GridScene.rebuildKeyboardText); there is no keysplit/drum-pad label path, so no Swift-side observation can exist.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       const int namedKey = (*padKeys)[0];
@@ -857,8 +857,8 @@ Original expression:
   QVERIFY(namedIndex.isValid())
 
 A034 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:547
-Disposition: NATIVE
-Mapping/reason: Same drum-pad label record obligation as A033; no Swift pad-label model exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same drum-pad label record obligation as A033; no Swift pad-label model exists.
 Source context since previous assertion:
   ;
 
@@ -866,8 +866,8 @@ Original expression:
   QVERIFY(unnamedIndex.isValid())
 
 A035 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:548
-Disposition: NATIVE
-Mapping/reason: Same drum-pad label record obligation as A033.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Same drum-pad label record obligation as A033.
 Source context since previous assertion:
   ;
 
@@ -875,8 +875,8 @@ Original expression:
   QVERIFY(longIndex.isValid())
 
 A036 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:549
-Disposition: NATIVE
-Mapping/reason: Pad-name text assertion ('Kick'); the Swift keyboard model has no drum-pad names.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name text assertion ('Kick'); the Swift keyboard model has no drum-pad names.
 Source context since previous assertion:
   ;
 
@@ -885,8 +885,8 @@ Original expression:
                QStringLiteral("Kick"))
 
 A037 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:551
-Disposition: NATIVE
-Mapping/reason: Accidental-pad fixture guard; the Swift keyboard model has no pad rows.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Accidental-pad fixture guard; the Swift keyboard model has no pad rows.
 Source context since previous assertion:
   ;
 
@@ -894,8 +894,8 @@ Original expression:
   QVERIFY(detail::isBlackKey(namedKey))
 
 A038 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:555
-Disposition: NATIVE
-Mapping/reason: Long pad-name text assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Long pad-name text assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const QString longText = model->data(longIndex, TimelineQuickTextModel::TextRole).toString();
@@ -906,8 +906,8 @@ Original expression:
   QCOMPARE(longText, fullLongText)
 
 A039 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:563
-Disposition: NATIVE
-Mapping/reason: Pad-label width vs measured text; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label width vs measured text; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const auto geometry = pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth());
@@ -922,8 +922,8 @@ Original expression:
   QCOMPARE(longRect.width(), expectedWidth)
 
 A040 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:564
-Disposition: NATIVE
-Mapping/reason: Pad label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset and can never overflow the gutter, so no Swift-side observation can exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset and can never overflow the gutter, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
 
@@ -931,8 +931,8 @@ Original expression:
   QVERIFY(longRect.width() > qreal(view.pianoKeyboardWidth()))
 
 A041 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:565
-Disposition: NATIVE
-Mapping/reason: Pad-label rect origin; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect origin; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -940,8 +940,8 @@ Original expression:
   QCOMPARE(longRect.left(), 0.0)
 
 A042 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:566
-Disposition: NATIVE
-Mapping/reason: Pad-label rect top vs pad row rect; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect top vs pad row rect; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -949,8 +949,8 @@ Original expression:
   QCOMPARE(longRect.top(), padRowRect(view, longKey).top())
 
 A043 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:567
-Disposition: NATIVE
-Mapping/reason: Pad-label rect height vs pad row rect; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-label rect height vs pad row rect; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -958,8 +958,8 @@ Original expression:
   QCOMPARE(longRect.height(), padRowRect(view, longKey).height())
 
 A044 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:568
-Disposition: NATIVE
-Mapping/reason: Unnamed-pad fallback to keyName; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Unnamed-pad fallback to keyName; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1082,8 +1082,8 @@ Original expression:
   QVERIFY(timeline)
 
 A055 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:607
-Disposition: NATIVE
-Mapping/reason: Per-track program guard; see A028. The Swift session has no program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Per-track program guard; see A028. The Swift session has no program surface.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -1094,8 +1094,8 @@ Original expression:
   QVERIFY(program < VOICEGROUP_SIZE)
 
 A056 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:624
-Disposition: NATIVE
-Mapping/reason: Fixture guard for a second used track with a different initial program; Swift track switching carries no program classification.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -1119,8 +1119,8 @@ Original expression:
   QVERIFY2(secondUsed, "Fixture must contain a second used track")
 
 A057 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:625
-Disposition: NATIVE
-Mapping/reason: Same program-difference fixture guard as A056.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -1161,8 +1161,8 @@ Original expression:
   QVERIFY(padKeys.has_value())
 
 A061 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:648
-Disposition: NATIVE
-Mapping/reason: Pad-name text assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name text assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const int namedKey = (*padKeys)[0];
@@ -1205,8 +1205,8 @@ Original expression:
   QVERIFY(model->rowCount() > 0)
 
 A064 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:655
-Disposition: NATIVE
-Mapping/reason: Drum-row-count shrink; the Swift keyboard model is track-independent and has no drum rows.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Drum-row-count shrink; the Swift keyboard model is track-independent and has no drum rows.
 Source context since previous assertion:
   ;
 
@@ -1214,8 +1214,8 @@ Original expression:
   QVERIFY(model->rowCount() < drumRowCount)
 
 A065 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:656
-Disposition: NATIVE
-Mapping/reason: Pad-row record disappearance; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-row record disappearance; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1258,8 +1258,8 @@ Original expression:
   QCOMPARE(model->rowCount(), drumRowCount)
 
 A069 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:668
-Disposition: NATIVE
-Mapping/reason: Pad-name restoration assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name restoration assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1283,8 +1283,8 @@ Original expression:
   QVERIFY(originalTimeline)
 
 A071 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:679
-Disposition: NATIVE
-Mapping/reason: Initial-program guard; the Swift session has no program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Initial-program guard; the Swift session has no program surface.
 Source context since previous assertion:
   ;
       const int track = view.selectionModel().primaryTrack();
@@ -1294,8 +1294,8 @@ Original expression:
   QVERIFY(initial < VOICEGROUP_SIZE)
 
 A072 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:716
-Disposition: NATIVE
-Mapping/reason: Program-change event tick guard; the Swift session publishes no program-change events.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Program-change event tick guard; the Swift session publishes no program-change events.
 Source context since previous assertion:
   ;
       MidiTimeline timeline = *originalTimeline;
@@ -1339,8 +1339,8 @@ Original expression:
   QVERIFY(changeTick > 0)
 
 A073 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:717
-Disposition: NATIVE
-Mapping/reason: Melodic-program fixture guard; no Swift program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Melodic-program fixture guard; no Swift program surface.
 Source context since previous assertion:
   ;
 
@@ -1379,8 +1379,8 @@ Original expression:
   QVERIFY(keys.has_value())
 
 A077 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:726
-Disposition: NATIVE
-Mapping/reason: Keysplit-type guard on the fixture bank; the Swift session exposes no voicegroup bank to the roll.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Keysplit-type guard on the fixture bank; the Swift session exposes no voicegroup bank to the roll.
 Source context since previous assertion:
   ;
       DrumBankFixture fixture(initial, (*keys)[0], (*keys)[1], (*keys)[2]);
@@ -1408,8 +1408,8 @@ Original expression:
   QVERIFY(model)
 
 A079 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:750
-Disposition: NATIVE
-Mapping/reason: currentProgram(track) observation; the Swift session publishes no per-track program.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: currentProgram(track) observation; the Swift session publishes no per-track program.
 Source context since previous assertion:
   ;
       const auto padText = [&] {
@@ -1429,8 +1429,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), initial)
 
 A080 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:751
-Disposition: NATIVE
-Mapping/reason: Pad-name assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1438,8 +1438,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A081 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:753
-Disposition: NATIVE
-Mapping/reason: currentProgram after edit-cursor move; no Swift program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: currentProgram after edit-cursor move; no Swift program surface.
 Source context since previous assertion:
   ;
       view.setEditCursorTick(changeTick);
@@ -1448,8 +1448,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), melodic)
 
 A082 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:754
-Disposition: NATIVE
-Mapping/reason: Pad-name assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1457,8 +1457,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A083 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:759
-Disposition: NATIVE
-Mapping/reason: Playhead positioning past a program-change event; the Swift session publishes no program changes, so the site's classification obligation cannot exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Playhead positioning past a program-change event; the Swift session publishes no program changes, so the site's classification obligation cannot exist.
 Source context since previous assertion:
   ;
       view.setEditCursorTick(0);
@@ -1470,8 +1470,8 @@ Original expression:
   QVERIFY(view.playheadTick() >= double(changeTick))
 
 A084 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:760
-Disposition: NATIVE
-Mapping/reason: currentProgram after playhead move; no Swift program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: currentProgram after playhead move; no Swift program surface.
 Source context since previous assertion:
   ;
 
@@ -1479,8 +1479,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), melodic)
 
 A085 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:761
-Disposition: NATIVE
-Mapping/reason: Pad-name assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1488,8 +1488,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A086 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:763
-Disposition: NATIVE
-Mapping/reason: currentProgram after playhead reset; no Swift program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: currentProgram after playhead reset; no Swift program surface.
 Source context since previous assertion:
   ;
       view.setPlayheadSample(0, true);
@@ -1498,8 +1498,8 @@ Original expression:
   QCOMPARE(view.currentProgram(track), initial)
 
 A087 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:764
-Disposition: NATIVE
-Mapping/reason: Pad-name assertion; no Swift pad-label path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1534,8 +1534,8 @@ Original expression:
   QVERIFY(timeline)
 
 A090 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:779
-Disposition: NATIVE
-Mapping/reason: Per-track program guard; no Swift program surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Per-track program guard; no Swift program surface.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -1682,8 +1682,8 @@ Original expression:
   QVERIFY(bandRoot)
 
 A102 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:828
-Disposition: NATIVE
-Mapping/reason: Unclipped band root. The Swift roll band root (rollStack) IS clipped; the overlay escapes the clipped gutter by band-local parenting inside the clipped band, so the literal !clip() invariant is a C++ scene-graph detail with no Swift counterpart.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Unclipped band root. The Swift roll band root (rollStack) IS clipped; the overlay escapes the clipped gutter by band-local parenting inside the clipped band, so the literal !clip() invariant is a C++ scene-graph detail with no Swift counterpart.
 Source context since previous assertion:
   ;
 
@@ -1798,8 +1798,8 @@ Original expression:
   QCOMPARE(gutterInput->parentItem(), gutterBox)
 
 A113 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:858
-Disposition: NATIVE
-Mapping/reason: Fixed label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset (GridScene.rebuildKeyboardText), so no Swift label can overflow the gutter.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Fixed label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset (GridScene.rebuildKeyboardText), so no Swift label can overflow the gutter.
 Source context since previous assertion:
   ;
 
@@ -1809,8 +1809,8 @@ Original expression:
   QVERIFY(fixedLabel->width() > qreal(view.pianoKeyboardWidth()))
 
 A114 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:859
-Disposition: NATIVE
-Mapping/reason: Chip wider than the keyboard gutter. Swift chip x is clamped to max(0, keyboardWidth - inset - chipW), so a Swift chip never exceeds the gutter.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip wider than the keyboard gutter. Swift chip x is clamped to max(0, keyboardWidth - inset - chipW), so a Swift chip never exceeds the gutter.
 Source context since previous assertion:
   ;
 
@@ -1964,8 +1964,8 @@ Original expression:
   QCOMPARE(chipText->property("verticalAlignment").toInt(), int(Qt::AlignVCenter))
 
 A131 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:883
-Disposition: NATIVE
-Mapping/reason: Chip crossing the gutter boundary. Swift chips are clamped inside the gutter (see A114), so no Swift-side observation of a gutter-crossing chip can exist.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip crossing the gutter boundary. Swift chips are clamped inside the gutter (see A114), so no Swift-side observation of a gutter-crossing chip can exist.
 Source context since previous assertion:
   ;
       const QRectF contentRect((chipText->width() - contentWidth) / 2,
@@ -2025,8 +2025,8 @@ Original expression:
   QCOMPARE(fixedLabel->property("horizontalAlignment").toInt(), int(Qt::AlignRight))
 
 A137 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:894
-Disposition: NATIVE
-Mapping/reason: Fixed label content crossing the gutter boundary; see A113. Swift labels cannot overflow the gutter.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Fixed label content crossing the gutter boundary; see A113. Swift labels cannot overflow the gutter.
 Source context since previous assertion:
   ;
       const QRectF fixedContentRect(fixedLabel->width() - fixedContentWidth,
@@ -2037,8 +2037,8 @@ Original expression:
   QVERIFY(fixedLabel->mapRectToScene(fixedContentRect).right() > gutterSceneRight.x())
 
 A138 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:895
-Disposition: NATIVE
-Mapping/reason: Chip content crossing the gutter boundary; see A131.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/timelinepan/tst_timelinepan.cpp) no longer builds or runs. Previous native note: Chip content crossing the gutter boundary; see A131.
 Source context since previous assertion:
   ;
 

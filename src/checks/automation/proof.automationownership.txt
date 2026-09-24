@@ -5,13 +5,13 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationownership.cpp
 Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb870
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 036a26f8ce0c6a13f476f164780b2fb8960c989f36c5a5ca500f8675c7bc55a4
+Swift SHA-256: 37ac484181e8abead7bf7b5ce96b36c6e2b66160ce6131224b2c465a5d661339
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
+Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
+Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -44,8 +44,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:64
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -115,8 +115,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A002 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:69
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
@@ -128,8 +128,8 @@ Original expression:
   QVERIFY(scene);
 
 A003 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:78
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const quint64 revisionBefore =
@@ -146,8 +146,8 @@ Original expression:
                   revisionBefore);
 
 A004 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:91
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       const AutomationGeometry geometry = AutomationGeometry::resolve();
@@ -166,8 +166,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 48, 32)));
 
 A005 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:92
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -175,8 +175,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 96, 64)));
 
 A006 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:93
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -184,8 +184,8 @@ Original expression:
   QVERIFY(ringPaintedAt(inputPoint(pan, 144, 96)));
 
 A007 | AutomationEditingTest::tracksSelectionRings | src/checks/automation/automationownership.cpp:94
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph ring/mesh probes (layer revision, ringPaintedAt triangles) observe the native render. A direct presenter check cannot establish this observation; the retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -193,8 +193,8 @@ Original expression:
   QVERIFY(!ringPaintedAt(inputPoint(pan, 192, 80)));
 
 A008 | AutomationEditingTest::tracksSelectionGroupDragUndo | src/checks/automation/automationownership.cpp:101
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -544,8 +544,8 @@ Original expression:
   QVERIFY(pointAt(tab().document(), 120).has_value());
 
 A042 | AutomationEditingTest::pencilModeChangeRetainsPencilGesture | src/checks/automation/automationownership.cpp:180
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   }
@@ -638,8 +638,8 @@ Original expression:
   QCOMPARE(endPoint->value, 92);
 
 A050 | AutomationEditingTest::pencilModeChangeRetainsNodeGesture | src/checks/automation/automationownership.cpp:210
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   }
@@ -816,8 +816,8 @@ Original expression:
   QCOMPARE(movedSelection.lanes, expectedLanes);
 
 A065 | AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection | src/checks/automation/automationownership.cpp:268
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   }
@@ -856,8 +856,8 @@ Original expression:
   QTRY_VERIFY(!tab().view().selectionModel().timeSelection().active());
 
 A067 | AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence | src/checks/automation/automationownership.cpp:292
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   }
@@ -1131,8 +1131,8 @@ Original expression:
   QTRY_VERIFY(!pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
 
 A089 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:394
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
   }
@@ -1181,8 +1181,8 @@ Original expression:
   QVERIFY(arm.has_value());
 
 A093 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:406
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1212,8 +1212,8 @@ Original expression:
   QTRY_VERIFY(tab().view().userGestureActive());
 
 A096 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:410
-Disposition: NATIVE
-Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1247,8 +1247,8 @@ Original expression:
   QCOMPARE(page().canvas()->activeParameter(), tempoIndex);
 
 A099 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:421
-Disposition: NATIVE
-Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1283,8 +1283,8 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A103 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:425
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1292,8 +1292,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
 
 A104 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:426
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1379,8 +1379,8 @@ Original expression:
   QCOMPARE(sibling->value, kPilotSiblingValue);
 
 A113 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:445
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
 Source context since previous assertion:
 
 
@@ -1401,8 +1401,8 @@ Original expression:
   QCOMPARE(page().canvas()->activeParameter(), pilotIndex);
 
 A115 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:448
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       const LaneHandle pilot = findRow(pilotRow);
@@ -1411,8 +1411,8 @@ Original expression:
   QVERIFY(pilot.valid());
 
 A116 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:449
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas lane row/handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); reaching the paired predicate establishes the row. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationownership.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
 
@@ -1430,8 +1430,8 @@ Original expression:
   QVERIFY(rearmed.has_value());
 
 A118 | AutomationEditingTest::parameterSwitchCancelsNodeDrag | src/checks/automation/automationownership.cpp:452
-Disposition: NATIVE
-Mapping/reason: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationownership.cpp) no longer builds or runs. Previous native note: The Quick scene-graph AutomationTransient layer revision/rects/triangles observe the native mesh. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
 
 
@@ -1561,227 +1561,233 @@ S007 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
   report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
                          what: "undo restores secondary Tempo lane")
 
-S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:34
+S008 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:41
   report.expect(!fixture.document.history.canUndo, cppID: id,
                     message: "the drag records exactly one history entry")
 
-S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:42
+S009 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:49
   report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                          what: "stationary selection click deletes grabbed node only")
 
-S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:44
+S010 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:51
   report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                          what: "stationary selection click preserves other lanes")
 
-S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:48
+S011 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:55
   report.expect(page.selection == nil, cppID: id,
                     message: "outside right press clears selection before opening a menu")
 
-S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:54
+S012 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:61
   report.expect(!page.bandVisible && page.selection?.range == TimeRange(
           startTick: 0, endTick: fixture.songEndTick), cppID: id,
                     message: "a pending band preserves selection below the Manhattan threshold")
 
-S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:58
+S013 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:65
   report.expect(page.bandVisible, cppID: id,
                     message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 
-S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:62
+S014 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:69
   report.expect(page.selection == nil, cppID: id,
                     message: "activated zero-width band clears selection")
 
-S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:68
+S015 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:75
   report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                     cppID: id, message: "zoomable lane consumes range choice")
 
-S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:70
+S016 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:77
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                          what: "range choice changes displayed maximum")
 
-S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:72
+S017 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:79
   report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
                          what: "range choice changes neither document nor history")
 
-S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:76
+S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:83
   report.expect(!page.menuRowActions.contains(AutomationMenuAction.valueRange.rawValue),
                     cppID: id, message: "centered lane has no value range submenu")
 
-S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:80
+S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:87
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                          what: "range persists independently across parameter switches")
 
-S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:88
+S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:95
   report.expect(synthetic.page.publishedMenuRows.first {
               $0.actionId == AutomationMenuAction.deleteNode.rawValue
           }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
 
-S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:92
+S021 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:99
   report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
                         message: "Set Value promotes the synthetic default")
 
-S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:94
+S022 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:101
   report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
                              what: "promoted value is a written tick-zero event")
 
-S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:99
+S023 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:106
   report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
                         message: "a prompt cannot follow a primary-track change")
 
-S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:101
+S024 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:108
   report.expectEqual(stale, synthetic.snapshot, cppID: id,
                              what: "stale prompt leaves document and history untouched")
 
-S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:104
+S025 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:111
   report.fail(id, "synthetic default projection missing")
 
-S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:113
+S026 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:120
   report.expect(hover.page.consumeHoverDelete(), cppID: id,
                     message: "pencil blank hover consumes deletion without falling through")
 
-S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:115
+S027 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:122
   report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
                          what: "blank hover deletion changes nothing")
 
-S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:118
+S028 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:125
   report.expect(!hover.page.consumeHoverDelete(), cppID: id,
                     message: "time selection retains semantic delete priority")
 
-S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:122
+S029 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:129
   report.expect(!hover.page.consumeHoverDelete(), cppID: id,
                     message: "arrow hover cannot claim pencil deletion")
 
-S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:126
+S030 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:133
   report.expect(hover.page.consumeHoverDelete(), cppID: id,
                     message: "pencil hover deletion consumes the written point")
 
-S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:128
+S031 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:135
   report.expectEqual([String](), hover.values(hover.volumeLane), cppID: id,
                          what: "hover deletion removes the actual written point")
 
-S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:130
+S032 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:137
   report.expectEqual(hoverBefore.revision + 1, hover.document.revision, cppID: id,
                          what: "hover deletion publishes one revision")
 
-S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:132
+S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:139
   report.expect(hover.undo() && !hover.document.history.canUndo, cppID: id,
                     message: "hover deletion is exactly one undo entry")
 
-S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:134
+S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:141
   report.expectEqual(["48:70"], hover.values(hover.volumeLane), cppID: id,
                          what: "undo restores the hover-deleted point")
 
-S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:141
+S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:148
   report.expect(hover.page.menuTargetIsPoint, cppID: id,
                     message: "the written point owns its captured menu target")
 
-S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:146
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:153
   report.expect(!hover.page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                     cppID: id, message: "a replacement lane menu invalidates the old point action")
 
-S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:148
+S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:155
   report.expectEqual(superseded, hover.snapshot, cppID: id,
                          what: "a superseded point command cannot edit the lane")
 
-S038 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:154
+S038 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:161
   report.expect(emptyRange.page.consumeSelectionCommand(command: .nudgeRight), cppID: id,
                     message: "an empty range owns its nudge command")
 
-S039 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:156
+S039 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:163
   report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
                         && emptyRange.page.selection?.range.span == 48, cppID: id,
                     message: "an empty range advances on the camera grid without changing its span")
 
-S040 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:159
+S040 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:166
   report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
                          what: "empty-band movement creates no document edit or history")
 
-S041 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:164
+S041 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:171
   report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
                     message: "range duplicate is consumed through the canonical command seam")
 
-S042 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:166
+S042 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:173
   report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
                          cppID: id, what: "duplicate moves the band onto the inserted span")
 
-S043 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:168
+S043 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:175
   report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
                          what: "duplicate advances the edit cursor to the new span end")
 
-S044 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:170
+S044 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:177
   report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
                     message: "duplicate remains one undo entry")
 
-S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:172
+S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:179
   report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
                          what: "undo restores the original range contents")
 
-S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:286
+S046 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:293
 Swift expression:
   report.expect(fixture.page.selection == nil, cppID: id, message: "starting a pencil stroke outside clears the selection")
 
-S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:305
+S047 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:312
 Swift expression:
   report.expect(moved.count == 2 && moved[0].value == 64 && moved[0].tick > 24, cppID: lockID, message: "a horizontal Shift drag locks the value and moves the tick")
 
-S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:319
+S048 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift:326
 Swift expression:
   report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64, cppID: lockID, message: "a vertical Shift drag locks the tick and moves the value")
 
-S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:374
+S049 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:381
 Swift expression:
   report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
 
-S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:379
+S050 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:386-387
 Swift expression:
-  report.expect(!markersVisible(), cppID: id, message: "markers hide below the detail threshold")
+  report.expect(!markersVisible(), cppID: id,
+                message: "markers hide below the detail threshold")
 
-S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:381
+S051 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:388
 Swift expression:
   report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), surface: 1, button: 1), cppID: id, message: "the pencil press through hidden markers starts a stroke")
 
-S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:384
+S052 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:391
 Swift expression:
   report.expect(fixture.page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 70), button: 1), cppID: id, message: "the stroke through hidden markers commits")
 
-S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:388
+S053 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:395
 Swift expression:
   report.expect(hidden.count == 3 && hidden.contains(where: { $0.tick == 24 && $0.value == 70 }), cppID: id, message: "the hidden-marker stroke inserts instead of grabbing the node")
 
-S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:395
+S054 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:402
 Swift expression:
   report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
 
-S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:401
+S055 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:408-411
 Swift expression:
-  report.expect(shownFixture.page.pointerPress(x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64), surface: 1, button: 1), cppID: id, message: "the pencil press on a visible node grabs it")
+  report.expect(shownFixture.page.pointerPress(
+      x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64),
+      surface: 1, button: 1),
+                cppID: id, message: "the pencil press on a visible node grabs it")
 
-S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:407
+S056 | drawerAutomationDetailThresholdPrecedence | src/checks/automation/automationselection.swift:414
 Swift expression:
   report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id, what: "a stationary release on the grabbed node deletes exactly it")
 
-S057 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:277
+S057 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:586
 Swift expression:
   report.expect(!switched.page.hasGesture, cppID: switchID, message: "switching parameters cancels the drag")
 
-S058 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:279
+S058 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:588
 Swift expression:
   report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "the cancelled drag writes nothing")
 
-S059 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:283
+S059 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:592
 Swift expression:
   report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID, what: "releasing after the switch commits nothing")
 
-S060 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:295
+S060 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:604
 Swift expression:
   report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID, what: "the recovery drag commits normally")
 
-S061 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:275
+S061 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:584
 Swift expression:
   report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
 
-S062 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:286
+S062 | drawerAutomationInflightDragInvalidation | src/checks/automation/automationcanvasediting.swift:595-597
 Swift expression:
-  report.expect(switched.page.pointerPress(x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1), cppID: switchID, message: "a fresh press grabs the node after the switch")
+  report.expect(switched.page.pointerPress(
+      x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
+                cppID: switchID, message: "a fresh press grabs the node after the switch")
 
 S063 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:128
 Swift expression:

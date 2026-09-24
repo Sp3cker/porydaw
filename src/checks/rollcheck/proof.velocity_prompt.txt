@@ -14,7 +14,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -90,14 +90,14 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A002 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:166
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
 
 A003 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:169
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
@@ -128,15 +128,15 @@ Original expression:
                "typing into the velocity prompt mutated the song")
 
 A008 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:184
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("noteVelocityAccept")),
                "the velocity prompt has no OK button")
 
 A009 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:188
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the OK button did not close the velocity prompt")
 
@@ -150,8 +150,8 @@ Original expression:
                "velocity prompt acceptance did not commit one undoable velocity edit")
 
 A011 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:194
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after acceptance")
 
@@ -179,21 +179,21 @@ Original expression:
                "drawing did not use the accepted velocity latch before the no-op acceptance")
 
 A015 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:221
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(reopened.window && reopened.popup, qUtf8Printable(reopened.diagnostic))
 
 A016 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:222
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*reopened.popup, QLatin1String("noteVelocityAccept")),
                "the reopened velocity prompt has no OK button")
 
 A017 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:225
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the unchanged acceptance did not close the prompt")
 
@@ -233,8 +233,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A023 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:264
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!unopened || !unopened->isOpen(),
                "the selected-note velocity entry opened without a selection")
@@ -248,14 +248,14 @@ Original expression:
                "the selectionless velocity entry wrote to the song")
 
 A025 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:273
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(escapee.window && escapee.popup, qUtf8Printable(escapee.diagnostic))
 
 A026 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:276
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
@@ -266,8 +266,8 @@ Original expression:
   QCOMPARE(input->property("text").toString(), QStringLiteral("20"))
 
 A028 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:283
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "Escape did not close the velocity prompt")
 
@@ -280,27 +280,27 @@ Original expression:
                "Escape on the velocity prompt wrote to the song")
 
 A030 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:287
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after Escape")
 
 A031 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:291
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic))
 
 A032 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:294
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("noteVelocityCancel")),
                "the velocity prompt has no Cancel button")
 
 A033 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:297
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the Cancel button did not close the velocity prompt")
 
@@ -313,27 +313,27 @@ Original expression:
                "the velocity prompt Cancel button wrote to the song")
 
 A035 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:301
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after the Cancel button")
 
 A036 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:307
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic))
 
 A037 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:311
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*stale.popup, QLatin1String("noteVelocityAccept")),
                "the stale velocity prompt has no OK button")
 
 A038 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:314
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "a stale acceptance did not close the prompt")
 
@@ -347,8 +347,8 @@ Original expression:
                "a stale velocity acceptance wrote to the song")
 
 A040 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:320
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after the stale acceptance")
 
@@ -365,8 +365,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A043 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:342
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
 
@@ -377,15 +377,15 @@ Original expression:
   QVERIFY2(outsideCell.key >= 0, "no timeline cell for the popup underlay dismissal")
 
 A045 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:350
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
                "the dismissal point did not reach the popup underlay")
 
 A046 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:358
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!outside.popup->isOpen(), "an outside canvas press did not cancel the draft")
 
@@ -399,20 +399,20 @@ Original expression:
                "the paired outside release reached the timeline after popup teardown")
 
 A048 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:365
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "outside cancellation did not restore roll focus")
 
 A049 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:371
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(interrupted.window && interrupted.popup, qUtf8Printable(interrupted.diagnostic))
 
 A050 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:374
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!interrupted.popup->isOpen(), "the interrupted outside press did not close the draft")
 
@@ -425,15 +425,15 @@ Original expression:
                "interrupted popup dismissal changed the timeline")
 
 A052 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:383
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(checks::events::primeMouseMove(*interrupted.window, roll, freshPoint),
                "could not prime the fresh velocity drag after interrupted dismissal")
 
 A053 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:388
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(view.previewVelocity(seed->noteB.noteId) == std::optional<int>{93} &&
                    doc.smf().write() == before && doc.undoStack()->index() == undo &&
@@ -457,14 +457,14 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A056 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:408
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(deactivated.window && deactivated.popup, qUtf8Printable(deactivated.diagnostic))
 
 A057 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:413
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!deactivated.popup->isOpen() && !roll.hasFocus() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -473,14 +473,14 @@ Original expression:
                "window deactivation wrote the draft or reactivated the timeline")
 
 A058 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:420
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(resized.window && resized.popup, qUtf8Printable(resized.diagnostic))
 
 A059 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:425
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!resized.popup->isOpen() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -489,36 +489,36 @@ Original expression:
                "canvas resize accepted or wrote the velocity draft")
 
 A060 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:438
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(smallViewport && smallViewport->isOpen() && smallViewport->window(),
                "Insert Time did not open its canvas form in the small viewport")
 
 A061 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:446
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(form && accept && cancel, "the small-viewport Insert Time form has no action buttons")
 
 A062 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:464
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(smallViewport->window()->height() < form->implicitHeight() &&
                    canvasBounds.contains(acceptBounds) && canvasBounds.contains(cancelBounds),
                qPrintable(geometryDiagnostic))
 
 A063 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:467
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*smallViewport, QLatin1String("insertTimeCancel")),
                "the visible small-viewport Insert Time Cancel button did not receive a real click")
 
 A064 | PianoRollTest::popupSessionDismissal | src/checks/rollcheck/velocity_prompt.cpp:470
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!smallViewport->isOpen() && doc.smf().write() == before &&
                    doc.undoStack()->index() == postInterruptionUndo &&
@@ -533,8 +533,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A066 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:498
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic))
 
@@ -545,21 +545,21 @@ Original expression:
   QVERIFY2(outsideCell.key >= 0, "no timeline cell for the prompt outside-right dismissal")
 
 A068 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:504
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
                "the dismissal point did not reach the popup underlay")
 
 A069 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:509
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!outside.popup->isOpen(), "an outside right press did not dismiss the prompt")
 
 A070 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:513
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the swallowed outside right release opened a popup")
 
@@ -578,8 +578,8 @@ Original expression:
                "the outside right dismissal wrote to the song")
 
 A073 | PianoRollTest::velocityPromptOutsideRightNoRetarget | src/checks/rollcheck/velocity_prompt.cpp:518
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QTRY_VERIFY2(roll.hasFocus(), "outside right cancellation did not restore roll focus")
 
@@ -590,52 +590,52 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A075 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:537
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycled.window && cycled.popup, qUtf8Printable(cycled.diagnostic))
 
 A076 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:540
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycleInput, "the keyboard-cycle velocity prompt has no text input")
 
 A077 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:546
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
                "velocity keyboard cycle did not start in its text input")
 
 A078 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:550
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityAccept"))
 
 A079 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:553
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
 
 A080 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:556
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(quick_popup::inputHasActiveFocus(*cycled.window, QLatin1String("noteVelocityInput")),
                "Tab did not wrap from Cancel back to the velocity input")
 
 A081 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:560
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QCOMPARE(activeObjectName(*cycled.window), QStringLiteral("noteVelocityCancel"))
 
 A082 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:561
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cycled.popup->isOpen() && cycleInput->property("text").toString() == cycleDraft &&
                    doc.smf().write() == before && doc.undoStack()->index() == undo &&
@@ -643,26 +643,26 @@ Original expression:
                "velocity focus traversal closed or accepted its draft")
 
 A083 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:567
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!cycled.popup->isOpen(), "Escape did not close the keyboard-cycle velocity prompt")
 
 A084 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:573
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
 
 A085 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:576
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(input, "the velocity prompt has no text input")
 
 A086 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:580
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && popup->isOpen(),
                "an out-of-range draft closed the velocity prompt before commit")
@@ -677,20 +677,20 @@ Original expression:
                "an invalid velocity draft was accepted or wrote to the song")
 
 A088 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:590
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(!popup->isOpen(), "Escape did not close the corrected-draft prompt")
 
 A089 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:594
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(lowered.window && lowered.popup, qUtf8Printable(lowered.diagnostic))
 
 A090 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:600
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(loweredInput, "the lowered velocity prompt has no text input")
 
@@ -701,8 +701,8 @@ Original expression:
   QCOMPARE(loweredInput->property("text").toString(), QStringLiteral("1"))
 
 A092 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:604
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the lower-bound acceptance did not close the prompt")
 
@@ -715,14 +715,14 @@ Original expression:
                "the lower bound velocity acceptance did not commit exactly velocity 1")
 
 A094 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:612
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(raised.window && raised.popup, qUtf8Printable(raised.diagnostic))
 
 A095 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:618
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(raisedInput, "the raised velocity prompt has no text input")
 
@@ -733,8 +733,8 @@ Original expression:
   QCOMPARE(raisedInput->property("text").toString(), QStringLiteral("127"))
 
 A097 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:622
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "the upper-bound acceptance did not close the prompt")
 
@@ -747,20 +747,20 @@ Original expression:
                "the upper bound velocity acceptance did not commit exactly velocity 127")
 
 A099 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:631
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(capped.window && capped.popup, qUtf8Printable(capped.diagnostic))
 
 A100 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:634
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(cappedInput, "the capped velocity prompt has no text input")
 
 A101 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:642
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && popup->isOpen(), "clamped step keys closed the velocity prompt")
 
@@ -779,8 +779,8 @@ Original expression:
                "clamped step keys wrote to the song")
 
 A104 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:649
-Disposition: NATIVE
-Mapping/reason: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/velocity_prompt.cpp) no longer builds or runs. Previous native note: NATIVE: prompt-window delivery obligation. The original observes a native Quick popup session (window/popup realization, rendered text input/buttons, open/close state, focus restoration, or mouse/key delivery) that a presenter-level Swift check cannot establish. The Swift VelocityPage predicates cover only the document transaction.
 Original expression:
   QVERIFY2(popup && !popup->isOpen(), "Escape did not close the clamped prompt")
 

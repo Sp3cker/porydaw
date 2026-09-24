@@ -41,8 +41,8 @@ persisted fixture at the end. No data rows or loops expand these sites.
 Original assertion inventory and source sequence
 
 A001 | SettingsDialogCheckTest::initTestCase | src/checks/keyboard/tst_settingsdialog.cpp:37
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "checks/keyboard/tst_settingsdialog.h"
 
@@ -84,8 +84,8 @@ Original expression:
 QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
 
 A002 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:67
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
@@ -120,48 +120,48 @@ Original expression:
 QVERIFY(tabs);
 
 A003 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:68
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(tabs->currentIndex(), 0);
 
 A004 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:71
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     auto *const mixer = dialog.findChild<QComboBox *>(QStringLiteral("pcmMixerCombo"));
 Original expression:
 QVERIFY(mixer);
 
 A005 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:72
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(mixer->findData(int(M4A_PCM_MIXER_IPATIX)) >= 0);
 
 A006 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:73
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(mixer->findData(int(M4A_PCM_MIXER_SAPPY)) >= 0);
 
 A007 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:74
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(mixer->currentData().toInt(), int(M4A_PCM_MIXER_SAPPY));
 
 A008 | SettingsDialogCheckTest::configuredSettingsRoundTrip | src/checks/keyboard/tst_settingsdialog.cpp:75
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
@@ -200,8 +200,8 @@ Original expression:
 QCOMPARE(editedSong->reverb, songTarget.cfg.reverb);
 
 A013 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:89
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 }
 
@@ -214,16 +214,16 @@ Original expression:
 QVERIFY(tabs);
 
 A014 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:90
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:
 QVERIFY(!tabs->isTabEnabled(1));
 
 A015 | SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine | src/checks/keyboard/tst_settingsdialog.cpp:91
-Disposition: NATIVE
-Mapping/reason: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/keyboard/tst_settingsdialog.cpp) no longer builds or runs. Previous native note: Original native QWidget-harness obligation (isolated QSettings directory, QTabWidget/QComboBox hierarchy and state). A direct presenter check cannot establish this widget observation; no converted-dialog evidence exists.
 Source context since previous assertion:
   ;
 Original expression:

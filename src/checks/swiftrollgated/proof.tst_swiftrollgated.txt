@@ -4,7 +4,7 @@ Reference revision: e3a54cb20be8167db96fdeb46c819581e3dec1f8
 Original: src/checks/swiftrollgated/tst_swiftrollgated.cpp
 Original SHA-256: b2ae4c9731df4f9989a11fe857718ecaf25a8f7146a2a0693243d71e6df78ccd
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 QML counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
 QML SHA-256: e50c61fc3fd9c78530ec3d40b6e6dda25440d4cbd727d87108d72b9a16e600f0
 QML counterpart: src/checks/editorqml/tst_ShellReticleVisuals.qml
@@ -41,8 +41,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:304
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/tst_swiftrollgated.cpp) no longer builds or runs. Previous native note: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
 Source context since previous assertion:
 void SwiftRollGatedTest::init()
 {
@@ -199,8 +199,8 @@ Original expression:
     QVERIFY2(QFile::rename(songPath, backupPath), qPrintable(songPath));
 
 A013 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:350
-Disposition: NATIVE
-Mapping: Signal-spy validity is harness plumbing with no user-observable effect; delivery is proved by the openFailedSpy count site (A013).
+Disposition: RETIRED-REPRESENTATION
+Mapping: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/tst_swiftrollgated.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
             QFile::rename(backupPath, songPath);
         else
@@ -496,8 +496,8 @@ Original expression:
     QCOMPARE(reopenedGrid->property("noteSummary").toString(), baselineSummary);
 
 A036 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:409
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/tst_swiftrollgated.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 void SwiftRollGatedTest::selectionReticleRasterTranslucency()
 {

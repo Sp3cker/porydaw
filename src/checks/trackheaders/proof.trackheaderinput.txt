@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/trackheaderinput.cpp
 Original SHA-256: 10de3d240a7022bc299278437dfbf2166e90e1cc46d82a30585361b026e238af
 Swift counterpart: src/checks/trackheaders/trackheaderinput.swift
-Swift SHA-256: 072b5353af8ae09ee596a51036e1697ca812863ac6d582ab0ba625af5aef5d6d
+Swift SHA-256: ff364ac89d360483adbe31b3eee2e9ad724b49e33494cff7d3e2fc9f37e4f796
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -142,8 +142,8 @@ Original expression:
   QVERIFY(sameRect(fx.root().property("trackHeadersBandRect").toRectF(), localRect))
 
 A004 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:86
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -182,8 +182,8 @@ Original expression:
   QVERIFY(near(fx.band().height(), localRect.height()))
 
 A009 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:91
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -255,8 +255,8 @@ Original expression:
   QCOMPARE(fx.rows().property("count").toInt(), fx.headers().rowCount())
 
 A018 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:104
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -266,8 +266,8 @@ Original expression:
   QVERIFY2(!frame.isNull(), qPrintable(error))
 
 A019 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:105
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -291,8 +291,8 @@ Original expression:
   QVERIFY(selectionRow && voiceRow)
 
 A021 | TrackHeadersTest::selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.cpp:128
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       SongDocument &doc = fx.tab().document();
@@ -953,8 +953,8 @@ Original expression:
   QVERIFY(near(headers.scrollY(), maximumScroll))
 
 A087 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:316
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1057,8 +1057,8 @@ Original expression:
   QVERIFY(fx.headers().pointerMove(pointerInput(fx.input(), *point, Qt::NoButton, Qt::NoButton)))
 
 A098 | TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip | src/checks/trackheaders/trackheaderinput.cpp:344
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheaderinput.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1066,8 +1066,8 @@ Original expression:
   QVERIFY(!fx.root().findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderToolTip")))
 
 A099 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:354
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/trackheaderinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -1083,8 +1083,8 @@ Original expression:
   QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)))
 
 A100 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:362
-Disposition: NATIVE-SETUP
-Mapping/reason: Native fixture and window discovery is retained test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/trackheaderinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *const quick = emptyView.quickView();
@@ -1216,262 +1216,262 @@ S021 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheade
   report.expect(h.rows[1].overlayColor != "#00000000", cppID: id,
                     message: "secondary scope renders the original selection overlay")
 
-S022 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:85
+S022 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:118
   report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Ctrl adds secondary scope")
 
-S023 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:87
+S023 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:120
   report.expectEqual(1, session.selectedTrack, cppID: id, what: "removing primary chooses first surviving track")
 
-S024 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:88
+S024 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:121
   report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "removed primary leaves surviving scope")
 
-S025 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:90
+S025 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:123
   report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "last scoped track cannot be removed")
 
-S026 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:92
+S026 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:125
   report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Shift extends range from primary")
 
-S027 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:93
+S027 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:126
   report.expectEqual(1, session.selectedTrack, cppID: id, what: "range keeps primary")
 
-S028 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:96
+S028 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:129
   report.expectEqual(Set([0, 1]), session.mutedTracks, cppID: id, what: "mute command uses entire track scope")
 
-S029 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:98
+S029 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:131
   report.expect(session.mutedTracks.isEmpty, cppID: id, message: "all-muted scope toggles off together")
 
-S030 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:100
+S030 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:133
   report.expectEqual(Set([0, 1]), session.soloedTracks, cppID: id, what: "solo command uses entire track scope")
 
-S031 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:102
+S031 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:135
   report.expect(session.soloedTracks.isEmpty, cppID: id, message: "all-soloed scope toggles off together")
 
-S032 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:104
+S032 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:137
   report.expect(fx.document.moveTrack(1, to: 0), cppID: id, message: "move scoped track")
 
-S033 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:105
+S033 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:138
   report.expectEqual(0, session.selectedTrack, cppID: id, what: "primary follows moved identity")
 
-S034 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:106
+S034 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:139
   report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "scope follows both moved identities")
 
-S035 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:107
+S035 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:140
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "undo scoped move")
 
-S036 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:108
+S036 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:141
   report.expectEqual(1, session.selectedTrack, cppID: id, what: "undo restores primary identity")
 
-S037 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:109
+S037 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:142
   report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "undo restores scope identities")
 
-S038 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:111
+S038 | trackHeaderScopeTransitions | src/checks/trackheaders/trackheaderinput.swift:144
   report.expectEqual(Set([0]), session.selectedTracks, cppID: id, what: "plain click collapses scope")
 
-S039 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:129
+S039 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:162
   report.expect(h.rows[0].muteHovered, cppID: id, message: "mute hover is visible")
 
-S040 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:131
+S040 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:164
   report.expect(!h.rows[0].muteHovered, cppID: id, message: "pointer leave clears mute hover")
 
-S041 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:132
+S041 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:165
   report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
                     cppID: id, message: "mute accepts press")
 
-S042 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:134
+S042 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:167
   report.expect(h.rows[0].mutePressed, cppID: id, message: "left press depresses mute")
 
-S043 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:135
+S043 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:168
   report.expect(h.beginPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
                     cppID: id, message: "right press during held mute is handled")
 
-S044 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:137
+S044 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:170
   report.expect(h.rows[0].mutePressed && !h.menuOpen, cppID: id,
                     message: "additional right press does not replace held mute")
 
-S045 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:139
+S045 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:172
   report.expect(h.endPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
                     cppID: id, message: "right release during held mute is handled")
 
-S046 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:141
+S046 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:174
   report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked, cppID: id,
                     message: "wrong-button release cancels mute without toggling")
 
-S047 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:146
+S047 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:179
   report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
                         cppID: id, message: "cancel reason \(reason) accepts a fresh press")
 
-S048 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:149
+S048 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:182
   report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked,
                         cppID: id, message: "cancel reason \(reason) releases mute without toggling")
 
-S049 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:151
+S049 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:184
   report.expect(!h.endPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
                         cppID: id, message: "cancel reason \(reason) rejects late release")
 
-S050 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:155
+S050 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:188
   report.expect(fx.session.mutedTracks.contains(0) && h.rows[0].muteChecked,
                     cppID: id, message: "mute click changes session mask and visible checked state")
 
-S051 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:158
+S051 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:191
   report.expect(!fx.session.mutedTracks.contains(0) && !h.rows[0].muteChecked,
                     cppID: id, message: "keyboard mute activation clears the same toggle")
 
-S052 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:162
+S052 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:195
   report.expect(h.rows[0].soloHovered, cppID: id, message: "solo hover is visible")
 
-S053 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:164
+S053 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:197
   report.expect(!h.rows[0].soloHovered, cppID: id, message: "pointer leave clears solo hover")
 
-S054 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:165
+S054 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:198
   report.expect(h.beginPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
                     cppID: id, message: "solo accepts press")
 
-S055 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:167
+S055 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:200
   report.expect(h.rows[0].soloPressed, cppID: id, message: "solo press is visible")
 
-S056 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:168
+S056 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:201
   report.expect(h.endPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
                     cppID: id, message: "solo accepts release")
 
-S057 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:170
+S057 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:203
   report.expect(fx.session.soloedTracks.contains(0) && h.rows[0].soloChecked,
                     cppID: id, message: "solo click changes session mask and visible checked state")
 
-S058 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:173
+S058 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:206
   report.expect(!fx.session.soloedTracks.contains(0) && !h.rows[0].soloChecked,
                     cppID: id, message: "keyboard solo activation clears the same toggle")
 
-S059 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:177
+S059 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:210
   report.expect(h.rows[0].muteChecked, cppID: id, message: "external session mute reaches header")
 
-S060 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:178
+S060 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:211
   report.expect(h.rows[1] === unaffected, cppID: id, message: "mask changes retain unrelated row")
 
-S061 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:179
+S061 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:212
   report.expectEqual(rebuilds, h.rowRebuildCount, cppID: id, what: "toggles never rebuild rows")
 
-S062 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:180
+S062 | muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.swift:213
   report.expectEqual(1, fx.session.selectedTrack, cppID: id, what: "toggles preserve primary track")
 
-S063 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:193
+S063 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:226
   report.expect(maximum > 0, cppID: id, message: "one-row viewport has a scroll range")
 
-S064 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:195
+S064 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:228
   report.expectEqual(maximum, h.scrollY, cppID: id, what: "scrollbar overshoot clamps at bottom")
 
-S065 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:197
+S065 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:230
   report.expectEqual(0, h.scrollY, cppID: id, what: "scrollbar undershoot clamps at top")
 
-S066 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:201
+S066 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:234
   report.expectEqual(afterKey, h.scrollY, cppID: id, what: "keyboard step scrolls one row")
 
-S067 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:202
+S067 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:235
   report.expect(!h.handleWheel(angleDeltaX: 120, angleDeltaY: 0, pixelDeltaX: 0,
                                   pixelDeltaY: 0, modifiers: 0, phase: 0),
                     cppID: id, message: "horizontal wheel is rejected")
 
-S068 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:205
+S068 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:238
   report.expectEqual(afterKey, h.scrollY, cppID: id, what: "horizontal wheel leaves scroll alone")
 
-S069 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:207
+S069 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:240
   report.expect(h.handleWheel(angleDeltaX: 0, angleDeltaY: -120, pixelDeltaX: 0,
                                  pixelDeltaY: 0, modifiers: 0, phase: 0),
                     cppID: id, message: "vertical wheel is accepted")
 
-S070 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:210
+S070 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:243
   report.expectEqual(afterKey, h.scrollY, cppID: id, what: "one wheel notch scrolls one row")
 
-S071 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:213
+S071 | scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.swift:246
   report.expectEqual(afterKey - 7, h.scrollY, cppID: id,
                          what: "trackpad pixel delta takes precedence over angle delta")
 
-S072 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:224
+S072 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:257
   report.expect(!fx.headers.beginPointer(x: -1, y: -1, button: 1, modifiers: 0),
                     cppID: id, message: "negative header coordinates are rejected")
 
-S073 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:230
+S073 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:263
   report.expectEqual(0, fx.headers.rows.count, cppID: id, what: "empty song publishes zero rows")
 
-S074 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:231
+S074 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:264
   report.expect(!fx.headers.beginPointer(x: 1, y: 1, button: 1, modifiers: 0),
                     cppID: id, message: "empty header rejects press")
 
-S075 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:233
+S075 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.swift:266
   report.expect(!fx.headers.endPointer(x: 1, y: 1, button: 1, modifiers: 0),
                     cppID: id, message: "empty header rejects release")
 
 S076-S099 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedBandGeometryAndRows and test_scrollThumbAtBothLimits, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
 
-S076 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:117
+S076 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:213
   verify(band.visible)
 
-S077 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:118
+S077 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:214
   verify(origin.x >= 0 && origin.y >= 0)
 
-S078 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:119
+S078 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:215
   verify(origin.x + band.width <= s.width + testCase.tolerance)
 
-S079 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:120
+S079 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:216
   verify(origin.y + band.height <= s.height + testCase.tolerance)
 
-S080 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:121
+S080 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:217
   verify(near(band.x, band.parent.bandRect.x))
 
-S081 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:122
+S081 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:218
   verify(near(band.y, band.parent.bandRect.y))
 
-S082 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:123
+S082 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:219
   verify(near(band.width, h.trackHeaderWidth))
 
-S083 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:124
+S083 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:220
   verify(near(band.height, h.viewportHeight))
 
-S084 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:125
+S084 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:221
   verify(input.visible)
 
-S085 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:126
+S085 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:222
   verify(near(input.width, band.width - h.scrollbarWidth))
 
-S086 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:127
+S086 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:223
   verify(near(input.height, band.height))
 
-S087 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:128
+S087 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:224
   verify(near(bar.x, input.width))
 
-S088 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:129
+S088 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:225
   verify(near(bar.width, h.scrollbarWidth))
 
-S089 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:130
+S089 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:226
   compare(h.viewportHeight, band.height)
 
-S090 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:131
+S090 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:227
   verify(rows.count > 0)
 
-S091 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:132
+S091 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:228
   compare(h.contentHeight, rows.count * h.rowHeight)
 
-S092 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:133
+S092 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:229
   verify(Object.keys(h.appearance).length > 0)
 
-S093 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:147
+S093 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:243
   tryVerify(function() { return near(thumb.y, 0) })
 
-S094 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:148
+S094 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:244
   verify(thumb.height > 0)
 
-S095 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:149
+S095 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:245
   verify(thumb.y >= 0)
 
-S096 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:150
+S096 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:246
   verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
 
-S097 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:152
+S097 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:248
   tryVerify(function() { return near(thumb.y + thumb.height, bar.height) })
 
-S098 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:153
+S098 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:245
   verify(thumb.y >= 0)
 
-S099 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:154
+S099 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:246
   verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
 
 Shared helper: src/checks/trackheaders/headerfixture.swift

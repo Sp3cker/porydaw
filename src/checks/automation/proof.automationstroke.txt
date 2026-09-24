@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationstroke.cpp
 Original SHA-256: 8b8caef7912b56d633bdf21e766e8e8beb414e2d64e5b7a8cb19d911b26a46f6
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
+Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -1863,147 +1863,150 @@ S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.s
   report.expectEqual(firstWrite, fx.document.state, cppID: id,
                          what: "only a second undo removes the preceding Pan sweep")
 
-S152 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:795
+S152 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:993
 Swift expression:
   report.fail(jitterID, "the jitter stroke did not start")
 
-S153 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:801
+S153 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:999
 Swift expression:
   report.expectEqual(48.0, jittered, cppID: jitterID, what: "pure horizontal jitter keeps the stroke's continuous value")
 
-S154 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:804
+S154 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1002
 Swift expression:
   report.expectEqual(1, jitter.strokePoints.count, cppID: jitterID, what: "a same-cell revisit keeps one point for the cell")
 
-S155 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:808
+S155 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1006
 Swift expression:
   report.expectEqual(["24:48", "48:48", "72:48"], jitterLane.laneValues(jitter.strokePoints), cppID: jitterID, what: "one point per crossed cell holds the jittered value")
 
-S156 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:818
+S156 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1016
 Swift expression:
   report.fail(zigzagID, "the zigzag stroke did not start")
 
-S157 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:826
+S157 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1024
 Swift expression:
   report.expectEqual((0..<6).map { Tick(24 + $0 * 24) }, zigzag.strokePoints.map(\.tick), cppID: zigzagID, what: "the zigzag keeps one point per crossed cell")
 
-S158 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:828
+S158 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1026
 Swift expression:
   report.expectEqual(zigzagValues, zigzag.strokePoints.map(\.value), cppID: zigzagID, what: "each zigzag cell holds its own extremum")
 
-S159 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:831
+S159 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1029
 Swift expression:
   report.expect(extrema[0] < extrema[1] && extrema[1] > extrema[2] && extrema[2] < extrema[3] && extrema[3] > extrema[4] && extrema[4] < extrema[5], cppID: zigzagID, message: "the zigzag preserves every directional extremum")
 
-S160 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:841
+S160 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1039
 Swift expression:
   report.fail(verticalID, "the vertical stroke did not start")
 
-S161 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:845
+S161 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1043
 Swift expression:
   report.expectEqual([AutomationLanePoint(tick: 24, value: 96)], vertical.strokePoints, cppID: verticalID, what: "vertical motion in one cell keeps only the final value")
 
-S162 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:866
+S162 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1064
 Swift expression:
   report.fail(densityID, "the density strokes did not start")
 
-S163 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:869
+S163 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1067-1068
 Swift expression:
-  report.expect(!sparse.isEmpty, cppID: densityID, message: "the sparse diagonal stroke writes points")
+  report.expect(!sparse.isEmpty, cppID: densityID,
+                message: "the sparse diagonal stroke writes points")
 
-S164 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:871
+S164 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1069
 Swift expression:
   report.expectEqual(sparse, dense, cppID: densityID, what: "10 vs 50 intermediate samples give identical completion points")
 
-S165 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:880
+S165 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1078
 Swift expression:
   report.fail(backtrackID, "the backtracking stroke did not start")
 
-S166 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:885
+S166 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1084-1086
 Swift expression:
-  report.expectEqual(["24:68", "48:84", "72:100"], backtrackLane.laneValues(backtrack.strokePoints), cppID: backtrackID, what: "revisited cells hold the leftward values while the far extremum stands")
+  backtrackLane.laneValues(backtrack.strokePoints),
+  cppID: backtrackID,
+  what: "revisited cells hold the leftward values while the far extremum stands")
 
-S167 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:889
+S167 | drawerAutomationPencilStrokeFilters | src/checks/automation/domain/gestures.swift:1087
 Swift expression:
   report.expectEqual([Tick(24), Tick(48), Tick(72)], backtrack.strokePoints.map(\.tick), cppID: backtrackID, what: "the backtracking stroke stays sorted by tick")
 
-S168 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:912
+S168 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1110
 Swift expression:
   report.fail(shiftID, "the locked stroke did not start")
 
-S169 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:921
+S169 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1119
 Swift expression:
   report.expectEqual(64.0, firstLocked, cppID: shiftID, what: "a locked run keeps the initial value")
 
-S170 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:923
+S170 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1121
 Swift expression:
   report.expectEqual(64.0, secondLocked, cppID: shiftID, what: "a locked run ignores later vertical travel")
 
-S171 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:927
+S171 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1125
 Swift expression:
   report.expectEqual(["24:64", "48:64", "72:64"], lockedLane.laneValues(locked.strokePoints), cppID: shiftID, what: "the locked stroke writes its constant initial value")
 
-S172 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:933
+S172 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1131
 Swift expression:
   report.fail(shiftID, "the unlocked stroke did not start")
 
-S173 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:939
+S173 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1137
 Swift expression:
   report.expect(unlockedValue != 64, cppID: shiftID, message: "the same travel unlocked moves the value")
 
-S174 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:946
+S174 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1144
 Swift expression:
   report.fail(controlID, "the freehand stroke did not start")
 
-S175 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:950
+S175 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1148
 Swift expression:
   report.expectEqual([Tick(24), Tick(30)], freehand.strokePoints.map(\.tick), cppID: controlID, what: "a freehand run lands on clock ticks off the snapped grid")
 
-S176 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:952
+S176 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1150
 Swift expression:
   report.expect(freehand.strokePoints.allSatisfy { $0.tick % 6 == 0 }, cppID: controlID, message: "every freehand point is clock-quantized")
 
-S177 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:954
+S177 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1152
 Swift expression:
   report.expect(freehand.strokePoints.contains { $0.tick % 24 != 0 }, cppID: controlID, message: "the freehand run escapes the snapped cell lattice")
 
-S178 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:961
+S178 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1159
 Swift expression:
   report.fail(mixedID, "the mixed stroke did not start")
 
-S179 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:966
+S179 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1164
 Swift expression:
   report.expectEqual([Tick(24), Tick(48), Tick(60), Tick(66)], mixed.strokePoints.map(\.tick), cppID: mixedID, what: "snapped then freehand segments compose contiguously")
 
-S180 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:969
+S180 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1167
 Swift expression:
   report.expectEqual(36, mixed.strokePoints.first?.value ?? -1, cppID: mixedID, what: "the snapped head keeps its cell value")
 
-S181 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:971
+S181 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1169
 Swift expression:
   report.expectEqual(Tick(24), mixed.tickBegin, cppID: mixedID, what: "the mixed stroke spans from its first cell")
 
-S182 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:980
+S182 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1178
 Swift expression:
   report.fail(altID, "the plain stroke did not start")
 
-S183 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:987
+S183 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1185
 Swift expression:
   report.fail(altID, "the plain stroke did not commit")
 
-S184 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:996
+S184 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1194
 Swift expression:
   report.fail(altID, "the fine stroke did not start")
 
-S185 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1003
+S185 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1201
 Swift expression:
   report.fail(altID, "the fine stroke did not commit")
 
-S186 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1007
+S186 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1205
 Swift expression:
   report.expect(!plain.isEmpty, cppID: altID, message: "the plain stroke writes the empty lane")
 
-S187 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1008
+S187 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gestures.swift:1206
 Swift expression:
   report.expectEqual(plain, altLane.values(altLane.panLane), cppID: altID, what: "the fine modifier leaves the stroke unchanged")
 

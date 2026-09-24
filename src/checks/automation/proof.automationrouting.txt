@@ -230,8 +230,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A013 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:77
-Disposition: NATIVE
-Mapping/reason: Retained native/QML obligation: the original asserts the rendered voice-changes input item has non-empty bounds (voiceChangeInput().bounds()). The voice-changes area is a separate QML item in the Swift architecture and no Swift presenter predicate measures its rendered bounds. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native/QML obligation: the original asserts the rendered voice-changes input item has non-empty bounds (voiceChangeInput().bounds()). The voice-changes area is a separate QML item in the Swift architecture and no Swift presenter predicate measures its rendered bounds. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
   }
@@ -535,8 +535,8 @@ Original expression:
   QTRY_VERIFY(findRow(controlRow(kPanController)).valid());
 
 A040 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:149
-Disposition: NATIVE
-Mapping/reason: Retained native obligation: the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -1059,8 +1059,8 @@ Original expression:
   QVERIFY(firstRowId.kind == EditorAutomationRowKind::ControlChange);
 
 A086 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:250
-Disposition: NATIVE
-Mapping/reason: Retained native obligation (native input delivery): the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native obligation (native input delivery): the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -1287,12 +1287,12 @@ S016 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanv
 S017 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:110
   report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
 
-S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:54
+S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:61
   report.expect(!page.bandVisible && page.selection?.range == TimeRange(
         startTick: 0, endTick: fixture.songEndTick), cppID: id,
                   message: "a pending band preserves selection below the Manhattan threshold")
 
-S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:58
+S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:65
   report.expect(page.bandVisible, cppID: id,
                   message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 
@@ -1357,11 +1357,11 @@ S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presenta
   report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
                        what: "the active lane publishes its written-event count")
 
-S035 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:194
+S035 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:201
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "banding writes nothing")
 
-S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:62
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:69
   report.expect(page.selection == nil, cppID: id,
                   message: "activated zero-width band clears selection")
 
@@ -1369,23 +1369,23 @@ S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/d
   report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
                   message: "an empty lane's first stroke is a change")
 
-S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:364
+S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:673
   report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
 
-S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:366
+S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:675
   report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
 
-S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:367
+S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:676
   report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 
-S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:372
+S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:681
   report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
                     what: "dropping the band writes nothing")
 
-S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:368
+S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:677
   report.expect(!band.page.isPanning, cppID: bandID,
                   message: "no pan owns the band scenario")
 
-S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:370
+S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:679
   report.expect(!band.page.hasGesture, cppID: bandID,
                   message: "no gesture owns the band scenario")

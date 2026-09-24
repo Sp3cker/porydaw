@@ -5,9 +5,9 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_document.cpp
 Original SHA-256: c73b4bcc38040e9e0866aceb87e7295c0c33b4d7b8c66bfa2859498618732d99
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 211b263c6b8678bc8eda2b82c624e95b2a1a965c52ff45d6f2f2b468f4dab5e6
+Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: c8aa71925950b7ab746177e857954ba5c88f9bf4ac03d8fef2d29c1b21d5f3bf
+Swift SHA-256: 53124d302de46aa58254dbcebc98646a12e8c41e60be4b17e2c52c918d3929d7
 Swift counterpart: src/checks/editcheck/DocumentHistoryChecks.swift
 Swift SHA-256: f8cc7b56af8882b78e6f3d22c1b4b0f38c430de4266933684fd7d43c074f9ec7
 Swift counterpart: src/checks/editcheck/DocumentEditChecks.swift
@@ -1786,364 +1786,364 @@ Original expression:
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
-S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:39
+S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
   report.expectEqual(3, notes.count,
                        cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                        what: "all note-ons projected")
 
-S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:42
+S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:48
   report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
                        cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                        what: "first following matching ends pair exactly")
 
-S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
+S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
   report.expect(notes[2].isUnterminated,
                   cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                   message: "unterminated note is preserved")
 
-S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:48
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:54
   report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
                   cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
                   message: "adoption remints unique document identities")
 
-S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:57
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                   cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                   message: "typed tempo is removed from raw chunks")
 
-S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:54
+S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
   report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
                        document.state.tempo,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "valid conductor tempo becomes typed state")
 
-S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:66
   report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
         .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
         cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
         message: "serialized MIDI carries no note identity")
 
-S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:64
+S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:70
   report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                   cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                   message: "note-end status is retained during adoption")
 
-S009 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:81
+S009 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:201
   report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
                     "overlapping edited participants were accepted")
 
-S010 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:84
+S010 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:204
   report.expectEqual(initialRevision, document.revision,
                            cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
                            what: "rejected batch leaves revision unchanged")
 
-S011 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:88
+S011 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:208
   report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
                     "unexpected rejection: \(error)")
 
-S012 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:96
+S012 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:216
   report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
                   cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                   message: "exact duplicate insertions receive distinct identities")
 
-S013 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:99
+S013 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:219
   report.expectEqual(2, document.notes(in: 0).filter {
         $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
     }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
     what: "exact duplicate insertions remain distinct notes")
 
-S014 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:106
+S014 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:226
   report.expectEqual(revisionBeforeNoOp, document.revision,
                        cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
                        what: "empty delete is a no-op")
 
-S015 | movementAndResize | src/checks/editcheck/NoteChecks.swift:119
+S015 | movementAndResize | src/checks/editcheck/NoteChecks.swift:239
   report.fail(noteEditsBasicID, "fixture insertion failed")
 
-S016 | movementAndResize | src/checks/editcheck/NoteChecks.swift:124
+S016 | movementAndResize | src/checks/editcheck/NoteChecks.swift:244
   report.expectEqual(Tick(2), trimmed?.tick,
                        cppID: "editcheck/EditCheckTest::noteMoveOverlap",
                        what: "edited note wins and stationary tail survives")
 
-S017 | movementAndResize | src/checks/editcheck/NoteChecks.swift:127
+S017 | movementAndResize | src/checks/editcheck/NoteChecks.swift:247
   report.expectEqual(Tick(2), trimmed?.duration,
                        cppID: "editcheck/EditCheckTest::noteMoveCollision",
                        what: "tail trim preserves surviving duration")
 
-S018 | movementAndResize | src/checks/editcheck/NoteChecks.swift:130
+S018 | movementAndResize | src/checks/editcheck/NoteChecks.swift:250
   report.expectEqual(ids[0], trimmed?.id,
                        cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
                        what: "stationary trim preserves identity")
 
-S019 | movementAndResize | src/checks/editcheck/NoteChecks.swift:134
+S019 | movementAndResize | src/checks/editcheck/NoteChecks.swift:254
   report.expectEqual(Tick(0), document.note(ids[0])?.tick,
                        cppID: "editcheck/EditCheckTest::noteMoveBatch",
                        what: "one undo restores collision victim")
 
-S020 | movementAndResize | src/checks/editcheck/NoteChecks.swift:138
+S020 | movementAndResize | src/checks/editcheck/NoteChecks.swift:258
   report.expectEqual(UInt8(70), document.note(ids[1])?.pitch,
                        cppID: "editcheck/EditCheckTest::noteMoveMerge",
                        what: "redo restores edited pitch")
 
-S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:147
+S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:267
   report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
                     "rejection fixture insertion failed")
 
-S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:153
+S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:273
   report.expectEqual(revision, rejectionDocument.revision,
                        cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
                        what: "conflicting pitch destinations reject whole operation")
 
-S023 | movementAndResize | src/checks/editcheck/NoteChecks.swift:157
+S023 | movementAndResize | src/checks/editcheck/NoteChecks.swift:277
   report.expectEqual(revision, rejectionDocument.revision,
                        cppID: "editcheck/EditCheckTest::noteMoveRejects",
                        what: "zero movement creates no entry")
 
-S024 | movementAndResize | src/checks/editcheck/NoteChecks.swift:162
+S024 | movementAndResize | src/checks/editcheck/NoteChecks.swift:282
   report.expectEqual(Tick(29), document.note(ids[2])?.tick,
                        cppID: noteEditsBasicID,
                        what: "leading resize clamps to one tick")
 
-S025 | movementAndResize | src/checks/editcheck/NoteChecks.swift:165
+S025 | movementAndResize | src/checks/editcheck/NoteChecks.swift:285
   report.expectEqual(Tick(1), document.note(ids[2])?.duration,
                        cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
                        what: "resize enforces minimum duration")
 
-S026 | movementAndResize | src/checks/editcheck/NoteChecks.swift:169
+S026 | movementAndResize | src/checks/editcheck/NoteChecks.swift:289
   report.expectEqual(UInt64(30), document.note(ids[2])?.endTick,
                        cppID: noteEditsBasicID,
                        what: "leading resize preserves note end")
 
-S027 | movementAndResize | src/checks/editcheck/NoteChecks.swift:177
+S027 | movementAndResize | src/checks/editcheck/NoteChecks.swift:297
   report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     "unterminated fixture was not projected")
 
-S028 | movementAndResize | src/checks/editcheck/NoteChecks.swift:182
+S028 | movementAndResize | src/checks/editcheck/NoteChecks.swift:302
   report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "moving an unterminated note does not invent an end")
 
-S029 | velocityEditing | src/checks/editcheck/NoteChecks.swift:195
+S029 | velocityEditing | src/checks/editcheck/NoteChecks.swift:315
   report.expectEqual(UInt8(1), document.note(ids[2])?.velocity,
                        cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
                        what: "inserted velocity zero shares the domain floor")
 
-S030 | velocityEditing | src/checks/editcheck/NoteChecks.swift:204
+S030 | velocityEditing | src/checks/editcheck/NoteChecks.swift:324
   report.expect(changed == revision + 1 && document.note(ids[0])?.velocity == 99 &&
         document.note(ids[1])?.velocity == 127,
         cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
         message: "batch velocity is atomic, clamped, and last-write-wins")
 
-S031 | velocityEditing | src/checks/editcheck/NoteChecks.swift:209
+S031 | velocityEditing | src/checks/editcheck/NoteChecks.swift:329
   report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
                                          expectedRevision: revision) == nil &&
         document.state == beforeStale,
         cppID: "editcheck/EditCheckTest::documentVelocityRejects",
         message: "stale velocity revision rejects without mutation")
 
-S032 | velocityEditing | src/checks/editcheck/NoteChecks.swift:216
+S032 | velocityEditing | src/checks/editcheck/NoteChecks.swift:336
   report.expect(document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
                   cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
                   message: "relative velocity clamps each note")
 
-S033 | velocityEditing | src/checks/editcheck/NoteChecks.swift:224
+S033 | velocityEditing | src/checks/editcheck/NoteChecks.swift:344
   report.expect(invalid == nil && document.revision == beforeInvalid,
                   cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
                   message: "one invalid participant rejects the whole batch")
 
-S034 | velocityEditing | src/checks/editcheck/NoteChecks.swift:227
+S034 | velocityEditing | src/checks/editcheck/NoteChecks.swift:347
   report.expectEqual(beforeNudge + 1, beforeInvalid,
                        cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
                        what: "one relative batch publishes one revision")
 
-S035 | velocityEditing | src/checks/editcheck/NoteChecks.swift:234
+S035 | velocityEditing | src/checks/editcheck/NoteChecks.swift:354
   report.expect(restored && document.note(ids[0])?.velocity == 1,
                   cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
                   message: "velocity batch participates in undo and redo")
 
-S036 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:336
+S036 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:456
   report.expect(document.note(ids[0])?.tick == 0 && document.note(ids[1])?.pitch == 71,
                   cppID: "editcheck/EditCheckTest::documentMergedOverlapPublication",
                   message: "group rebuilds from origin and restores passed neighbor")
 
-S037 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:340
+S037 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:460
   report.expect(document.note(ids[1])?.pitch == 69 && document.note(ids[0])?.duration == 4,
                   cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
                   message: "return to group origin restores state")
 
-S038 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:343
+S038 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:463
   report.expect(changes == 4,
                   cppID: "editcheck/EditCheckTest::documentLoadPublication",
                   message: "each real call including return-to-origin publishes once")
 
-S039 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:351
+S039 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:471
   report.expectEqual(beforeUndo, document.note(ids[0])?.id,
                        cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                        what: "undo and redo restore stable note identity")
 
-S040 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:354
+S040 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:474
   report.expect(document.note(ids[0])?.id == ids[0] && document.note(ids[1])?.id == ids[1],
                   cppID: "editcheck/EditCheckTest::documentDuplicationOwnership",
                   message: "document-scoped identities remain owned after history crossing")
 
-S041 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:357
+S041 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:477
   report.expect(remaps.allSatisfy { $0 == nil },
                   cppID: "editcheck/EditCheckTest::documentRemapsAndRaw",
                   message: "note-only mutations publish without a track remap")
 
-S042 | saveIdentity | src/checks/editcheck/NoteChecks.swift:437
+S042 | saveIdentity | src/checks/editcheck/NoteChecks.swift:557
   report.expect(!document.isDirty,
                   cppID: "editcheck/EditCheckTest::documentSavedIdentity",
                   message: "matching save snapshot marks its identity clean")
 
-S043 | saveIdentity | src/checks/editcheck/NoteChecks.swift:445
+S043 | saveIdentity | src/checks/editcheck/NoteChecks.swift:565
   report.expect(document.isDirty,
                   cppID: "editcheck/EditCheckTest::documentSavedIdentity",
                   message: "older completion cannot mark newer edits clean")
 
-S044 | saveIdentity | src/checks/editcheck/NoteChecks.swift:449
+S044 | saveIdentity | src/checks/editcheck/NoteChecks.swift:569
   report.expect(!document.isDirty,
                   cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                   message: "undo returns to sealed saved identity")
 
-S045 | saveIdentity | src/checks/editcheck/NoteChecks.swift:454
+S045 | saveIdentity | src/checks/editcheck/NoteChecks.swift:574
   report.expect(canonicalFile?.wasFormat0 == false,
                   cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                   message: "save capture owns canonical format-one MIDI bytes")
 
-S046 | saveIdentity | src/checks/editcheck/NoteChecks.swift:457
+S046 | saveIdentity | src/checks/editcheck/NoteChecks.swift:577
   report.expectEqual(0, document.state.tempo.count,
                        cppID: "editcheck/EditCheckTest::documentTempoEmpty",
                        what: "empty typed tempo remains empty in live state")
 
-S047 | saveIdentity | src/checks/editcheck/NoteChecks.swift:463
+S047 | saveIdentity | src/checks/editcheck/NoteChecks.swift:583
   report.expectEqual("[", markerDocument.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "first track-name meta remains a name even with marker text")
 
-S048 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+S048 | trackEditing | src/checks/editcheck/EventChecks.swift:76
   report.expectEqual(2, added,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "new track occupies the next engine slot")
 
-S049 | trackEditing | src/checks/editcheck/EventChecks.swift:71
+S049 | trackEditing | src/checks/editcheck/EventChecks.swift:79
   report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                        cppID: "editcheck/EditCheckTest::voiceLanePoint",
                        what: "new track voice is clamped and seeded")
 
-S050 | trackEditing | src/checks/editcheck/EventChecks.swift:74
+S050 | trackEditing | src/checks/editcheck/EventChecks.swift:82
   report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "add publishes old engine-track identities")
 
-S051 | trackEditing | src/checks/editcheck/EventChecks.swift:78
+S051 | trackEditing | src/checks/editcheck/EventChecks.swift:86
   report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "undo publishes the inverse track remap")
 
-S052 | trackEditing | src/checks/editcheck/EventChecks.swift:82
+S052 | trackEditing | src/checks/editcheck/EventChecks.swift:90
   report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "redo republishes the forward track remap")
 
-S053 | trackEditing | src/checks/editcheck/EventChecks.swift:87
+S053 | trackEditing | src/checks/editcheck/EventChecks.swift:95
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S054 | trackEditing | src/checks/editcheck/EventChecks.swift:90
+S054 | trackEditing | src/checks/editcheck/EventChecks.swift:98
   report.expectEqual(["8:60:4"],
                        document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                        cppID: "editcheck/EditCheckTest::trackDuplicate",
                        what: "duplicate preserves the fixture's literal note")
 
-S055 | trackEditing | src/checks/editcheck/EventChecks.swift:94
+S055 | trackEditing | src/checks/editcheck/EventChecks.swift:102
   report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                   cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                   message: "duplicate remints note identities")
 
-S056 | trackEditing | src/checks/editcheck/EventChecks.swift:99
+S056 | trackEditing | src/checks/editcheck/EventChecks.swift:107
   report.expect(document.timeSignatures.contains { $0.tick == 2 },
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "conductor time signature survives reorder")
 
-S057 | trackEditing | src/checks/editcheck/EventChecks.swift:102
+S057 | trackEditing | src/checks/editcheck/EventChecks.swift:110
   report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "conductor marker remains in chunk zero")
 
-S058 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+S058 | trackEditing | src/checks/editcheck/EventChecks.swift:115
   report.expect(document.rawChunks[0].events.contains { event in
         event.metaType == 0x58 && event.tick == 2
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "global signature is rescued before chunk deletion")
 
-S059 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+S059 | trackEditing | src/checks/editcheck/EventChecks.swift:119
   report.expect(document.rawChunks[0].events.contains { event in
         event.tick == 16 && MidiFile.metaIsMarker(event)
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "winning loop marker is rescued")
 
-S060 | trackEditing | src/checks/editcheck/EventChecks.swift:115
+S060 | trackEditing | src/checks/editcheck/EventChecks.swift:123
   report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "deleting the chunk-zero track retains the conductor chunk")
 
-S061 | trackEditing | src/checks/editcheck/EventChecks.swift:121
+S061 | trackEditing | src/checks/editcheck/EventChecks.swift:129
   report.expectEqual("Bass", document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename trims the stored display name")
 
-S062 | trackEditing | src/checks/editcheck/EventChecks.swift:125
+S062 | trackEditing | src/checks/editcheck/EventChecks.swift:133
   report.expectEqual(revision + 1, document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "loop-marker-shaped name is rejected")
 
-S063 | trackEditing | src/checks/editcheck/EventChecks.swift:130
+S063 | trackEditing | src/checks/editcheck/EventChecks.swift:138
   report.expect(budgetLimited.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "configured track budget rejects an added track")
 
-S064 | trackEditing | src/checks/editcheck/EventChecks.swift:137
+S064 | trackEditing | src/checks/editcheck/EventChecks.swift:145
   report.expect(ceiling.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "hardware track ceiling rejects a seventeenth track")
 
-S065 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
+S065 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
   report.expectEqual(beforeTempoRaw, document.revision,
                        cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                        what: "raw tempo meta is rejected")
 
-S066 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
+S066 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
   report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
                        document.state.tempo,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "tempo normalization keeps the last same-tick value")
 
-S067 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+S067 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:211
   report.expectEqual(rawCount, document.rawChunks[0].events.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "mixed raw and tempo replacement is atomic")
 
-S068 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+S068 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:215
   report.expectEqual(1, document.state.tempo.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "one undo restores both domains")
 
-S069 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
+S069 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
   report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "same-tick signature is replaced")
 
-S070 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
+S070 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:225
   report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature moves with its payload")
 
-S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
+S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:229
   report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature deletion removes destination")
 
-S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
+S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:242
   report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
         .map { Int($0.numerator) }.sorted(),
         cppID: "editcheck/EditCheckTest::songTimeSignature",
@@ -2373,7 +2373,7 @@ S128 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.
   report.expect(changes.count == 1 && changes[0].trackRemap == nil,
                 cppID: id, message: "A089-A090 meta insertion publishes one change without remap")
 
-S129 | trackRemapPublicationContract.expectRemap | src/checks/editcheck/DocumentTrackChecks.swift:105
+S129 | trackRemapPublicationContract.expectRemap | src/checks/editcheck/DocumentTrackChecks.swift:107
   report.expectEqual(1, changes.count, cppID: id,
                      what: "\(site) publishes exactly one change")
   report.expectEqual(TrackRemap(chunkMap: chunk, engineTrackMap: engine,

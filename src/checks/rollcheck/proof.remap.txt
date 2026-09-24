@@ -69,8 +69,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:170
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label. A presenter-level Swift check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -246,8 +246,8 @@ Original expression:
 QVERIFY2(source, qPrintable(error))
 
 A002 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:174
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: RemapFixture::prepare builds the SongDocument/MidiTimeline/SongView from the staged song. The Swift checks use the supplied session document.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -390,8 +390,8 @@ Original expression:
 QFAIL("move redo did not restore remapped owners")
 
 A013 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     }
@@ -407,8 +407,8 @@ Original expression:
 QVERIFY2(source, qPrintable(error))
 
 A014 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: RemapFixture::prepare builds the SongDocument/MidiTimeline/SongView from the staged song.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -549,8 +549,8 @@ Original expression:
 QFAIL("insert redo did not preserve existing SongView state")
 
 A026 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:289
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 }
@@ -565,8 +565,8 @@ Original expression:
 QVERIFY2(source, qPrintable(error))
 
 A027 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:293
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: RemapFixture::prepare builds the SongDocument/MidiTimeline/SongView from the staged song.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -707,8 +707,8 @@ Original expression:
 QFAIL("duplicate redo did not preserve existing SongView state")
 
 A039 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:343
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 }
@@ -723,8 +723,8 @@ Original expression:
 QVERIFY2(source, qPrintable(error))
 
 A040 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:347
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: RemapFixture::prepare builds the SongDocument/MidiTimeline/SongView from the staged song.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -906,8 +906,8 @@ Original expression:
 QFAIL("delete redo did not keep dropped SongView state absent")
 
 A053 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:431
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     }
@@ -923,8 +923,8 @@ Original expression:
 QVERIFY2(source, qPrintable(error))
 
 A054 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:435
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: RemapFixture::prepare builds the SongDocument/MidiTimeline/SongView from the staged song.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -1004,8 +1004,8 @@ Original expression:
 QFAIL("metadata-only redo changed SongView owner state")
 
 A059 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:497
-Disposition: NATIVE
-Mapping/reason: Original native staging precondition: QTemporaryDir/SmfFile raw fixture write to disk. The Swift roll has no raw-SMF staging predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 }
@@ -1037,8 +1037,8 @@ Original expression:
 QFAIL("could not write raw metadata-to-engine remap fixture")
 
 A060 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:501
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: SongDocument::load of the written raw fixture.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/remap.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -1273,42 +1273,41 @@ S021 | checkRemapMetadata undo | src/checks/rollcheck/remap.swift:283
 S022 | checkRemapMetadata redo | src/checks/rollcheck/remap.swift:288
   report.expectEqual(renamed, document.state, cppID: id, what: "redo restores the metadata name")
 
-S023 | swiftcore/EditorGridCamera::trackOwnerRemap insert | src/checks/rollcheck/EditorGridCameraChecks.swift:1034
-  report.expect(session.mutedTracks == [0] && session.soloedTracks == [0]
-                    && session.selectedTrack == 0,
-                cppID: id, message: "inserted track inherits no mute, solo, or selection owner state")
+S023 | swiftcore/EditorGridCamera::trackOwnerRemap insert | src/checks/rollcheck/EditorGridCameraChecks.swift:1035-1037
+  session.mutedTracks == [0] && session.soloedTracks == [0]
+      && session.selectedTrack == 0,
+  cppID: id, message: "inserted track inherits no mute, solo, or selection owner state")
 
-S024 | swiftcore/EditorGridCamera::trackOwnerRemap move | src/checks/rollcheck/EditorGridCameraChecks.swift:1050
-  report.expect(session.mutedTracks == [1] && session.soloedTracks == [0]
-                    && session.selectedTrack == 0,
-                cppID: id, message: "move remaps mute, solo, and selection owners to the new index")
+S024 | swiftcore/EditorGridCamera::trackOwnerRemap move | src/checks/rollcheck/EditorGridCameraChecks.swift:1051-1053
+  session.mutedTracks == [1] && session.soloedTracks == [0]
+      && session.selectedTrack == 0,
+  cppID: id, message: "move remaps mute, solo, and selection owners to the new index")
 
-S025 | swiftcore/EditorGridCamera::trackOwnerRemap remap-before-publication | src/checks/rollcheck/EditorGridCameraChecks.swift:1054
-  report.expect(remappedAtDocument.last.map {
+S025 | swiftcore/EditorGridCamera::trackOwnerRemap remap-before-publication | src/checks/rollcheck/EditorGridCameraChecks.swift:1056-1058
       $0.muted == [1] && $0.soloed == [0] && $0.selected == 0
   } == true,
   cppID: id, message: "owner remap lands before the document change publishes")
 
-S026 | swiftcore/EditorGridCamera::trackOwnerRemap undo | src/checks/rollcheck/EditorGridCameraChecks.swift:1060
-  report.expect(session.mutedTracks == [0] && session.soloedTracks == [1]
-                    && session.selectedTrack == 1,
-                cppID: id, message: "undo applies the inverse remap to every owner")
+S026 | swiftcore/EditorGridCamera::trackOwnerRemap undo | src/checks/rollcheck/EditorGridCameraChecks.swift:1061-1063
+  session.mutedTracks == [0] && session.soloedTracks == [1]
+      && session.selectedTrack == 1,
+  cppID: id, message: "undo applies the inverse remap to every owner")
 
-S027 | swiftcore/EditorGridCamera::trackOwnerRemap duplicate | src/checks/rollcheck/EditorGridCameraChecks.swift:1065
-  report.expect(session.mutedTracks == [0] && session.soloedTracks == [1]
-                    && session.selectedTrack == 1,
-                cppID: id, message: "duplicate keeps owner identity on the source track")
+S027 | swiftcore/EditorGridCamera::trackOwnerRemap duplicate | src/checks/rollcheck/EditorGridCameraChecks.swift:1066-1068
+  session.mutedTracks == [0] && session.soloedTracks == [1]
+      && session.selectedTrack == 1,
+  cppID: id, message: "duplicate keeps owner identity on the source track")
 
-S028 | swiftcore/EditorGridCamera::trackOwnerRemap delete | src/checks/rollcheck/EditorGridCameraChecks.swift:1071
-  report.expect(session.soloedTracks.isEmpty && session.mutedTracks == [0]
-                    && session.selectedTrack == 0,
-                cppID: id, message: "delete drops the removed owner and falls selection back")
+S028 | swiftcore/EditorGridCamera::trackOwnerRemap delete | src/checks/rollcheck/EditorGridCameraChecks.swift:1072-1074
+  session.soloedTracks.isEmpty && session.mutedTracks == [0]
+      && session.selectedTrack == 0,
+  cppID: id, message: "delete drops the removed owner and falls selection back")
 
-S029 | swiftcore/EditorGridCamera::trackOwnerRemap delete undo | src/checks/rollcheck/EditorGridCameraChecks.swift:1076
-  report.expect(session.soloedTracks.isEmpty && session.mutedTracks == [0]
-                    && session.selectedTrack == 0
-                    && session.document.engineTracks.usedTrackCount == added + 1,
-                cppID: id, message: "undo restores the track without reviving dropped owner state")
+S029 | swiftcore/EditorGridCamera::trackOwnerRemap delete undo | src/checks/rollcheck/EditorGridCameraChecks.swift:1077-1080
+  session.soloedTracks.isEmpty && session.mutedTracks == [0]
+      && session.selectedTrack == 0
+      && session.document.engineTracks.usedTrackCount == added + 1,
+  cppID: id, message: "undo restores the track without reviving dropped owner state")
 
 S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml:476
   verify(waitForNative(function() { if (grid.trackIndex !== 1) return false; ... every rendered note on track 1 ... }, 5000), "setTrack follows track 1 in notes and faces")

@@ -22,9 +22,9 @@ Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: 1736e3944298a15c5a69e9a7c8aa96f51944f5109acca86a5d6ecaf230af8003
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 8ba1fbe0ec80dffe8b68f66b65908d4f2a1a74a26deeb56f647d1641a5e683db
+Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Additional Swift SHA-256: d5875c0c5d83b79f1ab4f0bda4d25127de7d5a71e3af4fab57fd3f3e63c5055f
 Additional Swift counterpart: src/checks/editorqml/tst_ShellOpenFailure.qml
@@ -42,7 +42,7 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 33 / PARTIAL 0 / GAP 9 / NATIVE 38. A002 and A004-A030 are
+Tally: MATCHED 33 / PARTIAL 0 / GAP 42 / NATIVE 0 / RETIRED-REPRESENTATION 5. A002 and A004-A030 are
 MATCHED to the Qt Quick Test shellwindow lane
 (src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership
 with openTwoSongShell, plus the ShellQmlBootstrap clipboard helpers in
@@ -112,8 +112,8 @@ Two-song MainWindow session opened per test after the Cocoa platform gate; no QT
 Original assertion inventory and source sequence
 
 A001 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:29
-Disposition: NATIVE
-Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
 Source context since previous assertion:
 #include "mainwindowroutingfixture.h"
 
@@ -155,8 +155,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A003 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:40
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         const auto activated = checks::async_wait::waitUntil([] { return true; },
@@ -426,8 +426,8 @@ Original expression:
         QCOMPARE(soloTriggered.count(), 4)
 
 A031 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:135
-Disposition: NATIVE
-Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
 Source context since previous assertion:
     }
 
@@ -450,8 +450,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A033 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:146
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         const auto activated = checks::async_wait::waitUntil([] { return true; },
@@ -466,24 +466,24 @@ Original expression:
                  "Cocoa did not make MainWindow active after show()")
 
 A034 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:149
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QMenu *menu = editMenu(window);
 Original expression:
         QVERIFY(menu)
 
 A035 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:150
-Disposition: NATIVE
-Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!menu->isVisible())
 
 A036 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:153
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QAction *copy = window.m_copyAction;
         QAction *solo = window.m_soloAction;
@@ -512,16 +512,16 @@ Original expression:
         QVERIFY(seedNote.has_value())
 
 A038 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:169
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(copy->isEnabled() && solo->isEnabled())
 
 A039 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:172
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         const QList<QKeySequence> copyBindings = copy->shortcuts();
         const QList<QKeySequence> soloBindings = solo->shortcuts();
@@ -529,8 +529,8 @@ Original expression:
         QVERIFY(!copyBindings.isEmpty() && !soloBindings.isEmpty())
 
 A040 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:195
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         const int track = view.selectionModel().primaryTrack();
         view.setTrackSolo(track, false);
@@ -559,16 +559,16 @@ Original expression:
                  "Cocoa did not activate the foreign window")
 
 A041 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:197
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(QApplication::focusWidget(), &foreignText)
 
 A042 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:203
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // The Copy binding stays with the field's own text; the window Copy
@@ -579,16 +579,16 @@ Original expression:
         QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("foreign draft"))
 
 A043 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:204
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(copyTriggered.count(), 0)
 
 A044 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:211
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         // Ordinary keys stay local to the field: typing replaces the selected
         // field text while both songs stay untouched.
@@ -600,8 +600,8 @@ Original expression:
         QCOMPARE(foreignText.text(), QStringLiteral("x"))
 
 A045 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:213
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
 Source context since previous assertion:
         sendShortcut(foreignText, soloBindings.front());
 Original expression:
@@ -632,8 +632,8 @@ Original expression:
         QCOMPARE(session->a->document().smf().write(), beforeA)
 
 A049 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:228
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // Protected popup input stays local on the same native shell: the
@@ -651,16 +651,16 @@ Original expression:
                  "Cocoa did not reactivate MainWindow after the foreign window hid")
 
 A050 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:230
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
 
 A051 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -668,8 +668,8 @@ Original expression:
                  "the Roll band could not take focus before the Insert Time prompt")
 
 A052 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:235
-Disposition: NATIVE
-Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         window.m_insertTimeAction->trigger();
         songview::QuickPopupSession *popup = quick_popup::popupSession(view);
@@ -677,8 +677,8 @@ Original expression:
         QTRY_VERIFY(popup && popup->isOpen() && popup->window())
 
 A053 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:236
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -686,8 +686,8 @@ Original expression:
             quick_popup::inputHasActiveFocus(*popup->window(), QLatin1String("insertTimeBars")))
 
 A054 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:239
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
 Source context since previous assertion:
         sendShortcut(*popup->window(), soloBindings.front());
 Original expression:
@@ -695,8 +695,8 @@ Original expression:
                  "a window command fired while the Insert Time prompt owned the keys")
 
 A055 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:242
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
 Source context since previous assertion:
         sendShortcut(*popup->window(), copyBindings.front());
 Original expression:
@@ -704,8 +704,8 @@ Original expression:
                  "window Copy fired while the Insert Time prompt owned the keys")
 
 A056 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:245
-Disposition: NATIVE
-Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QTest::keyClick(popup->window(), Qt::Key_Escape);
 Original expression:
@@ -728,8 +728,8 @@ Original expression:
         QCOMPARE(session->a->document().smf().write(), beforeA)
 
 A059 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:258
-Disposition: NATIVE
-Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
 Source context since previous assertion:
     }
 
@@ -745,16 +745,16 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A060 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:260
-Disposition: NATIVE
-Mapping/reason: Setup open for the native bound-view teardown sequence: the tab-hide cancels the prompt while the closing view is still bound and the destructor unbind follows in the same synchronous stack. The teardown delivery this open feeds is native Qt action retargeting no presenter-level Swift check can establish.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
         QVERIFY(session.has_value())
 
 A061 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:265
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *closing = session->b;
@@ -764,16 +764,16 @@ Original expression:
         QCOMPARE(window.m_editActions->target(), &view)
 
 A062 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:267
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QAction *solo = window.m_soloAction;
 Original expression:
         QVERIFY(solo && solo->isEnabled())
 
 A063 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:269
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         window.m_workspace->selectSongTab(closing);
 Original expression:
@@ -781,16 +781,16 @@ Original expression:
                  "the Roll band could not take focus before the Insert Time prompt")
 
 A064 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:271
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
 
 A065 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:274
-Disposition: NATIVE
-Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         window.m_insertTimeAction->trigger();
         songview::QuickPopupSession *popup = quick_popup::popupSession(view);
@@ -798,8 +798,8 @@ Original expression:
         QTRY_VERIFY(popup && popup->isOpen())
 
 A066 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:281
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         bool observed = false;
         QSignalSpy soloTriggered(solo, &QAction::triggered);
@@ -812,16 +812,16 @@ Original expression:
                  "closing a clean tab produced an unexpected modal prompt")
 
 A067 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:283
-Disposition: NATIVE
-Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY2(observed, "the open popup was not cancelled during the bound view's teardown")
 
 A068 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:284
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -837,24 +837,24 @@ Original expression:
                  "the clean tab did not close")
 
 A070 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:287
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_editActions->target(), &session->a->view())
 
 A071 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:288
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(solo->isEnabled())
 
 A072 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:296
-Disposition: NATIVE
-Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
 Source context since previous assertion:
     }
 
@@ -867,8 +867,8 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A073 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:298
-Disposition: NATIVE
-Mapping/reason: Setup open for the native failed-project modal delivery case: the Cocoa activeModalWidget dismissal is driven with a queued reject while the live tab must stay interactive. The modal delivery this open feeds is a native-harness obligation no presenter-level Swift check can establish.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
@@ -886,8 +886,8 @@ Original expression:
         QVERIFY(!old->document().isDirty())
 
 A075 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:316
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         window.m_workspace->requestSongOpen(old->name());
         window.m_workspace->requestProjectOpenAt(session->fixture->root() +
@@ -1454,66 +1454,66 @@ S098 | sessionLifetime | src/checks/workspace/session_io.swift:299
                            cppID: lifetimeID,
                            what: "explicit project service close owns worker shutdown")
 
-S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:89
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:118
     report.expect(session.bankSlots.count >= 4,
                   cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                   message: "published bank has slot views")
 
-S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:92
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:121
     report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                        what: "slot 0 is editable square 1")
 
-S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:95
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:124
     report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
                        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                        what: "slot 3 is initially blank")
 
-S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:119
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:148
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "bank edit dirties bank")
 
-S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:122
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:151
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "scalar edit changes the requested voice and preserves every other slot")
 
-S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:125
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:154
         report.expect(result.lease.bankToken != oldToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "applied bank edit mints a fresh lease")
 
-S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:128
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:157
         report.expectEqual(oldToken, oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
 
-S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:131
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:160
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank edit publishes bank, dirty, and history exactly once")
 
-S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:142
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:171
         report.expectEqual(originalSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "undo restores the complete original bank view")
 
-S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:145
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:174
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank undo publishes bank, dirty, and history exactly once")
 
-S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:156
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:185
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "redo restores the scalar edit without changing other slots")
 
-S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:159
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:188
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
@@ -1600,39 +1600,39 @@ S126 | bankConflicts | src/checks/workspace/bank_edits.swift:201
                            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                            what: "unknown token triggers bankConflict")
 
-S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:191
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:220
         report.expectEqual(false, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the song clean")
 
-S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:194
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:223
         report.expectEqual(false, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the bank clean")
 
-S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:197
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:226
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "unified bank save publishes bank, dirty, and history exactly once")
 
-S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:202
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:231
         report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted MIDI bytes")
 
-S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:205
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:234
         report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted bank bytes")
 
-S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:216
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:245
         report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified song edit from disk")
 
-S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:219
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:248
         report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified bank edits and preserved slots from disk")

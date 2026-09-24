@@ -4,7 +4,7 @@ Reference revision: e3a54cb20be8167db96fdeb46c819581e3dec1f8
 Original: src/checks/swiftrollgated/chromevisuals.cpp
 Original SHA-256: fb16ea07001c2c341b736ab109630e712f3e52c06079bb24c64903ed21949bda
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 QML counterpart: src/checks/editorqml/tst_ShellChromeVisuals.qml
 QML SHA-256: bfb04f7eb6b624eecaa95735b5879aa71872281af70a813bd218afb31563933e
 Probe counterpart: src/checks/editorqml/GatedVisualsProbe.swift
@@ -39,8 +39,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:145
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/chromevisuals.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
@@ -191,8 +191,8 @@ Original expression:
 
 
 A002 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:147
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/chromevisuals.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     if (m_mode == QStringLiteral("swiftqtml"))
 Original expression:
@@ -200,8 +200,8 @@ Original expression:
 
 
 A003 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:149
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/chromevisuals.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
     if (m_mode == QStringLiteral("selectionkey"))
 Original expression:
@@ -209,8 +209,8 @@ Original expression:
 
 
 A004 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:150
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/chromevisuals.cpp) no longer builds or runs. Previous native note: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:

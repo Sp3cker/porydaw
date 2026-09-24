@@ -6,7 +6,7 @@ Original SHA-256: 89da4c7d7d2708876b618fa5595b067bebe31388d76709f960abc899e20d58
 Swift counterpart: src/checks/editcheck/tst_songdocument_songraw.swift
 Swift SHA-256: 7c5dc3cac4f4652f22a1bdc91eedd7000788a27fdbc5d8875e0acd05d19b3c16
 Additional Swift counterpart: src/checks/editcheck/EventChecks.swift
-Additional Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+Additional Swift SHA-256: 53124d302de46aa58254dbcebc98646a12e8c41e60be4b17e2c52c918d3929d7
 Additional Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift SHA-256: 8844e59119c3710fa155d7050f9bbfaac73f8f5838f2acd6994b833fe4c91dba
 Additional Swift counterpart: src/checks/editcheck/EventViewsEditsParity.swift
@@ -513,8 +513,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A035 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:213
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const int chunk = widgets.model->chunk();
@@ -528,8 +528,8 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTic
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A036 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:215
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -537,8 +537,8 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"))
 
 A037 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:219
-Disposition: NATIVE
-Mapping/reason: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
 Source context since previous assertion:
 ;
     typeDigits(*widgets.quickWindow, QString::number(CoreTimeDefaults::kNoTick));
@@ -549,8 +549,8 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), beforeIndex)
 
 A038 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:221
-Disposition: NATIVE
-Mapping/reason: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the typed kNoTick rejection through the rendered editor (no undo push, bytes unchanged); presenter-level Swift cannot establish this native delivery, and no Swift refusal predicate exists.
 Source context since previous assertion:
 ;
 
@@ -559,8 +559,8 @@ Original expression:
 QCOMPARE(document.smf().write(), before)
 
 A039 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:223
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     checks::eventviews::closeCellEditor(widgets);
@@ -570,8 +570,8 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTic
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A040 | EventViewsEditsTest::tickHighBitThroughEditor | src/checks/eventviews/edits.cpp:225
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1524,8 +1524,8 @@ Original expression:
 QCOMPARE(note, second + 1)
 
 A125 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:472
-Disposition: NATIVE
-Mapping/reason: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1556,8 +1556,8 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), second)
 
 A128 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:475
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1565,8 +1565,8 @@ Original expression:
 QTRY_COMPARE(widgets.controller->currentRow(), second)
 
 A129 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:481
-Disposition: NATIVE
-Mapping/reason: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1600,8 +1600,8 @@ Original expression:
 QCOMPARE(undoCount(document), orderAfterDrop)
 
 A132 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:485
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1623,8 +1623,8 @@ Original expression:
 QVERIFY(crossTarget >= 0)
 
 A134 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:492
-Disposition: NATIVE
-Mapping/reason: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1653,8 +1653,8 @@ Original expression:
 QCOMPARE(undoCount(document), orderAfterDrop)
 
 A137 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:496
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -1701,8 +1701,8 @@ Original expression:
 QCOMPARE(onRow, offRow + 1)
 
 A140 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:520
-Disposition: NATIVE
-Mapping/reason: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     const int orderBeforePin = undoCount(document);
@@ -1779,8 +1779,8 @@ Original expression:
 QVERIFY(!menuCell.isNull())
 
 A147 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:539
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     QTest::mouseClick(widgets.quickWindow, Qt::RightButton, Qt::NoModifier, menuCell.toPoint());
@@ -1789,8 +1789,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->menuOpen())
 
 A148 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:540
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1818,8 +1818,8 @@ Original expression:
 QVERIFY(menuModel)
 
 A151 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:551
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     int moveDownRow = -1;
@@ -1844,8 +1844,8 @@ Original expression:
 QVERIFY(triggered.isValid())
 
 A153 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:555
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1853,8 +1853,8 @@ Original expression:
 QVERIFY(quick_popup::clickMenuRow(*widgets.popupSession, moveDownRow))
 
 A154 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:556
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1862,8 +1862,8 @@ Original expression:
 QTRY_VERIFY(!widgets.controller->menuOpen())
 
 A155 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:557
-Disposition: NATIVE
-Mapping/reason: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1932,8 +1932,8 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), first)
 
 A162 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:571
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1947,8 +1947,8 @@ Original expression:
 QVERIFY(quick)
 
 A163 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:572
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -1956,8 +1956,8 @@ Original expression:
 QVERIFY(quick->focusEventListInput(Qt::OtherFocusReason))
 
 A164 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:573
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -2126,8 +2126,8 @@ Original expression:
 QVERIFY(opened.fixture->view().quickView() != nullptr)
 
 A178 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:628
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     opened.fixture->view().quickView()->focusEventListInput(Qt::OtherFocusReason);
@@ -2138,8 +2138,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->selectedRows().contains(first))
 
 A179 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:629
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -2167,8 +2167,8 @@ Original expression:
 QCOMPARE(countMatching(document.smf().tracks[chunk], secondEvent), 0)
 
 A182 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:634
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -2176,8 +2176,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->selectedRows().isEmpty())
 
 A183 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:635
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -2211,8 +2211,8 @@ Original expression:
 QTRY_COMPARE(countMatching(document.smf().tracks[chunk], firstEvent), 0)
 
 A186 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:647
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
     const int currentRow = widgets.controller->currentRow();
@@ -2259,8 +2259,8 @@ Original expression:
 QVERIFY(row >= 0)
 
 A190 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:664
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/edits.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -2271,8 +2271,8 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTic
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A191 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:666
-Disposition: NATIVE
-Mapping/reason: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -2280,8 +2280,8 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"))
 
 A192 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:672
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
     typeDigits(*widgets.quickWindow, QStringLiteral("15"));
@@ -2294,8 +2294,8 @@ Original expression:
 QVERIFY(drawer)
 
 A193 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:673
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -2323,8 +2323,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1)
 
 A196 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:678
-Disposition: NATIVE
-Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
 Source context since previous assertion:
 ;
 
@@ -2332,8 +2332,8 @@ Original expression:
 QVERIFY(!widgets.controller->isEditing())
 
 A197 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:679
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -2365,8 +2365,8 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), undoBeforeDelete)
 
 A200 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:688
-Disposition: NATIVE
-Mapping/reason: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
 Source context since previous assertion:
 ;
 
@@ -2579,192 +2579,192 @@ S050 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         message: "raw mutation history fully rewinds to encoded baseline and replays exactly")
 
-S051 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+S051 | trackEditing | src/checks/editcheck/EventChecks.swift:76
   report.expectEqual(2, added,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "new track occupies the next engine slot")
 
-S052 | trackEditing | src/checks/editcheck/EventChecks.swift:71
+S052 | trackEditing | src/checks/editcheck/EventChecks.swift:79
   report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                        cppID: "editcheck/EditCheckTest::voiceLanePoint",
                        what: "new track voice is clamped and seeded")
 
-S053 | trackEditing | src/checks/editcheck/EventChecks.swift:74
+S053 | trackEditing | src/checks/editcheck/EventChecks.swift:82
   report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "add publishes old engine-track identities")
 
-S054 | trackEditing | src/checks/editcheck/EventChecks.swift:78
+S054 | trackEditing | src/checks/editcheck/EventChecks.swift:86
   report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "undo publishes the inverse track remap")
 
-S055 | trackEditing | src/checks/editcheck/EventChecks.swift:82
+S055 | trackEditing | src/checks/editcheck/EventChecks.swift:90
   report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "redo republishes the forward track remap")
 
-S056 | trackEditing | src/checks/editcheck/EventChecks.swift:87
+S056 | trackEditing | src/checks/editcheck/EventChecks.swift:95
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S057 | trackEditing | src/checks/editcheck/EventChecks.swift:90
+S057 | trackEditing | src/checks/editcheck/EventChecks.swift:98
   report.expectEqual(["8:60:4"],
                        document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                        cppID: "editcheck/EditCheckTest::trackDuplicate",
                        what: "duplicate preserves the fixture's literal note")
 
-S058 | trackEditing | src/checks/editcheck/EventChecks.swift:94
+S058 | trackEditing | src/checks/editcheck/EventChecks.swift:102
   report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                   cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                   message: "duplicate remints note identities")
 
-S059 | trackEditing | src/checks/editcheck/EventChecks.swift:99
+S059 | trackEditing | src/checks/editcheck/EventChecks.swift:107
   report.expect(document.timeSignatures.contains { $0.tick == 2 },
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "conductor time signature survives reorder")
 
-S060 | trackEditing | src/checks/editcheck/EventChecks.swift:102
+S060 | trackEditing | src/checks/editcheck/EventChecks.swift:110
   report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "conductor marker remains in chunk zero")
 
-S061 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+S061 | trackEditing | src/checks/editcheck/EventChecks.swift:115
   report.expect(document.rawChunks[0].events.contains { event in
         event.metaType == 0x58 && event.tick == 2
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "global signature is rescued before chunk deletion")
 
-S062 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+S062 | trackEditing | src/checks/editcheck/EventChecks.swift:119
   report.expect(document.rawChunks[0].events.contains { event in
         event.tick == 16 && MidiFile.metaIsMarker(event)
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "winning loop marker is rescued")
 
-S063 | trackEditing | src/checks/editcheck/EventChecks.swift:115
+S063 | trackEditing | src/checks/editcheck/EventChecks.swift:123
   report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "deleting the chunk-zero track retains the conductor chunk")
 
-S064 | trackEditing | src/checks/editcheck/EventChecks.swift:121
+S064 | trackEditing | src/checks/editcheck/EventChecks.swift:129
   report.expectEqual("Bass", document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename trims the stored display name")
 
-S065 | trackEditing | src/checks/editcheck/EventChecks.swift:125
+S065 | trackEditing | src/checks/editcheck/EventChecks.swift:133
   report.expectEqual(revision + 1, document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "loop-marker-shaped name is rejected")
 
-S066 | trackEditing | src/checks/editcheck/EventChecks.swift:130
+S066 | trackEditing | src/checks/editcheck/EventChecks.swift:138
   report.expect(budgetLimited.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "configured track budget rejects an added track")
 
-S067 | trackEditing | src/checks/editcheck/EventChecks.swift:137
+S067 | trackEditing | src/checks/editcheck/EventChecks.swift:145
   report.expect(ceiling.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "hardware track ceiling rejects a seventeenth track")
 
-S068 | trackNameRoles | src/checks/editcheck/EventChecks.swift:156
+S068 | trackNameRoles | src/checks/editcheck/EventChecks.swift:164
   report.expectEqual("Bare", document.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "document query ignores a channel-prefixed name")
 
-S069 | trackNameRoles | src/checks/editcheck/EventChecks.swift:165
+S069 | trackNameRoles | src/checks/editcheck/EventChecks.swift:173
   report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "rename changes only bare names after empty-prefix or channel clearing")
 
-S070 | trackNameRoles | src/checks/editcheck/EventChecks.swift:170
+S070 | trackNameRoles | src/checks/editcheck/EventChecks.swift:178
   report.expectEqual("Bare", imported.tracks.first?.name,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                        what: "import and document queries select the same bare name")
 
-S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
+S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
   report.expectEqual(beforeTempoRaw, document.revision,
                        cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                        what: "raw tempo meta is rejected")
 
-S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
+S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
   report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
                        document.state.tempo,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "tempo normalization keeps the last same-tick value")
 
-S073 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+S073 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:211
   report.expectEqual(rawCount, document.rawChunks[0].events.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "mixed raw and tempo replacement is atomic")
 
-S074 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+S074 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:215
   report.expectEqual(1, document.state.tempo.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "one undo restores both domains")
 
-S075 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
+S075 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
   report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "same-tick signature is replaced")
 
-S076 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
+S076 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:225
   report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature moves with its payload")
 
-S077 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
+S077 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:229
   report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature deletion removes destination")
 
-S078 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
+S078 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:242
   report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
         .map { Int($0.numerator) }.sorted(),
         cppID: "editcheck/EditCheckTest::songTimeSignature",
         what: "move preserves every cross-chunk source signature")
 
-S079 | laneEditing | src/checks/editcheck/EventChecks.swift:249
+S079 | laneEditing | src/checks/editcheck/EventChecks.swift:257
   report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
                        document.lanePoints(track: 0, lane: .controller(7)),
                        cppID: "editcheck/EditCheckTest::automationLanePoints",
                        what: "span write replaces and clamps points")
 
-S080 | laneEditing | src/checks/editcheck/EventChecks.swift:257
+S080 | laneEditing | src/checks/editcheck/EventChecks.swift:265
   report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
         .map { "\($0.tick):\($0.value)" },
         cppID: "automation-domain/laneMoveDestinationCollision",
         what: "lane move relocates the selected identity")
 
-S081 | laneEditing | src/checks/editcheck/EventChecks.swift:270
+S081 | laneEditing | src/checks/editcheck/EventChecks.swift:278
   report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
                        cppID: "automation-domain/laneDeleteForeignChunk",
                        what: "foreign-chunk XCMD point cannot delete a local event")
 
-S082 | importAnalysis | src/checks/editcheck/EventChecks.swift:289
+S082 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
   report.expectEqual(2, analysis.xcmd.first?.count,
                        cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                        what: "import counts logical XCMD points")
 
-S083 | importAnalysis | src/checks/editcheck/EventChecks.swift:292
+S083 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
   report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
                        cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                        what: "unknown controller is not exported")
 
-S084 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
+S084 | importAnalysis | src/checks/editcheck/EventChecks.swift:301
   report.expectEqual(1, analysis.silentTracks,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis",
                        what: "player track budget identifies silent tracks")
 
-S085 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
+S085 | importAnalysis | src/checks/editcheck/EventChecks.swift:304
   report.expect(analysis.tracks[0].notesBeforeProgram,
                   cppID: "onboardcheck/OnboardingTest::importAnalysis",
                   message: "notes before instrument are reported")
 
-S086 | importTransforms | src/checks/editcheck/EventChecks.swift:310
+S086 | importTransforms | src/checks/editcheck/EventChecks.swift:432
   report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
                        cppID: "onboardcheck/OnboardingTest::importDedup",
                        what: "only eligible same-tick setter is removed")
 
-S087 | importTransforms | src/checks/editcheck/EventChecks.swift:313
+S087 | importTransforms | src/checks/editcheck/EventChecks.swift:435
   report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
         if case let .channel(status, data0, data1) = $0.payload {
             return status >> 4 == 0xC ? data0 : data1
@@ -2773,21 +2773,21 @@ S087 | importTransforms | src/checks/editcheck/EventChecks.swift:313
     }, cppID: "onboardcheck/OnboardingTest::importDedup",
     what: "action-like XCMD selectors are preserved")
 
-S088 | importTransforms | src/checks/editcheck/EventChecks.swift:321
+S088 | importTransforms | src/checks/editcheck/EventChecks.swift:443
   report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "rescale uses floor arithmetic")
 
-S089 | importTransforms | src/checks/editcheck/EventChecks.swift:324
+S089 | importTransforms | src/checks/editcheck/EventChecks.swift:446
   report.expectEqual(Tick(1), file.chunks[0].endTick,
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "end tick uses the same floor arithmetic")
 
-S090 | importTransforms | src/checks/editcheck/EventChecks.swift:332
+S090 | importTransforms | src/checks/editcheck/EventChecks.swift:454
   report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
                     "overflowing rescale unexpectedly succeeded")
 
-S091 | importTransforms | src/checks/editcheck/EventChecks.swift:335
+S091 | importTransforms | src/checks/editcheck/EventChecks.swift:457
   report.expectEqual(baseline, overflow,
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
@@ -3070,103 +3070,103 @@ S157 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.sw
   report.expect(document.note(mintedID) != nil, cppID: id,
                 message: "inserted note-on resolves by its minted identity")
 
-S158 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:283
+S158 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:301
   report.expectEqual(first + 1, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
                      what: "second controller follows first")
 
-S159 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:285
+S159 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:303
   report.expectEqual(first + 2, document.rawChunks[0].events.firstIndex(of: noteOn),
                      cppID: id, what: "note follows controllers")
 
-S160 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:291
+S160 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:309
   report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
                      what: "legal in-run swap moves the second controller first")
 
-S161 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:293
+S161 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:311
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "legal in-run swap moves the first controller second")
 
-S162 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:295
+S162 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:313
   report.expectEqual(swapBase + 1, document.history.undoIndex, cppID: id,
                      what: "legal in-run swap pushes one undo step")
 
-S163 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:299
+S163 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:317
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "past-run destination cannot displace the event")
 
-S164 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:301
+S164 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:319
   report.expectEqual(orderAfterDrop, document.history.undoIndex, cppID: id,
                      what: "past-run destination pushes no undo step")
 
-S165 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:304
+S165 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:322
   report.expectEqual(note, document.rawChunks[0].events.firstIndex(of: noteOn), cppID: id,
                      what: "cross-run destination cannot displace the note")
 
-S166 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:306
+S166 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:324
   report.expectEqual(orderAfterDrop, document.history.undoIndex, cppID: id,
                      what: "cross-run destination pushes no undo step")
 
-S167 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:321
+S167 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:339
   report.expectEqual(offIndex + 1, document.rawChunks[0].events.firstIndex(of: pinnedOn),
                      cppID: id, what: "note-end pins ahead of its note-on")
 
-S168 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:329
+S168 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:347
   report.expectEqual(offIndex, document.rawChunks[0].events.firstIndex(of: pinnedOff),
                      cppID: id, what: "pinned note-end stays ahead of its note-on")
 
-S169 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:331
+S169 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:349
   report.expectEqual(onIndex, document.rawChunks[0].events.firstIndex(of: pinnedOn), cppID: id,
                      what: "pinned note-on stays after its note-end")
 
-S170 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:333
+S170 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:351
   report.expectEqual(orderBeforePin, document.history.undoIndex, cppID: id,
                      what: "pinned reorder pushes no undo step")
 
-S171 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:337
+S171 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:355
   report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "row move down restores the first controller")
 
-S172 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:339
+S172 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:357
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
                      what: "row move down advances the second controller")
 
-S173 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:341
+S173 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:359
   report.expectEqual(note, document.rawChunks[0].events.firstIndex(of: noteOn), cppID: id,
                      what: "row move down keeps the note in place")
 
-S174 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:343
+S174 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:361
   report.expectEqual(undoBeforeMenuMove + 1, document.history.undoIndex, cppID: id,
                      what: "row move down pushes one undo step")
 
-S175 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:346
+S175 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:364
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "undo restores the swapped first controller")
 
-S176 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:348
+S176 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:366
   report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
                      what: "undo restores the swapped second controller")
 
-S177 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:352
+S177 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:370
   report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "key move down restores the first controller")
 
-S178 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:354
+S178 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:372
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
                      what: "key move down advances the second controller")
 
-S179 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:356
+S179 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:374
   report.expectEqual(undoBeforeKeyMove + 1, document.history.undoIndex, cppID: id,
                      what: "key move down pushes one undo step")
 
-S180 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:359
+S180 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:377
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "undo restores the key-moved first controller")
 
-S181 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:363
+S181 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:381
   report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
                      what: "boundary move cannot displace into the earlier run")
 
-S182 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:365
+S182 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:383
   report.expectEqual(orderBeforeBoundaryMove, document.history.undoIndex, cppID: id,
                      what: "boundary move pushes no undo step")
 

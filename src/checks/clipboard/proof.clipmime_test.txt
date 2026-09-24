@@ -4,7 +4,7 @@ Reference revision: 02752345fa3a1dbaf11ee6f1cd3ad5da475f0e06
 Original: src/checks/clipboard/clipmime_test.cpp
 Original SHA-256: 0d0a02515571b1c3969d261705702d72977b45dbd8fdfaa7113405f0336a9482
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 690e9d390b39ffdcd9b781e6538c3b5ed95e78a8d28cf387ed687590f0f7c21a
+Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -21,7 +21,7 @@ state) a model-level Swift check cannot establish; the Swift messages
 themselves reserve native MIME transport and failure routing as host
 assertions.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 13, PARTIAL 0, GAP 1, NATIVE 3.
+Tally: MATCHED 13, PARTIAL 0, GAP 4, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -316,8 +316,8 @@ Original expression:
   QVERIFY(clipcheck_support::sameClip(decoded->clip, expected));
 
 A005 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:235
-Disposition: NATIVE
-Mapping/reason: Observes live QClipboard MIME state after writeClipboard; a model-level Swift check cannot establish system-clipboard transport, and the S001 message reserves it as a host assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/clipboard/clipmime_test.cpp) no longer builds or runs. Previous native note: Observes live QClipboard MIME state after writeClipboard; a model-level Swift check cannot establish system-clipboard transport, and the S001 message reserves it as a host assertion.
 Source context since previous assertion:
   ;
       }
@@ -390,8 +390,8 @@ Original expression:
   QCOMPARE(converted->tracks.front().notes.front().duration, uint32_t{24});
 
 A013 | ClipMimeTest::foreignClipboardIsNotClip | src/checks/clipboard/clipmime_test.cpp:254
-Disposition: NATIVE
-Mapping/reason: Observes live QClipboard state after publishing foreign plain-text MIME; no Swift predicate publishes or observes a foreign system clipboard.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/clipboard/clipmime_test.cpp) no longer builds or runs. Previous native note: Observes live QClipboard state after publishing foreign plain-text MIME; no Swift predicate publishes or observes a foreign system clipboard.
 Source context since previous assertion:
   ;
       }
@@ -406,8 +406,8 @@ Original expression:
   QVERIFY(!songview::clipboardHasClipMime());
 
 A014 | ClipMimeTest::foreignClipboardIsNotClip | src/checks/clipboard/clipmime_test.cpp:255
-Disposition: NATIVE
-Mapping/reason: Observes live QClipboard decode state for foreign MIME; see A013.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/clipboard/clipmime_test.cpp) no longer builds or runs. Previous native note: Observes live QClipboard decode state for foreign MIME; see A013.
 Source context since previous assertion:
   ;
 Original expression:
@@ -491,7 +491,7 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1690
+S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1697
   report.expect(routedCore?.ticksPerBeat == 24 && routedCore?.clip == routedClip
           && routedScaled?.span == 48
           && routedScaled?.tracks.count == 1
@@ -499,31 +499,31 @@ S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1690
           cppID: "clipmimecheck/ClipMimeTest::clipboardRoutesClipMime",
           message: "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion")
 
-S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1704
+S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1711
   report.expect(ClipboardCodec.decode(malformedClipboardPayload(kind)) == nil,
                         cppID: "clipmimecheck/ClipMimeTest::malformedPayloads[\(kind)]",
                         message: "the exact malformed baseline payload is rejected")
 
-S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1708
+S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1715
   report.expect(ClipboardCodec.decode(Data("not json at all".utf8)) == nil,
                     cppID: "clipmimecheck/ClipMimeTest::malformedCustomMimeReportsDecodeFailure",
                     message: "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion")
 
-S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1730
+S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1737
   report.expectEqual(
           upExpected,
           ClipboardCodec.rescale(upInput, sourceTicksPerBeat: 24, destinationTicksPerBeat: 48),
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[up_24_to_48]",
           what: "exact up-scaled clip")
 
-S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1766
+S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1773
   report.expectEqual(
           downExpected,
           ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
           what: "half-up down-scaled clip with stable last-wins collisions")
 
-S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1786
+S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1793
   report.expectEqual(
           identityInput,
           ClipboardCodec.rescale(identityInput, sourceTicksPerBeat: 24,
@@ -531,7 +531,7 @@ S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1786
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[same_tpb_is_exact_identity]",
           what: "same-TPB clip including duplicate ordering")
 
-S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1806
+S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1813
   report.expectEqual(
           saturationExpected,
           ClipboardCodec.rescale(saturationInput, sourceTicksPerBeat: 1,
@@ -539,7 +539,7 @@ S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1806
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[saturates_without_wrap]",
           what: "saturated clip without wrapping")
 
-S008 | roundTrip | src/checks/editcheck/TimeChecks.swift:1820
+S008 | roundTrip | src/checks/editcheck/TimeChecks.swift:1827
   report.expect(decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip),
                     cppID: cppID, message: "codec round-trip preserves payload")
 

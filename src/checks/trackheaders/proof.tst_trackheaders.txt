@@ -4,7 +4,7 @@ Reference revision: 0d03b1612987993f5972da3d0df8661d26bbd395
 Original: src/checks/trackheaders/tst_trackheaders.cpp
 Original SHA-256: 497123213188be4872ba55d4aaeb4987b9b5b3fb9e44d332f526958cf5c45a64
 Swift counterpart: src/checks/trackheaders/headerfixture.swift
-Swift SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+Swift SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 Additional Swift counterpart: src/checks/trackheaders/headerinputfixture.swift
 Additional Swift SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
 
@@ -45,8 +45,8 @@ instead of a native window with focused input.
 Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::init | src/checks/trackheaders/tst_trackheaders.cpp:18
-Disposition: NATIVE
-Mapping/reason: Original native fixture obligation: TrackHeadersFixture::create builds the native window, song tab, and input surface the cases drive. The Swift suite opens the ProjectService bank and constructs a typed TrackHeadersFixture session/presenter instead; no native create step exists. This disposition does not claim equivalent native-window behavior.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackheaders.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -70,8 +70,8 @@ Original expression:
   QVERIFY2(m_fixture->create(error), qPrintable(error))
 
 A002 | TrackHeadersTest::init | src/checks/trackheaders/tst_trackheaders.cpp:19
-Disposition: NATIVE
-Mapping/reason: Original native input obligation: focusInput gives the native window its focused input item before event synthesis. Swift presenter checks drive beginPointer/updatePointer/endPointer directly with no focus step. This disposition does not claim equivalent native-window behavior.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackheaders.cpp) no longer builds or runs. Previous native note: Original native input obligation: focusInput gives the native window its focused input item before event synthesis. Swift presenter checks drive beginPointer/updatePointer/endPointer directly with no focus step. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
 ;
 
@@ -103,31 +103,31 @@ int runTrackHeaderQuickCheck(const QString &projectRoot, const QString &songLabe
 
 Swift assertion predicates
 
-S001 | drag | src/checks/trackheaders/headerfixture.swift:64
+S001 | drag | src/checks/trackheaders/headerfixture.swift:82
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts press")
 
-S002 | drag | src/checks/trackheaders/headerfixture.swift:66
+S002 | drag | src/checks/trackheaders/headerfixture.swift:84
   report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
 
-S003 | drag | src/checks/trackheaders/headerfixture.swift:68
+S003 | drag | src/checks/trackheaders/headerfixture.swift:86
   report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts release")
 
-S004 | expectRows | src/checks/trackheaders/headerfixture.swift:73
+S004 | expectRows | src/checks/trackheaders/headerfixture.swift:91
   report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
                          what: "\(phase): rows follow engine track order")
 
-S005 | expectRows | src/checks/trackheaders/headerfixture.swift:76
+S005 | expectRows | src/checks/trackheaders/headerfixture.swift:94
   report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
                          what: "\(phase): rows display ordered numbered track names")
 
-S006 | expectRows | src/checks/trackheaders/headerfixture.swift:78
+S006 | expectRows | src/checks/trackheaders/headerfixture.swift:96
   report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
                          what: "\(phase): one row per track plus add-track row")
 
-S007 | expectRows | src/checks/trackheaders/headerfixture.swift:81
+S007 | expectRows | src/checks/trackheaders/headerfixture.swift:99
   report.expectEqual([names.count], addRows, cppID: cppID,
                          what: "\(phase): add-track row remains last")
 

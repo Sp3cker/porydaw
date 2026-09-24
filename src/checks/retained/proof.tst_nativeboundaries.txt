@@ -25,8 +25,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:157
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   #include "tst_nativeboundaries.h"
 
@@ -189,8 +189,8 @@ Original expression:
           return fail(mode, QStringLiteral("cannot allocate project service"))
 
 A002 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:165
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
 
@@ -205,8 +205,8 @@ Original expression:
           return fail(mode, opened.error)
 
 A003 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:174
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
       }
@@ -223,8 +223,8 @@ Original expression:
                                                  : song.error)
 
 A004 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:185
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
       }
@@ -241,8 +241,8 @@ Original expression:
           return fail(mode, QString::fromUtf8(diagnostic.data()))
 
 A005 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:191
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
       }
@@ -255,8 +255,8 @@ Original expression:
           return fail(mode, QStringLiteral("Swift playback publication is empty"))
 
 A006 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:204
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
       }
@@ -276,8 +276,8 @@ Original expression:
               result = fail(mode, QString::fromLocal8Bit(converter.readAllStandardError()))
 
 A007 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:208
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
           } else {
@@ -288,8 +288,8 @@ Original expression:
                   result = fail(mode, QStringLiteral("mid2agb produced no assembly"))
 
 A008 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:215
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               assembly.close();
@@ -303,8 +303,8 @@ Original expression:
               result = fail(mode, error)
 
 A009 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:222
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
       } else if (mode == QStringLiteral("vgbankcheck")) {
@@ -318,8 +318,8 @@ Original expression:
               result = fail(mode, reopened.error)
 
 A010 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:225
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
           } else {
@@ -329,8 +329,8 @@ Original expression:
                   result = fail(mode, QStringLiteral("warm reload did not reuse the native bank"))
 
 A011 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:232
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               pd_bank_lease_release(reopened.lease);
@@ -344,8 +344,8 @@ Original expression:
               result = fail(mode, QStringLiteral("Swift publication omitted the source loop"))
 
 A012 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:236
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/retained/tst_nativeboundaries.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
           }
@@ -356,8 +356,8 @@ Original expression:
               result = fail(mode, QStringLiteral("cannot initialize playback fixture engine"))
 
 A013 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:241
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
           } else {
@@ -369,8 +369,8 @@ Original expression:
                   result = fail(mode, QStringLiteral("cannot initialize Swift player"))
 
 A014 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:249
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               } else {
@@ -385,8 +385,8 @@ Original expression:
                       result = fail(mode, QStringLiteral("Swift player did not advance"))
 
 A015 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:266
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
                   pd_player_destroy(player);
@@ -410,8 +410,8 @@ Original expression:
               result = fail(mode, error)
 
 A016 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:270
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
           } else {
@@ -422,8 +422,8 @@ Original expression:
                   result = fail(mode, QStringLiteral("export did not produce a RIFF file"))
 
 A017 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:278
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               file.close();
@@ -438,8 +438,8 @@ Original expression:
               result = fail(mode, QString::fromUtf8(diagnostic.data()))
 
 A018 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:289
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               pd_playback_data_release(timeline);
@@ -457,8 +457,8 @@ Original expression:
                   result = fail(mode, QStringLiteral("audio service rejected Swift publication"))
 
 A019 | runRetainedBoundaryCheck | src/checks/retained/tst_nativeboundaries.cpp:294
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/retained/tst_nativeboundaries.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
 Source context since previous assertion:
   ;
               }

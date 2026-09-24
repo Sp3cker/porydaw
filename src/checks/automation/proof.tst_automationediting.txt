@@ -6,13 +6,13 @@ Original SHA-256: b230eb77daa26bb9fc832e8029f28c6dd52254390c5f64accbcf1a58f9b2d5
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
+Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 5b86e9ccff282f49293daeda21809428125bd86085e2aa4e57a69fc3dfa60278
+Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
-Swift SHA-256: d6d51a256caab61787a5d22110668696f60ea0e1c41f758d5b6a82d9dcbd1758
+Swift SHA-256: 86670017de3e8b42610fb203a36e7e06a6b653e002ac054b51c80ba8d5cadff6
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -22,7 +22,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -59,8 +59,8 @@ src/checks/automation/tst_automationediting.cpp:269 | for (int index = 0; index 
 Original assertion inventory
 
 A001 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the TimelineQuickScene object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/tst_automationediting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(quickScene)
 
@@ -247,8 +247,8 @@ Original expression:
   QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
 
 A032 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:100
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the TimelineQuickScene object exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/tst_automationediting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(quickScene)
 
@@ -365,8 +365,8 @@ Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A051 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:144
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the staged blank press point lies inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/tst_automationediting.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the staged blank press point lies inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(m_automationInput->bounds().contains(blank))
 

@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_projection.cpp
 Original SHA-256: 4dc0fed604392d4a02f9a9f67f8b95fedf68363320ffba60658062c3f437c36d
 Swift counterpart: src/checks/rollcheck/static/geometry.swift
-Swift SHA-256: bd885d4f3cee03f29a4d0864a9b32d6b0c807e191a0e16cad72fd6160f1dcc82
+Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -207,8 +207,8 @@ Original expression:
   QFAIL("Fold visible pitch does not map back to itself")
 
 A009 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:120
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
                   break;
@@ -334,8 +334,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A017 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:235
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
   }
@@ -404,8 +404,8 @@ Original expression:
   QFAIL("no empty octave for the Highlight pixel probe")
 
 A018 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
           } else {
@@ -437,8 +437,8 @@ Original expression:
   QFAIL("Highlight did not tint the scale row")
 
 A019 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:271
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               const auto blendedChannel = [](int background, int source) {
@@ -454,8 +454,8 @@ Original expression:
   QFAIL("Highlight tint is not #b595fc at 20% opacity")
 
 A020 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:274
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               }
@@ -464,8 +464,8 @@ Original expression:
   QFAIL("Highlight tinted a non-scale row")
 
 A021 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:276
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               if (hlKbd != offKbd)
@@ -473,8 +473,8 @@ Original expression:
   QFAIL("Highlight repainted the keyboard column")
 
 A022 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:278
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               if (hlRoot != hlScale)
@@ -482,8 +482,8 @@ Original expression:
   QFAIL("Highlight emphasized the root degree differently")
 
 A023 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:289
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
 
@@ -500,8 +500,8 @@ Original expression:
   QFAIL("changing the scale root did not update Highlight lanes")
 
 A024 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:299
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               }
@@ -517,8 +517,8 @@ Original expression:
   QFAIL("changing the scale type did not update Highlight lanes")
 
 A025 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:313
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               }
@@ -538,8 +538,8 @@ Original expression:
   QFAIL("Fold hid the occupied scale row for the Highlight tint probe")
 
 A026 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:323
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               } else {
@@ -556,8 +556,8 @@ Original expression:
                             "probe")
 
 A027 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:330
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
                   } else {
@@ -569,8 +569,8 @@ Original expression:
   QFAIL("enabling Highlight disabled Fold")
 
 A028 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:334
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
                       const QImage foldHighlightPm = check.captureQuickFramebuffer();
@@ -580,8 +580,8 @@ Original expression:
   QFAIL("Highlight did not tint a visible occupied Fold scale row")
 
 A029 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:341
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
                       const QRgb expectedFoldTint = qRgb(blendedChannel(qRed(foldOff), 0xb5),
@@ -594,8 +594,8 @@ Original expression:
   QFAIL("Highlight tint on a Fold row is not #b595fc at 20% opacity")
 
 A030 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:370
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_projection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
                       }
@@ -713,22 +713,22 @@ S013 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swi
   report.expect(camera.snapshot.scrollY >= -1e-9 && camera.snapshot.scrollY <= maximum + 1e-9,
                   cppID: id, message: "A014 folded scroll remains inside its projected height")
 
-S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:214
+S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:211
   report.expect(document.history.currentIdentity == identity, cppID: id,
                   message: messages.history)
   checkScaleProjectionInvariants supplies history: "A015 undo restores the pre-probe document history"
 
-S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:216
+S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:213
   report.expect(before != nil && (try? document.captureSave().bytes) == before,
                   cppID: id, message: messages.bytes)
   checkScaleProjectionInvariants supplies bytes: "A016 undo restores serialized MIDI"
 
-S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:214
+S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:211
   report.expect(document.history.currentIdentity == identity, cppID: id,
                   message: messages.history)
   checkScaleHighlightRasterDocumentGuards supplies history: "A031 highlight note probe restores document history"
 
-S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:216
+S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:213
   report.expect(before != nil && (try? document.captureSave().bytes) == before,
                   cppID: id, message: messages.bytes)
   checkScaleHighlightRasterDocumentGuards supplies bytes: "A032 highlight note probe restores serialized MIDI"

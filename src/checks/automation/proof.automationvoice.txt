@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationvoice.cpp
 Original SHA-256: e2351f563326c4e210c19c12286ac488dccf15aa4b58929ce646af10c18b8c7a
 Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
-Swift SHA-256: 63088cc97982d4262cfb8e8d4649f8f2ad60d8b95c4905a171c94e72f1456a80
+Swift SHA-256: ca29d1134c8d6dc32cfad25fe7a0db1dfd1b5e943b02403ec55713e64d6ea009
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
@@ -43,8 +43,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:73
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -123,8 +123,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A002 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:75
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -133,8 +133,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A003 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:78
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{24, 5}, {kSourceTick, 6}});
@@ -218,8 +218,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A011 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:102
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -251,8 +251,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A014 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:106
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -390,8 +390,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A029 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:125
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -418,8 +418,8 @@ Original expression:
   QCOMPARE(tab().document().smf().write(), frozen.smf);
 
 A032 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:134
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -432,8 +432,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A033 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:136
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -442,8 +442,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A034 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:139
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 7}});
@@ -498,8 +498,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A039 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:157
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -563,8 +563,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:175
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -577,8 +577,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A046 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:177
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -587,8 +587,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A047 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:180
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 8}});
@@ -750,8 +750,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A062 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:226
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -764,8 +764,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A063 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:228
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -774,8 +774,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A064 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:235
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       const QPointF source = voicePoint(kSourceTick);
@@ -899,8 +899,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), destination, 9));
 
 A076 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:258
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1046,8 +1046,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A091 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:290
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -1060,8 +1060,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A092 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:292
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -1093,8 +1093,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A095 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:302
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
 
@@ -1157,8 +1157,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A101 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:316
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1166,8 +1166,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A102 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:322
-Disposition: NATIVE
-Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1180,8 +1180,8 @@ Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &voiceChangeInput());
 
 A103 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:324
-Disposition: NATIVE
-Mapping/reason: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer grab delivery (QQuickWindow mouseGrabberItem) is owned by the window/input item. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
       voiceChangeInput().ungrabMouse();
@@ -1227,8 +1227,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A108 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:330
-Disposition: NATIVE
-Mapping/reason: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native pointer feedback (cursor shape) is delivered by the window/input item, not by the presenter. The retained obligation is the converted-window lane.
 Source context since previous assertion:
 
 
@@ -1236,8 +1236,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A109 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:336
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
   }
@@ -1250,8 +1250,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A110 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:338
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -1260,8 +1260,8 @@ Original expression:
   QVERIFY(pan.valid());
 
 A111 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:341
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationvoice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       writeVoicePoints(tab().document(), {{kSourceTick, 13}, {kSourceTick, 13}});
@@ -1305,8 +1305,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A115 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:358
-Disposition: NATIVE
-Mapping/reason: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: Native Quick window/scene construction (QQuickWindow, SongView quick scene). A direct presenter check cannot establish the rendered scene; the converted-window lane (deno task verify:qml) is the retained obligation.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
@@ -1503,19 +1503,19 @@ Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired sources.
 
-S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:13
+S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:10
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceProjectionID,
                          what: "every DOC_CC_VOICE event of the primary track publishes a marker")
 
-S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:15
+S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:12
   report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceProjectionID,
                          what: "the projection keeps one marker per change")
 
-S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:17
+S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:14
   report.expect(page.publishedMarkers.allSatisfy { !$0.identity.isEmpty }, cppID: drawerVoiceProjectionID,
                     message: "every marker carries its occurrence identity")
 
-S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:19
+S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:16
   report.expectEqual(3, Set(page.markerIdentities).count, cppID: drawerVoiceProjectionID,
                          what: "the identities are distinct per occurrence")
 
@@ -1523,38 +1523,38 @@ S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_project
   report.expectEqual(fixture.markerX(tick), marker.x, cppID: drawerVoiceProjectionID,
                              what: "marker \(tick) draws at the shared camera's projection")
 
-S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:28
+S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:25
   report.expect(marker.label.hasPrefix(String(format: "%03d", expectedProgram)),
                         cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) labels its own program slot "
                             + "(\"\(marker.label)\")")
 
-S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:32
+S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:29
   report.expect(marker.lineBottom > marker.lineTop, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a vertical rule")
 
-S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:34
+S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:31
   report.expect(marker.lineWidth > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a rule of a real width")
 
-S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:36
+S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:33
   report.expect((marker.labelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) publishes a label box with a real width")
 
-S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:38
+S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:35
   report.expect(!marker.offscreen, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) is inside the visible plot")
 
-S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:45
+S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:39
   report.expectEqual(2 + tail, page.heldSpans.count, cppID: drawerVoiceProjectionID,
                          what: "each program section publishes one held span "
                              + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
 
-S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:48
+S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:42
   report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "a resolved track publishes the band's tracking facts")
 
-S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:50
+S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:44
   report.expect(!page.readoutText.isEmpty, cppID: drawerVoiceProjectionID,
                     message: "the context readout names the program at the context tick")
 
@@ -1562,319 +1562,319 @@ S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_project
   report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                     message: "the readout is published for a presented track")
 
-S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:59
+S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:57
   report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
                          what: "a press inside the marker hit radius takes that marker")
 
-S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:63
+S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:61
   report.expect(!page.hasGesture, cppID: drawerVoiceProjectionID,
                     message: "a press beyond the marker hit radius starts no marker gesture")
 
-S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:71
+S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:67
   report.expect(page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a background hover publishes its slot label")
 
-S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:73
+S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:69
   report.expect(page.hoverText.hasPrefix("→ "), cppID: drawerVoiceProjectionID,
                     message: "the hover label keeps the legacy arrow prefix")
 
-S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:75
+S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:71
   report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
                          what: "a hover repaints no marker label")
 
-S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:80
+S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:79
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a marker hover publishes no background label")
 
-S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:82
+S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:81
   report.expectEqual(48, Tick(page.hoverTick), cppID: drawerVoiceProjectionID,
                          what: "the marker hover publishes its own tick")
 
-S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:84
+S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:83
   report.expectEqual(21, page.hoverHintProfile, cppID: drawerVoiceProjectionID,
                          what: "a marker hover advertises fine marker movement")
 
-S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:87
+S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:86
   report.expectEqual(12, page.hoverHintProfile, cppID: drawerVoiceProjectionID,
                          what: "leaving the marker restores horizontal-scroll instructions")
 
-S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:90
+S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:89
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "leaving the plot clears the hover")
 
-S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:96
+S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:95
   report.expect(!page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "no selected track publishes the unavailable state")
 
-S026 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:98
+S026 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:97
   report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceProjectionID,
                          what: "no selected track publishes no marker")
 
-S027 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:100
+S027 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:99
   report.expectEqual("No track selected", page.plotMessage, cppID: drawerVoiceProjectionID,
                          what: "the plot names the missing track")
 
-S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:110
+S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:109
   report.expect(label.hasPrefix(String(format: "%03d ", slot)), cppID: drawerVoiceLabelID,
                     message: "a slot label starts with its zero-padded program number "
                         + "(\"\(label)\")")
 
-S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:115
+S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:114
   report.expect(label.contains(symbol), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its source symbol")
 
-S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:117
+S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:116
   report.expect(label.contains("(\(type))"), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its declared type in parentheses")
 
-S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:120
+S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:119
   report.expect(label.contains(type), cppID: drawerVoiceLabelID,
                         message: "a slot with no source symbol names its declared type "
                             + "(\"\(label)\")")
 
-S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:124
+S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:123
   report.expectEqual("→ \(label)", VoiceLanePolicy.hoverLabel(label), cppID: drawerVoiceLabelID,
                          what: "the hover spelling is the label with the legacy arrow")
 
-S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:126
+S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:125
   report.expectEqual("", VoiceLanePolicy.hoverLabel(""), cppID: drawerVoiceLabelID,
                          what: "an unresolvable slot publishes no hover label at all")
 
-S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:129
+S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:128
   report.expectEqual("Sample", voiceTypeName(macro: BankVoiceMacro.directSound),
                          cppID: drawerVoiceLabelID, what: "Direct Sound is the Sample type")
 
-S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:131
+S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:130
   report.expectEqual("Sample (fixed pitch)",
                          voiceTypeName(macro: BankVoiceMacro.directSoundNoResample),
                          cppID: drawerVoiceLabelID, what: "the no-resample form names its fixed pitch")
 
-S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:134
+S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:133
   report.expectEqual("Sample (reverse)", voiceTypeName(macro: BankVoiceMacro.directSoundAlt),
                          cppID: drawerVoiceLabelID, what: "the alternate form names its reverse playback")
 
-S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:136
+S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:135
   report.expectEqual("Square 1", voiceTypeName(macro: BankVoiceMacro.square1), cppID: drawerVoiceLabelID,
                          what: "the square-1 macro names Square 1")
 
-S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:138
+S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:137
   report.expectEqual("Square 2", voiceTypeName(macro: BankVoiceMacro.square2), cppID: drawerVoiceLabelID,
                          what: "the square-2 macro names Square 2")
 
-S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:140
+S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:139
   report.expectEqual("Wave", voiceTypeName(macro: BankVoiceMacro.programmableWave),
                          cppID: drawerVoiceLabelID, what: "the wave macro names Wave")
 
-S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:142
+S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:141
   report.expectEqual("Noise", voiceTypeName(macro: BankVoiceMacro.noise), cppID: drawerVoiceLabelID,
                          what: "the noise macro names Noise")
 
-S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:144
+S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:143
   report.expectEqual("Drumkit", voiceTypeName(macro: BankVoiceMacro.keysplitAll),
                          cppID: drawerVoiceLabelID, what: "the drumkit macro names Drumkit")
 
-S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:146
+S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:145
   report.expectEqual("", voiceTypeName(macro: nil), cppID: drawerVoiceLabelID,
                          what: "no macro names no type")
 
-S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:151
+S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:150
   report.expectEqual(String(format: "%03d", 7), VoiceLanePolicy.label(slot: 7, view: blank),
                          cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes only its program number")
 
-S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:154
+S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:153
   report.expectEqual("", VoiceLanePolicy.label(slot: -1, view: blank), cppID: drawerVoiceLabelID,
                          what: "a missing slot publishes no label at all")
 
-S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:156
+S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:155
   report.expectEqual("", VoiceLanePolicy.label(slot: session.bankSlots.count, view: nil),
                          cppID: drawerVoiceLabelID, what: "an out-of-range slot publishes no label")
 
-S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:164
+S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:163
   report.expect(true, cppID: drawerVoiceLabelID,
                         message: "the staged bank publishes no blank slot to drive")
 
-S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:171
+S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:170
   report.fail(drawerVoiceLabelID, "the blank-slot fixture published no marker at tick 48")
 
-S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:174
+S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:173
   report.expect(marker.slotBlank, cppID: drawerVoiceLabelID,
                     message: "a change into a blank slot publishes blank truth")
 
-S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:176
+S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:175
   report.expectEqual("", marker.symbol, cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes no symbol")
 
-S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:178
+S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:177
   report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceLabelID,
                          what: "a blank slot's marker label is its program number")
 
-S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:181
+S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:180
   report.expect(fixture.page.contextBlank, cppID: drawerVoiceLabelID,
                     message: "the context readout publishes the blank truth too")
 
-S052 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:183
+S052 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:182
   report.expectEqual(blankIndex, fixture.page.contextSlot, cppID: drawerVoiceLabelID,
                          what: "the blank context names the blank slot")
 
-S053 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:185
+S053 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:184
   report.expectEqual("", fixture.page.contextSymbol, cppID: drawerVoiceLabelID,
                          what: "the blank context publishes no symbol")
 
-S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:196
+S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:195
   report.expectEqual(programs[0], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 0,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "tick 0 resolves the opening program")
 
-S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:199
+S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:198
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 48,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "a change takes effect at its own tick")
 
-S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:202
+S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:201
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 119,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the context holds until the next change")
 
-S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:205
+S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:204
   report.expectEqual(programs[2], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 120,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the late change takes effect at its tick")
 
-S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:208
+S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:207
   report.expectEqual(48, VoiceLanePolicy.endTick(after: 0, points: points), cppID: drawerVoiceContextID,
                          what: "the opening span ends at the first change")
 
-S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:210
+S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:209
   report.expectEqual(nil, VoiceLanePolicy.endTick(after: 120, points: points), cppID: drawerVoiceContextID,
                          what: "the last span runs to the song's end")
 
-S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:218
+S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:217
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context resolves at the published edit cursor")
 
-S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:220
+S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:219
   report.expectEqual(VoiceLanePolicy.label(slot: programs[1],
                                                view: fixture.session.bankSlots[programs[1]]),
                          page.readoutText, cppID: drawerVoiceContextID,
                          what: "the readout names the edit cursor's program")
 
-S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:224
+S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:223
   report.expectEqual(cursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "cursor-only publication rebuilds no marker content")
 
-S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:226
+S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:225
   report.expectEqual(cursorDocument, fixture.snapshot, cppID: drawerVoiceContextID,
                          what: "cursor-only publication changes no document or history state")
 
-S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:231
+S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:230
   report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "the playing context resolves at the shared tick, not the cursor")
 
-S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:233
+S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:232
   report.expect(page.presentedPlaying, cppID: drawerVoiceContextID,
                     message: "the presentation publishes its own playing state")
 
-S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:236
+S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:235
   report.expectEqual(programs[1], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "a rounded playing tick crosses into the next span")
 
-S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:238
+S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:237
   report.expectEqual(96, page.presentedContextTick, cppID: drawerVoiceContextID,
                          what: "the presented tick is the rounded shared tick")
 
-S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:243
+S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:242
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context returns to the edit cursor")
 
-S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:247
+S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:246
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "a moved edit cursor re-resolves the stopped context")
 
-S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:249
+S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:248
   report.expectEqual(laterCursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "a later cursor-only publication remains readout-only")
 
-S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:255
+S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:254
   report.expectEqual([0], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "the secondary track publishes only its own change")
 
-S072 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:257
+S072 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:256
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the readout follows the newly selected track")
 
-S073 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:261
+S073 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:260
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "returning to the primary track restores its markers")
 
-S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:271
+S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:270
   report.expectEqual(points.map { VoiceOccurrence($0).text }, page.markerIdentities,
                          cppID: drawerVoiceIdentityID,
                          what: "a marker's identity is its lane occurrence's own identity")
 
-S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:274
+S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:273
   report.expect(page.markerIdentities.allSatisfy {
           $0.split(separator: ".").count == 4
       }, cppID: drawerVoiceIdentityID,
                     message: "an identity names chunk, event index, tick and value")
 
-S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:283
+S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:282
   report.expectEqual(VoiceOccurrence(first),
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first), in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the identity resolves the occurrence it names")
 
-S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:287
+S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:286
   report.expectEqual(VoiceOccurrence(second),
                          VoiceLanePolicy.occurrence(at: 48, in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the tick lookup takes the document's last event at that tick")
 
-S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:293
+S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:292
   report.expect(VoiceLanePolicy.occurrence(mutated, in: [first, second]) == nil,
                     cppID: drawerVoiceIdentityID,
                     message: "a different value is never accepted as the frozen occurrence")
 
-S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:296
+S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:295
   report.expectEqual(first.eventIndex,
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first),
                                                     in: points + [first])?.eventIndex,
                          cppID: drawerVoiceIdentityID,
                          what: "the resolved occurrence keeps the document's event index")
 
-S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:307
+S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:306
   report.expectEqual(VoiceOccurrence(points[1]), frozen, cppID: drawerVoiceIdentityID,
                          what: "the press freezes the marker's own occurrence")
 
-S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:310
+S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:309
   report.expectEqual(before, page.markerIdentities, cppID: drawerVoiceIdentityID,
                          what: "a camera scroll changes no marker identity")
 
-S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:312
+S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:311
   report.expect(page.publishedMarkers[1].x != x, cppID: drawerVoiceIdentityID,
                     message: "a camera scroll does move the projection")
 
-S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:314
+S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:313
   report.expectEqual(frozen, page.frozenOccurrence, cppID: drawerVoiceIdentityID,
                          what: "the frozen occurrence survives a camera scroll")
 
-S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:317
+S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:316
   report.expect(!page.hasGesture, cppID: drawerVoiceIdentityID,
                     message: "the release ends the gesture without a draft")
 
-S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:327
+S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:326
   report.expect(page.acceptPicker(), cppID: drawerVoiceIdentityID,
                     message: "an insertion between the changes lands in the document")
 
-S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:329
+S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:328
   report.expectEqual(4, page.markerIdentities.count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence joins the projection")
 
-S087 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:331
+S087 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:330
   report.expectEqual(4, Set(page.markerIdentities).count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence has an identity of its own")
 
-S088 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:333
+S088 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:332
   report.expectEqual(earlier,
                          page.publishedMarkers.filter { Tick($0.tick) <= 48 }.map(\.identity),
                          cppID: drawerVoiceIdentityID,

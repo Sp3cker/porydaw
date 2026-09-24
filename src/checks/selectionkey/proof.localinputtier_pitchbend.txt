@@ -4,7 +4,7 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/selectionkey/localinputtier_pitchbend.cpp
 Original SHA-256: dfffb49ac306107884b336a69859d3db9390feb3f1c5a702bdc61ac4e50351b7
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -181,8 +181,8 @@ Original expression:
                "pitch-bend/Solo/Copy/Mute have no single-key bindings")
 
 A002 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:118
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the canonical action-set precondition is native production-object
 setup a presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -192,8 +192,8 @@ Original expression:
   QVERIFY2(actions, "the pitch-bend scenario has no canonical action set")
 
 A003 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:120
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the canonical pitch-bend action precondition is native
 production-object setup a presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -223,8 +223,8 @@ Original expression:
                "unavailable pitch-bend key was consumed by shared routing")
 
 A005 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:131
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the zero-trigger observation requires the native signal spy on
 the production action and cannot be established by a presenter-level Swift
 check.
@@ -251,8 +251,8 @@ Original expression:
                "the reserved tick-4800 pitch-bend note could not be inserted and resolved")
 
 A007 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:140
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the timeline Quick-window precondition requires the native
 surface and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -262,8 +262,8 @@ Original expression:
   QVERIFY2(quickWindow, "the timeline Quick window is missing")
 
 A008 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:152
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; note publication through the production model observes native
 async state and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -288,8 +288,8 @@ Original expression:
                               .arg(view.selectionModel().primaryTrack())))
 
 A009 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:165
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the opener target staging (primary track, selection, no time
 selection) observes production selection state through the native view and
 cannot be established by a presenter-level Swift check.
@@ -311,8 +311,8 @@ Original expression:
                               .arg(view.selectionModel().timeSelection().active())))
 
 A010 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:171
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Roll-origin focus staging requires the native window and cannot
 be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -322,8 +322,8 @@ Original expression:
                "could not request roll focus for the pitch-bend opener")
 
 A011 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:179
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Roll-origin focus observation requires native Quick focus state
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -345,8 +345,8 @@ Original expression:
                                    applicationFocusState())))
 
 A012 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:190
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; staging the disabled production action observes the native action
 object and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -358,8 +358,8 @@ Original expression:
   QVERIFY2(!pitchBendAction->isEnabled(), "the disabled action state was not staged")
 
 A013 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:219
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the exactly-once opener trigger observation requires the native
 signal spy and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -396,8 +396,8 @@ Original expression:
   QCOMPARE(pitchBendTriggered.count(), 1)
 
 A014 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:226
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; autorepeat consumption through the production key route requires
 the native routing objects and cannot be established by a presenter-level
 Swift check.
@@ -414,8 +414,8 @@ Original expression:
                "eligible pitch-bend repeat was not consumed")
 
 A015 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:228
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the still-once trigger observation requires the native signal
 spy and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -424,8 +424,8 @@ Original expression:
   QCOMPARE(pitchBendTriggered.count(), 1)
 
 A016 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:229
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the revealed Quick popup observation requires the native popup
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -437,8 +437,8 @@ Original expression:
               QStringLiteral("pitch-bend opener did not reveal Quick popup: %1").arg(popupState())))
 
 A017 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:238
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the graph/TextInput lookup requires the native popup content and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -452,8 +452,8 @@ Original expression:
   QVERIFY2(graph && numericEdit, "the Quick pitch-bend graph or numeric TextInput is missing")
 
 A018 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:243
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; completing native Quick focus on the graph requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -470,8 +470,8 @@ Original expression:
                               .arg(graphFocusBefore, applicationFocusState())))
 
 A019 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:252
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the graph-local Solo observation (signal count, window-action
 delta, production solo mask) requires native objects and cannot be established
 by a presenter-level Swift check.
@@ -492,8 +492,8 @@ Original expression:
                               .arg(view.soloMask())))
 
 A020 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:268
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the popup-local Copy observation (window-action delta, sentinel
 clipboard text, document bytes) requires the native clipboard and window owner
 and cannot be established by a presenter-level Swift check.
@@ -517,8 +517,8 @@ Original expression:
                               .arg(QApplication::clipboard()->text())))
 
 A021 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:286
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the absorbed roll-command observation (playback requests,
 production mute mask, document bytes) requires native signal and view objects
 and cannot be established by a presenter-level Swift check.
@@ -541,8 +541,8 @@ Original expression:
                "a non-audition roll command escaped the pitch-bend graph")
 
 A022 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:294
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the editable-canvas geometry requires the native QML graph item
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -556,8 +556,8 @@ Original expression:
   QVERIFY2(!canvas.isEmpty(), "pitch-bend graph has no editable canvas")
 
 A023 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:306
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the one-vertex production-history observation requires the native
 undo stack and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -578,8 +578,8 @@ Original expression:
                "graph input did not create one undoable interior bend vertex")
 
 A024 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:313
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the graph-local Delete observation requires the native undo stack
 and lane lookup and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -595,8 +595,8 @@ Original expression:
                "graph-local Delete did not remove exactly one selected vertex")
 
 A025 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:316
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; claiming the platform Undo shortcut requires native shortcut
 arbitration and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -606,8 +606,8 @@ Original expression:
                "pitch-bend popup did not claim the standard Undo shortcut")
 
 A026 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:319
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the popup-Undo restoration observation requires the native undo
 stack and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -618,8 +618,8 @@ Original expression:
                "popup Undo did not restore the deleted bend vertex")
 
 A027 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:321
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; claiming Undo for the graph edit requires native shortcut
 arbitration and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -629,8 +629,8 @@ Original expression:
                "pitch-bend popup did not claim Undo for the graph edit")
 
 A028 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:324
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the pre-edit restoration observation requires the native undo
 stack and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -641,8 +641,8 @@ Original expression:
                "popup Undo did not restore the pre-edit document")
 
 A029 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:337
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; completing native Quick focus on the numeric TextInput requires
 the native window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -666,8 +666,8 @@ Original expression:
                               .arg(numericFocusBefore, applicationFocusState())))
 
 A030 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:347
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the numeric Copy observation (native focus, selected text,
 window-action delta, clipboard) requires the native window and clipboard and
 cannot be established by a presenter-level Swift check.
@@ -689,8 +689,8 @@ Original expression:
                                    applicationFocusState())))
 
 A031 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:363
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the numeric Solo-key observation (QML field text, window-action
 delta, production solo mask) requires native objects and cannot be established
 by a presenter-level Swift check.
@@ -715,8 +715,8 @@ Original expression:
                               .arg(view.soloMask())))
 
 A032 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:373
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the stored BENDR observation requires the native popup object
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -727,8 +727,8 @@ Original expression:
   QCOMPARE(popup->bendRange(), textBefore.toInt())
 
 A033 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:377
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; invoking selectAll on the native QML field requires the native
 item and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -740,8 +740,8 @@ Original expression:
   QVERIFY(QMetaObject::invokeMethod(numericEdit, "selectAll"))
 
 A034 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:380
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the Space-yields-transport observation (native signal spy, QML
 field text and focus, popup openness) requires the native window and cannot be
 established by a presenter-level Swift check.
@@ -760,8 +760,8 @@ Original expression:
                               .arg(applicationFocusState())))
 
 A035 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:389
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the double-toggle observation requires the native signal spy and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -773,8 +773,8 @@ Original expression:
                               .arg(playPause.count())))
 
 A036 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:399
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Escape closing the native Quick popup requires the native window
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -803,8 +803,8 @@ Original expression:
                "the pitch-bend popup session left document changes behind")
 
 A038 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:406
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Roll-focus staging after the popup requires the native window and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -817,8 +817,8 @@ Original expression:
                "could not request Roll focus after the popup")
 
 A039 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:408
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Roll-focus observation requires native Quick focus state and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -829,8 +829,8 @@ Original expression:
                "Roll focus did not become active after the popup")
 
 A040 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:414
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the Solo-resume observation (window-action delta, production solo
 state) requires native objects and cannot be established by a presenter-level
 Swift check.
@@ -847,8 +847,8 @@ Original expression:
                               .arg(view.trackSoloed(kTrack))))
 
 A041 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:420
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the Solo-untoggle observation (window-action delta, production
 solo state) requires native objects and cannot be established by a
 presenter-level Swift check.

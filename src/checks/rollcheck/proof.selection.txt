@@ -74,8 +74,8 @@ close the slots.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:36
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/selection.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -116,8 +116,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A002 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:92
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
       const PencilVelocityFixture &fixture = *seed;
@@ -282,8 +282,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A012 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:139
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/selection.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -322,8 +322,8 @@ Original expression:
                "selection audition fixture did not establish the velocity latch")
 
 A014 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:171
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -458,8 +458,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A023 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/selection.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -472,8 +472,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A024 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:266
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -545,8 +545,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A027 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:297
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/selection.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -559,8 +559,8 @@ Original expression:
   QVERIFY(seed.has_value())
 
 A028 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:313
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
       SongDocument &doc = check.document();
@@ -636,8 +636,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A033 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:346
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/selection.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -832,8 +832,8 @@ Original expression:
   QFAIL("the threshold velocity drag did not push exactly one command")
 
 A046 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:451
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
 
@@ -893,8 +893,8 @@ Original expression:
   QFAIL("the chord-held velocity drag did not push exactly one command")
 
 A051 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:479
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
 
@@ -1022,8 +1022,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A061 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:556
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
   }
@@ -1056,8 +1056,8 @@ Original expression:
   QFAIL("no free grid cell for the non-Scale move")
 
 A062 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:571
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/selection.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
               view.setScaleFold(foldBefore);

@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/selectionkey/localinput.cpp
 Original SHA-256: 0eabe04716106ce2fb03f89a6693752467dbb4e3194aeb4075954bda14dd5e2e
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -50,8 +50,8 @@ last, so a failed assertion can never skip the remaining teardown.
 Original assertion inventory and source sequence
 
 A001 | SelectionLocalInputTierTest::activateShellForCommands | src/checks/selectionkey/localinput.cpp:57
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the shell-window existence precondition requires the native
 production shell and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -115,8 +115,8 @@ Original expression:
   QVERIFY2(shell, "the view has no shell window for resumed commands")
 
 A002 | SelectionLocalInputTierTest::activateShellForCommands | src/checks/selectionkey/localinput.cpp:64
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Cocoa active-window arbitration requires the native shell and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -132,8 +132,8 @@ Original expression:
                "the production shell did not become the active window for resumed commands")
 
 A003 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:97
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the window-session open precondition is a native loader
 precondition a presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -174,8 +174,8 @@ Original expression:
                qUtf8Printable(error))
 
 A004 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:101
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the song-tab open precondition is a native loader precondition a
 presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -186,8 +186,8 @@ Original expression:
   QVERIFY2(tab, qUtf8Printable(error))
 
 A005 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:103
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; observing production window actions requires the native shell and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -198,8 +198,8 @@ Original expression:
                "the production shell is missing the window actions")
 
 A006 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:107
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the tab Quick-surface precondition requires the native Quick
 surface and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -210,8 +210,8 @@ Original expression:
   QVERIFY2(quick, "the tab Quick surface is missing")
 
 A007 | SelectionLocalInputTierTest::init | src/checks/selectionkey/localinput.cpp:109
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/localinput.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the tab Quick-window/root precondition requires the native Quick
 surface and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -222,8 +222,8 @@ Original expression:
                "the tab Quick window or root object is missing")
 
 A008 | SelectionLocalInputTierTest::cleanup | src/checks/selectionkey/localinput.cpp:149
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the residual Quick mouse-grab observation requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -270,8 +270,8 @@ Original expression:
   QVERIFY2(released, "the Quick mouse grab survived the case teardown")
 
 A009 | SelectionLocalInputTierTest::cleanup | src/checks/selectionkey/localinput.cpp:150
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinput.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the clean-close contract (no dirty tab at explicit close)
 observes native session state a presenter-level Swift check cannot establish.
 Source context since previous assertion:

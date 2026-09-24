@@ -8,7 +8,7 @@ Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Swift SHA-256: a9c8ef79e003a9396492f2d27cadc6c88514a664ad5b45872ca79a1a593bb7b7
+Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
 
@@ -20,7 +20,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -202,8 +202,8 @@ Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, 0, kPanController}))
 
 A024 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:115
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the computed press point must lie inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the computed press point must lie inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(automationInput().bounds().contains(start))
 
@@ -244,8 +244,8 @@ Original expression:
   QTRY_VERIFY(findRow(lfoRow).valid())
 
 A031 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:145
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
@@ -268,8 +268,8 @@ Original expression:
   QVERIFY(rows.size() > 1)
 
 A035 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:159
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first row's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first row's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
@@ -286,14 +286,14 @@ Original expression:
   QVERIFY(rows[1].id.kind == EditorAutomationRowKind::ControlChange)
 
 A038 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:164
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's top edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's top edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(input.y() >= qreal(body.top()))
 
 A039 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:165
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's bottom edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's bottom edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Original expression:
   QVERIFY(input.y() < qreal(body.bottom()))
 
@@ -550,7 +550,7 @@ Swift expression:
       binding's presence and its editor-routed delivery scope.
       cppID: KeymapCheckTest::deliveryScopes.
 
-S029 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:105
+S029 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:104
 Swift expression:
   onAssertion(
       registry.sequences("automation.pencil_mode").map(\.strokes) ==
@@ -568,13 +568,13 @@ Swift expression:
   compare(grid.pencilMode, false) and compare(automation.isPencilMode, false) at :554-555
   establish the off state; automation is session.automationPage().
 
-S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:561
+S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:616-620
 Swift expression:
-  wait(520); compare(grid.pencilMode, true, "the pencil latch survives the B hold without release") at
-  :562; compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
-  at :563; keyRelease(Qt.Key_B) at :564; compare(grid.pencilMode, true, "releasing B keeps
-  the pencil latched") at :565 and compare(automation.isPencilMode, true, "releasing B keeps
-  automation pencil latched") at :566.
+  compare(grid.pencilMode, true, "the pencil latch survives the B hold without release")
+  compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
+  keyRelease(Qt.Key_B)
+  compare(grid.pencilMode, true, "releasing B keeps the pencil latched")
+  compare(automation.isPencilMode, true, "releasing B keeps automation pencil latched")
 
 S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:575
 Swift expression:

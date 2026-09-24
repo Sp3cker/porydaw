@@ -5,11 +5,11 @@ Original: src/checks/selectionkey/localinputtier_text.cpp
 Original SHA-256: 80adaaa8ce5a7eddfa1a779243b266c24be61bd830b111f4fd65f4f6f0d8b3d6
 Original removed from current checkout; use git show at reference.
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
+Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 
 Scope: numericPromptOwnsKeys and velocityPromptOwnsKeys. Other historical text-surface methods are not covered by this scoped proof; this is not a file-retirement certificate.
 
@@ -465,10 +465,10 @@ S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
-S020 | test_cWindowShortcutsAndNumericOwnership prompt field | src/checks/editorqml/tst_ShellWindow.qml:331
+S020 | test_cWindowShortcutsAndNumericOwnership prompt field | src/checks/editorqml/tst_ShellWindow.qml:350
   var field = findChild(surface, "noteVelocityInput"); verify(field, "the original numeric prompt has a text field")
 
-S021 | test_cWindowShortcutsAndNumericOwnership field focus | src/checks/editorqml/tst_ShellWindow.qml:333
+S021 | test_cWindowShortcutsAndNumericOwnership field focus | src/checks/editorqml/tst_ShellWindow.qml:352
   tryCompare(field, "activeFocus", true, 3000)
 
 S022 | test_cWindowShortcutsAndNumericOwnership selectAll deliveries | src/checks/editorqml/tst_ShellWindow.qml:334
@@ -483,24 +483,35 @@ S024 | test_cWindowShortcutsAndNumericOwnership Copy stays in the field | src/ch
 S025 | test_cWindowShortcutsAndNumericOwnership Paste round trip | src/checks/editorqml/tst_ShellWindow.qml:344
   keySequence(StandardKey.Paste) after field.selectAll() and the replacing digit; compare(field.text, "12", "native Copy and Paste stay with the text editor")
 
-S026 | test_cWindowShortcutsAndNumericOwnership S stays in the field | src/checks/editorqml/tst_ShellWindow.qml:349
-  keyClick(Qt.Key_S); compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo"); compare(session.velocityPage().promptOpen, true)
+S026 | test_cWindowShortcutsAndNumericOwnership S stays in the field | src/checks/editorqml/tst_ShellWindow.qml:369-370
+  compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo")
+  compare(session.velocityPage().promptOpen, true)
 
-S027 | test_cWindowShortcutsAndNumericOwnership arrows stay in the prompt | src/checks/editorqml/tst_ShellWindow.qml:352
-  keyClick(Qt.Key_Up); keyClick(Qt.Key_Down); compare(field.activeFocus, true, "prompt arrows keep focus in the numeric editor"); compare(session.velocityPage().promptOpen, true); tryCompare(session.velocityPage(), "selectedCount", 1, 3000, "prompt arrows keep the musical selection"); compare(session.documentDirty, false, "prompt arrows never edit the song")
+S027 | test_cWindowShortcutsAndNumericOwnership arrows stay in the prompt | src/checks/editorqml/tst_ShellWindow.qml:373-377
+  compare(field.activeFocus, true, "prompt arrows keep focus in the numeric editor")
+  compare(session.velocityPage().promptOpen, true)
+  tryCompare(session.velocityPage(), "selectedCount", 1, 3000,
+             "prompt arrows keep the musical selection")
+  compare(session.documentDirty, false, "prompt arrows never edit the song")
 
-S028 | test_cWindowShortcutsAndNumericOwnership first Space toggles transport | src/checks/editorqml/tst_ShellWindow.qml:362
-  keyClick(Qt.Key_Space); tryCompare(playhead, "playing", true, 3000, "window Space owns transport even with numeric text focus"); compare(field.text, promptTextAfterArrows, "transport Space never modifies numeric text"); compare(field.activeFocus, true)
+S028 | test_cWindowShortcutsAndNumericOwnership first Space toggles transport | src/checks/editorqml/tst_ShellWindow.qml:382-385
+  tryCompare(playhead, "playing", true, 3000,
+             "window Space owns transport even with numeric text focus")
+  compare(field.text, promptTextAfterArrows, "transport Space never modifies numeric text")
+  compare(field.activeFocus, true)
 
-S029 | test_cWindowShortcutsAndNumericOwnership second Space reverses transport | src/checks/editorqml/tst_ShellWindow.qml:367
-  keyClick(Qt.Key_Space); tryCompare(playhead, "playing", false, 3000, "the second window Space reverses one transport activation"); compare(session.velocityPage().promptOpen, true)
+S029 | test_cWindowShortcutsAndNumericOwnership second Space reverses transport | src/checks/editorqml/tst_ShellWindow.qml:387-389
+  tryCompare(playhead, "playing", false, 3000,
+             "the second window Space reverses one transport activation")
+  compare(session.velocityPage().promptOpen, true)
 
-S030 | test_cWindowShortcutsAndNumericOwnership Escape closes the prompt | src/checks/editorqml/tst_ShellWindow.qml:371
-  keyClick(Qt.Key_Escape); tryCompare(session.velocityPage(), "promptOpen", false, 3000)
+S030 | test_cWindowShortcutsAndNumericOwnership Escape closes the prompt | src/checks/editorqml/tst_ShellWindow.qml:390-391
+  keyClick(Qt.Key_Escape)
+  tryCompare(session.velocityPage(), "promptOpen", false, 3000)
 
-S031 | test_cWindowShortcutsAndNumericOwnership production window bindings | src/checks/editorqml/tst_ShellWindow.qml:227
+S031 | test_cWindowShortcutsAndNumericOwnership production window bindings | src/checks/editorqml/tst_ShellWindow.qml:255
   verify(shell.shellPresenter.actionSequences("roll.copy").length > 0); compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S"); compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
 
-S032 | ShellQmlBootstrap.setVelocityCommand | src/checks/editorqml/ShellQmlTests.swift:191
+S032 | ShellQmlBootstrap.setVelocityCommand | src/checks/editorqml/ShellQmlTests.swift:198
   public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }; the row drives it through
   session.performGridCommand(bootstrap.setVelocityCommand())

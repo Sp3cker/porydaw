@@ -81,8 +81,8 @@ ruler row.
 Original assertion inventory and source sequence
 
 A001 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:197
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
@@ -284,112 +284,112 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A002 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:198
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fixture.tab()->isReady())
 
 A003 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:199
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.rollInput()->isEnabled())
 
 A004 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:200
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.rulerInput()->isEnabled())
 
 A005 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:201
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.horizontalScrollbar()->isVisible())
 
 A006 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:202
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.horizontalScrollbar()->isEnabled())
 
 A007 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:203
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.eventListController())
 
 A008 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:204
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.drawer())
 
 A009 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:205
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.headersInput()->isEnabled())
 
 A010 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:206
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fixture.headersInput()->interaction(), fixture.headers())
 
 A011 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:207
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.controls()->isEnabled())
 
 A012 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:208
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.divisionControl()->isEnabled())
 
 A013 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:209
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.feelControl()->isEnabled())
 
 A014 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:210
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(controlsMatchRuler(fixture))
 
 A015 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:214
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
@@ -399,8 +399,8 @@ Original expression:
   QVERIFY(root)
 
 A016 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:221
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *const verticalScrollbar =
@@ -413,56 +413,56 @@ Original expression:
   QVERIFY(verticalScrollbar)
 
 A017 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:222
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(verticalScrollbar->isVisible())
 
 A018 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:223
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(verticalScrollbar->isEnabled())
 
 A019 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:224
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(otherEvents)
 
 A020 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:225
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(otherEvents->isEnabled())
 
 A021 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:226
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(eventListInput)
 
 A022 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:227
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(eventListInput->isEnabled())
 
 A023 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       constexpr std::array drawerNames{
@@ -479,8 +479,8 @@ Original expression:
   QVERIFY2(input, name)
 
 A024 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -497,8 +497,8 @@ Original expression:
   QCOMPARE(fixture.view()->editCursorTick(), uint64_t(96))
 
 A026 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:245
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       const Tick before = fixture.view()->editCursorTick();
@@ -507,8 +507,8 @@ Original expression:
   QCOMPARE(fixture.view()->editCursorTick(), before)
 
 A027 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:246
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -525,8 +525,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), zoom))
 
 A029 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:256
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -539,24 +539,24 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A030 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:257
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A031 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:258
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fixture.tab()->isReady())
 
 A032 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:259
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -571,24 +571,24 @@ Original expression:
   QCOMPARE(fixture.view()->editCursorTick(), uint64_t(0))
 
 A034 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:261
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(controlsMatchRuler(fixture))
 
 A035 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:262
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(allFixedSurfacesEnabled(fixture))
 
 A036 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:265
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       const Tick cursor = fixture.view()->editCursorTick();
@@ -617,8 +617,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), zoom))
 
 A039 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:278
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
   }
@@ -631,48 +631,48 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A040 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:279
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A041 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:280
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(bindVoicegroup(fixture))
 
 A042 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:281
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.tab()->isReady())
 
 A043 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:282
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(controlsMatchRuler(fixture))
 
 A044 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:283
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(allFixedSurfacesEnabled(fixture))
 
 A045 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:290
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -685,16 +685,16 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A046 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:291
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A047 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:293
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       const GridControlState before = gridControlState(fixture);
@@ -702,40 +702,40 @@ Original expression:
   QVERIFY(!before.divisionText.isEmpty())
 
 A048 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:294
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(bindVoicegroup(fixture))
 
 A049 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:295
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.tab()->isReady())
 
 A050 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:296
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(unchangedGridControlState(fixture, before))
 
 A051 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:297
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(controlsMatchRuler(fixture))
 
 A052 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:304
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -748,16 +748,16 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A053 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:305
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A054 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:308
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       const Tick gated = fixture.view()->editCursorTick();
@@ -766,24 +766,24 @@ Original expression:
   QCOMPARE(fixture.view()->editCursorTick(), gated)
 
 A055 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:309
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fixture.view()->userGestureActive())
 
 A056 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:310
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(bindVoicegroup(fixture))
 
 A057 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:313
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       const Tick ready = fixture.view()->editCursorTick();
@@ -792,16 +792,16 @@ Original expression:
   QVERIFY(fixture.view()->editCursorTick() != ready)
 
 A058 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:314
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fixture.view()->userGestureActive())
 
 A059 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:321
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -814,8 +814,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A060 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:322
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -832,8 +832,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(fixture.view()->camera().scrollX(), gated))
 
 A062 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:326
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -850,8 +850,8 @@ Original expression:
   QVERIFY(!qFuzzyCompare(fixture.view()->camera().scrollX(), ready))
 
 A064 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:336
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
   }
@@ -864,8 +864,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A065 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:337
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -882,8 +882,8 @@ Original expression:
   QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), gated))
 
 A067 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:341
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
@@ -900,8 +900,8 @@ Original expression:
   QVERIFY(!qFuzzyCompare(fixture.view()->camera().pxPerBeat(), ready))
 
 A069 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:359
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
   }
@@ -922,24 +922,24 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A070 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:360
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
 
 A071 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:361
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/gate.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(bindVoicegroup(fixture))
 
 A072 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:390
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
@@ -974,8 +974,8 @@ Original expression:
   QFAIL("ready ruler tooltip Quick surface did not become input-ready")
 
 A073 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:451
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1042,8 +1042,8 @@ Original expression:
   QFAIL("ready ruler tooltip Quick control was destroyed before hover delivery")
 
 A074 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:455
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1054,8 +1054,8 @@ Original expression:
                                    .arg(guardedControl->objectName())))
 
 A075 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:461
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1066,8 +1066,8 @@ Original expression:
   QFAIL(qUtf8Printable(hoverDiagnostic(guardedControl)))
 
 A076 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:464
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1076,8 +1076,8 @@ Original expression:
   QFAIL("ready ruler tooltip Quick scene was destroyed after hover delivery")
 
 A077 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:475
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1094,8 +1094,8 @@ Original expression:
   QFAIL("ruler tooltip covered the ruler row instead of floating below it")
 
 A078 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:479
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
           }
@@ -1105,8 +1105,8 @@ Original expression:
   QFAIL("ruler tooltip spilled past the Quick canvas below the ruler row")
 
 A079 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:483
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
           }
@@ -1116,8 +1116,8 @@ Original expression:
   QFAIL("ruler tooltip left the Quick canvas while floating below the row")
 
 A080 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:487
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
           }
@@ -1128,8 +1128,8 @@ Original expression:
                                    .arg(guardedControl->objectName())))
 
 A081 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:493
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
       }
@@ -1140,8 +1140,8 @@ Original expression:
   QFAIL("ready ruler tooltip Quick scene was destroyed while awaiting hover leave")
 
 A082 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:495
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/gate.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
 Source context since previous assertion:
   ;
           } else {

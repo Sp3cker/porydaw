@@ -47,8 +47,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:130
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "tst_swiftrollbench.h"
 
@@ -184,8 +184,8 @@ Original expression:
   QVERIFY2(selectionkey::openWindowSession(session, m_projectRoot, error), qUtf8Printable(error))
 
 A002 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:133
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -195,8 +195,8 @@ Original expression:
   QVERIFY2(tab != nullptr, qUtf8Printable(error))
 
 A003 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:137
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -207,8 +207,8 @@ Original expression:
   QVERIFY(quickView != nullptr)
 
 A004 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:139
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       QQuickWindow *const quickWin = quickView->quickWindow();
@@ -217,8 +217,8 @@ Original expression:
   QVERIFY(quickWin != nullptr)
 
 A005 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:143
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       // The embedded Quick window is a child window: it is exposed with the
@@ -229,8 +229,8 @@ Original expression:
   QVERIFY2(QTest::qWaitForWindowExposed(quickWin), "the Quick window must be exposed")
 
 A006 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:144
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -239,8 +239,8 @@ Original expression:
                "the Quick window must be active before the cadence is timed")
 
 A007 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:154
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -257,8 +257,8 @@ Original expression:
                "the Swift roll overlay must expose its viewport item")
 
 A008 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:158
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -268,8 +268,8 @@ Original expression:
   QVERIFY(root != nullptr)
 
 A009 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:160
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
       const QRectF rollBand = root->property("rollBandRect").toRectF();
@@ -279,8 +279,8 @@ Original expression:
                "the roll band rect must be published before the cadence")
 
 A010 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:183
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
       const QPointF rollCenter = root->mapToScene(rollBand.center());
@@ -309,8 +309,8 @@ Original expression:
   QVERIFY2(!stamps.stamps.empty(), "the Quick window must swap a frame before the cadence")
 
 A011 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:231
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
       stamps.stamps.clear();
@@ -366,8 +366,8 @@ Original expression:
                "the scroll cadence must swap at least 24 frames")
 
 A012 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:233
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
 
@@ -376,8 +376,8 @@ Original expression:
                "the zoom cadence must swap at least 24 frames")
 
 A013 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:235
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
 
@@ -385,8 +385,8 @@ Original expression:
   QVERIFY2(scroll.moved, "the scroll cadence must move the active roll's viewport")
 
 A014 | SwiftRollBenchTest::testScrollZoomFrameCadence | src/checks/swiftrollbench/tst_swiftrollbench.cpp:236
-Disposition: NATIVE
-Mapping/reason: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollbench/tst_swiftrollbench.cpp) no longer builds or runs. Previous native note: Native window/frame-cadence observation on the mounted roll (exposure, active state, swapped-frame stamps, viewport/camera movement tokens, printed SWIFTROLLBENCH timing). No Swift counterpart exists. A presenter-level Swift check cannot establish frame delivery or timing.
 Source context since previous assertion:
   ;
 

@@ -7,13 +7,13 @@ Original SHA-256: 1d6668d96212debf3f3930429fbeae4733c422c9b15de920f4ae1a59f693ec
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
-Swift SHA-256: 4155aec5230e18a72801ddadf35e29a74c99e60712d0a6df8377685f4e5d51e9
+Swift SHA-256: 59ed28893d4f4d827013c8446a6a1f93da109c6ac14c864502abaef0a491ae1b
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: d1ee3a04c544ea09c93f71fcbd5baaccae2a223664e580d4a594f833d691a6a4
+Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -194,8 +194,8 @@ Original expression:
   QVERIFY(stageSong(pilotSmf()));
 
 A002 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationfixture.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
 
       arrangeCcLane();
@@ -205,8 +205,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow && m_quickWindow->isVisible() && m_quickWindow->isExposed());
 
 A003 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:136
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationInput item exists and its bounds are non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationfixture.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationInput item exists and its bounds are non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Source context since previous assertion:
 
 
@@ -214,8 +214,8 @@ Original expression:
   QTRY_VERIFY(m_automationInput && !m_automationInput->bounds().isEmpty());
 
 A004 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:137
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationfixture.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
 
 
@@ -248,8 +248,8 @@ Original expression:
   QTRY_VERIFY(lane.valid());
 
 A007 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:147
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationfixture.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Source context since previous assertion:
 
 
@@ -257,8 +257,8 @@ Original expression:
   QTRY_VERIFY(!laneBody(lane).isEmpty());
 
 A008 | AutomationEditingTest::init | src/checks/automation/automationfixture.cpp:150
-Disposition: NATIVE
-Mapping/reason: Original native QQuickWindow/QQuickItem/scene-graph obligation (the staged drag point lies inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationfixture.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the staged drag point lies inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
 Source context since previous assertion:
 
 
@@ -878,7 +878,7 @@ S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationca
   report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
                   message: "cancelling ends the gesture synchronously")
 
-S022 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:352
+S022 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:661
   report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
                        what: "quiescing an idle page writes nothing")
 

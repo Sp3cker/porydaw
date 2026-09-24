@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/selectioncheck_tracks.cpp
 Original SHA-256: c0fa3450cb285e33ceb356561d3055af065b6fc341901fea52f96135ae14f7dd
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: 89df5cc2ea66edee4dbdc58d6c241d0c5dce1583289bfd775c4e3e93775e5842
+Swift SHA-256: 778da8c451451063174068f222938592213cc116b252e1c77c4c62eb668c78e6
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

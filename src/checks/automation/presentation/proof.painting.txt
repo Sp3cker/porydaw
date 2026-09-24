@@ -14,8 +14,8 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-Tally: MATCHED 129, PARTIAL 32, GAP 0, NATIVE 34.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Tally: MATCHED 129, PARTIAL 32, GAP 9, NATIVE 0, RETIRED-REPRESENTATION 25.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -66,8 +66,8 @@ Original expression:
   QVERIFY(automationPage)
 
 A002 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:120
-Disposition: NATIVE
-Mapping/reason: Native EditorRig precondition: the C++ AutomationCanvas interaction object was retired with the native rig and has no Swift counterpart; AutomationPage publishes the model and owns pointer input, and the QML lane mounts the production page (S075).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -291,14 +291,14 @@ Original expression:
   QVERIFY(automationPage)
 
 A037 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:234
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene precondition: the C++ quick scene and its automation layers were retired with the native rig; the QML lane draws and asserts its own items (S075/S081).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A038 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:235
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas interaction object; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -327,20 +327,20 @@ Original expression:
   QCOMPARE(m_document->smf().write(), before)
 
 A043 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:256
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup: no Swift handle exists to validate; Swift addresses the lane by AutomationParameter and catalog index (S097).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(volumeHandle.valid())
 
 A044 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:257
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(panHandle.valid())
 
 A045 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:258
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(lfoHandle.valid())
 
@@ -432,14 +432,14 @@ Original expression:
   QVERIFY(automationPage)
 
 A059 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:309
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene; see A037.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A060 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:310
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -450,8 +450,8 @@ Original expression:
   QVERIFY(activateParameter(tempo))
 
 A062 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:317
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(volumeHandle.valid())
 
@@ -487,14 +487,14 @@ Original expression:
   QVERIFY(automationPage)
 
 A068 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:338
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene; see A037.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A069 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:339
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -558,14 +558,14 @@ Original expression:
   QVERIFY(automationPage)
 
 A079 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:376
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene; see A037.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A080 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:377
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -576,8 +576,8 @@ Original expression:
   QVERIFY(activateParameter(volume))
 
 A082 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:382
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(volumeHandle.valid())
 
@@ -624,8 +624,8 @@ Original expression:
   QVERIFY(automationPage)
 
 A090 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:440
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -684,41 +684,41 @@ Original expression:
   QVERIFY(lfoBackground)
 
 A100 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:485
-Disposition: NATIVE
-Mapping/reason: Qt Quick Control backgroundItem internals; see A098.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Qt Quick Control backgroundItem internals; see A098.
 Original expression:
   QVERIFY(tempoBackground)
 
 A101 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:487
-Disposition: NATIVE
-Mapping/reason: Tab background colour identity (the tabSelectedBackground role): the model-level selection is asserted (S029/S115); the drawn role colour is owned by the QML theme and no executing predicate samples it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabSelectedBackground role): the model-level selection is asserted (S029/S115); the drawn role colour is owned by the QML theme and no executing predicate samples it.
 Original expression:
   QCOMPARE(panBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>())
 
 A102 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:489
-Disposition: NATIVE
-Mapping/reason: Tab background colour identity (the tabBackground role); see A101.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabBackground role); see A101.
 Original expression:
   QCOMPARE(lfoBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabBackground")).value<QColor>())
 
 A103 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:491
-Disposition: NATIVE
-Mapping/reason: Tab background colour identity (the tabBackground role); see A101.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabBackground role); see A101.
 Original expression:
   QCOMPARE(tempoBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabBackground")).value<QColor>())
 
 A104 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:496
-Disposition: NATIVE
-Mapping/reason: Native timeline band layout geometry (TimelineBand::Automation): the band rect is a native layout object with no Swift counterpart; the QML lane grabs the composed band (S094).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Native timeline band layout geometry (TimelineBand::Automation): the band rect is a native layout object with no Swift counterpart; the QML lane grabs the composed band (S094).
 Original expression:
   QVERIFY(band)
 
 A105 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:498
-Disposition: NATIVE
-Mapping/reason: Native band raster capture precondition (a non-null composed band image).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Native band raster capture precondition (a non-null composed band image).
 Original expression:
   QVERIFY(!image.isNull())
 
@@ -757,8 +757,8 @@ Original expression:
   QVERIFY(automationPage)
 
 A111 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:533
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -769,14 +769,14 @@ Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A113 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:548
-Disposition: NATIVE
-Mapping/reason: Native timeline band layout geometry; see A104.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Native timeline band layout geometry; see A104.
 Original expression:
   QVERIFY(band)
 
 A114 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:550
-Disposition: NATIVE
-Mapping/reason: Native band raster capture precondition; see A105.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(!before.isNull())
 
@@ -793,8 +793,8 @@ Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(automationPage->automationViewportSize())).contains(*label))
 
 A117 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:556
-Disposition: NATIVE
-Mapping/reason: Native band raster capture precondition; see A105.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(!after.isNull())
 
@@ -811,14 +811,14 @@ Original expression:
   QVERIFY(automationPage)
 
 A120 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:566
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene; see A037.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A121 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:567
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -829,8 +829,8 @@ Original expression:
   QVERIFY(activateParameter(volume))
 
 A123 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:579
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene automationLaneTextModel: the C++ lane text model has no Swift counterpart; ghost label text is asserted by S052 — painting.swift:207.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(ghostModel)
 
@@ -889,8 +889,8 @@ Original expression:
   QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline")
 
 A132 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:605
-Disposition: NATIVE
-Mapping/reason: Retired text-model separation (the lane name model versus the hover readout model): the hover readout is asserted as its own text by S070/S093.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Retired text-model separation (the lane name model versus the hover readout model): the hover readout is asserted as its own text by S070/S093.
 Original expression:
   QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
 
@@ -927,8 +927,8 @@ Original expression:
   QVERIFY(tab)
 
 A138 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:625
-Disposition: NATIVE
-Mapping/reason: Qt Quick Control contentItem internals of the tab: no published counterpart; the tab's production Text item is asserted by S099.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Qt Quick Control contentItem internals of the tab: no published counterpart; the tab's production Text item is asserted by S099.
 Original expression:
   QVERIFY(content)
 
@@ -1024,20 +1024,20 @@ Original expression:
   QVERIFY(automationPage)
 
 A154 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:663
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene; see A037.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(scene)
 
 A155 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:664
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas; see A002.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
 A156 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:667
-Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene lane text model; see A123.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(laneTextModel)
 
@@ -1116,8 +1116,8 @@ Original expression:
   QVERIFY(!minLabel->intersects(*neutralLabel))
 
 A168 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:708
-Disposition: NATIVE
-Mapping/reason: Native AutomationCanvas LaneHandle row lookup; see A043.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/presentation/painting.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(panHandle.valid())
 
@@ -1699,43 +1699,43 @@ Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerAutomationPaintingModelID,
                         message: "leaving the plot clears the tempo hover")
 
-S075 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2852
+S075 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:3014
 QML expression:
   verify(bootstrap.attachProductionSection(testCase.automationKind),
                  "the production Automation page attaches to its slot")
 
-S076 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4137
+S076 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4313
 QML expression:
   fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
-S077 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4140
+S077 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4316
 QML expression:
   compare(testCase.automationTabItems().length, model.tabCount,
                   "every catalog parameter drew a selector tab")
 
-S078 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4148
+S078 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4324
 QML expression:
   verify(activeTab, "the active parameter's tab is drawn")
 
-S079 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4149
+S079 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4325
 QML expression:
   compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
 
-S080 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4154
+S080 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4330
 QML expression:
   compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
                   testCase.collectByNames(tempoTab, ["automationParameterTabText"], [])[0].text,
                   "the last catalog parameter is the Tempo row the selector drew")
 
-S081 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4164
+S081 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4340
 QML expression:
   verify(findChild(page, "automationGridLines"), "the page composed its time grid")
 
-S082 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4165
+S082 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4341
 QML expression:
   verify(findChild(page, "automationValueLines"), "the page composed its value axis")
 
-S083 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4182
+S083 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4358
 QML expression:
   tryVerify(function() { return testCase.automationNodeItems().length
                                          === testCase.automationModel().nodeCount }, 2000,
@@ -1743,153 +1743,153 @@ QML expression:
                     + testCase.automationNodeItems().length + " drawn of "
                     + testCase.automationModel().nodeCount + ")")
 
-S084 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4187
+S084 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4363
 QML expression:
   compare(testCase.automationNodeItems().length > 0, true,
                   "the lane with written events drew its nodes")
 
-S085 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4189
+S085 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4365
 QML expression:
   compare(testCase.automationCurveItems().length > 0, true,
                   "the lane with written events drew its curve")
 
-S086 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1995
+S086 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2157
 QML expression:
   verify(active > 0, "the active lane draws its curve")
 
-S087 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2000
+S087 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2162
 QML expression:
   tryVerify(function() {
               return testCase.collectByNames(page, ["automationGhostCurve"], []).length > 0
           }, 2000, "the plot drew the ghost's curve")
 
-S088 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2005
+S088 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2167
 QML expression:
   compare(drawn.length, active + ghosts,
                   "pinning adds exactly the ghost runs before the active runs")
 
-S089 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2019
+S089 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2181
 QML expression:
   verify(ordered, "every ghost run draws before the active runs")
 
-S090 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2021
+S090 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2183
 QML expression:
   tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
                     "a second Control press cleared the pin")
 
-S091 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2023
+S091 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2185
 QML expression:
   tryVerify(function() {
               return testCase.automationCurveItems().length === active
           }, 2000, "unpinning restores the unpinned plot")
 
-S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1843
+S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:2003
 QML expression:
   tryVerify(function() { return model.hoverVisible === true }, 2000,
                     "the node move published its hover")
 
-S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1845
+S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:2005
 QML expression:
   tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
                     2000, "the drawn label shows the published hover text")
 
-S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1963
+S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:2123
 QML expression:
   verify(changed, "the node hover paints over the background hover")
 
-S095 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2920
+S095 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3082
 QML expression:
   verify(gutter && scroller, "the selector exposes its gutter and clipped scroller")
 
-S096 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2927
+S096 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3089
 QML expression:
   compare(tabs.length, labels.length, "every catalog label has a tab")
 
-S097 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2934
+S097 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3096
 QML expression:
   verify(tab && tab.width > 0 && tab.height > 0, "the parameter tab has bounds")
 
-S098 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2936
+S098 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3098
 QML expression:
   verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5,
                          "parameter " + labels[i] + " stays inside the widened gutter")
 
-S099 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2939
+S099 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3101
 QML expression:
   verify(text, "the parameter tab has its production Text item")
 
-S100 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2940
+S100 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3102
 QML expression:
   compare(text.text, labels[i])
 
-S101 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2941
+S101 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3103
 QML expression:
   verify(text.contentWidth > 0 && text.contentHeight > 0,
                          "the parameter label has rendered ink")
 
-S102 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2943
+S102 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3105
 QML expression:
   verify(text.contentWidth <= text.width + 0.5
                          && text.contentHeight <= text.height + 0.5,
                          labels[i] + " fits without clipping its rendered text")
 
-S103 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2951
+S103 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3113
 QML expression:
   verify(Math.abs(center.x - bounds[j].x) > 0.5
                              || Math.abs(center.y - bounds[j].y) > 0.5,
                              "parameter tabs do not overlap at one center")
 
-S104 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2957
+S104 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3119
 QML expression:
   fuzzyCompare(bounds[pair].y, bounds[pair + 1].y, 0.5,
                                "related controller pairs share a row")
 
-S105 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2962
+S105 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3124
 QML expression:
   fuzzyCompare(tempo.x, left.x, 0.01, "Tempo shares the first column's left edge")
 
-S106 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2963
+S106 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3125
 QML expression:
   fuzzyCompare(tempo.x + tempo.width, right.x + right.width, 0.01,
                            "Tempo spans both columns")
 
-S107 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2965
+S107 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3127
 QML expression:
   verify(bounds[bounds.length - 1].y > bounds[bounds.length - 2].y,
                      "Tempo closes the selector below the controllers")
 
-S108 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2967
+S108 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:3129
 QML expression:
   compare(scroller.clip, true, "the selector clips its scrolling content")
 
-S109 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2986
+S109 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3148
 QML expression:
   verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
 
-S110 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2991
+S110 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3153
 QML expression:
   fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
 
-S111 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2994
+S111 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3156
 QML expression:
   verify(scroller.contentHeight > scroller.height, "the catalog scrolls at minimum height")
 
-S112 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2998
+S112 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3160
 QML expression:
   verify(firstOrigin.y >= -0.5 && firstOrigin.y + first.height <= scroller.height + 0.5,
                      "the first parameter is visible at the content top")
 
-S113 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3003
+S113 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3165
 QML expression:
   verify(lastOrigin.y >= -0.5 && lastOrigin.y + last.height <= scroller.height + 0.5,
                      "Tempo is visible at the content bottom")
 
-S114 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4268
+S114 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4444
 QML expression:
   compare(bootstrap.automationLaneTicks(), ticksBefore,
                   "switching parameters wrote nothing to the lane")
 
-S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4270
+S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4446
 QML expression:
   compare(bootstrap.automationSelectionRange(), selected,
                   "the explicit selection survives a parameter switch")

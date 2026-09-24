@@ -471,8 +471,8 @@ Original expression:
   QTRY_VERIFY(std::abs(camera.scrollY() - midpoint) < kTolerance);
 
 A025 | ScrollbarTest::keyboardNavigation | src/checks/scrollbar/input.cpp:279
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes the live QQuickWindow active-focus item, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/input.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes the live QQuickWindow active-focus item, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
       QQuickItem &scrollbar = bar(orientation);
       scrollbar.forceActiveFocus(Qt::TabFocusReason);

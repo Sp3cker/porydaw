@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/tails.cpp
 Original SHA-256: d92f2060355d91e8020b072d89a8ad9256fc7b7f46d9b33060232113bdfbb8d8
 Swift counterpart: src/checks/playback/tails.swift
-Swift SHA-256: 905fec896b489a9d3c698b1019c723304e4607ef7ab83fa9d873a2da05594a22
+Swift SHA-256: 5a5ae7ade507f622bfd0609a2c63f7de6dee8d2532867ad7530c84f077055cff
 
 Purpose and status
 Each numbered entry records one original assertion/failure site, not one test

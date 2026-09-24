@@ -22,7 +22,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -350,8 +350,8 @@ Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A023 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:146
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation; the Swift suite publishes no rendered image.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand image validity is a retained native rendering obligation; the Swift suite publishes no rendered image.
 Original expression:
   QVERIFY(!sameSpan.isNull())
 
@@ -374,14 +374,14 @@ Original expression:
   QVERIFY(readoutRect.isValid())
 
 A027 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:154
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!nextSpan.isNull())
 
 A028 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:155
-Disposition: NATIVE
-Mapping/reason: Native: the changedPixels region comparison is a retained native QImage pixel obligation over the readout rect.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the changedPixels region comparison is a retained native QImage pixel obligation over the readout rect.
 Original expression:
   QVERIFY(changedPixels(sameSpan, nextSpan,
                             deviceRect(readoutRect, nextSpan.devicePixelRatio(), nextSpan.size())) >
@@ -418,8 +418,8 @@ Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A034 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:188
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand idle image validity is a retained native rendering obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand idle image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!idle.isNull())
 
@@ -454,14 +454,14 @@ Original expression:
   QVERIFY(hoverRect.isValid())
 
 A040 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:199
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand hovered image validity is a retained native rendering obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand hovered image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!hovered.isNull())
 
 A041 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:200
-Disposition: NATIVE
-Mapping/reason: Native: the changedPixels comparison over the hover rect is a retained native QImage pixel obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the changedPixels comparison over the hover rect is a retained native QImage pixel obligation.
 Original expression:
   QVERIFY(changedPixels(idle, hovered,
                             deviceRect(hoverRect, hovered.devicePixelRatio(), hovered.size())) > 0)
@@ -647,8 +647,8 @@ Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A072 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:270
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!original.isNull())
 
@@ -671,14 +671,14 @@ Original expression:
   QVERIFY(renamedRect.isValid())
 
 A076 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:286
-Disposition: NATIVE
-Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!renamed.isNull())
 
 A077 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:287
-Disposition: NATIVE
-Mapping/reason: Native: the changedPixels union-region comparison is a retained native QImage pixel obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the changedPixels union-region comparison is a retained native QImage pixel obligation.
 Original expression:
   QVERIFY(changedPixels(
                   original, renamed,
@@ -835,8 +835,8 @@ Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A097 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:342
-Disposition: NATIVE
-Mapping/reason: Native: the original observes SongView::auditionVoice through a QSignalSpy; that spy handle is a retained native signal obligation, replaced in Swift by the typed onAuditionVoice callback (S275, S282).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voice.cpp) no longer builds or runs. Previous native note: Native: the original observes SongView::auditionVoice through a QSignalSpy; that spy handle is a retained native signal obligation, replaced in Swift by the typed onAuditionVoice callback (S275, S282).
 Original expression:
   QVERIFY(audition.isValid())
 
@@ -1152,14 +1152,14 @@ Original expression:
   QCOMPARE(view.camera().scrollX(), floor)
 
 A147 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:128
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario. Shared VoiceFixture setup precondition consumed by voiceSurfaceAndPaintLifecycle, voiceHoverLifecycle, voiceRefreshLifecycle and voiceCameraTransactions; a failed create aborts the harness rather than asserting a scenario outcome, so it is not a parity assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   qFatal("%s", qPrintable(error))
 
 A148 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:135
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario. Shared VoiceTransactionFixture setup precondition consumed by voicePickerTransactions and voiceMarkerDragTransactions; a failed create aborts the harness rather than asserting a scenario outcome, so it is not a parity assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voice.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   qFatal("%s", qPrintable(error))
 
@@ -2828,17 +2828,17 @@ Swift expression:
                 (page.hoverLabelRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                 message: "the background hover publishes a usable label rect")
 
-S317 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3429
+S317 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3771
 QML expression:
   verify(readout.width > 0 && readout.height > 0,
          "the readout draws a usable rect")
 
-S318 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3431
+S318 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3773
 QML expression:
   compare(readout.horizontalAlignment, Text.AlignRight,
           "the readout draws right-aligned")
 
-S319 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3438
+S319 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3780
 QML expression:
   tryVerify(function() { return hoverLabel.visible }, 1000,
             "the background hover draws its label")

@@ -5,11 +5,11 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/parity.cpp
 Original SHA-256: 38c3be9d3a4a7201a577c79d6619ff8331e3e2422b6f76045ab840eb4894d35f
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 5c57b1ca8d62ccec7ffef66c3d5d95f863495eba10021966910e99c772230615
+Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
+Additional Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/automationselection.swift
-Additional Swift SHA-256: d651f10e23d47da379a39447f659f276580244134775262b3b6810a706be3d4d
+Additional Swift SHA-256: 37ac484181e8abead7bf7b5ce96b36c6e2b66160ce6131224b2c465a5d661339
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -610,8 +610,8 @@ Original expression:
                         QStringLiteral("sub-threshold empty jitter mutated the document"));
 
 A018 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:459
-Disposition: NATIVE
-Mapping/reason: Requires the native automation cursor shape on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/parity.cpp) no longer builds or runs. Previous native note: Requires the native automation cursor shape on the retired surface.
 Source context since previous assertion:
   }
 
@@ -636,8 +636,8 @@ Original expression:
                         QStringLiteral("origin phantom hover did not keep the arrow cursor"));
 
 A019 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:485
-Disposition: NATIVE
-Mapping/reason: Requires the native Quick layer revision to advance on the retired surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/parity.cpp) no longer builds or runs. Previous native note: Requires the native Quick layer revision to advance on the retired surface.
 Source context since previous assertion:
       const auto before = snapshot(ctx.rig.document());
       const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
@@ -823,18 +823,18 @@ Counterpart expression:
       report.expectEqual(Tick(60), locked.targets[0].current.tick, cppID: drawerAutomationNodeDragID,
                          what: "a time lock keeps the mapped tick")
 
-S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:930
+S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:929
 Counterpart expression:
       report.expectEqual(Tick(24), verticalDrag.targets[0].current.tick,
                          cppID: drawerAutomationContractParityID,
                          what: "a value lock keeps the original tick")
 
-S015 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:915
+S015 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:914
 Counterpart expression:
       report.expect(AutomationCommit.apply(fractionalPlan, in: fractional.document),
                     cppID: drawerAutomationContractParityID, message: "a fractional tempo drag commits one edit")
 
-S016 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:917
+S016 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:916
 Counterpart expression:
       report.expectEqual(fractionalBefore.revision + 1, fractional.document.revision,
                          cppID: drawerAutomationContractParityID, what: "one fractional drag is one revision")
@@ -857,7 +857,7 @@ Counterpart expression:
                          cppID: drawerAutomationContractParityID,
                          what: "a move onto a free tick keeps every occupant in order")
 
-S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:28
+S020 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:27
 Counterpart expression:
       report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                          what: "heterogeneous selected drag is one revision")

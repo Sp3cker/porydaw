@@ -8,9 +8,9 @@ Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollcheck/keyboard.swift
-Additional Swift SHA-256: 6db4784f8cd68510a8e4791ad0d6f772db480fde64718efdd0d174baab9220cd
+Additional Swift SHA-256: 9614afe485ce2e87806d725f20cee0397388fc3f9c9ab73c65e56db15f88f3ab
 Additional Swift counterpart: src/checks/rollcheck/note_commands.swift
-Additional Swift SHA-256: 5cacc138997ef46d430435cf9547c9fadda41b30ebe25898f6a3d804300dc4f4
+Additional Swift SHA-256: 68ba6128a66cc2e929d2fc1b7abc65affb535f7134575e95672d2ce55b481263
 Additional Swift counterpart: src/checks/rollcheck/pencil.swift
 Additional Swift SHA-256: 9fdd7a587866d35457c75e107100cc7bac92e9d405986b3b31d565ef44eacaa1
 Additional Swift counterpart: src/checks/workspace/session_playback.swift
@@ -54,7 +54,7 @@ predicates cited in the mappings execute from the same swiftcore suite:
 EditorGridCameraChecks checkViewport/checkIsolation/checkDrawLatchAndCancel
 (lines 255-259, 547-549, 947-950), the keyboard, note_commands, and pencil
 scenarios, and workspace/session_playback.swift via SessionChecks.swift:40.
-Tally: MATCHED 37, PARTIAL 64, GAP 0, NATIVE 8
+Tally: MATCHED 37, PARTIAL 64, GAP 5, NATIVE 0, RETIRED-REPRESENTATION 3
 
 Original assertion inventory and source sequence
 
@@ -261,8 +261,8 @@ Original expression:
                CoreTimeDefaults::kMaxTick - 2048)
 
 A017 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:98
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -581,8 +581,8 @@ Original expression:
   QTRY_VERIFY(view.grid().segmentAt(102).start == segment.start)
 
 A050 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:188
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/camera.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -774,8 +774,8 @@ Original expression:
   QCOMPARE(view.viewState().scrollY, 217.0)
 
 A067 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:262
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/camera.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -920,8 +920,8 @@ Original expression:
   QCOMPARE(view.viewState().scrollPx, state.scrollPx)
 
 A080 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:328
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -1014,8 +1014,8 @@ Original expression:
   QVERIFY(visible >= 2)
 
 A086 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:369
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -1093,8 +1093,8 @@ Original expression:
   QVERIFY(rollBand.has_value())
 
 A093 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:393
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QImage raster = checks::support::captureQuickBand(view, rollBand->rect);
@@ -1192,8 +1192,8 @@ Original expression:
   QVERIFY(std::abs(view.viewState().scrollPx + pad / 2.0) <= 1e-12)
 
 A101 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:442
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/static/camera.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.applyViewState(original);
@@ -1263,8 +1263,8 @@ Original expression:
   QCOMPARE(document.smf().write(), bytes)
 
 A106 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:478
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/static/camera.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       view.applyViewState(original);

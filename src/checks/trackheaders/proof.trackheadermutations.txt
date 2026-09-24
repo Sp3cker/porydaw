@@ -37,8 +37,8 @@ Their helper expectations execute on every call and are inventoried below. Calle
 Original assertion inventory and source sequence
 
 A001 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:55
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -131,8 +131,8 @@ Original expression:
   QVERIFY2(session && session->window(), "the timeline Quick canvas has no popup session")
 
 A005 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:71
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const quick_popup::PromptGuard guard(fixture.view());
@@ -158,8 +158,8 @@ Original expression:
   QVERIFY2(renameRow >= 0, "the header menu did not render the Rename track row")
 
 A007 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:81
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -184,16 +184,16 @@ Original expression:
   QCOMPARE(fixture.headers().renamingTrack(), track)
 
 A010 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:86
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(fixture.rename().isVisible())
 
 A011 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:88
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       // The fixture's rename() accessor already resolves the named TextInput.
@@ -254,8 +254,8 @@ Original expression:
   QCOMPARE(headers.renamingTrack(), fx.sourceTrack())
 
 A016 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:116
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -307,8 +307,8 @@ Original expression:
   QCOMPARE(fx.tab().document().trackName(fx.sourceTrack()), original)
 
 A022 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:126
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -355,8 +355,8 @@ Original expression:
   QCOMPARE(fx.tab().document().trackName(fx.sourceTrack()), original)
 
 A027 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:139
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -535,8 +535,8 @@ Original expression:
   QVERIFY(near(headers.reorderIndicatorY(), trackRows * headers.rowHeight()))
 
 A046 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:187
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -795,8 +795,8 @@ Original expression:
                   .contains(QStringLiteral("Dragged")))
 
 A075 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:252
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
   }
@@ -1011,8 +1011,8 @@ Original expression:
   QTRY_VERIFY(cancelled.search->hasActiveFocus())
 
 A098 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:303
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(cancelled, QStringLiteral("127"));
@@ -1105,8 +1105,8 @@ Original expression:
   QVERIFY(checks::voicepicker::dismissOutside(cancelled))
 
 A108 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:326
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1182,8 +1182,8 @@ Original expression:
   QTRY_VERIFY(!picker.accept->property("enabled").toBool())
 
 A117 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:343
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QTest::keyClick(picker.window, Qt::Key_Return);
@@ -1200,8 +1200,8 @@ Original expression:
   QCOMPARE(fx.tab().document().revision(), revision)
 
 A119 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:347
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1281,8 +1281,8 @@ Original expression:
   QCOMPARE(audition.at(1).at(2).toInt(), 0)
 
 A128 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:365
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1452,8 +1452,8 @@ Original expression:
   QTRY_VERIFY(remapped.search->hasActiveFocus())
 
 A147 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:402
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(remapped, QStringLiteral("127"));
@@ -1505,8 +1505,8 @@ Original expression:
   QCOMPARE(remapHoldAudition.at(0).at(2).toInt(), 112)
 
 A152 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:424
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       }
@@ -1575,200 +1575,200 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:14
+S001 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:66
   report.expect(h.doublePointer(x: p.x, y: p.y, button: 1, modifiers: 0),
                     cppID: id, message: "title double click opens rename")
 
-S002 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:16
+S002 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:68
   report.expectEqual(0, h.renamingTrack, cppID: id, what: "rename targets clicked track")
 
-S003 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:19
+S003 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:71
   report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancel closes editor")
 
-S004 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:24
+S004 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:76
   report.expectEqual(-1, h.renamingTrack, cppID: id, what: "hidden cancels draft permanently")
 
-S005 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:31
+S005 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:83
   report.expectEqual(-1, h.renamingTrack, cppID: id, what: "commit closes editor")
 
-S006 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:32
+S006 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:84
   report.expectEqual(1, focusRestores, cppID: id, what: "commit restores requested roll focus")
 
-S007 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:33
+S007 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:85
   report.expectEqual("HdrSrc", fx.document.trackName(0), cppID: id, what: "commit renames song track")
 
-S008 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:34
+S008 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:86
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "rename is one document edit")
 
-S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:37
+S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:89
   report.expectEqual("1 · HdrSrc", h.rows[0].title, cppID: id,
                          what: "renamed title survives presenter rebuild")
 
-S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:39
+S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:91
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "rename undo succeeds")
 
-S011 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:40
+S011 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:92
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo restores name")
 
-S012 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:55
+S012 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:107
   report.expect(h.reorderIndicatorVisible, cppID: id,
                     message: "no-op drag displays insertion marker")
 
-S013 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:57
+S013 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:109
   report.expectEqual(0, h.reorderIndicatorY, cppID: id,
                          what: "no-op drag marker stays at the top insertion slot")
 
-S014 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:64
+S014 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:116
   report.expect(h.reorderIndicatorVisible, cppID: id,
                         message: "cancel \(reason): drag displays insertion marker")
 
-S015 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:66
+S015 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:118
   report.expectEqual(bottom, h.reorderIndicatorY, cppID: id,
                              what: "cancel \(reason): marker reaches bottom insertion slot")
 
-S016 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:69
+S016 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:121
   report.expect(!h.reorderIndicatorVisible, cppID: id,
                         message: "cancel \(reason): marker clears")
 
-S017 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:71
+S017 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:123
   report.expect(!h.endPointer(x: start.x, y: bottom, button: 1, modifiers: 0),
                         cppID: id, message: "cancel \(reason): late release is rejected")
 
-S018 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:77
+S018 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:129
   report.expect(h.endPointer(x: start.x, y: bottom, button: 2, modifiers: 0),
                     cppID: id, message: "wrong-button release consumes the armed drag")
 
-S019 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:79
+S019 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:131
   report.expect(!h.reorderIndicatorVisible, cppID: id,
                     message: "wrong-button release clears the insertion marker")
 
-S020 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:84
+S020 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:136
   report.expect(!notes.isEmpty, cppID: id,
                     message: "the reorder fixture track carries content to move")
 
-S021 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:93
+S021 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:145
   report.expectEqual("Dragged", fx.document.trackName(1), cppID: id,
                          what: "drag commits pending name before moving its track")
 
-S022 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:95
+S022 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:147
   report.expectEqual(notes, fx.document.notes(in: 1).map {
           "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
       }, cppID: id, what: "reorder carries musical content to destination")
 
-S023 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:98
+S023 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:150
   report.expectEqual(Set([1]), fx.session.mutedTracks, cppID: id, what: "mute follows moved identity")
 
-S024 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:99
+S024 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:151
   report.expectEqual([1], fx.trackRows.filter(\.muteChecked).map(\.track), cppID: id,
                          what: "moved row displays migrated mute")
 
-S025 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:101
+S025 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:153
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "move undo succeeds")
 
-S026 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:102
+S026 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:154
   report.expectEqual(Set([0]), fx.session.mutedTracks, cppID: id, what: "undo restores mute identity")
 
-S027 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:103
+S027 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:155
   report.expectEqual("Dragged", fx.document.trackName(0), cppID: id,
                          what: "move undo retains earlier committed rename")
 
-S028 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:105
+S028 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:157
   report.expect(fx.document.history.redoDocument(), cppID: id, message: "move redo succeeds")
 
-S029 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:106
+S029 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:158
   report.expectEqual(Set([1]), fx.session.mutedTracks, cppID: id, what: "redo moves mute again")
 
-S030 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:108
+S030 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:160
   report.expectEqual("2 · Dragged", h.rows[1].title, cppID: id,
                          what: "moved title survives rebuild at new numbered slot")
 
-S031 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:124
+S031 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:176
   report.expect(h.rows[2].addHovered, cppID: id, message: "add row displays hover")
 
-S032 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:126
+S032 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:178
   report.expect(!h.rows[2].addHovered, cppID: id, message: "leave clears add hover")
 
-S033 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:128
+S033 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:180
   report.expect(!h.menuOpen && requests == 0, cppID: id,
                     message: "right press on add row opens neither menu nor picker")
 
-S034 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:130
+S034 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:182
   report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "add row preserves selection")
 
-S035 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:132
+S035 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:184
   report.expect(h.rows[2].addPressed, cppID: id, message: "left press depresses add row")
 
-S036 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:134
+S036 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:186
   report.expect(!h.rows[2].addPressed, cppID: id, message: "FocusLost releases add row")
 
-S037 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:135
+S037 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:187
   report.expect(!h.endPointer(x: add.x, y: add.y, button: 1, modifiers: 0),
                     cppID: id, message: "late add release is rejected")
 
-S038 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:139
+S038 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:191
   report.expectEqual(0, requests, cppID: id, what: "release outside add row requests no picker")
 
-S039 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:140
+S039 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:192
   report.expect(!h.rows[2].addPressed, cppID: id,
                     message: "outside release clears the add row press")
 
-S040 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:143
+S040 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:195
   report.expectEqual(1, requests, cppID: id, what: "add click requests existing voice picker")
 
-S041 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:148
+S041 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:200
   report.expectEqual(2, requests, cppID: id, what: "picker can reopen after cancellation")
 
-S042 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:150
+S042 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:202
   report.expectEqual(3, fx.document.engineTracks.usedTrackCount, cppID: id,
                          what: "picker acceptance creates one engine track")
 
-S043 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:152
+S043 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:204
   report.expectEqual(2, fx.session.selectedTrack, cppID: id, what: "new track becomes primary")
 
-S044 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:153
+S044 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:205
   report.expectEqual([127], fx.document.lanePoints(track: 2, lane: .voice).map(\.value),
                          cppID: id, what: "new track receives accepted program")
 
-S045 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:155
+S045 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:207
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "accepted add writes once")
 
-S046 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:159
+S046 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:211
   report.expectEqual(accepted, fx.document.state, cppID: id, what: "completion is single use")
 
-S047 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:161
+S047 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:213
   report.expectEqual([0, 1, 2], fx.trackRows.map(\.track), cppID: id,
                          what: "rebuilt tracks remain ordered and unique")
 
-S048 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:163
+S048 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:215
   report.expectEqual(4, h.rows.count, cppID: id, what: "rebuilt add row follows three tracks")
 
-S049 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:164
+S049 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:216
   report.expect(h.rows[3].isAddTrack, cppID: id, message: "add row remains last")
 
-S050 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:165
+S050 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:217
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "add undo succeeds")
 
-S051 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:166
+S051 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:218
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes added track")
 
-S052 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:167
+S052 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:219
   report.expectEqual(3, h.rows.count, cppID: id, what: "undo restores prior rows")
 
-S053 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:168
+S053 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:220
   report.expect(fx.document.history.redoDocument(), cppID: id, message: "add redo succeeds")
 
-S054 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:169
+S054 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:221
   report.expectEqual(accepted, fx.document.state, cppID: id, what: "redo restores accepted track")
 
-S055 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:170
+S055 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:222
   report.expectEqual(4, h.rows.count, cppID: id, what: "redo restores the accepted rows")
 
-S056 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:177
+S056 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:229
   report.expectEqual([0], voiceRequests, cppID: id, what: "voice double click requests picker")
 
-S057 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:178
+S057 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:230
   report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "picker target remaps")
 
 S058 | renameTargetRowAndScrolledTitleResolve | src/checks/trackheaders/trackheadermutations.swift:19
@@ -1802,44 +1802,44 @@ S064 | renameMenuTargetsAndBegins | src/checks/trackheaders/trackheadermutations
 
 S065-S078 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_renameEditorBoundToTrackRow, test_reorderMarkerStaysInsideInput and test_headerMenuRenameRowActivates, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
 
-S065 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:168
+S065 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:264
   var editor = rename.parent
   verify(editor !== null)
 
-S066 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:170
+S066 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:266
   tryCompare(editor, "visible", true)
 
-S067 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:171
+S067 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:267
   verify(near(editor.x, h.renameEditorRect.x))
 
-S068 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:172
+S068 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:268
   verify(near(editor.y, first.index * h.rowHeight - h.scrollY + h.renameEditorRect.y))
 
-S069 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:173
+S069 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:269
   verify(near(editor.width, h.renameEditorRect.width))
 
-S070 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:174
+S070 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:270
   verify(near(editor.height, h.renameEditorRect.height))
 
-S071 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:188
+S071 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:284
   tryCompare(marker, "visible", true)
 
-S072 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:189
+S072 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:285
   verify(marker.y >= 0)
 
-S073 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:190
+S073 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:286
   verify(marker.y + marker.height <= input.height + testCase.tolerance)
 
-S074 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:202
+S074 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:298
   tryCompare(h, "menuOpen", true)
 
-S075 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:204
+S075 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:300
   tryVerify(function() {
       row = findChild(surface(), "headerMenuRow_3")
       return row !== null
   })
 
-S076 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:210
+S076 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:306
   tryCompare(h, "renamingTrack", first.track)
   tryCompare(item("timelineTrackHeaderRename"), "visible", true)
 

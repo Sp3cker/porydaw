@@ -4,7 +4,7 @@ Reference revision: de3e5a6cb27d018c313c02b408981668bfa2172b
 Original: src/checks/selectionkey/gesturethumbs.cpp
 Original SHA-256: f3408709c98dce898821250c4c0ee87a28473c16d5871183f516ff79a458e3c0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -92,8 +92,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A002 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:37
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/gesturethumbs.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the delivery-surface precondition requires the native Quick window
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -105,8 +105,8 @@ Original expression:
   QVERIFY2(!mQuickWindow.isNull(), "scrollbar-gesture delivery surface is unavailable")
 
 A003 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:48
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; live Quick plus native focus acquisition requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -126,8 +126,8 @@ Original expression:
                "owning timeline band did not have live Quick and native focus")
 
 A004 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:59
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; thumb visibility and draggable geometry observe the native
 rendered window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -147,8 +147,8 @@ Original expression:
                "registered scrollbar thumb was not draggable in the shown window")
 
 A005 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:76
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the live-gesture observation requires native mouse delivery and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -171,8 +171,8 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "thumb drag did not become a live gesture")
 
 A006 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:81
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; drag-to-scroll-model coupling observes the native MouseArea drag
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -201,8 +201,8 @@ Original expression:
                "the registered live gesture did not block the shared Delete")
 
 A008 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:88
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Escape releasing the native mouse grab requires native delivery
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -214,8 +214,8 @@ Original expression:
                "native mouse grab")
 
 A009 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:94
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; held-button movement staying inert observes the native post-cancel
 grab state and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -228,8 +228,8 @@ Original expression:
                "movement with the button held after Escape changed the scroll model")
 
 A010 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:97
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; physical release after cancellation observes native input state
 and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -240,8 +240,8 @@ Original expression:
                "physical release after cancellation changed the scroll model")
 
 A011 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:100
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the fresh-drag control precondition observes the native rendered
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -253,8 +253,8 @@ Original expression:
                "registered scrollbar controls disappeared before the fresh drag")
 
 A012 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:113
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; starting a new thumb drag after physical release requires native
 delivery and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -274,8 +274,8 @@ Original expression:
                    "a fresh press after physical release did not start a new thumb drag")
 
 A013 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:116
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturethumbs.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; ending the fresh drag on physical release observes native input
 state and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:

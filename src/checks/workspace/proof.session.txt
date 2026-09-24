@@ -4,7 +4,7 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/workspace/session.cpp
 Original SHA-256: a19558ef78ae366f3df333964bfa2a2c3345b7aec4af11a8e62d95c8084af5f2
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Swift SHA-256: 8a39e6257c5fdd3dfc4744b109a3341efbf9f2ebddaad157a93c81f517398dfb
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift SHA-256: 421e737799b9ec913dd08667f0867a96dbc089dc64157a21927105f9601ed2eb
 Swift counterpart: src/checks/workspace/session_io.swift
@@ -1140,66 +1140,66 @@ S098 | sessionLifetime | src/checks/workspace/session_io.swift:299
                              cppID: lifetimeID,
                              what: "explicit project service close owns worker shutdown")
 
-S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:89
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:118
   report.expect(session.bankSlots.count >= 4,
                     cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                     message: "published bank has slot views")
 
-S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:92
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:121
   report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
                          cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                          what: "slot 0 is editable square 1")
 
-S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:95
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:124
   report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
                          cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                          what: "slot 3 is initially blank")
 
-S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:119
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:148
   report.expectEqual(true, session.bankDirty,
                              cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                              what: "bank edit dirties bank")
 
-S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:122
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:151
   report.expectEqual(scalarEditedSlots, session.bankSlots,
                              cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                              what: "scalar edit changes the requested voice and preserves every other slot")
 
-S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:125
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:154
   report.expect(result.lease.bankToken != oldToken,
                         cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                         message: "applied bank edit mints a fresh lease")
 
-S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:128
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:157
   report.expectEqual(oldToken, oldLease.bankToken,
                              cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                              what: "superseded lease retains its bank token and stays valid")
 
-S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:131
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:160
   report.expect(
               bankPublications.count == 1
                   && bankPublications[0].domains == [.bank, .dirty, .history],
               cppID: "swiftcore/DocumentSession::bankPublicationDomains",
               message: "bank edit publishes bank, dirty, and history exactly once")
 
-S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:142
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:171
   report.expectEqual(originalSlots, session.bankSlots,
                              cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                              what: "undo restores the complete original bank view")
 
-S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:145
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:174
   report.expect(
               bankPublications.count == 1
                   && bankPublications[0].domains == [.bank, .dirty, .history],
               cppID: "swiftcore/DocumentSession::bankPublicationDomains",
               message: "bank undo publishes bank, dirty, and history exactly once")
 
-S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:156
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:185
   report.expectEqual(scalarEditedSlots, session.bankSlots,
                              cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                              what: "redo restores the scalar edit without changing other slots")
 
-S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:159
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:188
   report.expect(
               bankPublications.count == 1
                   && bankPublications[0].domains == [.bank, .dirty, .history],
@@ -1286,39 +1286,39 @@ S126 | bankConflicts | src/checks/workspace/bank_edits.swift:201
                              cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                              what: "unknown token triggers bankConflict")
 
-S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:191
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:220
   report.expectEqual(false, session.document.isDirty,
                              cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                              what: "unified save marks the song clean")
 
-S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:194
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:223
   report.expectEqual(false, session.bankDirty,
                              cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                              what: "unified save marks the bank clean")
 
-S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:197
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:226
   report.expect(
               bankPublications.count == 1
                   && bankPublications[0].domains == [.bank, .dirty, .history],
               cppID: "swiftcore/DocumentSession::bankPublicationDomains",
               message: "unified bank save publishes bank, dirty, and history exactly once")
 
-S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:202
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:231
   report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
                         cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                         message: "unified save changes persisted MIDI bytes")
 
-S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:205
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:234
   report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
                         cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                         message: "unified save changes persisted bank bytes")
 
-S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:216
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:245
   report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
                              cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                              what: "fresh reopen reads the unified song edit from disk")
 
-S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:219
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:248
   report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
                              cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                              what: "fresh reopen reads the unified bank edits and preserved slots from disk")

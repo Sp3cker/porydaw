@@ -57,8 +57,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:27
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: the native slot stages and loads its project/song fixture before any roll observation. A presenter-level Swift check cannot establish this precondition.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/rollcheck/rollcheck.h"
   #include "checks/rollcheck/tst_pianoroll.h"
@@ -90,8 +90,8 @@ Original expression:
   QVERIFY2(source, qPrintable(error));
 
 A002 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:32
-Disposition: NATIVE
-Mapping/reason: Original native loader precondition: SongDocument::load of the staged song into the projection document. The Swift suite stages its song before the session exists, so no in-suite predicate asserts this load step.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       SongDocument projectionDoc;
       QString projectionError;
@@ -129,8 +129,8 @@ Original expression:
   QFAIL("document did not mint distinct equal-visible duplicate note IDs");
 
 A004 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:61
-Disposition: NATIVE
-Mapping/reason: Original native Quick-view precondition: the slot requires the live TimelineQuickView and its quick window (resized to 800x480). The swiftcore roll lane hosts no Quick window.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/identity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       }
 

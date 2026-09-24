@@ -4,7 +4,7 @@ Reference revision: 0d03b1612987993f5972da3d0df8661d26bbd395
 Original: src/checks/selectionkey/window.cpp
 Original SHA-256: 24b508983d6d19c9f2e2656750ebda853fa6b302d7b5075d06d56dd13cdf4599
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -52,8 +52,8 @@ teardown.
 Original assertion inventory and source sequence
 
 A001 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:133
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the window-session open precondition is a native loader
 precondition a presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -194,8 +194,8 @@ Original expression:
                qUtf8Printable(error))
 
 A002 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:137
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/window.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the song-tab open precondition is a native loader precondition a
 presenter-level Swift check cannot establish.
 Source context since previous assertion:
@@ -206,8 +206,8 @@ Original expression:
   QVERIFY2(tab, qUtf8Printable(error))
 
 A003 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:139
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; observing production window actions requires the native shell and
 cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -218,8 +218,8 @@ Original expression:
                "the production shell is missing the window actions")
 
 A004 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:147
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; Qt active-window arbitration requires the native shell and cannot
 be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -238,8 +238,8 @@ Original expression:
                "the production shell did not become Qt's active window for shortcut matching")
 
 A005 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:154
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the tab Quick-surface precondition requires the native Quick
 surface and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -250,8 +250,8 @@ Original expression:
   QVERIFY2(quick, "the tab Quick surface is missing")
 
 A006 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:156
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/window.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 established; the tab Quick-window/root precondition requires the native Quick
 surface and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -262,8 +262,8 @@ Original expression:
                "the tab Quick window or root object is missing")
 
 A007 | SelectionWindowTierTest::cleanup | src/checks/selectionkey/window.cpp:208
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the residual Quick mouse-grab observation requires the native
 window and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:
@@ -322,8 +322,8 @@ Original expression:
   QVERIFY2(released, "the Quick mouse grab survived the case teardown")
 
 A008 | SelectionWindowTierTest::cleanup | src/checks/selectionkey/window.cpp:209
-Disposition: NATIVE
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
 established; the genuine no-prompt close acceptance observes the native
 production shell and cannot be established by a presenter-level Swift check.
 Source context since previous assertion:

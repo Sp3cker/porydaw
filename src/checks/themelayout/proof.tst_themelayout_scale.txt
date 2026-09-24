@@ -62,8 +62,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:57
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the QCoreApplication instance
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_scale.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be a QApplication before stylesheet/layout initialization. No
 QWidget/QApplication layer exists in the Swift shell, whose layout owners are
 pure values needing no application object; a presenter-level Swift check
@@ -163,8 +163,8 @@ Original expression:
   QVERIFY(!layout::initialize(*application, m_baseFontPx + 1));
 
 A005 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:62
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the successful
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_scale.cpp) no longer builds or runs. Previous native note: Original native application-state obligation: the successful
 re-initialize must leave the native stylesheet byte-identical. No stylesheet
 layer exists in the Swift shell; a presenter check cannot observe the native
 stylesheet. Stable styling is covered by S001/S002 and the shell-typography

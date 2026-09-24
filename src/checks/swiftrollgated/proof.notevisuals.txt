@@ -4,7 +4,7 @@ Reference revision: e3a54cb20be8167db96fdeb46c819581e3dec1f8
 Original: src/checks/swiftrollgated/notevisuals.cpp
 Original SHA-256: b81b356e4f41b0dcb0000eade8d27b2132132b5c61d31d21bfb40faccc7517fb
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 QML counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
 QML SHA-256: 5502d18075a8f98bba2458b53fc3b273c0f79a2c3e3bc74f37bb49b49ec6dc5a
 Probe counterpart: src/checks/editorqml/GatedVisualsProbe.swift
@@ -39,8 +39,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:241
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/swiftrollgated/notevisuals.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 

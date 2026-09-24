@@ -4,7 +4,7 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midismf.cpp
 Original SHA-256: 8020c4710e4f59b87aac42d18cd70d595cf81260c9c12dfd64581a7361efe5c3
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 5d9a117c9b98b1c32c568358e5f91b3f319f560f4f4869dc69e822dd1de2527c
+Swift SHA-256: ad617ef213c07267de4e3b79fa8e2bf3abc2747b3fc32bb6ff588b1ccfe5adef
 Additional covering Swift files:
 src/checks/editcheck/NoteChecks.swift
 Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
@@ -3985,64 +3985,64 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:1023
+S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:1024
       report.expectEqual(expectedValid, swift.valid, cppID: cppID,
                          what: "independent Swift validity (error=\(swift.error))")
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:1026
+S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:1027
           report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
                         message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:1032
+S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:1033
               report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
                                  what: "independent canonical byte vector")
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:1039
+S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:1040
           report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                              what: "independent format-0 provenance")
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1062
+S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1063
                   report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
                                 cppID: cppID,
                                 message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1068
+S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1069
               report.expect(last.tick <= chunk.endTick, cppID: cppID,
                             message: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1073
+S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1074
       report.expectEqual(expected.division, file.division, cppID: cppID,
                          what: "independent decoded division")
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1075
+S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1076
       report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                          what: "independent decoded format-0 provenance")
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1077
+S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1078
       report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                          what: "independent decoded chunk count")
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1080
+S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1081
           report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
                              what: "independent decoded chunk=\(index) end tick")
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1082
+S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1083
           report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
                              cppID: cppID, what: "independent decoded chunk=\(index) event count")
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1089
+S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1090
               report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1092
+S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1093
           report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
                              cppID: cppID,
                              what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
 
-S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:750
+S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:751
   coreMidiExpectOracleValue(Int64(m4aExportSupport(controller).rawValue), .ccExport, Int64(cc),
                             row: "cc-\(cc)-export", cppID: m4aSemanticsID, report: report)
 
-S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1428
+S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1429
       report.expectEqual(independent, actual, cppID: cppID,
                          what: "row=\(row) independent expected value")
 
@@ -4079,38 +4079,38 @@ S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:302
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "moving an unterminated note does not invent an end")
 
-S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:294
+S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
       report.expectEqual(2, analysis.xcmd.first?.count,
                          cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                          what: "import counts logical XCMD points")
 
-S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:297
+S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
       report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
                          cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                          what: "unknown controller is not exported")
 
 
-S025 | compareFixture | src/checks/midi/MidiChecks.swift:991
+S025 | compareFixture | src/checks/midi/MidiChecks.swift:992
           report.fail(cppID, "missing --swiftcore fixture root")
 
-S026 | compareFixture | src/checks/midi/MidiChecks.swift:1010
+S026 | compareFixture | src/checks/midi/MidiChecks.swift:1011
           report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
 
-S027 | compareCodecCase | src/checks/midi/MidiChecks.swift:1035
+S027 | compareCodecCase | src/checks/midi/MidiChecks.swift:1036
         report.expect(swift.encoded.count > 9 &&
                       swift.encoded[8] == 0 && swift.encoded[9] == 1,
                       cppID: cppID,
                       message: "independent encoded format word is 1")
 
-S028 | compareCodecCase | src/checks/midi/MidiChecks.swift:1044
+S028 | compareCodecCase | src/checks/midi/MidiChecks.swift:1045
             report.expect(reparsed.valid, cppID: cppID,
                           message: "independent semantic reparse validity (error=\(reparsed.error))")
 
-S029 | compareCodecCase | src/checks/midi/MidiChecks.swift:1047
+S029 | compareCodecCase | src/checks/midi/MidiChecks.swift:1048
                 report.expectEqual(file.division, reread.division, cppID: cppID,
                                    what: "independent semantic reparse division")
 
-S030 | compareCodecCase | src/checks/midi/MidiChecks.swift:1049
+S030 | compareCodecCase | src/checks/midi/MidiChecks.swift:1050
                 report.expectEqual(file.chunks, reread.chunks, cppID: cppID,
                                    what: "independent semantic reparse chunks")
 
@@ -4393,39 +4393,39 @@ S100 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift:1
       report.expectEqual(true, notes.last?.isUnterminated, cppID: cppID,
                          what: "last note has no end")
 
-S102 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:354
+S102 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:395
       report.expectEqual(row.controllers.count, analysis.controllers.count,
                          cppID: cppID, what: "ordinary controller histogram size")
 
-S103 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:356
+S103 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:397
       report.expectEqual(row.xcmd.count, analysis.xcmd.count,
                          cppID: cppID, what: "XCMD histogram size")
 
-S104 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:361
+S104 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:402
       report.expectEqual(expected.0, actual.controller, cppID: cppID,
                          what: "ordinary controller \(index) number")
 
-S105 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:363
+S105 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:404
       report.expectEqual(expected.1, actual.count, cppID: cppID,
                          what: "ordinary controller \(index) count")
 
-S106 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:365
+S106 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:406
       report.expectEqual(expected.2, actual.support, cppID: cppID,
                          what: "ordinary controller \(index) support")
 
-S107 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:371
+S107 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:412
       report.expectEqual(expected.0, actual.label, cppID: cppID,
                          what: "XCMD \(index) label")
 
-S108 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:373
+S108 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:414
       report.expectEqual(expected.1, actual.count, cppID: cppID,
                          what: "XCMD \(index) count")
 
-S109 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:375
+S109 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:416
       report.expectEqual(expected.2, actual.support, cppID: cppID,
                          what: "XCMD \(index) support")
 
-S110 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:378
+S110 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:419
       report.expect(analysis.controllers.allSatisfy {
           $0.controller < 29 || $0.controller > 31
       }, cppID: cppID, message: "XCMD plumbing stays out of ordinary controllers")

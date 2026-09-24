@@ -4,7 +4,7 @@ Reference revision: 17942fef3dff1fce4d45c7b1aac7428f3027f395
 Original: src/checks/clipboard/laneselection_test.cpp
 Original SHA-256: ab2d332f404a73461b3ec5ccd4aca0b1c74d1955c5bf29d4bd552c2ad90a9485
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: 89df5cc2ea66edee4dbdc58d6c241d0c5dce1583289bfd775c4e3e93775e5842
+Swift SHA-256: 778da8c451451063174068f222938592213cc116b252e1c77c4c62eb668c78e6
 Production counterpart (AutomationRowStack projection): src/swift/app/drawer/automation/AutomationLaneProjection.swift
 Production SHA-256: 0500ae4898050f756894d99b3b92ebc5978af268e0f9ac188f352ee30d76a324
 
@@ -44,7 +44,7 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-harness obligations (ProjectionRig document
 plus EditorRig window); it does not establish coverage of any converted check.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 43, PARTIAL 0, GAP 19, NATIVE 8.
+Tally: MATCHED 43, PARTIAL 0, GAP 19, NATIVE 0, RETIRED-REPRESENTATION 8.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -105,8 +105,8 @@ lane: .controller(7), from: 0, through: noTick, tick 24 value 64).
 Original assertion inventory and source sequence
 
 A001 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:150
-Disposition: NATIVE
-Mapping/reason: NATIVE: the native ProjectionRig harness (an adoptSmf document plus a shown EditorRig window) has no Swift counterpart; the Swift suite builds a plain three-note SongDocument/DocumentSession fixture (SelectionChecks.swift:8-27) with no window. Retained native setup obligation; it establishes no coverage of any converted check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include <QtTest>
 
@@ -344,8 +344,8 @@ Original expression:
   QVERIFY((set.second == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 10}}));
 
 A012 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:173
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -477,8 +477,8 @@ Original expression:
   QVERIFY(!coversNodes(noTempo, tempoId()));
 
 A027 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:203
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -526,8 +526,8 @@ Original expression:
   QVERIFY(coversNodes(full, ccId(0, 7)));
 
 A032 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:215
-Disposition: NATIVE
-Mapping/reason: Native secondary ProjectionRig harness setup (two-track document); see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
           QString secondaryError;
@@ -552,8 +552,8 @@ Original expression:
   QVERIFY(!coversNodes(partial, tempoId()));
 
 A035 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:225
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -661,8 +661,8 @@ Original expression:
   QVERIFY(hidden.visibleLanes(selection).empty());
 
 A047 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:252
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -710,8 +710,8 @@ Original expression:
   QVERIFY(!rowFor(model, invalidId()));
 
 A052 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:285
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup at the data-row zoom/scroll; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }
@@ -809,8 +809,8 @@ Original expression:
   QVERIFY(!model.hitTest(tempoId(), midX, projection, dpr, selection));
 
 A060 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:314
-Disposition: NATIVE
-Mapping/reason: Native ProjectionRig harness setup; see A001.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/clipboard/laneselection_test.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       }

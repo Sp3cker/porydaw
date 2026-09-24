@@ -202,8 +202,8 @@ Original expression:
 QVERIFY(seed.has_value())
 
 A007 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:93
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: a right press must open the Quick note menu. No Swift roll predicate observes note-menu opening.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: a right press must open the Quick note menu. No Swift roll predicate observes note-menu opening.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -224,8 +224,8 @@ Original expression:
 QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu")
 
 A008 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:95
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the note menu must render a frame. Native QML surface observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the note menu must render a frame. Native QML surface observation.
 Source context since previous assertion:
 ;
     QQuickItem *const frame = quick_popup::menuFrame(*menu);
@@ -234,8 +234,8 @@ Original expression:
 QVERIFY2(frame, "the note menu rendered no frame")
 
 A009 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:97
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the retarget point must fall outside the rendered menu frame (native frame geometry).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the retarget point must fall outside the rendered menu frame (native frame geometry).
 Source context since previous assertion:
 ;
     const QPointF retargetLocal(seed->a.center);
@@ -245,8 +245,8 @@ QVERIFY2(!frame->contains(frame->mapFromScene(roll.mapToScene(retargetLocal))),
              "the retarget note fell inside the open note menu")
 
 A010 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:100
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the note menu must own a canvas window.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the note menu must own a canvas window.
 Source context since previous assertion:
 ;
     QQuickWindow *const window = menu->window();
@@ -255,8 +255,8 @@ Original expression:
 QVERIFY2(window, "the note menu has no canvas window")
 
 A011 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:106
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the open note menu must stay open while retargeting. Menu session state is not modelled in the Swift roll.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the open note menu must stay open while retargeting. Menu session state is not modelled in the Swift roll.
 Source context since previous assertion:
 ;
     const QPoint retargetPoint = roll.mapToScene(retargetLocal).toPoint();
@@ -278,8 +278,8 @@ Original expression:
 QTRY_COMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId})
 
 A013 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:110
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the retarget release must not reach the timeline (native event delivery to the open menu).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the retarget release must not reach the timeline (native event delivery to the open menu).
 Source context since previous assertion:
 ;
     QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, retargetPoint);
@@ -309,8 +309,8 @@ QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
              "the retarget press/release mutated the song")
 
 A016 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:139
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: locating a visible empty row outside the reopened menu frame is native frame geometry.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: locating a visible empty row outside the reopened menu frame is native frame geometry.
 Source context since previous assertion:
 ;
 
@@ -342,8 +342,8 @@ Original expression:
 QVERIFY2(clearKey >= 0, "no visible empty row outside the reopened note menu")
 
 A017 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:142
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: an empty-space right click must dismiss the note menu.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: an empty-space right click must dismiss the note menu.
 Source context since previous assertion:
 ;
     const QPoint clearPoint = roll.mapToScene(clearLocal).toPoint();
@@ -353,8 +353,8 @@ Original expression:
 QTRY_VERIFY2(!menu->isOpen(), "empty-space right-click did not dismiss the note menu")
 
 A018 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:145
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the dismissed release must not reopen a popup (native paired-event delivery).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the dismissed release must not reopen a popup (native paired-event delivery).
 Source context since previous assertion:
 ;
     QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, clearPoint);
@@ -403,8 +403,8 @@ Original expression:
 QVERIFY(seed.has_value())
 
 A022 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:174
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: a right press must open the Quick note menu before the stale edit.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: a right press must open the Quick note menu before the stale edit.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -425,8 +425,8 @@ Original expression:
 QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu")
 
 A023 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:178
-Disposition: NATIVE
-Mapping/reason: Retained native popup obligation: the document edit must dismiss the open note menu (native menu session lifetime).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the document edit must dismiss the open note menu (native menu session lifetime).
 Source context since previous assertion:
 ;
 
@@ -583,8 +583,8 @@ Original expression:
 QVERIFY(seed.has_value())
 
 A035 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:247
-Disposition: NATIVE
-Mapping/reason: Original native window precondition: the Quick window hosting the roll input for a real mouse-ungrab drag.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/pencil_velocity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -602,8 +602,8 @@ Original expression:
 QVERIFY2(window, "no Quick window for mouse-ungrab cancellation")
 
 A036 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:248
-Disposition: NATIVE
-Mapping/reason: Original native window precondition: the Quick window must become exposed before the ungrab drag. Retained native obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/pencil_velocity.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -612,8 +612,8 @@ QVERIFY2(QTest::qWaitForWindowExposed(window),
              "Quick window did not become exposed for the mouse-ungrab cancellation drag")
 
 A037 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:252
-Disposition: NATIVE
-Mapping/reason: Original native event priming: primeMouseMove must stage the real drag before the ungrab. Host event-delivery obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Original native event priming: primeMouseMove must stage the real drag before the ungrab. Host event-delivery obligation.
 Source context since previous assertion:
 ;
     const QPoint pressPosition = roll.mapToScene(QPointF(seed->b.center)).toPoint();
@@ -751,8 +751,8 @@ QVERIFY2(doc.findNote(track, cell.tick, uint8_t(cell.key), &note),
              "lifecycle pencil draw produced no note")
 
 A047 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:318
-Disposition: NATIVE
-Mapping/reason: Retained native host-input obligation: pressing the roll through the Quick window must grant the roll input focus. The shell lane forces focus (tst_ShellGridInput.qml:406/421) rather than asserting the press-grants-focus chain, so no executing predicate covers it.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native host-input obligation: pressing the roll through the Quick window must grant the roll input focus. The shell lane forces focus (tst_ShellGridInput.qml:406/421) rather than asserting the press-grants-focus chain, so no executing predicate covers it.
 Source context since previous assertion:
 ;
     view.selectionModel().setNoteSelection({note.noteId});
@@ -902,7 +902,7 @@ S004 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interloc
   report.expect(unchanged(before), cppID: id,
                 message: "A018 velocity aborts preserve MIDI bytes and undo history")
 
-S005 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:358
+S005 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:359
   report.fail(id, "could not seed the velocity-drag note pair")
 
 S006 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:374

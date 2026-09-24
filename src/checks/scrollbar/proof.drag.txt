@@ -537,8 +537,8 @@ Original expression:
   QTRY_VERIFY(near(value(songView, axis), minimumValue + span / 2.0));
 
 A043 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:241
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: observes the live QQuickWindow mouse-grabber item, which a presenter-level Swift check cannot establish.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/scrollbar/drag.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: observes the live QQuickWindow mouse-grabber item, which a presenter-level Swift check cannot establish.
 Source context since previous assertion:
       beginDrag(axis);
       release();

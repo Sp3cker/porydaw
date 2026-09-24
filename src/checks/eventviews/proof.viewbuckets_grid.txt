@@ -720,8 +720,8 @@ Original expression:
 QVERIFY(timeline)
 
 A049 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:319
-Disposition: NATIVE
-Mapping/reason: Observes the live timeline Quick window and its grabbed pixels; presenter-level Swift cannot establish rendered output.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/eventviews/viewbuckets_grid.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     for (int track = 0; track < 16; ++track) {
@@ -736,8 +736,8 @@ Original expression:
 QVERIFY2(quickWindow, "the timeline Quick window is unavailable")
 
 A050 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:321
-Disposition: NATIVE
-Mapping/reason: Observes the live timeline Quick window and its grabbed pixels; presenter-level Swift cannot establish rendered output.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/viewbuckets_grid.cpp) no longer builds or runs. Previous native note: Observes the live timeline Quick window and its grabbed pixels; presenter-level Swift cannot establish rendered output.
 Source context since previous assertion:
 ;
     const QImage image = quickWindow->grabWindow();

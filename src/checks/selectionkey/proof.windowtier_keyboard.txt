@@ -4,11 +4,11 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: aef988778b56b851301cff37fb9ad9781de638aa4cba36e5f24511baf13103e8
+Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 39595ccddb010182c8e01df9f89ba18a8a00adcb9d060200bc1776197b566bb2
+Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -136,8 +136,8 @@ Original expression:
                "the reserved tick-960 note pair could not be inserted and resolved")
 
 A002 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:99
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -221,8 +221,8 @@ Original expression:
                "the second Solo press did not untoggle exactly once")
 
 A010 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -257,8 +257,8 @@ Original expression:
                "the reserved tick-2400 note pair could not be inserted and resolved")
 
 A012 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:140
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -266,8 +266,8 @@ Original expression:
   QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
 
 A013 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
@@ -280,8 +280,8 @@ Original expression:
   QVERIFY2(grip, "Tab traversal never reached the automation resize grip")
 
 A014 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:147
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -290,8 +290,8 @@ Original expression:
                "the automation resize grip does not show its advertised active focus")
 
 A015 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:155
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const int copyBefore = m_counts.copy;
@@ -305,8 +305,8 @@ Original expression:
   QCOMPARE(heightAfterUp, heightBefore + gripStep)
 
 A016 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:158
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Down);
@@ -325,8 +325,8 @@ Original expression:
   QVERIFY2(notePairUnchanged(document, *pair), "grip arrow keys moved the selected notes")
 
 A018 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:160
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -335,8 +335,8 @@ Original expression:
                "grip arrow keys triggered a window action")
 
 A019 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:164
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Left);
@@ -381,8 +381,8 @@ Original expression:
   QVERIFY(pair.has_value())
 
 A022 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:184
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -390,8 +390,8 @@ Original expression:
   QVERIFY(focusAutomationBand(view))
 
 A023 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:187
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       auto *const canvas = view.editorDrawer()->automationPage()->canvas();
@@ -401,8 +401,8 @@ Original expression:
   QVERIFY(canvas && quick)
 
 A024 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -471,8 +471,8 @@ Original expression:
                "transport play/pause request with no label, document or selection change")
 
 A027 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:238
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -514,8 +514,8 @@ Original expression:
   QVERIFY(selectionUnchanged())
 
 A031 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:245
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -618,8 +618,8 @@ Original expression:
   QVERIFY(selectionUnchanged())
 
 A042 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:265
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
@@ -672,8 +672,8 @@ Original expression:
                   automation_valueprompt::focusedTextInput(*quickWindow()))
 
 A046 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:281
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QPointer<QQuickItem> prompt = automation_valueprompt::focusedTextInput(*quickWindow());
@@ -694,8 +694,8 @@ Original expression:
   QCOMPARE(selectedText, QStringLiteral("48"))
 
 A048 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:285
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), copy->key(), copy->keyboardModifiers());
@@ -704,8 +704,8 @@ Original expression:
   QCOMPARE(QGuiApplication::clipboard()->text(), selectedText)
 
 A049 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:286
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -713,8 +713,8 @@ Original expression:
   QCOMPARE(m_counts.copy, promptCopiesBefore)
 
 A050 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:288
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), remove->key(), remove->keyboardModifiers());
@@ -723,8 +723,8 @@ Original expression:
   QVERIFY(prompt && prompt->property("text").toString().isEmpty())
 
 A051 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:290
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), paste->key(), paste->keyboardModifiers());
@@ -779,8 +779,8 @@ Original expression:
   QVERIFY(selectionUnchanged())
 
 A057 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:297
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -788,8 +788,8 @@ Original expression:
   QVERIFY(focusParameter(7))
 
 A058 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:299
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), copy->key(), copy->keyboardModifiers());
@@ -798,8 +798,8 @@ Original expression:
   QCOMPARE(m_counts.copy, copiesBefore + 1)
 
 A059 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:300
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -862,8 +862,8 @@ Original expression:
   QVERIFY(notePairUnchanged(document, *pair))
 
 A066 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:308
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -967,8 +967,8 @@ Original expression:
   QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume})
 
 A077 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:327
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1047,8 +1047,8 @@ Original expression:
                "the reserved tick-2400 note pair could not be inserted and resolved")
 
 A083 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:357
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1056,8 +1056,8 @@ Original expression:
   QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
 
 A084 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:361
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
@@ -1068,8 +1068,8 @@ Original expression:
   QVERIFY(canvas && quick)
 
 A085 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:376
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1091,8 +1091,8 @@ Original expression:
   QVERIFY2(focusTap(), "the tempo Tap button never became focusable")
 
 A086 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:377
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1101,8 +1101,8 @@ Original expression:
                "the tap-tempo canvas session would be disabled for this staging")
 
 A087 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:396
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1185,8 +1185,8 @@ Original expression:
   QVERIFY2(document.undoStack()->count() == undoCountBefore, "Return changed the undo count")
 
 A094 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:407
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1323,8 +1323,8 @@ Original expression:
                "the reserved tick-2400 note pair could not be inserted and resolved")
 
 A106 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:449
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1332,8 +1332,8 @@ Original expression:
   QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
 
 A107 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:457
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
@@ -1348,8 +1348,8 @@ Original expression:
   QVERIFY2(toggle, "Tab traversal never reached the automation drawer toggle")
 
 A108 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:458
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 
@@ -1431,8 +1431,8 @@ Original expression:
                "bare Space on the focused toggle moved or edited the selected note")
 
 A114 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:496
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       // Enter and Return are the advertised local activation keys: each one
@@ -1444,8 +1444,8 @@ Original expression:
                "Enter did not activate the focused drawer toggle")
 
 A115 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:499
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
@@ -1542,55 +1542,55 @@ S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
-S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:109
+S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:125
   session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
   session.openSong("mus_littleroot_test")
   // The shellwindow entry of ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46)
   // stages the same two-song fixture; the velocity drawer seed rows above it
   // reproduce MainWindowRoutingFixture::openSession.
 
-S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:166
+S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:182
   tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
   // After a real mouseClick on the drawn velocityNodeFill hit target.
 
-S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:227
+S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:255
   verify(shell.shellPresenter.actionSequences("roll.copy").length > 0,
                "native Copy is registered as a window shortcut")
 
-S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:229
+S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:257
   compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S")
 
-S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:230
+S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:258
   compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:273
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:290
   compare(copied.length, 1, "the real node click selected one note")
 
-S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:274
+S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:291
   compare(session.documentDirty, false, "Copy starts from a clean song")
 
-S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:275
+S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:292
   roll.forceActiveFocus(Qt.OtherFocusReason)
   tryCompare(roll, "activeFocus", true, 3000,
              "the Edit menu returned keyboard focus to the roll")
 
-S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:279
+S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:295
   keySequence(StandardKey.Copy)
   compare(copyActivatedSpy.count, 1, "native Copy activates the window shortcut once")
   // copyActivatedSpy targets the production window Shortcut objectName
   // "shellShortcut_roll.copy" selected by windowShortcut().
 
-S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:280
+S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:297
   var clip = JSON.parse(bootstrap.copiedClipSummary())
   compare(clip.length, 3, "the native clipboard carries a decodable song clip")
   compare(clip[0], 1, "the copied clip contains one track")
   compare(clip[1], 1, "the copied track contains one selected note")
   compare(clip[2], copied[0].pitch, "the copied note retains its original key")
 
-S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:285
+S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:302
   compare(session.documentDirty, false, "the native window Copy never edits the song")
 
-S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:308
+S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:325
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", true, 3000)
   compare(soloActivatedSpy.count, 1, "first non-text S activates Solo once")
@@ -1598,12 +1598,12 @@ S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // the focused non-text window child shortcutTarget, and soloActivatedSpy
   // targets the production "shellShortcut_roll.solo_tracks" Shortcut.
 
-S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:311
+S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:328
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", false, 3000)
   compare(soloActivatedSpy.count, 2, "second non-text S activates Solo twice total")
 
-S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:377
+S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:394
   var velocityToggle = findChild(drawer, "drawerToggle_velocity")
   verify(velocityToggle && velocityToggle.visible, "the velocity toggle is drawn")
   velocityToggle.forceActiveFocus(Qt.OtherFocusReason)
@@ -1613,46 +1613,46 @@ S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // (src/ui/songview/quick/drawer/EditorDrawer.qml:316) with activeFocusOnTab
   // and Return/Enter-only local keys; bare Space is not consumed there.
 
-S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:384
+S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:401
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000,
              "bare Space on focused drawer chrome owns transport")
 
-S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:387
+S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:404
   compare(surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).visible, toggleSectionVisible,
           "chrome Space never toggles the focused section")
 
-S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:390
+S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:407
   compare(session.documentDirty, false, "chrome Space never edits the song")
 
-S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:391
+S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:408
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", false, 3000,
              "the second chrome Space stops transport")
 
-S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:188
+S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:190
   return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"
   // Reads the native clip through production pd_clipboard_read and
   // ClipboardCodec.decode (ShellQmlTests.swift:176-180); "[]" means absent.
 
-S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:655
+S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:709
   var beforeGrip = grid.noteSummary
   var heightBefore = surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).bodyHeight
   // Snapshot precedes every grip arrow; S039 compares against it.
-S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:658
+S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:712
   keyClick(Qt.Key_Up)
   verify(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight
          > heightBefore, "grip Up resizes the drawer locally")
   keyClick(Qt.Key_Down)
   compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
           heightBefore, "grip Down restores its height")
-S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:664
+S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:718
   keyClick(Qt.Key_Left)
   keyClick(Qt.Key_Right)
   compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
-S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:695
+S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:749
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000)
   compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
@@ -1660,7 +1660,7 @@ S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_Shel
           "chrome Space never changes musical selection")
   // drawerToggle_velocity owns active focus (:691-692); the second Space stops
   // transport (:700-701).
-S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:980
+S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1143
   verify(!firstLabel.checked, "the focused label is not yet active")
   // firstLabel holds keyboard focus (:977-979) without being active: the
   // pre-Space precondition that it is not the active parameter.
@@ -1675,60 +1675,60 @@ S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_Shel
 S043 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1004
   keyClick(Qt.Key_Enter) (:1003)
   tryCompare(firstLabel, "checked", true, 3000, "Enter activates the focused label once") (:1004-1005)
-S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1007
+S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1170
   compare(grid.noteSummary, notesBefore, "label Enter never moves the selection") (:1007)
   compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
   compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
   // Partial: the time-selection half is unproved (the shell lane stages no
   // time selection); the Return-side note no-change at :1018 rides unsplit.
-S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1014
-  keyClick(Qt.Key_Return) (:1013)
-  tryCompare(secondLabel, "checked", true, 3000, "Return activates the focused second label") (:1014-1015)
-  compare(firstLabel.checked, false, "Return retargets activation exactly once") (:1016)
-S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1006
+S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1177-1179
+  tryCompare(secondLabel, "checked", true, 3000,
+             "Return activates the focused second label")
+  compare(firstLabel.checked, false, "Return retargets activation exactly once")
+S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1169
   compare(session.documentDirty, false, "label Enter never edits the song") (:1006)
   compare(session.documentDirty, false, "label Return never edits the song") (:1017)
-S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1008
+S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1171
   compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
   compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor") (:1019)
-S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1009
+S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1172
   compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
-S049 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1021
-  keyClick(Qt.Key_Up) (:1020)
-  compare(secondLabel.checked, true, "Up never retargets the active label") (:1021)
-  compare(session.documentDirty, false, "Up on a label never edits the song") (:1022)
-  compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection") (:1023)
-S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1028
-  keyClick(Qt.Key_Enter) (:1027)
-  tryCompare(model, "tapTempoTapCount", 1, 3000, "Enter on the focused Tap button registers exactly one tap") (:1028-1029)
-  compare(tapButton.activeFocus, true, "the first tap keeps button focus") (:1030)
+S049 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1184-1186
+  compare(secondLabel.checked, true, "Up never retargets the active label")
+  compare(session.documentDirty, false, "Up on a label never edits the song")
+  compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection")
+S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1191-1193
+  tryCompare(model, "tapTempoTapCount", 1, 3000,
+             "Enter on the focused Tap button registers exactly one tap")
+  compare(tapButton.activeFocus, true, "the first tap keeps button focus")
 S051 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1032
   keyClick(Qt.Key_Return) (:1031)
   tryCompare(model, "tapTempoTapCount", 2, 3000, "Return on the focused Tap button adds the second tap") (:1032-1033)
-S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1037
+S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1200
   compare(session.documentDirty, false, "tap keys never edit the song") (:1037)
-S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1038
+S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1201
   compare(grid.noteSummary, notesBefore, "tap keys never move the selection") (:1038)
-S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1035
+S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1198
   verify(draft && draft.visible, "the two-tap session shows the draft readout") (:1035)
   verify(draft.text.indexOf("BPM") >= 0, "the two-tap draft names a tempo") (:1036)
-S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1039
-  keyClick(Qt.Key_Return, Qt.ShiftModifier) (:1039)
-  compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap") (:1040)
+S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1202-1203
+  keyClick(Qt.Key_Return, Qt.ShiftModifier)
+  compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap")
 S056 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1042
   keyClick(Qt.Key_Space) (:1041)
   tryCompare(playhead, "playing", true, 3000, "bare Space on the Tap button owns transport") (:1042-1043)
-S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1044
+S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1207
   compare(model.tapTempoTapCount, 2, "transport Space never taps") (:1044)
-S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1045
+S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1208
   compare(session.documentDirty, false, "tap Space never edits the song") (:1045)
-S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1046
+S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1209
   compare(grid.noteSummary, notesBefore, "tap Space never moves the selection") (:1046)
   // Partial: the time-selection half is unproved (the shell lane stages no
   // time selection).
-S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1050
-  model.resetTapTempo() (:1050)
-  compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft") (:1051)
+S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1213-1215
+      model.resetTapTempo()
+      compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
+  }
 
 Supplemental converted-window evidence
 

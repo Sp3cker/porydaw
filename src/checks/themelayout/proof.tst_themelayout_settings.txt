@@ -243,8 +243,8 @@ Original expression:
   QCOMPARE(wizard.wizardStyle(), QWizard::ClassicStyle);
 
 A006 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:151
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the controller restore case writes into it.
 Source context since previous assertion:
   ;
@@ -266,8 +266,8 @@ Original expression:
       m_application->styleSheet().contains(QStringLiteral("QHeaderView::section{border:0;}")));
 
 A008 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:162
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the dialog case writes into it.
 Source context since previous assertion:
   ;
@@ -366,8 +366,8 @@ Original expression:
            committedTheme.color(themes::Role::song_view_grid));
 
 A017 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:208
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: the two-row table
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the two-row table
 must become visible before viewport grabs sample cell colors.
 Source context since previous assertion:
   ;
@@ -412,8 +412,8 @@ Original expression:
   QCOMPARE(cellColor(1), themes::color(themes::Role::item_alternate_background));
 
 A020 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:219
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the first cell must not
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: the first cell must not
 already be the flash red before the override is installed.
 Source context since previous assertion:
   ;
@@ -423,8 +423,8 @@ Original expression:
   QVERIFY(cellColor(0) != flash);
 
 A021 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:221
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: after installing the
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: after installing the
 flash background, the grabbed first-row cell must equal it, proving item
 backgrounds override the theme.
 Source context since previous assertion:
@@ -434,8 +434,8 @@ Original expression:
   QCOMPARE(cellColor(0), flash);
 
 A022 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:231
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: after installing
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: after installing
 magenta foreground text, the grabbed viewport must contain the ink color
 somewhere, proving item foregrounds render.
 Source context since previous assertion:
@@ -453,8 +453,8 @@ Original expression:
   QTRY_VERIFY(containsColor(table.viewport()->grab().toImage(), table.viewport()->rect(), ink));
 
 A023 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:237
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the geometry case writes into it.
 Source context since previous assertion:
   ;
@@ -527,8 +527,8 @@ Original expression:
       initialGeometry.at(index));
 
 A029 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:268
-Disposition: NATIVE
-Mapping/reason: Native harness precondition: the scratch settings directory
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must be valid before the refresh case writes into it.
 Source context since previous assertion:
   ;
@@ -564,8 +564,8 @@ Original expression:
   QTRY_VERIFY(dialog.isVisible());
 
 A032 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:283
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: the tab bar must
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the tab bar must
 become visible before its grab baselines the no-op reset check.
 Source context since previous assertion:
   ;
@@ -578,8 +578,8 @@ Original expression:
   QTRY_VERIFY(tabBar.isVisible());
 
 A033 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:287
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: the refresh probe
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native fixture/window obligation: the refresh probe
 widget must become visible before ThemeChange delivery is counted.
 Source context since previous assertion:
   ;
@@ -590,8 +590,8 @@ Original expression:
   QTRY_VERIFY(gridPaintTarget.isVisible());
 
 A034 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:295
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: grabbing the tab bar
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 must produce a non-null baseline image for the later pixel-identity check.
 Source context since previous assertion:
   ;
@@ -665,8 +665,8 @@ Original expression:
           themes::contrastRatio(defaultGrid, background));
 
 A041 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:318
-Disposition: NATIVE
-Mapping/reason: Original native object-lifetime obligation: destroying a
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native object-lifetime obligation: destroying a
 registered refresh target must clear its QPointer guard, proving refresh
 targets hold no dangling references.
 Source context since previous assertion:
@@ -680,8 +680,8 @@ Original expression:
   QVERIFY(destroyedGuard.isNull());
 
 A042 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:321
-Disposition: NATIVE
-Mapping/reason: Original native event obligation: after destroying one
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native event obligation: after destroying one
 target, the surviving probe must still receive exactly one more ThemeChange
 on the next slider move.
 Source context since previous assertion:
@@ -692,8 +692,8 @@ Original expression:
   QCOMPARE(gridPaintTarget.themeChangeCount, refreshCountBeforeCleanup + 1);
 
 A043 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:324
-Disposition: NATIVE
-Mapping/reason: Original native event obligation: resetting the slider to the
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native event obligation: resetting the slider to the
 default contrast must deliver no StyleChange to the tab bar.
 Source context since previous assertion:
   ;
@@ -711,8 +711,8 @@ Original expression:
   QVERIFY(tabBar.grab().toImage() == tabBefore);
 
 A045 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:326
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the no-op reset
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native application-state obligation: the no-op reset
 must leave the application palette untouched.
 Source context since previous assertion:
   ;
@@ -720,8 +720,8 @@ Original expression:
   QCOMPARE(m_application->palette(), paletteBefore);
 
 A046 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:327
-Disposition: NATIVE
-Mapping/reason: Original native application-state obligation: the no-op reset
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native application-state obligation: the no-op reset
 must leave the application stylesheet untouched.
 Source context since previous assertion:
   ;
@@ -729,8 +729,8 @@ Original expression:
   QCOMPARE(m_application->styleSheet(), styleSheetBefore);
 
 A047 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:328
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: the probe must have
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/themelayout/tst_themelayout_settings.cpp) no longer builds or runs. Previous native note: Original native rendering obligation: the probe must have
 painted at least once during the sequence, proving refresh delivery reaches
 painting.
 Source context since previous assertion:
@@ -857,17 +857,17 @@ Counterpart expression:
   contrasting, reading back and restoring the applied grid on the production
   shell (:167-190) for the refresh targets (A035-A040, A044).
 
-S004 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:419
+S004 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:421
 Counterpart expression:
   report.expectEqual("#373737", committed.windowBackground, ...)
   with contrast-80, preview and revert rows (A011-A016).
 
-S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:119
+S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:126
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", data.mode)
   observing the dark/80 commit row on the production shell (A011-A012).
 
-S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
+S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:280
 Counterpart expression:
   report.expectEqual(row.item, palette.menuBackground, ...)   (:280)
   pinning the item surface per preset row (#D2D0CA/#424242/#393C43), the

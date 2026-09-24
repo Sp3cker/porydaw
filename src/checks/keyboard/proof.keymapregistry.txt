@@ -292,15 +292,15 @@ S014 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:88
   ("eventlist.move_up", .editorRouted),
 S015 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:89
   ("eventlist.move_down", .editorRouted),
-S016 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:94
+S016 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:95
   registry.sequences("edit.insert_time").map(\.strokes) ==
       [[QtKeyCode.i.rawValue | QtKeyboardModifier.control.rawValue |
           QtKeyboardModifier.shift.rawValue]],
   // "Insert Time keeps Ctrl+Shift+I" (:94-99).
-S017 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:100
+S017 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:101
   registry.sequences("edit.delete_time").isEmpty,
   // "Delete Time remains unbound" (:100-103).
-S018 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:104
+S018 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:105
   registry.sequences("automation.pencil_mode").map(\.strokes) ==
       [[QtKeyCode.b.rawValue]],
   // "Pencil Mode keeps unmodified B" (:104-108).

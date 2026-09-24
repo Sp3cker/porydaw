@@ -7,11 +7,11 @@ Original SHA-256: 70afce2bc8c968ac2e07bda2381e175882152793f4e4c6748a6cb2760a84d5
 Swift counterpart: src/checks/rollcheck/presentation.swift
 Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
 Additional Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Additional Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
+Additional Swift SHA-256: 822b24d3f99f7b60759761cfcb74e90059532a8a1d1c7628303a018ef4131068
 Additional Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
-Additional Swift SHA-256: 903a0e21c0585cc53b8fe921a9a07cf23421a062382a85654dfbff78f3dd3057
+Additional Swift SHA-256: ebe356d8c74ca537123e4f07f1f5a085c0cb6c60a2cbc69db30e998fb0ed6230
 Additional Swift counterpart: src/checks/trackheaders/headerfixture.swift
-Additional Swift SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+Additional Swift SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -69,8 +69,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:69
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label for the unchanged slot. A presenter-level Swift check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -144,8 +144,8 @@ Original expression:
       QVERIFY2(source, qPrintable(error));
 
 A002 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:73
-Disposition: NATIVE
-Mapping/reason: Fixture guard retained native: requires the live Quick viewport plus a TrackHeaderModel on the retired SongView.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       HeaderFixture fixture;
@@ -181,8 +181,8 @@ Original expression:
           QFAIL("unchanged song reset or reordered TrackHeaderModel records");
 
 A005 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:97
-Disposition: NATIVE
-Mapping/reason: Original native fixture/loader precondition: LoadedSong::load of the staged song label for the structural slot. A presenter-level Swift check cannot establish it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
       }
   }
@@ -196,8 +196,8 @@ Original expression:
       QVERIFY2(source, qPrintable(error));
 
 A006 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:101
-Disposition: NATIVE
-Mapping/reason: Fixture guard retained native: requires the live Quick viewport plus a TrackHeaderModel on the retired SongView.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/rollcheck/header_reconciliation.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
       HeaderFixture fixture;
@@ -352,19 +352,19 @@ Counterpart expression:
 report.expect(document.trackName(0) != "zzz", cppID: structuralID,
               message: "cancelled draft cannot commit across the replacement")
 
-S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:16
+S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:68
 Counterpart expression:
       report.expectEqual(0, h.renamingTrack, cppID: id, what: "rename targets clicked track")
 
-S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:19
+S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:71
 Counterpart expression:
       report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancel closes editor")
 
-S011 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:94
+S011 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:131
 Counterpart expression:
       report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
-S012 | expectRows | src/checks/trackheaders/headerfixture.swift:81
+S012 | expectRows | src/checks/trackheaders/headerfixture.swift:99
 Counterpart expression:
           report.expectEqual([names.count], addRows, cppID: cppID,
                              what: "\(phase): add-track row remains last")

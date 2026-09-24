@@ -444,8 +444,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A016 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:351
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_editing.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
   }
@@ -540,8 +540,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A019 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:425
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_editing.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
 Source context since previous assertion:
   ;
   }

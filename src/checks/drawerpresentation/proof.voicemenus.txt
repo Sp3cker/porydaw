@@ -15,7 +15,7 @@ a specific related scenario differs; GAP means exact assertion correspondence is
 established; NATIVE identifies a retained native window, rendering, focus or
 input-delivery obligation; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -478,20 +478,20 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A048 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:236
-Disposition: NATIVE
-Mapping/reason: Retained native rendering precondition: the original resolves the native popup panel before the stale probe. The Swift page composes a page-owned QML modal from bridged rows (src/ui/songview/quick/drawer/VoiceChangeMenu.qml:53 voiceMenuPanel) and exposes no native panel, so no Swift predicate discharges this native rendering obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY2(panel, "the voice menu lost its rendered panel before the stale probe")
 
 A049 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:238
-Disposition: NATIVE
-Mapping/reason: Retained native rendering precondition: the original resolves the native rendered Delete-row centre (menuRowSceneCenter) to aim the native pointer path. No Swift predicate replaces this native row-geometry obligation; the page-owned QML modal is a different surface.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voicemenus.cpp) no longer builds or runs. Previous native note: Retained native rendering precondition: the original resolves the native rendered Delete-row centre (menuRowSceneCenter) to aim the native pointer path. No Swift predicate replaces this native row-geometry obligation; the page-owned QML modal is a different surface.
 Original expression:
   QVERIFY2(!deleteCenter.isNull(), "the Delete row never rendered")
 
 A050 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:240
-Disposition: NATIVE
-Mapping/reason: Retained native window obligation: the original delivers the stale press and release through the native menu window (mapToGlobal plus QTest::mousePress/mouseRelease). No Swift predicate replaces this native input-delivery obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(menuWindow)
 
@@ -544,8 +544,8 @@ Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
 A059 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:285
-Disposition: NATIVE
-Mapping/reason: Retained native focus-item obligation: the original polls the native quick view focused timeline band (QTRY over Qt focus items). No Swift predicate replaces this native focus obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voicemenus.cpp) no longer builds or runs. Previous native note: Retained native focus-item obligation: the original polls the native quick view focused timeline band (QTRY over Qt focus items). No Swift predicate replaces this native focus obligation.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
 
@@ -556,8 +556,8 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A061 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:292
-Disposition: NATIVE
-Mapping/reason: Retained native window obligation: the original delivers the outside press and its paired release through the native menu window (mapToScene plus QTest::mouseEvent). No Swift predicate replaces this native input-delivery obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(menuWindow)
 
@@ -587,8 +587,8 @@ Original expression:
   QVERIFY(fixture.snapshot() == before)
 
 A066 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:302
-Disposition: NATIVE
-Mapping/reason: Retained native focus-item obligation: the original polls the native quick view focused band (QTRY) after the dismissal. No Swift predicate replaces this native focus-restoration obligation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voicemenus.cpp) no longer builds or runs. Previous native note: Retained native focus-item obligation: the original polls the native quick view focused band (QTRY) after the dismissal. No Swift predicate replaces this native focus-restoration obligation.
 Original expression:
   QTRY_VERIFY2(view.quickView()->focusedBand() == songview::TimelineBand::VoiceChanges,
                    "the dismissal did not restore the voice band focus")
@@ -600,26 +600,26 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A068 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:321
-Disposition: NATIVE
-Mapping/reason: Retained native item-graph obligation: the original resolves the native quick view root object to reach the ruler real open method. The Swift drawer page exposes no equivalent native item graph; the new roll composition ruler items belong to the timeline/ruler lane.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(root)
 
 A069 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:324
-Disposition: NATIVE
-Mapping/reason: Retained native item-graph obligation: the original resolves the native timelineRulerInput TimelineInputItem to reach the ruler. The Swift drawer page exposes no equivalent item lookup; the new roll composition ruler items belong to the timeline/ruler lane.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(rulerInput)
 
 A070 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:326
-Disposition: NATIVE
-Mapping/reason: Retained native item-graph obligation: the original dynamic_casts the ruler input interaction to the native TimeRuler before opening its division menu. The Swift drawer page has no ruler interaction object; the ruler division menu belongs to the timeline/ruler lane.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(ruler)
 
 A071 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:329
-Disposition: NATIVE
-Mapping/reason: Retained native item-graph obligation: the original resolves the native timelineRulerDivisionControl item to aim the ruler division open. The Swift drawer page composes no such item; the ruler division control belongs to the timeline/ruler lane.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/voicemenus.cpp) no longer builds or runs. Previous native note: Retained native item-graph obligation: the original resolves the native timelineRulerDivisionControl item to aim the ruler division open. The Swift drawer page composes no such item; the ruler division control belongs to the timeline/ruler lane.
 Original expression:
   QVERIFY(division)
 
@@ -704,8 +704,8 @@ Original expression:
   QVERIFY(!quick_popup::popupSession(view)->isOpen())
 
 A084 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:135
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario. Shared VoiceTransactionFixture setup precondition consumed by every scenario in this file; a failed create aborts the harness rather than asserting a scenario outcome, so it is not a parity assertion. The VoiceFixture overload guard at src/checks/drawerpresentation/fixtures.cpp:128 is not consumed by voicemenus.cpp and is accounted for in proof.voice.txt.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/drawerpresentation/voicemenus.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   qFatal("%s", qPrintable(error))
 

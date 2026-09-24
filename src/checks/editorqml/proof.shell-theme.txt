@@ -6,7 +6,7 @@ Original SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37d
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: 3e3636072c86d9645ecf359a4af726fcdfeb5642aae9b67fb3c93ef4f97c1ebe
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 No assertion sites.
 

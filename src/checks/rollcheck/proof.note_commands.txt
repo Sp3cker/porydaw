@@ -4,7 +4,7 @@ Reference revision: 5f768e3401d74d5df185a6de5692595351156a9d
 Original: src/checks/rollcheck/note_commands.cpp
 Original SHA-256: e9083e9d41a8aa34a5e93d88056383343f408d7d473c49b66eab0aa964969b97
 Swift counterpart: src/checks/rollcheck/note_commands.swift
-Swift SHA-256: 5cacc138997ef46d430435cf9547c9fadda41b30ebe25898f6a3d804300dc4f4
+Swift SHA-256: 68ba6128a66cc2e929d2fc1b7abc65affb535f7134575e95672d2ce55b481263
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -861,8 +861,8 @@ Original expression:
                    "the popup-join partner did not land");
 
 A053 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:505
-Disposition: NATIVE
-Mapping/reason: Original native popup obligation: the Quick note menu session must open on a right click. The Swift check invokes the command handler directly and opens no menu.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the Quick note menu session must open on a right click. The Swift check invokes the command handler directly and opens no menu.
 Source context since previous assertion:
           view.selectionModel().setNoteSelection({source.noteId, partner.noteId});
       }
@@ -875,16 +875,16 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
 
 A054 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:507
-Disposition: NATIVE
-Mapping/reason: Original native popup obligation: the typed command row must exist in the Quick note menu model.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the typed command row must exist in the Quick note menu model.
 Source context since previous assertion:
       const int row = noteRow(*opened.model, command);
 Original expression:
   QVERIFY2(row >= 0, "the note menu lost the command's typed row");
 
 A055 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:509
-Disposition: NATIVE
-Mapping/reason: Original native popup obligation: a real click on the command's note-menu row must dispatch. The Swift check calls PianoGrid.performCommand(command:) without menu delivery.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: a real click on the command's note-menu row must dispatch. The Swift check calls PianoGrid.performCommand(command:) without menu delivery.
 Source context since previous assertion:
       const int commandUndoIndex = doc.undoStack()->index();
 Original expression:
@@ -892,8 +892,8 @@ Original expression:
                "the command's note menu row did not receive a real click");
 
 A056 | PianoRollTest::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.cpp:512
-Disposition: NATIVE
-Mapping/reason: Original native popup obligation: the Quick note menu must close after the row activation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_commands.cpp) no longer builds or runs. Previous native note: Original native popup obligation: the Quick note menu must close after the row activation.
 Source context since previous assertion:
       QCoreApplication::processEvents();
 Original expression:
@@ -1111,131 +1111,131 @@ S026 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_
 S027 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:335
   report.fail(id, "no free pitch for the unterminated join group")
 
-S028 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:346
+S028 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:343
   report.fail(id, "the unterminated join group did not land")
 
-S029 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:354
+S029 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:351
   report.expect(session.document.history.currentIdentity != before &&
                     joined?.duration == 3 * grid && joined?.velocity == source.velocity,
                 cppID: id, message: "mixed join preserves first velocity and spans three cells")
 
-S030 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:357
+S030 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:354
   report.expect(fixture.note(at: pairTick) == nil, cppID: id,
                 message: "mixed join removes the same-key partner")
 
-S031 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:360
+S031 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:357
   report.expect(singletonAfter?.id == singleton.id &&
                     singletonAfter?.tick == singleton.tick &&
                     singletonAfter?.duration == singleton.duration &&
                     singletonAfter?.velocity == singleton.velocity,
                 cppID: id, message: "mixed join preserves the other-pitch singleton and identity")
 
-S032 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:365
+S032 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:362
   report.expect(fixture.note(at: openTick, pitch: UInt8(openPitch))?.isUnterminated == true,
                 cppID: id, message: "mixed join does not synthesize an open note's end")
 
-S033 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:367
+S033 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:364
   report.expect(joined.map {
       session.selectedNotes == [singleton.id, open.id, $0.id]
   } == true && session.selectedNoteOrder.count == 3,
   cppID: id, message: "mixed join selects the joined and surviving notes")
 
-S034 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:371
+S034 | swiftcore/PianoRoll::keyboardJoinMixedSpread | src/checks/rollcheck/note_commands.swift:368
   report.expect(session.document.history.undoDocument() &&
                     (try? session.document.state.file.encoded()) == original &&
                     session.document.history.currentIdentity == before,
                 cppID: id, message: "one undo restores every mixed-join group")
 
-S035 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:385
+S035 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:382
   report.fail(id, "the combined-split seed did not grow to three cells")
 
-S036 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:401
+S036 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:398
   report.fail(id, "the cursor straddler or bystander did not land")
 
-S037 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:410
+S037 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:407
   report.expect(session.document.history.currentIdentity != before, cppID: id,
                 message: "both split arms commit as one transaction")
 
-S038 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:416
+S038 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:413
   report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
                 cppID: id, message: "selected source splits along every grid line")
 
-S039 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:419
+S039 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:416
   report.expect(fixture.note(at: straddlerTick, pitch: straddlerPitch)?.duration == grid,
                 cppID: id, message: "straddler's left half stays in place")
 
-S040 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:421
+S040 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:418
   report.expect(fixture.note(at: cursor, pitch: straddlerPitch)?.duration == grid,
                 cppID: id, message: "straddler splits at the cursor")
 
-S041 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:423
+S041 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:420
   report.expect(session.selectedNoteOrder.count == 4 &&
                     session.selectedNotes == Set(pieces.map(\.id)).union([bystander.id]),
                 cppID: id, message: "only source fragments and bystander remain selected")
 
-S042 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:427
+S042 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:424
   report.expect(session.document.note(selected).map {
       $0.pitch == source.pitch && $0.tick >= source.tick &&
           $0.tick < source.tick + 3 * grid
   } == true, cppID: id, message: "selected note is a source fragment")
 
-S043 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:433
+S043 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:430
   report.expect(bystanderAfter?.id == bystander.id &&
                     bystanderAfter?.tick == bystander.tick &&
                     bystanderAfter?.duration == grid &&
                     bystanderAfter?.velocity == 82,
                 cppID: id, message: "also-selected bystander retains identity and values")
 
-S044 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:438
+S044 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:435
   report.expect(session.document.note(straddler.id) == nil, cppID: id,
                 message: "the original cursor straddler was replaced")
 
-S045 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:440
+S045 | swiftcore/PianoRoll::keyboardSplitSelectedPlusCursorStraddler | src/checks/rollcheck/note_commands.swift:437
   report.expect(session.document.history.undoDocument() &&
                     (try? session.document.state.file.encoded()) == original &&
                     session.document.history.currentIdentity == before,
                 cppID: id, message: "one undo restores both split arms")
 
-S046 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:457
+S046 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:454
   report.fail(id, "popup split seed did not grow to three cells")
 
-S047 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:471
+S047 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:468
   report.fail(id, "popup-join partner did not land")
 
-S048 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:485
+S048 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:482
   report.expect(copy?.duration == source.duration, cppID: id,
                 message: "Duplicate row creates a same-length copy one span later")
 
-S049 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:487
+S049 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:484
   report.expect(copy.map { session.selectedNoteOrder == [$0.id] } == true,
                 cppID: id, message: "Duplicate row selects its copy")
 
-S050 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:494
+S050 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:491
   report.expect(fixture.note(at: source.tick + Tick(offset) * grid)?.duration == grid,
                 cppID: id, message: "Split row yields a grid-length piece")
 
-S051 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:497
+S051 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:494
   report.expect(session.selectedNoteOrder.count == 3 &&
                     session.selectedNotes == Set(pieces.map(\.id)),
                 cppID: id, message: "Split row selects all three pieces")
 
-S052 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:502
+S052 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:499
   report.expect(joined?.duration == 3 * grid, cppID: id,
                 message: "Join row spans the same-key pair")
 
-S053 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:504
+S053 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:501
   report.expect(fixture.note(at: secondTick) == nil, cppID: id,
                 message: "Join row removes its partner")
 
-S054 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:506
+S054 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:503
   report.expect(joined.map { session.selectedNoteOrder == [$0.id] } == true,
                 cppID: id, message: "Join row selects the merged note")
 
-S055 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:511
+S055 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:508
   report.expect(session.document.history.currentIdentity != before,
                 cppID: id, message: "menu command records a history entry")
 
-S056 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:513
+S056 | swiftcore/PianoRoll::keyboardNoteCommandPopupActivation | src/checks/rollcheck/note_commands.swift:510
   report.expect(session.document.history.undoDocument() &&
                     (try? session.document.state.file.encoded()) == original &&
                     session.document.history.currentIdentity == before,

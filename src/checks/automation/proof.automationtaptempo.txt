@@ -16,7 +16,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 The original swiftcore suite entrypoints invoke these paired functions in their original
@@ -59,8 +59,8 @@ Original expression:
           qPrintable(QStringLiteral("draft %1 outside %2±%3").arg(draft).arg(nominalBpm).arg(slack)))
 
 A003 | AutomationEditingTest::tapTempoDraftAccumulatesFromSecondTapAndFreezesDocument | src/checks/automation/automationtaptempo.cpp:106
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -161,8 +161,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeTap.undoIndex)
 
 A020 | AutomationEditingTest::tapTempoSingleStrayTapAfterIdleGapCommitsNothing | src/checks/automation/automationtaptempo.cpp:146
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -203,8 +203,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == beforeTap)
 
 A027 | AutomationEditingTest::tapTempoFourTapsCommitOnceAtTickZeroAndUndoRestores | src/checks/automation/automationtaptempo.cpp:171
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -331,8 +331,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeCommit.undoCount + 1)
 
 A048 | AutomationEditingTest::tapTempoTappingCurrentTickZeroTempoIsSilent | src/checks/automation/automationtaptempo.cpp:222
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -427,8 +427,8 @@ Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 3)
 
 A064 | AutomationEditingTest::tapTempoCommitReplacesTickZeroPointPreservingLaterPoints | src/checks/automation/automationtaptempo.cpp:265
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -535,8 +535,8 @@ Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A082 | AutomationEditingTest::tapTempoCommitInsertsFirstTempoPointOnNonzeroDocument | src/checks/automation/automationtaptempo.cpp:304
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -619,8 +619,8 @@ Original expression:
   QCOMPARE(int(tab().document().tempoPoints().size()), 1)
 
 A096 | AutomationEditingTest::tapTempoConcurrentTempoEditAbortsDraftSynchronously | src/checks/automation/automationtaptempo.cpp:338
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -679,8 +679,8 @@ Original expression:
   QCOMPARE(int(document.tempoPoints().size()), 1)
 
 A106 | AutomationEditingTest::tapTempoDocumentChangedSeamClearsSession | src/checks/automation/automationtaptempo.cpp:372
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -733,8 +733,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeClear.undoIndex)
 
 A115 | AutomationEditingTest::tapTempoDisabledCanvasAndEmptyDocumentAreNoOps | src/checks/automation/automationtaptempo.cpp:397
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -775,8 +775,8 @@ Original expression:
   QCOMPARE(canvas->tapTempoDraftBpm(), 0)
 
 A122 | AutomationEditingTest::tapTempoRenderedTapButtonStagesTapWithoutDocumentChanges | src/checks/automation/automationtaptempo.cpp:421
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -895,8 +895,8 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), beforeTap.undoIndex)
 
 A142 | AutomationEditingTest::tapTempoMeanWindowAndClampBounds | src/checks/automation/automationtaptempo.cpp:472
-Disposition: NATIVE-SETUP
-Mapping/reason: The retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; the converted page has no null-canvas branch, so this native precondition is retained and is not a rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/automation/automationtaptempo.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Original expression:
   QVERIFY(canvas)
 
@@ -1336,72 +1336,72 @@ Swift expression:
     report.expect(seam.page.tapTempoSession.tapCount == 0 && !seam.page.tapTempoActive, cppID: id,
                   message: "the document seam clears the session synchronously")
 
-S062 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4679
+S062 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5057
 Swift expression:
         verify(tempoTab, "the Tempo row is drawn in the selector")
 
-S063 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4681
+S063 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5059
 Swift expression:
         verify(tapControl, "the Tempo row composed its Tap control")
 
-S064 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4686
+S064 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5064
 Swift expression:
         compare(String(tapControl.Accessible.name).length > 0, true,
                 "the Tap control publishes its accessible name ('" + tapControl.Accessible.name + "')")
 
-S065 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4692
+S065 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5070
 Swift expression:
         tryVerify(function() { return bootstrap.automationTapCount() >= 1 }, 2000,
                   "the pointer tap registered a tap")
 
-S066 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4694
+S066 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5072
 Swift expression:
         compare(bootstrap.automationInteractionActive(), true,
                 "a live tap session is the page's interaction fact")
 
-S067 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4696
+S067 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5074
 Swift expression:
         compare(bootstrap.automationDocumentRevision(), revisionBefore,
                 "tapping writes nothing to the document")
 
-S068 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4698
+S068 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5076
 Swift expression:
         compare(session.canUndo, undoBefore, "tapping records no history entry")
 
-S069 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4712
+S069 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5090
 Swift expression:
         compare(bootstrap.automationTapCount(), 0, "the cancel cleared the tap session")
 
-S070 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4713
+S070 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5091
 Swift expression:
         compare(bootstrap.automationTempoBpm(), tempoBefore,
                 "a cancelled session wrote no tempo")
 
-S071 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4715
+S071 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5093
 Swift expression:
         compare(bootstrap.automationDocumentRevision(), revisionBefore,
                 "a cancelled session published no revision")
 
-S072 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4757
+S072 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5135
 Swift expression:
         compare(model.tapTempoTapCount, 3, "the panel publishes the live tap count")
 
-S073 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4760
+S073 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5138
 Swift expression:
         tryVerify(function() { return inlineDraft && inlineDraft.visible }, 1000,
                   "the live cadence is drawn inside the Tempo tab")
 
-S074 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4762
+S074 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5140
 Swift expression:
         tryCompare(inlineDraft, "text", "120 BPM", 1000,
                    "the original inline readout shows the tapped tempo")
 
-S075 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4769
+S075 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5147
 Swift expression:
         verify(!bootstrap.automationTapIdleElapsed(),
                "a lone tap's idle window commits nothing")
 
-S076 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:4704
+S076 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:5082
 Swift expression:
         compare(bootstrap.automationTapCount() >= 1, true,
                 "Return on the focused Tap control registered a tap")

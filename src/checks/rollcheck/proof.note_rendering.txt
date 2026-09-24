@@ -579,8 +579,8 @@ Original expression:
   QFAIL("velocity-color mode changed a ghost note's rendering");
 
 A032 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:338
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
       view.selectTrack(selectedTrackBeforeGhostProbe);
       const QImage velocityModeRender = check.captureQuickFramebuffer();
@@ -589,8 +589,8 @@ Original expression:
   QFAIL("velocity-mode note interior does not match velocityNoteColor(100)");
 
 A033 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:343
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
       view.setVelocityColorMode(false);
       const QImage identityRestoredRender = check.captureQuickFramebuffer();
@@ -1022,8 +1022,8 @@ Original expression:
   QFAIL("short-note velocity probe has no frame-free interior row");
 
 A051 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:673
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
 Source context since previous assertion:
               bool valueInkFound = false;
               for (int y = inkTop; y < inkBottom; ++y) {
@@ -1035,8 +1035,8 @@ Original expression:
   QFAIL("short-note velocity drag rendered no value ink inside the note box");
 
 A052 | PianoRollTest::velocityValueRaster | src/checks/rollcheck/note_rendering.cpp:695
-Disposition: NATIVE
-Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/note_rendering.cpp) no longer builds or runs. Previous native note: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation. Runs once per keyHeight row (8.6px/9.0px).
 Source context since previous assertion:
               const QRect imageBounds = shortDragImage.rect();
               const QRect noteBoxPixels(QPoint(boxLeftPixel, boxTopPixel),

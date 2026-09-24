@@ -21,8 +21,8 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
-Tally: MATCHED 32 / PARTIAL 17 / GAP 0 / NATIVE-SETUP 4.
+Unresolved entries remain work.
+Tally: MATCHED 32 / PARTIAL 17 / GAP 0 / NATIVE-SETUP 0 / RETIRED-REPRESENTATION 4.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
@@ -275,8 +275,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A016 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:72
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained harness loader precondition: the original resolved the timelineQuickCanvas TimelineQuickView by object name inside the native QML harness. The Swift fixture constructs the production VelocityPage directly and resolves no scene graph, so no Swift predicate asserts this lookup; native velocityclicks.cpp still executes it.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 
@@ -288,8 +288,8 @@ Original expression:
   QVERIFY(quickView)
 
 A017 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:74
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained harness loader precondition: the original required the quick view root object before it could reach the gutter input. No Swift counterpart resolves a root object; the Swift fixture drives the page owner directly.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     QObject *const quickRoot = quickView->rootObject();
@@ -298,8 +298,8 @@ Original expression:
   QVERIFY(quickRoot)
 
 A018 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:78
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained harness input precondition: the original resolved the timelineVelocityGutterInput item by object name. The Swift case reaches the same ruler through page.pointerPress with surface 0; the object-name lookup itself stays native only.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *const gutterInput =
@@ -310,8 +310,8 @@ Original expression:
   QVERIFY(gutterInput)
 
 A019 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:79
-Disposition: NATIVE-SETUP
-Mapping/reason: Retained harness window precondition: the original required the gutter input to belong to the suite Quick window. The Swift fixture owns no Quick window and never asserts item window ownership.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/velocity/velocityclicks.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 ;
 

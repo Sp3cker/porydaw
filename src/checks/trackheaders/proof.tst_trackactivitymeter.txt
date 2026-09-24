@@ -34,8 +34,8 @@ Their helper expectations execute on every call and are inventoried below.
 Original assertion inventory and source sequence
 
 A001 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:96
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackactivitymeter.h"
 
@@ -155,8 +155,8 @@ Original expression:
   QVERIFY(m_model)
 
 A004 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:102
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -224,8 +224,8 @@ Original expression:
   QVERIFY(meterHeight > 0 && m_model->activityWidth() > 0)
 
 A008 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:146
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
 
@@ -262,8 +262,8 @@ Original expression:
   QVERIFY(roles[0] != 0 && roles[1] != 0)
 
 A012 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:168
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       DataChange changes;
@@ -327,8 +327,8 @@ Original expression:
   QVERIFY(shared != 255)
 
 A018 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:180
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       levels[kTrack] = {shared, shared};
@@ -339,8 +339,8 @@ Original expression:
   QVERIFY2(!within.isNull(), qPrintable(error))
 
 A019 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:185
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       levels[kTrack] = {uint8_t(shared + 1), uint8_t(shared + 1)};
@@ -377,8 +377,8 @@ Original expression:
   QVERIFY(across != 255)
 
 A023 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:195
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       levels[kTrack] = {across, across};
@@ -443,8 +443,8 @@ Original expression:
   QVERIFY(row >= 0)
 
 A030 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:214
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       const int meterHeight = std::max(0, m_model->rowHeight() - m_model->separatorWidth());
@@ -457,8 +457,8 @@ Original expression:
   QVERIFY2(!active.isNull(), qPrintable(error))
 
 A031 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:227
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const qreal dpr = active.devicePixelRatio();
@@ -537,16 +537,16 @@ Original expression:
   QCOMPARE(paused.height(), trackheaders_test::devicePixelSpan(origin.y(), meterHeight, dpr))
 
 A039 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(paused.devicePixelRatio(), dpr)
 
 A040 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:240
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -572,8 +572,8 @@ Original expression:
   QVERIFY(completeColumns >= 2)
 
 A042 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:253
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -616,8 +616,8 @@ Original expression:
   QVERIFY(row >= 0)
 
 A046 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:274
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       QString error;
@@ -629,8 +629,8 @@ Original expression:
   QVERIFY2(!image.isNull(), qPrintable(error))
 
 A047 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:277
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const int left = image.width() / 4;
@@ -640,8 +640,8 @@ Original expression:
               image.pixelColor(right, image.height() / 8))
 
 A048 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:279
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
@@ -675,8 +675,8 @@ Original expression:
   QVERIFY(first >= 0 && second >= 0)
 
 A051 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:307
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
   ;
       DataChange changes;
@@ -697,8 +697,8 @@ Original expression:
   QVERIFY2(!firstImage.isNull(), qPrintable(error))
 
 A052 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:309
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
       const QImage secondImage = captureRow(*m_view, *m_model, second, error);
@@ -706,24 +706,24 @@ Original expression:
   QVERIFY2(!secondImage.isNull(), qPrintable(error))
 
 A053 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:310
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(trackheaders_test::isOpaque(firstImage))
 
 A054 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:311
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(trackheaders_test::isOpaque(secondImage))
 
 A055 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:312
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/tst_trackactivitymeter.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
 Source context since previous assertion:
   ;
 Original expression:

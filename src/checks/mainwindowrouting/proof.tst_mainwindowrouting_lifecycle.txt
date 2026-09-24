@@ -22,9 +22,9 @@ Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: 1736e3944298a15c5a69e9a7c8aa96f51944f5109acca86a5d6ecaf230af8003
+Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 6354c47dd5e55e254188d5a7e7556baf6e2cf7e2d923282d46095bfaffab6d10
+Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 
 Status and evidence
 Thirteen test methods covering tab close/reopen global state, ready-reload transient preservation, reload focus handoff, fresh-bind/staged-reload/bank-rebind staging, failed-open preservation, project switch/quit, and five MouseHints drag/focus/tab delivery cases.
@@ -38,7 +38,7 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 0 / PARTIAL 31 / GAP 86 / NATIVE 47. No MATCHED site is claimed:
+Tally: MATCHED 0 / PARTIAL 31 / GAP 119 / NATIVE 0 / RETIRED-REPRESENTATION 14. No MATCHED site is claimed:
 no Qt lifecycle observation coincides exactly with a Swift model predicate.
 PARTIAL covers the shell-lane close-walk/tab-selection crosswalk (A002/A003 to
 S186/S187; A035/A037/A038 to S188), the service-level song/voicegroup/MIDI/name
@@ -325,16 +325,16 @@ Original expression:
         QVERIFY(seeded.eventList)
 
 A019 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:106
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QTabBar *tabBar = window.findChild<QTabBar *>();
 Original expression:
         QVERIFY(tabBar)
 
 A020 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:109
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         tabBar->setFocusPolicy(Qt::StrongFocus);
         tabBar->setFocus(Qt::OtherFocusReason);
@@ -342,8 +342,8 @@ Original expression:
         QCOMPARE(QApplication::focusWidget(), tabBar)
 
 A021 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:112
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QSignalSpy eventListTraffic(&view, &SongView::eventListVisibilityChanged);
         view.applyViewState(seeded);
@@ -371,8 +371,8 @@ Original expression:
         QCOMPARE(reopened->timeline().get(), beforeReload)
 
 A024 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:132
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         bool stateDropped = false;
         const auto reload = checks::async_wait::waitUntil(
@@ -390,8 +390,8 @@ Original expression:
         QCOMPARE(reload, checks::async_wait::Result::Ready)
 
 A025 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:133
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -430,8 +430,8 @@ Original expression:
         QCOMPARE(eventListTraffic.count(), 0)
 
 A030 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:138
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -525,8 +525,8 @@ Original expression:
         QVERIFY(waitForTabReady(workspace, b))
 
 A041 | MainWindowRoutingLifecycleTest::selectionDuringReloadFocusesWhenReady | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:163
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QWidget *const focused = QApplication::focusWidget();
 Original expression:
@@ -966,8 +966,8 @@ Original expression:
         QVERIFY(!old->document().isDirty())
 
 A084 | MainWindowRoutingLifecycleTest::failedOpenPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:337
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         workspace.requestSongOpen(old->name());
         workspace.requestProjectOpenAt(session->fixture->root() +
@@ -1170,8 +1170,8 @@ Original expression:
         QCOMPARE(reopenedB->document().undoStack()->count(), undoB)
 
 A106 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:383
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QCloseEvent close;
         QApplication::sendEvent(&window, &close);
@@ -1179,16 +1179,16 @@ Original expression:
         QVERIFY(close.isAccepted())
 
 A107 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:384
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(window.m_closeAccepted)
 
 A108 | MainWindowRoutingLifecycleTest::projectSwitchAndQuitPreserveState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:386
-Disposition: NATIVE
-Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         window.close();
 Original expression:
@@ -1225,8 +1225,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A112 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:400
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         ui::MouseHints &hints = mouseHints();
@@ -1235,8 +1235,8 @@ Original expression:
         QVERIFY(transport)
 
 A113 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:403
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QDial *const dial = transport->findChild<QDial *>();
         QComboBox *const combo = transport->findChild<QComboBox *>();
@@ -1244,8 +1244,8 @@ Original expression:
         QVERIFY(dial && combo)
 
 A114 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:408
-Disposition: NATIVE
-Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         // The packed transport toolbar overflows the fixture's 960px window
         // and hides the dial in the extension; widening relayouts it into
@@ -1255,8 +1255,8 @@ Original expression:
         QTRY_VERIFY(dial->isVisibleTo(&window))
 
 A115 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:416
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
 
         // QCursor::setPos injects a real spontaneous move through the
@@ -1269,8 +1269,8 @@ Original expression:
         QVERIFY(dialWindow)
 
 A116 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:426
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         const auto windowPoint = [dialWindow](QWidget *widget, const QPoint &local) {
             return dialWindow->mapFromGlobal(widget->mapToGlobal(local));
@@ -1285,8 +1285,8 @@ Original expression:
         QTRY_VERIFY(dial->underMouse())
 
 A117 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:427
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1301,8 +1301,8 @@ Original expression:
         QVERIFY(!dialProfile.isEmpty())
 
 A119 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:440
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // A real C++ drag on the output dial keeps the dial's profile for the
@@ -1318,16 +1318,16 @@ Original expression:
         QVERIFY(dial->value() < 50)
 
 A120 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:441
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(hints.currentSource() == dial && hints.currentText() == dialProfile)
 
 A121 | MainWindowRoutingLifecycleTest::mouseHintWidgetDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:445
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QCursor::setPos(combo->mapToGlobal(combo->rect().center()));
         QTest::mouseRelease(dialWindow, Qt::LeftButton, Qt::NoModifier,
@@ -1349,8 +1349,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A123 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:456
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         SongView &view = session->b->view();
         ui::MouseHints &hints = mouseHints();
@@ -1359,16 +1359,16 @@ Original expression:
         QVERIFY(canvas)
 
 A124 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:458
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
 Original expression:
         QVERIFY(plot)
 
 A125 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:472
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // A scrollable Quick scrollbar: the thumb drag is the ordinary QML
@@ -1387,8 +1387,8 @@ Original expression:
         QVERIFY2(scrollbar, "no scrollable Quick scrollbar is visible in the fixture")
 
 A126 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:477
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         const bool vertical = scrollbar->property("orientation").toInt() == int(Qt::Vertical);
@@ -1398,8 +1398,8 @@ Original expression:
         QVERIFY(thumbLength > 0)
 
 A127 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:485
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         const QPointF thumbLocal =
             vertical ? QPointF(scrollbar->width() / 2.0, thumbPos + thumbLength / 2.0)
@@ -1412,8 +1412,8 @@ Original expression:
         QTRY_VERIFY(hints.currentSource() == scrollbar && hints.currentText().isEmpty())
 
 A128 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:491
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // The drag retains the originating empty claim; releasing outside the
@@ -1424,8 +1424,8 @@ Original expression:
         QVERIFY(hints.currentSource() == scrollbar && hints.currentText().isEmpty())
 
 A129 | MainWindowRoutingLifecycleTest::mouseHintQuickDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:493
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QTest::mouseRelease(canvas, Qt::LeftButton, Qt::NoModifier, plotScene);
 Original expression:
@@ -1444,8 +1444,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A131 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:503
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         SongView &view = session->b->view();
         ui::MouseHints &hints = mouseHints();
@@ -1454,16 +1454,16 @@ Original expression:
         QVERIFY(canvas)
 
 A132 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:505
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QQuickItem *const headers = quickItem(view, QLatin1String("timelineTrackHeadersInput"));
 Original expression:
         QVERIFY(headers)
 
 A133 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:507
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         songview::TrackHeaderModel *const model = trackHeaders(view);
 Original expression:
@@ -1489,8 +1489,8 @@ Original expression:
         QVERIFY(title.has_value())
 
 A136 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:517
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         const uint64_t commitRevision = session->b->document().revision();
 
@@ -1538,8 +1538,8 @@ Original expression:
         QVERIFY(model->reorderIndicatorVisible())
 
 A140 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:539
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1567,8 +1567,8 @@ Original expression:
         QTRY_VERIFY(session->b->document().revision() > commitRevision)
 
 A142 | MainWindowRoutingLifecycleTest::mouseHintHeaderDragSettlesOnRelease | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:555
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1587,8 +1587,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A144 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:565
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         SongView &view = session->b->view();
         ui::MouseHints &hints = mouseHints();
@@ -1597,16 +1597,16 @@ Original expression:
         QVERIFY(canvas)
 
 A145 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:567
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QQuickItem *const plot = quickItem(view, QLatin1String("timelineRollInput"));
 Original expression:
         QVERIFY(plot)
 
 A146 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:570
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         hoverAt(*canvas, plot->mapToScene(plot->boundingRect().center()).toPoint());
@@ -1622,8 +1622,8 @@ Original expression:
         QVERIFY(!profile.isEmpty())
 
 A148 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:576
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // Keyboard focus changes under a stationary pointer leave the
@@ -1640,8 +1640,8 @@ Original expression:
         QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders)
 
 A150 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:578
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1656,8 +1656,8 @@ Original expression:
         QCOMPARE(hints.currentText(), profile)
 
 A152 | MainWindowRoutingLifecycleTest::mouseHintSurvivesFocusChange | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:582
-Disposition: NATIVE
-Mapping/reason: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Asserts QObject hint-source identity (or its absence) from real Qt hover/drag delivery. A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QTest::keyClick(canvas, Qt::Key_Tab);
         QCoreApplication::processEvents();
@@ -1685,8 +1685,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A155 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:594
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         ui::MouseHints &hints = mouseHints();
@@ -1696,16 +1696,16 @@ Original expression:
         QVERIFY(canvasB)
 
 A156 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:596
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         QQuickItem *const plotB = quickItem(viewB, QLatin1String("timelineRollInput"));
 Original expression:
         QVERIFY(plotB)
 
 A157 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:599
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         hoverAt(*canvasB, plotB->mapToScene(plotB->boundingRect().center()).toPoint());
@@ -1721,8 +1721,8 @@ Original expression:
         QVERIFY(!hints.currentText().isEmpty())
 
 A159 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:605
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // Switching to another real tab hides B's canvas; its hint dies with
@@ -1732,8 +1732,8 @@ Original expression:
         QTRY_VERIFY(hints.currentSource() != plotB)
 
 A160 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:610
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // Hovering A's canvas claims its own source.
@@ -1743,16 +1743,16 @@ Original expression:
         QVERIFY(canvasA)
 
 A161 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:612
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Test-harness precondition of the retired native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp, no longer built or run); it asserts only fixture/object/window scaffolding with no consumer-visible behavior, and that harness was its only ingress.
 Source context since previous assertion:
         QQuickItem *const plotA = quickItem(viewA, QLatin1String("timelineRollInput"));
 Original expression:
         QVERIFY(plotA)
 
 A162 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:614
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
         hoverAt(*canvasA, plotA->mapToScene(plotA->boundingRect().center()).toPoint());
 Original expression:
@@ -1767,8 +1767,8 @@ Original expression:
         QVERIFY(!hints.currentText().isEmpty())
 
 A164 | MainWindowRoutingLifecycleTest::mouseHintDiesWithItsTab | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:621
-Disposition: NATIVE
-Mapping/reason: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Native widget or Quick-item delivery/visibility obligation (transport controls, canvases, headers, scrollbars, dials). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
         // Closing the hovered tab destroys the source; the service releases
@@ -2746,13 +2746,15 @@ S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_Shel
     destination is active when the close-all walk begins") at :512-514; then
     compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab") at :521.
 
-S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:531
-    var discard = findChild(shell, "songTabDiscard") with verify(discard && discard.visible, "the
-    close gate exposes Discard") at :524-525; mouseClick(discard, discard.width / 2,
-    discard.height / 2) at :526 then verify(waitForNative(function() { return
-    shell.shellPresenter.closeReady && tabs.tabCount === 0 && shell.sceneLoader.item === null },
-    5000), "Discard advances the remaining clean tab and detaches the scene") at :527-530;
-    compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved") at :531.
+S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:515-522
+  var discard = findChild(shell, "songTabDiscard")
+  verify(discard && discard.visible, "the close gate exposes Discard")
+  mouseClick(discard, discard.width / 2, discard.height / 2)
+  verify(waitForNative(function() {
+      return shell.shellPresenter.closeReady && tabs.tabCount === 0
+          && shell.sceneLoader.item === null
+  }, 5000), "Discard advances the remaining clean tab and detaches the scene")
+  compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved")
 
 S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:602
     test_d :476-479 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,

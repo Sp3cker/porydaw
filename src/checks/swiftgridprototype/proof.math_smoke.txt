@@ -194,83 +194,83 @@ int32_t sgm_pitch_y_to_pitch(const uint8_t *pitches, size_t count, double y, dou
 
 Swift assertion predicates
 
-S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
-report.expect(near(compact.snapshot.viewportWidth, 50) &&
-                  near(compact.snapshot.minHScroll, -48) &&
-                  near(compact.snapshot.maxHScroll, 0),
-                  cppID: cameraTransformID,
-                  message: "caller-resolved minimum viewport produces observable camera bounds")
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16-20
+  report.expect(gridCameraNear(compact.snapshot.viewportWidth, 50) &&
+                gridCameraNear(compact.snapshot.minHScroll, -48) &&
+                gridCameraNear(compact.snapshot.maxHScroll, 0),
+                cppID: cameraTransformID,
+                message: "caller-resolved minimum viewport produces observable camera bounds")
 
-S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
-report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
-                  message: "tick/content transforms round-trip with a fractional offset")
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26-27
+  report.expect(gridCameraNear(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+                message: "tick/content transforms round-trip with a fractional offset")
 
-S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
-report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
-                  message: "horizontal restoration preserves fractional offsets")
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28-29
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+                message: "horizontal restoration preserves fractional offsets")
 
-S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
-report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
-                  cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30-31
+  report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+                cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
 
-S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
-report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
-                  cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33-34
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
+                cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
 
-S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
-report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
-                  message: "bound timeline end reaches the plot origin")
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36-37
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+                message: "bound timeline end reaches the plot origin")
 
-S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
-report.expect(near(viewportCamera.snapshot.scrollX, -48),
-                  cppID: cameraTransformID,
-                  message: "bound viewport shrink reclamps the changed pre-roll floor")
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43-45
+  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, -48),
+                cppID: cameraTransformID,
+                message: "bound viewport shrink reclamps the changed pre-roll floor")
 
-S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
-report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
-                  cppID: cameraTransformID,
-                  message: "bound viewport updates preserve a legal fractional offset")
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48-50
+  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
+                cppID: cameraTransformID,
+                message: "bound viewport updates preserve a legal fractional offset")
 
 S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
 report.expect(zoom.zoomChanged && zoom.scrollChanged &&
                   near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
                   message: "interactive time zoom preserves its tick anchor")
 
-S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
-report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
-                  !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
-                  cppID: cameraZoomID,
-                  message: "time zoom reaches its bound when the pointer anchor is unreachable")
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65-68
+  report.expect(gridCameraNear(clampedTimeZoom.snapshot.scrollX, 64) &&
+                !gridCameraNear(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+                cppID: cameraZoomID,
+                message: "time zoom reaches its bound when the pointer anchor is unreachable")
 
-S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
-report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
-                  near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
-                  near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
-                  message: "unanchored restoration keeps valid fractional camera state")
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70-73
+  report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, 48) &&
+                gridCameraNear(camera.snapshot.keyHeight, 16) && gridCameraNear(camera.snapshot.scrollX, 10.5) &&
+                gridCameraNear(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+                message: "unanchored restoration keeps valid fractional camera state")
 
-S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
-report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
-                  near(sanitized.snapshot.keyHeight, 12) &&
-                  near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
-                  cppID: cameraZoomID,
-                  message: "restoration sanitizes non-finite transient view-state values independently")
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78-82
+  report.expect(gridCameraNear(sanitized.snapshot.pixelsPerBeat, 32) &&
+                gridCameraNear(sanitized.snapshot.keyHeight, 12) &&
+                gridCameraNear(sanitized.snapshot.scrollX, 0) && gridCameraNear(sanitized.snapshot.scrollY, 0),
+                cppID: cameraZoomID,
+                message: "restoration sanitizes non-finite transient view-state values independently")
 
-S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
-report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
-                  message: "content shrink reclamps the horizontal offset")
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86-87
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+                message: "content shrink reclamps the horizontal offset")
 
-S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
-report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
-                  cppID: cameraTransformID,
-                  message: "viewport growth reclamps vertical content")
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89-91
+  report.expect(gridCameraNear(camera.snapshot.viewportWidth, 800) && gridCameraNear(camera.snapshot.scrollY, 0),
+                cppID: cameraTransformID,
+                message: "viewport growth reclamps vertical content")
 
-S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
-report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
-                  message: "an unbound timeline homes to its lead pad")
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93-94
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+                message: "an unbound timeline homes to its lead pad")
 
-S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
-report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
-                  message: "unbound viewport updates follow the resolved home")
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96-97
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+                message: "unbound viewport updates follow the resolved home")
 
 S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
 report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
@@ -294,33 +294,33 @@ report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
                   folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
                   cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
 
-S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
-report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
-                       10) &&
-                  folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
-                  folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
-                  cppID: cameraPitchID,
-                  message: "fractional DPR snapping defines the inverse row boundary")
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119-124
+  report.expect(gridCameraNear(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+                     10) &&
+                folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
+                folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
+                cppID: cameraPitchID,
+                message: "fractional DPR snapping defines the inverse row boundary")
 
-S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
-report.expect(near(projectedContent.snapshot.scrollY, 15),
-                  cppID: cameraPitchID,
-                  message: "pitch projection shrink reclamps the vertical offset")
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131-133
+  report.expect(gridCameraNear(projectedContent.snapshot.scrollY, 15),
+                cppID: cameraPitchID,
+                message: "pitch projection shrink reclamps the vertical offset")
 
-S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
-report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
-                  message: "vertical bounds derive from projected row height")
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139-140
+  report.expect(gridCameraNear(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+                message: "vertical bounds derive from projected row height")
 
-S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
-report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
-                  message: "pitch zoom preserves its row anchor when bounds permit")
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146-147
+  report.expect(gridCameraNear(anchoredRow, resultingRow), cppID: cameraZoomID,
+                message: "pitch zoom preserves its row anchor when bounds permit")
 
-S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
-report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
-                  near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
-                  !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
-                  cppID: cameraZoomID,
-                  message: "pitch zoom reaches its bound when the row anchor is unreachable")
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159-163
+  report.expect(gridCameraNear(clampedPitchZoom.snapshot.scrollY, 0) &&
+                gridCameraNear(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                !gridCameraNear(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+                cppID: cameraZoomID,
+                message: "pitch zoom reaches its bound when the row anchor is unreachable")
 
 S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
 report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
@@ -354,65 +354,65 @@ report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
                   near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
                   message: "wide range reveal honors the requested trailing edge")
 
-S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:261
 report.expect(
             after.pixelsPerBeat > before.pixelsPerBeat
                 && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
                 && counters.camera == publications + 1,
             cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
-S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:274
 report.expect(
         session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
         cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
 
-S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:289
 report.expect(
         gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
             && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
                     angleZoom * pow(1.0015, 120), tolerance: 1e-7),
         cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
 
-S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:294
 report.expect(
         counters.camera == 2,
         cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
 
-S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:304
 report.expect(
         gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
         cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
 
-S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:319
 report.expect(
         gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
             && minimumPublications == 1 && counters.camera == minimumPublications,
         cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
 
-S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:336
 report.expect(
         gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
             && maximumPublications == 1 && counters.camera == maximumPublications,
         cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
 
-S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:347
 report.expect(
         gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
         cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
 
-S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:359
 report.expect(
         pitchAfter.keyHeight > pitchBefore.keyHeight
             && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
             && counters.camera == 1,
         cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
 
-S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:370
 report.expect(
         session.camera.snapshot == pitchMomentum && counters.camera == 0,
         cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
 
-S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:380
 report.expect(
         gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
         cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")

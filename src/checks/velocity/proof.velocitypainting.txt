@@ -23,7 +23,7 @@ established; NATIVE-SETUP identifies a retained C++ loader/window/input precondi
 RETIRED-REPRESENTATION marks a C++ mechanism with no Swift ingress whose
 consumer-visible effect is carried by the predicates cited in its mapping.
 A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Unresolved entries remain work.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
