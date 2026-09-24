@@ -110,6 +110,7 @@ TestCase {
         verify(bootstrap.prepareSongDockFixture(), "staged project has a stray and partial registration")
         const settings = settingsComponent.createObject(testCase)
         verify(settings !== null, "QtCore settings is available")
+        settings.setValue("lastProjectDir", "")
         settings.setValue("swiftDock/columnWidth", 280)
         settings.setValue("swiftDock/songsRatio", 0.5)
         settings.sync()
@@ -316,9 +317,64 @@ TestCase {
                "deleting with the checked option removes the unused voicegroup source")
     }
 
+    function test_constrainedVoiceEditorRemainsScrollable() {
+        const settings = settingsComponent.createObject(testCase)
+        verify(settings !== null, "QtCore settings is available")
+        settings.setValue("lastProjectDir", "")
+        settings.setValue("swiftDock/columnWidth", 280)
+        settings.setValue("swiftDock/songsRatio", 0.5)
+        settings.sync()
+        settings.destroy()
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production window loads")
+        shell.height = 380
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return session.songOpen || session.lastSaveError.length > 0 },
+                             30000), "the fixture bank loads: " + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        const dock = findChild(shell, "swiftDockColumn")
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        verify(editor !== null, "the form is mounted inside the scroller")
+        verify(dock !== null && scroll !== null, "the mounted voice pane has an editor scroller")
+        compare(dock.width, 280, "selecting a voice never expands the saved dock width")
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true, 5000)
+        for (const slot of [4, 0]) {
+            voice.selectSlot(slot)
+            tryCompare(voice.editorModel(), "editable", true, 5000,
+                       "the chosen bank voice becomes editable after loading")
+            waitForRendering(editor)
+            tryVerify(function() { return scroll.contentHeight > scroll.height + 1 }, 3000,
+                      "the selected form extends below the constrained viewport: "
+                      + scroll.contentHeight + " vs " + scroll.height)
+            scroll.contentY = 0
+            const type = findChild(shell, "vgTypeCombo")
+            verify(type !== null && type.visible, "the type selector is mounted")
+            const top = type.mapToItem(scroll, 0, 0)
+            verify(top.y >= 0 && top.y + type.height <= scroll.height + 1,
+                   "the type selector is visible at the start of the form")
+            mouseWheel(scroll, 1, scroll.height / 2, 0, -120)
+            tryVerify(function() { return scroll.contentY > 0 }, 3000,
+                      "a wheel gesture advances the constrained editor form")
+            scroll.contentY = scroll.contentHeight - scroll.height
+            const release = findChild(editor, "vgReleaseSpin")
+            verify(release !== null && release.visible, "the release control is mounted")
+            const origin = release.mapToItem(scroll, 0, 0)
+            verify(origin.y >= 0 && origin.y + release.height <= scroll.height + 1
+                   && origin.x >= 0 && origin.x + release.width <= scroll.width + 1,
+                   "the release control is reachable within the dock's viewport")
+            compare(dock.width, 280, "CGB and DirectSound selection keep the saved width")
+        }
+    }
+
     function test_voicegroupPaneStackedAndRatioRestores() {
         const settings = settingsComponent.createObject(testCase)
         verify(settings !== null, "QtCore settings is available")
+        settings.setValue("lastProjectDir", "")
         settings.setValue("swiftDock/columnWidth", 280)
         settings.setValue("swiftDock/songsRatio", 0.3)
         settings.sync()

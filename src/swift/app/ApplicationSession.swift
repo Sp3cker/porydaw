@@ -74,6 +74,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var isDisposed = false
     private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
+    private var startupRestoreTask: Task<Void, Never>?
     private var pendingProjectSwitch: ProjectSwitchCandidate?
     private var settingsApplicationName = ""
     private var editorLanes = EditorLaneState()
@@ -739,9 +740,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 closeCancelled()
                 return
             }
-            activeReplacementTask = Task { [weak self] in
-                await self?.finishProjectSwitch(pending)
+            let replacement = Task { [weak self] in
+                guard let self else { return }
+                await self.finishProjectSwitch(pending)
             }
+            activeReplacementTask = replacement
+            if pending.restore != nil { startupRestoreTask = replacement }
             return
         }
         if !closed {
@@ -817,15 +821,22 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func requestProjectSwitch(path: String, label: String?) {
+        // A deliberate open wins over a recipe still loading in the background.
+        startupRestoreTask?.cancel()
+        startupRestoreTask = nil
+        if let pending = pendingProjectSwitch, pending.restore != nil {
+            pendingProjectSwitch = nil
+            Task { await pending.service.close() }
+        }
         startProjectSwitch(path: path, label: label, restore: nil)
     }
 
     private func startProjectSwitch(path: String, label: String?,
                                     restore: WorkspaceTabRecipe?) {
         let priorTask = activeReplacementTask
-        activeReplacementTask = Task { [weak self] in
+        let replacement = Task { [weak self] in
             _ = await priorTask?.value
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             self.lastSaveError = ""
             let service = ProjectService()
             do {
@@ -850,6 +861,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 }
             } catch {
                 await service.close()
+                guard !Task.isCancelled else { return }
                 if restore != nil, !self.settingsApplicationName.isEmpty {
                     EditorViewStateCodec.saveTabs(
                         WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
@@ -858,6 +870,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 self.failOpen(String(describing: error))
             }
         }
+        activeReplacementTask = replacement
+        if restore != nil { startupRestoreTask = replacement }
     }
 
     /// Opens `label` after every earlier open has finished: one open at a time,
@@ -914,7 +928,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                                      workspace: workspace, app: self)
             songTabs.add(tab, at: index)
         } catch {
-            failOpen(String(describing: error))
+            if !Task.isCancelled { failOpen(String(describing: error)) }
         }
     }
 
@@ -1035,6 +1049,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         await releaseTabs()
         await catalogService?.close()
         guard !isDisposed, !Task.isCancelled else {
+            isReplacingProject = false
             await candidate.service.close()
             return
         }
@@ -1060,6 +1075,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let restored = recipe.normalized(available: candidate.labels)
             isRestoringTabs = true
             for song in restored.orderedSongs {
+                guard !Task.isCancelled else { break }
                 await openTab(label: song, at: nil)
             }
             if let selected = songTabs.tab(label: restored.selectedSong) {

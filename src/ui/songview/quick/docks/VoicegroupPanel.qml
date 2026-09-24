@@ -228,12 +228,31 @@ ColumnLayout {
         }
     }
 
-    VoiceEditor {
-        id: voiceEditor
-        objectName: "voicegroupEditorSurface"
+    Flickable {
+        id: editorScroll
+        objectName: "voiceEditorScrollView"
         Layout.fillWidth: true
-        controller: panel.controller
-        palette: panel.palette
-        baseFontPx: panel.baseFontPx
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
+        Layout.preferredHeight: voiceEditor.Layout.preferredHeight
+        Layout.maximumHeight: voiceEditor.Layout.preferredHeight
+        Layout.leftMargin: Math.round(panel.baseFontPx * 0.33)
+        Layout.rightMargin: Math.round(panel.baseFontPx * 0.25)
+        Layout.topMargin: Math.round(panel.baseFontPx * 0.33)
+        contentWidth: width
+        contentHeight: voiceEditor.Layout.preferredHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+        VoiceEditor {
+            id: voiceEditor
+            objectName: "voicegroupEditorSurface"
+            width: editorScroll.width
+            height: editorScroll.contentHeight
+            controller: panel.controller
+            palette: panel.palette
+            baseFontPx: panel.baseFontPx
+        }
     }
 }
