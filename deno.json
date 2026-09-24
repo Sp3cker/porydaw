@@ -15,6 +15,7 @@
     "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts",
     "proof": "deno run --allow-read=src/checks,build/proof-evidence tools/proof_reader.ts",
     "proof:edit": "deno run --allow-read=src/checks --allow-write=src/checks tools/proof_editor.ts",
+    "proof:compact": "deno run --allow-read=src/checks --allow-write=src/checks --allow-run=git tools/proof_compact.ts",
     "lsp:swift": "python3 tools/gen_swift_compdb.py --index",
     "worktree:create": "deno run --allow-read --allow-write --allow-run tools/worktree.ts create"
   },

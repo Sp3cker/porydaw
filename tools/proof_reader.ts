@@ -36,6 +36,11 @@ An S entry names its predicate without a line number and carries one Anchor: lin
   Anchor: deleted
       The cited file no longer exists; the entry is historical.
 
+Compact ledger form: closed rows (MATCHED, RETIRED-*, NATIVE-*) carry only their
+header, Disposition, and one S-citing Mapping line; S entries carry only header
+plus Anchor. Stripped C++ is recoverable via
+  \`git show <Reference revision>:<Original path>\` (SHA-pinned in the preamble).
+
 To preview or apply an exact edit to one proof entry: deno task proof:edit --help
 
 Paths are relative to src/checks; an unambiguous C++ basename also works.

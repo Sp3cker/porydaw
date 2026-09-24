@@ -12,6 +12,10 @@ const HELP =
   Preview an exact, unique replacement within one proof entry. --apply writes it.
   A disposition change must also change that site's Mapping or Mapping/reason line.
   An S edit must keep exactly one Anchor: line that resolves to its cited source.
+  Closed rows (MATCHED, RETIRED-*, NATIVE-*) stay compact: --apply rejects edits
+  that add Source context or Original expression lines back to them, and S edits
+  that add body lines beyond header plus Anchor. Stripped C++ is recoverable via
+  \`git show <Reference revision>:<Original path>\` from the ledger preamble.
   The command preserves entry IDs and validates proof structure, but cannot prove
   source freshness, execution, or correspondence. Inspect the source first.
 
@@ -72,6 +76,37 @@ function assertPreserved(
         );
       }
     }
+  }
+}
+
+function assertCompact(before: string, after: string, status?: string): void {
+  if (status !== undefined) {
+    if (
+      status !== "MATCHED" && !status.startsWith("RETIRED-") &&
+      !status.startsWith("NATIVE")
+    ) return;
+    for (
+      const marker of [
+        "Source context since previous assertion:",
+        "Original expression:",
+      ]
+    ) {
+      if (!before.includes(marker) && after.includes(marker)) {
+        throw new Error(
+          `closed ${status} rows stay compact: ${marker} belongs in git history, not the ledger`,
+        );
+      }
+    }
+    return;
+  }
+  const bulk = (text: string): number =>
+    text.split("\n").slice(1).filter((line) =>
+      line.trim() && !line.trim().startsWith("Anchor:")
+    ).length;
+  if (bulk(after) > bulk(before)) {
+    throw new Error(
+      "S entries stay compact: header plus one Anchor: line only, no added body lines",
+    );
   }
 }
 
@@ -154,11 +189,10 @@ async function replace(
     );
   }
   const changed = text.replace(before, after);
-  if (
-    current.predicates.some((predicate) =>
-      predicate.id.toUpperCase() === id.toUpperCase()
-    )
-  ) {
+  const isPredicate = current.predicates.some((predicate) =>
+    predicate.id.toUpperCase() === id.toUpperCase()
+  );
+  if (isPredicate) {
     await assertAnchorResolves(changed);
   }
   const result = [
@@ -168,6 +202,14 @@ async function replace(
   ].join(newline);
   const updated = parseProof(proof.path, result);
   assertPreserved(current, updated, site);
+  if (apply && (site !== undefined || isPredicate)) {
+    assertCompact(
+      text,
+      changed,
+      updated.sites.find((entry) => site !== undefined && entry.id === site.id)
+        ?.status,
+    );
+  }
   console.log(
     `${proof.path}:${start + 1} ${id} ${
       apply ? "applying" : "preview (not written)"
