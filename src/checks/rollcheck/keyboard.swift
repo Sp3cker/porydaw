@@ -5,6 +5,7 @@ import PorydawCore
 @MainActor
 func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardTranspose(report, session: session)
+    checkKeyboardKeepsEditedNoteVisible(report, session: session)
     checkKeyboardResizeNotes(report, session: session)
     checkTimelineInsertBlankTimeTracks(report, session: session)
     checkTimelineInsertBlankTimeLanes(report, session: session)
@@ -123,6 +124,110 @@ private func checkKeyboardTranspose(_ report: CheckReport, session: DocumentSess
         report.expect(session.document.note(seed.id).map {
             $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
         } == true, cppID: id, message: "Left snaps the off-grid note back to the lattice")
+    }
+}
+
+@MainActor
+private func checkKeyboardKeepsEditedNoteVisible(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::keyboardKeepVisible"
+    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+        let originalState = session.document.state
+        let originalIdentity = session.document.history.currentIdentity
+        session.document.nudgeNotes([seed.id], byTicks: Int64(seed.snap), byKeys: -11)
+        session.setSelectedNotes([seed.id])
+        guard let parked = session.document.note(seed.id) else {
+            report.fail(id, "the keep-visible seed is missing after setup")
+            return
+        }
+        report.expect(parked.tick == seed.tick + seed.snap
+            && Int(parked.pitch) == seed.pitch - 11,
+            cppID: id, message: "the keep-visible seed reaches its parked pitch and tick")
+        let parkedPitch = Int(parked.pitch)
+        let row = session.camera.projection.row(forPitch: parkedPitch)
+        let height = session.camera.snapshot.keyHeight
+        _ = session.mutateCamera {
+            _ = $0.setVScroll(Double(row + 1) * height)
+        }
+        report.expect(Double(row) * height - session.camera.snapshot.scrollY < 0,
+                      cppID: id, message: "the selected note is parked above the roll")
+        grid.performCommand(command: EditCommand.transposeUp.rawValue)
+        guard let transposed = session.document.note(seed.id) else {
+            report.fail(id, "transpose lost the keep-visible note")
+            return
+        }
+        let snapshot = session.camera.snapshot
+        let top = Double(session.camera.projection.row(forPitch: Int(transposed.pitch)))
+            * snapshot.keyHeight - snapshot.scrollY
+        report.expect(Int(transposed.pitch) == parkedPitch + 1 && transposed.tick == parked.tick,
+                      cppID: id, message: "Up transposes the parked note one semitone")
+        report.expect(top >= 0 && top + snapshot.keyHeight <= snapshot.rollHeight,
+                      cppID: id, message: "Up keeps the parked note fully within the roll")
+
+        grid.performCommand(command: EditCommand.transposeDown.rawValue)
+        let parkedTick = parked.tick
+        let dpr = grid.devicePixelRatio
+        _ = session.mutateCamera {
+            _ = $0.setHScroll($0.contentX(tick: Double(parkedTick + seed.snap)) + 1 / dpr)
+        }
+        report.expect(session.camera.displayX(tick: Double(parkedTick + seed.snap),
+                                               origin: 0, dpr: dpr) < 0,
+                      cppID: id, message: "the next nudge starts left of the viewport")
+        grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+        guard let nudged = session.document.note(seed.id) else {
+            report.fail(id, "nudge lost the keep-visible note")
+            return
+        }
+        let startX = session.camera.displayX(tick: Double(nudged.tick), origin: 0, dpr: dpr)
+        report.expect(nudged.tick == parkedTick + seed.snap && startX == 0,
+                      cppID: id, message: "Right reveals the parked note at the left edge")
+        let cellWidth = session.camera.contentX(tick: Double(parkedTick + 2 * seed.snap))
+            - session.camera.contentX(tick: Double(parkedTick + seed.snap))
+        let rideCount = Int(ceil(session.camera.snapshot.viewportWidth / cellWidth)) + 2
+        var expectedTick = UInt64(nudged.tick)
+        var everyRideVisible = true
+        for _ in 0..<rideCount {
+            grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+            expectedTick += UInt64(seed.snap)
+            guard let current = session.document.note(seed.id) else {
+                report.fail(id, "repeated nudge lost the keep-visible note")
+                return
+            }
+            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
+            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+                                                              + UInt64(current.duration)),
+                                                origin: 0, dpr: dpr)
+            everyRideVisible = everyRideVisible && left >= 0
+                && right <= session.camera.snapshot.viewportWidth - 1 / dpr
+        }
+        report.expect(session.document.note(seed.id).map { UInt64($0.tick) == expectedTick } == true,
+                      cppID: id, message: "the note rides right by every requested snap step")
+        report.expect(everyRideVisible, cppID: id,
+                      message: "every Right nudge keeps the whole note in the viewport")
+        var everyReturnVisible = true
+        for _ in 0..<(rideCount + 1) {
+            grid.performCommand(command: EditCommand.nudgeLeft.rawValue)
+            guard let current = session.document.note(seed.id) else {
+                report.fail(id, "return nudge lost the keep-visible note")
+                return
+            }
+            let left = session.camera.displayX(tick: Double(current.tick), origin: 0, dpr: dpr)
+            let right = session.camera.displayX(tick: Double(UInt64(current.tick)
+                                                              + UInt64(current.duration)),
+                                                origin: 0, dpr: dpr)
+            everyReturnVisible = everyReturnVisible && left >= 0
+                && right <= session.camera.snapshot.viewportWidth - 1 / dpr
+        }
+        report.expect(everyReturnVisible, cppID: id,
+                      message: "every Left nudge keeps the whole note in the viewport")
+        report.expect(session.document.note(seed.id).map {
+            $0.tick == parked.tick && $0.pitch == parked.pitch
+        } == true, cppID: id, message: "riding left returns the same note to its parked position")
+        while session.document.history.currentIdentity != originalIdentity
+            && session.document.history.canUndo {
+            guard session.document.history.undoDocument() else { break }
+        }
+        report.expect(session.document.state == originalState,
+                      cppID: id, message: "undo restores the pre-gesture song bytes")
     }
 }
 

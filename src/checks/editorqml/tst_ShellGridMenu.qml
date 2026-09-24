@@ -279,6 +279,52 @@ TestCase {
         tryCompare(headers, "menuOpen", false)
     }
 
+    function test_shiftRightRollSweepOpensCanonicalTimeMenu() {
+        var session = openSong()
+        var roll = control("swiftRollInput")
+        var grid = surface().gridModel
+        var startX = roll.width * 0.3
+        var endX = roll.width * 0.6
+        var midX = (startX + endX) / 2
+        var notes = JSON.parse(grid.noteSummary)
+        var y = -1
+        for (var row = Math.ceil(grid.cameraScrollY / grid.rowHeight);
+             row < Math.min(128, Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight));
+             ++row) {
+            var pitch = 127 - row
+            var occupied = notes.some(function(note) {
+                var left = note.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+                var right = (note.tick + note.duration) * grid.beatWidth
+                    / grid.ticksPerBeat - grid.cameraScrollX
+                return note.pitch === pitch && left < endX && right > startX
+            })
+            if (!occupied) {
+                y = (row + 0.5) * grid.rowHeight - grid.cameraScrollY
+                break
+            }
+        }
+        verify(y > 0 && y < roll.height, "an empty visible roll row is available")
+        var revision = grid.appliedRevisionText
+        mousePress(roll, startX, y, Qt.RightButton, Qt.ShiftModifier)
+        mouseMove(roll, endX, y, -1, Qt.RightButton, Qt.ShiftModifier)
+        compare(session.gridCommandAvailable(0), true, "Copy is available during the sweep")
+        compare(session.gridCommandAvailable(2), true, "Duplicate Time is available during the sweep")
+        compare(session.gridCommandAvailable(17), true, "Clear Time Selection is available during the sweep")
+        mouseRelease(roll, endX, y, Qt.RightButton, Qt.ShiftModifier)
+        compare(grid.appliedRevisionText, revision, "sweeping selection does not edit notes")
+        mouseClick(roll, midX, y, Qt.RightButton)
+        var menu = panel()
+        tryCompare(menu, "rowCount", 9)
+        compare(menu.rowItem(0).itemData.actionId, 11)
+        verify(menu.rowItem(0).itemData.enabled,
+               "Copy is enabled in the rendered time menu after sweep")
+        compare(menu.rowItem(4).itemData.actionId, 6)
+        verify(menu.rowItem(4).itemData.enabled,
+               "Duplicate Time is enabled in the rendered time menu after sweep")
+        keyClick(Qt.Key_Escape)
+        tryCompare(surface().rulerMenu, "isOpen", false)
+    }
+
     function test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels() {
         openSong()
         var ruler = control("timelineRulerInput")

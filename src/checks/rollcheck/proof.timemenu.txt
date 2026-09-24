@@ -9,7 +9,9 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS (controller, 10.17s).
-Counts: MATCHED 1, PARTIAL 0, GAP 59, NATIVE 40.
+Command: deno task verify:shell --verbose --filter shell-grid-menu --qt ShellGridMenu::test_shiftRightRollSweepOpensCanonicalTimeMenu
+Result: PASS — 1/19 ok (local mounted ShellWindow test; shift-right roll sweep exposes time commands and rendered menu).
+Counts: MATCHED 7, PARTIAL 2, GAP 81, RETIRED-REPRESENTATION 10.
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: GAP
@@ -1018,90 +1020,39 @@ A090 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/check
 Disposition: RETIRED-REPRESENTATION
 
 A091 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:501
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
-Source context since previous assertion:
-  ;
-      const qreal pressX = check.view().camera().displayX(double(pressTick), 0.0, rows.dpr());
-      const qreal dragX = check.view().camera().displayX(double(dragTick), 0.0, rows.dpr());
-      const qreal sweepY = rows.centerY(emptyKey);
-      checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonPress, QPointF(pressX, sweepY),
-                                Qt::RightButton, Qt::RightButton, Qt::ShiftModifier);
-      for (int step = 1; step <= 4; ++step) {
-          const QPointF pos(pressX + (dragX - pressX) * double(step) / 4.0, sweepY);
-          checks::events::sendMouse(check.rollInput(), QEvent::MouseMove, pos, Qt::NoButton,
-                                    Qt::RightButton, Qt::ShiftModifier);
-      }
-      const songview::EditorSelectionModel::TimeSelection swept =
-          view.selectionModel().timeSelection();
-Original expression:
-  QVERIFY2(swept.active() && swept.endTick > swept.startTick,
-               "the Shift+right-drag did not sweep a time selection")
+Disposition: MATCHED
+Mapping: S002
 
 A092 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:506
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
-Source context since previous assertion:
-  ;
-      // Still holding the button: the gesture is live, but the cached actions
-      // must already carry the swept selection's eligibility.
-      const songview::EditActions *actions = view.editActions();
-Original expression:
-  QVERIFY2(actions, "the swept view has no bound canonical actions")
+Disposition: RETIRED-REPRESENTATION
+Mapping: Native QAction pointer presence is replaced by the session's command-availability API.
 
 A093 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:507
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(actions->action(SongView::EditCommand::Copy)->isEnabled(),
-               "the live sweep gesture left Copy cached as disabled")
+Disposition: MATCHED
+Mapping: S003
 
 A094 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:509
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
-               "the live sweep gesture left Duplicate Time cached as disabled")
+Disposition: MATCHED
+Mapping: S004
 
 A095 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:511
-Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(actions->action(SongView::EditCommand::ClearTimeSelection)->isEnabled(),
-               "the live sweep gesture left Clear cached as disabled")
+Disposition: MATCHED
+Mapping: S002
 
 A096 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:520
 Disposition: RETIRED-REPRESENTATION
 
 A097 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:522
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const int copyRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Copy);
-Original expression:
-  QVERIFY2(copyRow >= 0 && opened.model->itemAt(copyRow)->enabled,
-               "Copy was greyed in the menu after a real sweep")
+Disposition: MATCHED
+Mapping: S005
 
 A098 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:525
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const int duplicateRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Duplicate);
-Original expression:
-  QVERIFY2(duplicateRow >= 0 && opened.model->itemAt(duplicateRow)->enabled,
-               "Duplicate Time was greyed in the menu after a real sweep")
+Disposition: MATCHED
+Mapping: S006
 
 A099 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:531
 Disposition: GAP
-Mapping/reason: GAP — menu-row enablement observation (Duplicate Time enabled after a real sweep) with no Swift menu surface; the Swift counterpart never opens the native time-selection menu. Closed by a Swift predicate observing the duplicate-command enablement for the sweep selection.
+Mapping/reason: GAP — the sweep menu test does not create or locate the original fixture seed note before switching from time selection to note-only selection.
 Source context since previous assertion:
   ;
       // Note-only selection: the same canonical Duplicate command enables for
@@ -1114,7 +1065,7 @@ Original expression:
 
 A100 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:534
 Disposition: GAP
-Mapping/reason: GAP: the shared time-selection menu itself is unported (no Swift menu surface; menu-row clicks, enablement, and menu-driven history depth below remain open). Only the insert-time document model is Swift-tested (S001).
+Mapping/reason: GAP — after clearing the time sweep and selecting a note, the mounted Swift menu test does not verify that Duplicate stays enabled for the note-only selection.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({seedNote.noteId});
@@ -1123,11 +1074,26 @@ Original expression:
                "a note-only selection left Duplicate cached as disabled")
 
 Swift executable assertion index
-This predicate runs in the green swiftcore projectSession suite; it establishes
-only the model undo restoration, not a rendered menu click.
+S001 proves model insertion undo in swiftcore; S002-S006 run in the mounted
+shell QML test and prove a roll-origin sweep and rendered-menu eligibility.
 
 S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
 Anchor: message "A088: one undo restores the bytes before time insertion"
+
+S002 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Clear Time Selection is available during the sweep"
+
+S003 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Copy is available during the sweep"
+
+S004 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Duplicate Time is available during the sweep"
+
+S005 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Copy is enabled in the rendered time menu after sweep"
+
+S006 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Duplicate Time is enabled in the rendered time menu after sweep"
 
 Remaining original source (closing sequence and helper bodies):
   ;
