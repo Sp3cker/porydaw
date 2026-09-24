@@ -5,28 +5,47 @@ Original: src/checks/selectionkey/corearrows.cpp
 Original SHA-256: 69dfaa2c94085416c2507de2b7167f5df3db2a327698490d34dda13bbe77d3e8
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
 
 Status and evidence
+Tally: MATCHED 0, PARTIAL 3, GAP 3, NATIVE 14.
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below. Source context preserves setup,
 rows, loops, and guards between assertions verbatim. S identifiers identify
-exact Swift predicates in the counterpart, listed after the inventory.
+exact Swift predicates in the counterparts, listed after the inventory.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 This file holds the core arrow-routing half of plan scenario 1 plus the
-mergeable-move undo proof. The declared Swift counterpart exercises only the
-numeric-prompt transaction (drawerOriginalNumericPromptTransaction); it has no
-predicate for band clicks, arrow moves, or undo history, so no site here is
-MATCHED or PARTIAL. Pure note/selection-state predicates are GAP (migration
-work a presenter-level Swift check could in principle establish); every
-observation requiring the native fixture, window, delivery, or focus is NATIVE.
+mergeable-move undo proof. The paired localinputtier_text.swift transaction
+(S001-S008) exercises only the numeric-prompt transaction
+(drawerOriginalNumericPromptTransaction) and asserts nothing about band clicks,
+arrow moves, or undo history. The frozen shellwindow lane
+(src/checks/editorqml/tst_ShellWindow.qml :: test_gEditorRoutedNoteKeysAndChromeArrows,
+S009-S014) delivers real arrow keys to the production roll and observes the
+selected note's transpose/nudge/length deltas, so A013, A014 and A018 are
+PARTIAL, each naming its unproved condition. The incidental band-click
+selection site (A007) and the fixture-presence guards (A011, A017) still have no
+Swift predicate and stay GAP; every observation requiring the native fixture,
+window, delivery, or focus is NATIVE.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose (controller-observed)
+Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok
+(5 skipped); run_checks PASS. That run executes the paired prompt-transaction
+predicates S001-S008 only.
+Command: deno task verify:shell --filter shellwindow --verbose
+(controller-observed)
+Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok
+(10 skipped); run_checks PASS. That run executes the shellwindow predicates
+S009-S014 through the shellwindow entry of ShellQmlTests.swift
+(src/checks/editorqml/ShellQmlTests.swift:46).
+The native C++ harness is not registered in this checkout (the swift_core_check
+source list carries only selectionkey/localinputtier_text.swift); its cases are
+reference inventories only, never current execution evidence.
 
 Execution ownership
 SelectionKeyCoreTest slots run on freshly assembled CoreFixture instances via
@@ -37,7 +56,11 @@ src/checks/workspace/SessionChecks.swift; it builds a
 drawerAutomationAutomationFixture (CC10 pan rows 48=32, 96=64) and drives the
 production Swift AutomationPage prompt. That fixture struct, defined in
 src/checks/automation/AutomationPageChecks.swift, carries no report predicates
-of its own.
+of its own. test_gEditorRoutedNoteKeysAndChromeArrows reaches the production
+editor through the shellwindow entry of ShellQmlTests.swift
+(src/checks/editorqml/ShellQmlTests.swift:46), which stages the
+mus_route101/mus_littleroot_test fixture and drives real QTest arrow delivery
+into the focused roll (S009-S014).
 
 Fixture, sequence and row constraints
 incidentalBandClickPreservesSelection_data registers 4 band rows (velocity,
@@ -264,9 +287,12 @@ Original expression:
 A007 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:159
 Disposition: GAP
 Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the eligible-selection equality below is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+established; the incidental band-click selection equality is pure selection
+state a presenter-level Swift check could in principle assert, but none does.
+The frozen shellwindow rows (S009) click the drawn velocity node and create a
+one-note selection; no predicate asserts that an incidental band click preserves
+an already eligible note selection. Original predicate and setup below remain an
+open obligation.
 Source context since previous assertion:
   ;
 
@@ -352,9 +378,10 @@ Original expression:
 A011 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:213
 Disposition: GAP
 Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; fixture-note presence is pure document state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
+established; the cross-band fixture note presence is a native harness
+precondition with no Swift counterpart (the shellwindow lane stages its own
+single selected velocity note instead, S009). Original predicate and setup below
+remain an open obligation.
 Source context since previous assertion:
   ;
       songView.selectionModel().setNoteSelection(selection);
@@ -390,12 +417,16 @@ Original expression:
                               .arg(QLatin1String(probe.label), direction)))
 
 A013 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:238
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; per-note key/tick positions are pure document state a
-presenter-level Swift check could in principle assert, but none does. This site
-expands over every fixture note per row. Original predicate and setup below
-remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S010-S013 in
+src/checks/editorqml/tst_ShellWindow.qml
+(test_gEditorRoutedNoteKeysAndChromeArrows) deliver real arrow keys to the
+focused production roll and observe the selected note transposition (Up +1,
+Down back, Shift+Up +12, Shift+Down back), its nudge (Right advances the tick,
+Left returns it) and its length (Shift+Right grows, Shift+Left restores).
+Unproved as stated: invariance of the unselected fixture notes, the exact
+snap-step tick delta (the shell row asserts only tick > original), and the
+four-band row expansion (velocity, voice changes, ruler, other events).
 Source context since previous assertion:
   ;
 
@@ -421,11 +452,15 @@ Original expression:
                            QString::number(expectedKey), QString::number(expectedTick))))
 
 A014 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:251
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; post-arrow selection equality is pure selection state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S014 in
+src/checks/editorqml/tst_ShellWindow.qml
+(test_gEditorRoutedNoteKeysAndChromeArrows): the edited source note stays
+selected and resolvable by its original id after every routed arrow
+(compare(selection.length, 1, "the edited source note stays selected")).
+Unproved as stated: full noteSelection() vector equality over the whole
+selection (the shell row tracks the single source note, not the pair) and the
+four-band row expansion.
 Source context since previous assertion:
   ;
       }
@@ -477,9 +512,10 @@ Original expression:
 A017 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:279
 Disposition: GAP
 Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; fixture-note presence is pure document state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
+established; the fixture note presence before the undo proof is a native harness
+precondition with no Swift counterpart. The shellwindow rows observe the selected
+note before and after each arrow (S014) but assert no separate pre-undo snapshot.
+Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
       songView.selectionModel().setNoteSelection(selection);
@@ -489,12 +525,15 @@ Original expression:
   QVERIFY2(beforeUndo.has_value(), "the fixture notes vanished before the undo proof")
 
 A018 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:291
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; per-note key/tick positions across the Up/Undo/Redo/Down stages
-are pure document state a presenter-level Swift check could in principle
-assert, but none does. This site expands over every fixture note per stage.
-Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S010-S013 in
+src/checks/editorqml/tst_ShellWindow.qml
+(test_gEditorRoutedNoteKeysAndChromeArrows): the shell delivers Up and then Down
+through the production roll and observes the selected note key return to its
+original value, proving the transposing press and its reversal by the opposite
+arrow. Unproved as stated: the production mergeable-move history undo/redo
+stages (the shell rows press the opposite arrow instead of traversing history)
+and invariance of the unselected notes across stages.
 Source context since previous assertion:
   ;
 
@@ -587,3 +626,57 @@ S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
+
+S009 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:601
+  function test_gEditorRoutedNoteKeysAndChromeArrows() {
+      openTwoSongShell()
+      var roll = findChild(selectedSurface(), "swiftRollInput")
+      verify(roll && roll.visible, "the focused roll receives editor keys")
+      selectDrawnVelocityNote(selectedSurface())
+      compare(chosen.length, 1, "the pointer selected one source note")
+  // Reaches the production editor through the shellwindow entry of
+  // ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46), which stages
+  // mus_route101 and mus_littleroot_test; selectDrawnVelocityNote clicks the
+  // drawn velocity node fill (:153-167).
+
+S010 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:620
+  keyClick(Qt.Key_Up)
+  compare(selectedNote().pitch, original.pitch + 1, "Up transposes one semitone")
+  keyClick(Qt.Key_Down)
+  compare(selectedNote().pitch, original.pitch, "Down reverses Up")
+
+S011 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:624
+  keyClick(Qt.Key_Up, Qt.ShiftModifier)
+  compare(selectedNote().pitch, original.pitch + 12, "Shift+Up transposes an octave")
+  keyClick(Qt.Key_Down, Qt.ShiftModifier)
+  compare(selectedNote().pitch, original.pitch, "Shift+Down reverses the octave")
+
+S012 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:628
+  keyClick(Qt.Key_Right)
+  verify(selectedNote().tick > original.tick, "Right nudges the selected note forward")
+  keyClick(Qt.Key_Left)
+  compare(selectedNote().tick, original.tick, "Left returns the selected note")
+
+S013 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:632
+  keyClick(Qt.Key_Right, Qt.ShiftModifier)
+  verify(selectedNote().duration > original.duration,
+         "Shift+Right lengthens the selected note")
+  keyClick(Qt.Key_Left, Qt.ShiftModifier)
+  compare(selectedNote().duration, original.duration,
+          "Shift+Left restores the selected note duration")
+
+S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:611
+  function selectedNote() {
+      var selection = JSON.parse(grid.noteSummary).filter(function(note) {
+          return note.selected && note.id === original.id
+      })
+      compare(selection.length, 1, "the edited source note stays selected")
+      return selection[0]
+  }
+  // Every S010-S013 row reads through this helper, so each arrow observation
+  // also carries the retained single-note selection.
+
+Shared helpers
+selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml:153) and
+openTwoSongShell (:88) stage the fixture and click the drawn velocity note; they
+carry no assertion of their own beyond the rows recorded in S009.

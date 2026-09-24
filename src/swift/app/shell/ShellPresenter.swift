@@ -25,19 +25,24 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("edit.redo", "Redo"),
         Action("roll.copy", "Copy Notes", .copy),
         Action("roll.cut", "Cut Notes", .cut),
-        Action("roll.duplicate_time", "Duplicate Notes", .duplicate),
+        Action("roll.duplicate_time", "Duplicate", .duplicate),
         Action("roll.paste", "Paste Notes", .paste),
-        Action("roll.select_all", "Select All Notes", .selectAll),
         Action("roll.delete", "Delete Notes", .delete),
+        Action("roll.select_all", "Select All Notes", .selectAll),
+        Action("edit.insert_time", "Insert Time", .insertTime),
+        Action("edit.delete_time", "Delete Time", .deleteTime),
+        Action("edit.clear_time_selection", "Clear Time Selection", .clearTimeSelection),
+        Action("edit.edit_time_signature", "Edit Time Signature at Edit Cursor…", .editTimeSignature),
+        Action("edit.remove_time_signature", "Remove Time Signature", .removeTimeSignature),
         Action("roll.transpose_up", "Transpose Up", .transposeUp),
         Action("roll.transpose_down", "Transpose Down", .transposeDown),
         Action("roll.transpose_up_octave", "Transpose Up an Octave", .transposeUpOctave),
         Action("roll.transpose_down_octave", "Transpose Down an Octave", .transposeDownOctave),
         Action("roll.nudge_left", "Nudge Left", .nudgeLeft),
         Action("roll.nudge_right", "Nudge Right", .nudgeRight),
-        Action("roll.mute_tracks", "Mute Track", .muteTracks),
-        Action("roll.solo_tracks", "Solo Track", .soloTracks),
-        Action("automation.pencil_mode", "Pencil Mode", .pencilMode),
+        Action("roll.mute_tracks", "Mute Selected Tracks", .muteTracks),
+        Action("roll.solo_tracks", "Solo Selected Tracks", .soloTracks),
+        Action("automation.pencil_mode", "Toggle Pencil Mode", .pencilMode),
         Action("roll.split", "Split Notes", .split),
         Action("roll.join", "Join Notes", .join),
         Action("roll.lengthen_note", "Lengthen Notes", .lengthenNote),
@@ -51,8 +56,15 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
     private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") }
+    private static let timeIds = [
+        "edit.insert_time", "edit.delete_time", "roll.duplicate_time",
+        "edit.clear_time_selection", "edit.edit_time_signature", "edit.remove_time_signature",
+    ]
+    private static let tracksIds = ["roll.mute_tracks", "roll.solo_tracks"]
+    private static let submenuIds = Set(timeIds + tracksIds)
     private static let editIds = allActionIds.filter {
-        $0.hasPrefix("edit.") || $0.hasPrefix("roll.") || $0.hasPrefix("automation.")
+        ($0.hasPrefix("edit.") || $0.hasPrefix("roll.") || $0.hasPrefix("automation."))
+            && !submenuIds.contains($0)
     }
     private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
     private static let contextIds = [
@@ -79,6 +91,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var actionIds: [String]
     @QtTracked public var fileActionIds: [String]
     @QtTracked public var editActionIds: [String]
+    @QtTracked public var timeActionIds: [String]
+    @QtTracked public var tracksActionIds: [String]
     @QtTracked public var transportActionIds: [String]
     @QtTracked public var windowActionIds: [String]
     @QtTracked public var contextActionIds: [String]
@@ -97,6 +111,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         actionIds = Self.allActionIds
         fileActionIds = Self.fileIds
         editActionIds = Self.editIds
+        timeActionIds = Self.timeIds
+        tracksActionIds = Self.tracksIds
         transportActionIds = Self.transportIds
         windowActionIds = Self.windowIds
         contextActionIds = Self.contextIds

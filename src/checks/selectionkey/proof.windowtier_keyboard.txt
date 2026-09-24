@@ -6,22 +6,22 @@ Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
+Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
+Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
 The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired numeric-prompt transaction and in the frozen shellwindow Qt Quick lane, listed after the inventory. The prompt keyboard-ownership block's lane lookup and insertion-prompt open (volume lane, tick 5808, value 48) are MATCHED by S011/S012/S013; the remaining block sites (draft selectedText, no mutation, preserved selection, Escape close) are PARTIAL against that transaction. The window Copy/Solo case's one-selected-note setup, its window Copy/Solo single-key bindings, the Copy activation count, the decoded native clipboard, the document-dirty fact, the first and second Solo activation counts with their soloed states, and the window-Space-priority sites are MATCHED by the shellwindow lane predicates S018 through S036, with the parameter-label and tap-button sites carrying the drawer-toggle substitution recorded in their reasons. The keyboard-routing, grip, Tab-traversal, drawer-height, tap-tempo and committed-edit observations outside the sites named above stay NATIVE or GAP. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The shellwindow-lane predicates cited below (S018 through S036) execute the frozen revision pinned by the Additional Swift SHA-256 lines above; the controller reports that lane green, and this inventory did not re-run it.
+Command: deno task verify --filter swiftcore --verbose (controller-observed)
+Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skipped); run_checks PASS. That run executes the paired prompt-transaction predicates S001-S017 only.
+Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
+Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S035 plus the grip/chrome rows S037-S040 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
-Execution ownership
-drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S017); the window-tier Copy/Solo, clipboard, document-dirty, soloed-state and window-Space-priority sites are executed by test_cWindowShortcutsAndNumericOwnership in src/checks/editorqml/tst_ShellWindow.qml (the shellwindow entry of ShellQmlTests.swift), whose predicates are S018 through S036; the file's remaining keyboard-routing, grip/Tab-traversal, drawer-height, tap-tempo and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
+drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S017); the window-tier Copy/Solo, clipboard, document-dirty, soloed-state and window-Space-priority sites are executed by test_cWindowShortcutsAndNumericOwnership in src/checks/editorqml/tst_ShellWindow.qml (the shellwindow entry of ShellQmlTests.swift), whose predicates are S018 through S036; the grip-locality sites are executed by test_gEditorRoutedNoteKeysAndChromeArrows (grip rows S037 through S039) and the chrome-Space selection site by test_hKeyboardFocusAndDrawerSpacePriority (S040); the file's remaining keyboard-routing, Tab-traversal, drawer-height, tap-tempo and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
 
 Fixture, sequence and row constraints
 Copy/solo count rows, grip-arrow rows, label-activation rows, and the prompt keyboard-ownership block (open, select-all, copy, delete, paste, Escape, then post-prompt copy/remove/paste/move rows) expand one site per delivered key. The note-move loop expands tick/key assertions per selected note id; tap-button rows expand Enter, Return, auto-repeat, and Space delivery into per-key count and document-identity sites.
@@ -315,8 +315,8 @@ Original expression:
   QCOMPARE(heightAfterDown, heightBefore)
 
 A017 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S037-S039 in src/checks/editorqml/tst_ShellWindow.qml (test_gEditorRoutedNoteKeysAndChromeArrows): the drawerHandle_velocity grip takes focus (:642-643) and resizes the drawer on Up/Down (S038) and the full note summary is unchanged across all four grip arrows (S039 against the S037 snapshot, "grip arrows never mutate selected notes"). Unproved as stated: the reserved tick-2400 note pair (the shell tracks one drawn velocity note), the drawerAutomationHandle chrome, and the exact integer grip-step equality.
 Source context since previous assertion:
   ;
 
@@ -345,8 +345,8 @@ Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), heightBefore)
 
 A020 | SelectionWindowTierTest::chromeGripKeysStayLocal | src/checks/selectionkey/windowtier_keyboard.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S037 and S039 in src/checks/editorqml/tst_ShellWindow.qml (test_gEditorRoutedNoteKeysAndChromeArrows): Left/Right on the focused drawerHandle_velocity grip leave the full note summary equal to the pre-arrow snapshot (S039, "grip arrows never mutate selected notes", snapshot S037). Unproved as stated: the reserved tick-2400 note pair (the shell tracks one drawn velocity note) and the drawerAutomationHandle chrome.
 Source context since previous assertion:
   ;
 
@@ -1279,8 +1279,8 @@ Original expression:
   QVERIFY2(document.undoStack()->count() == undoCountBefore, "bare Space changed the undo count")
 
 A103 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:430
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S040 in src/checks/editorqml/tst_ShellWindow.qml (test_hKeyboardFocusAndDrawerSpacePriority): bare Space on the focused drawer chrome leaves the full grid note summary, selection flags included, unchanged (S040, "chrome Space never changes musical selection"). Unproved as stated: the two-tap tempo session and draft-readout preconditions, the time-selection component of selectionUnchanged() (the shell lane stages no time selection), and byte-level document identity.
 Source context since previous assertion:
   ;
 
@@ -1417,8 +1417,8 @@ Original expression:
                "play/pause request while leaving the drawer section hidden or shown")
 
 A113 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:489
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S040 in src/checks/editorqml/tst_ShellWindow.qml (test_hKeyboardFocusAndDrawerSpacePriority): with drawerToggle_velocity owning active focus, bare Space toggles transport while the focused section visibility and the full grid note summary stay unchanged (S040, "chrome Space never changes musical selection"). Unproved as stated: the reserved tick-2400 pair resolved by id with per-note tick/key identity (the shell asserts whole-summary string equality over one drawn velocity note) and the drawerAutomationToggle chrome.
 Source context since previous assertion:
   ;
       const std::optional<DocNote> afterSpace = selectionkey::noteById(document, pair->ids[0]);
@@ -1541,55 +1541,55 @@ S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
-S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:107
+S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:109
   session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
   session.openSong("mus_littleroot_test")
   // The shellwindow entry of ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46)
   // stages the same two-song fixture; the velocity drawer seed rows above it
   // reproduce MainWindowRoutingFixture::openSession.
 
-S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:164
+S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:166
   tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
   // After a real mouseClick on the drawn velocityNodeFill hit target.
 
-S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:225
+S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:227
   verify(shell.shellPresenter.actionSequences("roll.copy").length > 0,
                "native Copy is registered as a window shortcut")
 
-S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:227
+S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:229
   compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S")
 
-S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:228
+S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:230
   compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:271
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:273
   compare(copied.length, 1, "the real node click selected one note")
 
-S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:272
+S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:274
   compare(session.documentDirty, false, "Copy starts from a clean song")
 
-S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:273
+S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:275
   roll.forceActiveFocus(Qt.OtherFocusReason)
   tryCompare(roll, "activeFocus", true, 3000,
              "the Edit menu returned keyboard focus to the roll")
 
-S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:276
+S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:279
   keySequence(StandardKey.Copy)
   compare(copyActivatedSpy.count, 1, "native Copy activates the window shortcut once")
   // copyActivatedSpy targets the production window Shortcut objectName
   // "shellShortcut_roll.copy" selected by windowShortcut().
 
-S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:278
+S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:280
   var clip = JSON.parse(bootstrap.copiedClipSummary())
   compare(clip.length, 3, "the native clipboard carries a decodable song clip")
   compare(clip[0], 1, "the copied clip contains one track")
   compare(clip[1], 1, "the copied track contains one selected note")
   compare(clip[2], copied[0].pitch, "the copied note retains its original key")
 
-S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:283
+S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:285
   compare(session.documentDirty, false, "the native window Copy never edits the song")
 
-S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:306
+S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:308
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", true, 3000)
   compare(soloActivatedSpy.count, 1, "first non-text S activates Solo once")
@@ -1597,12 +1597,12 @@ S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // the focused non-text window child shortcutTarget, and soloActivatedSpy
   // targets the production "shellShortcut_roll.solo_tracks" Shortcut.
 
-S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:309
+S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:311
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", false, 3000)
   compare(soloActivatedSpy.count, 2, "second non-text S activates Solo twice total")
 
-S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:375
+S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:377
   var velocityToggle = findChild(drawer, "drawerToggle_velocity")
   verify(velocityToggle && velocityToggle.visible, "the velocity toggle is drawn")
   velocityToggle.forceActiveFocus(Qt.OtherFocusReason)
@@ -1612,28 +1612,53 @@ S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // (src/ui/songview/quick/drawer/EditorDrawer.qml:316) with activeFocusOnTab
   // and Return/Enter-only local keys; bare Space is not consumed there.
 
-S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:382
+S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:384
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000,
              "bare Space on focused drawer chrome owns transport")
 
-S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:385
+S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:387
   compare(surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).visible, toggleSectionVisible,
           "chrome Space never toggles the focused section")
 
-S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:388
+S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:390
   compare(session.documentDirty, false, "chrome Space never edits the song")
 
-S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:389
+S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:391
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", false, 3000,
              "the second chrome Space stops transport")
 
-S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:183
+S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:188
   return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"
   // Reads the native clip through production pd_clipboard_read and
   // ClipboardCodec.decode (ShellQmlTests.swift:176-180); "[]" means absent.
+
+S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:644
+  var beforeGrip = grid.noteSummary
+  var heightBefore = surface.drawerPresenter.section(
+              bootstrap.velocitySectionKind()).bodyHeight
+  // Snapshot precedes every grip arrow; S039 compares against it.
+S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:647
+  keyClick(Qt.Key_Up)
+  verify(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight
+         > heightBefore, "grip Up resizes the drawer locally")
+  keyClick(Qt.Key_Down)
+  compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
+          heightBefore, "grip Down restores its height")
+S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:653
+  keyClick(Qt.Key_Left)
+  keyClick(Qt.Key_Right)
+  compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
+S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:684
+  keyClick(Qt.Key_Space)
+  tryCompare(playhead, "playing", true, 3000)
+  compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
+  compare(surface.gridModel.noteSummary, noteSnapshot,
+          "chrome Space never changes musical selection")
+  // drawerToggle_velocity owns active focus (:680-681); the second Space stops
+  // transport (:689-690).
 
 Supplemental converted-window evidence
 
@@ -1650,7 +1675,7 @@ unchanged.
 
 The staged song and selected note differ from the original reserved note pair.
 This standalone check does not replace the original QWidget-window Copy/Solo
-action-counter assertions; the shellwindow lane predicates S018 through S036
+action-counter assertions; the shellwindow lane predicates S018 through S040
 cover those window-tier sites, and this check does not establish them. The
 grip-arrow dispositions recorded above are unchanged by that crosswalk.
 

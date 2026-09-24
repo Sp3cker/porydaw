@@ -4,7 +4,7 @@ Reference revision: b5815a6e23296a9cc48c85a201a2ce858b99aae9
 Original: src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp
 Original SHA-256: 8cbb6d5233d79b129a9bdf3aefa2030e44f879d81a99c91841e10504c1c0541f
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Swift SHA-256: 8783f082390c2394febe9205babef51ca6ac5b211a9453cffdc171e4f699c520
 Additional Swift counterpart: src/checks/workspace/bank_edits.swift
 Additional Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
@@ -21,6 +21,10 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: c4092dcabd070ecb2b17b3551e13c528f3bcb60607c825e5d8a152adb118af6d
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
 
 Status and evidence
 Thirteen test methods covering tab close/reopen global state, ready-reload transient preservation, reload focus handoff, fresh-bind/staged-reload/bank-rebind staging, failed-open preservation, project switch/quit, and five MouseHints drag/focus/tab delivery cases.
@@ -34,18 +38,29 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 0 / PARTIAL 8 / GAP 109 / NATIVE 47. No MATCHED site is claimed:
-no same-dir Swift counterpart exists for this suite, and none of the
-paired SessionChecks-suite predicates asserts the same Qt-routing observation.
+Tally: MATCHED 0 / PARTIAL 10 / GAP 107 / NATIVE 47. No MATCHED site is claimed:
+the two reconciled sites (A002, A003) are PARTIAL on the close-walk tab accounting
+crosswalked to the offscreen Qt Quick shellwindow lane (S186-S188), and no
+same-dir Swift counterpart exists for the rest of this suite; the paired
+SessionChecks-suite predicates do not assert these Qt-routing observations.
+Reopen, focus, staging and project-switch paths stay GAP.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The swiftcore lane executes the Swift counterpart only. The Qt Widget/Quick
-delivery, Cocoa-gated, and harness-timing observations inventoried here execute
-only in the native Qt check harness, never in that lane.
+Result: PASS — build ok (0.15s); ok swiftcore (10.38s); verify 1/6 ok (5 skipped);
+run_checks PASS. Controller-run on the frozen tree pinned by the hashes above; the
+ledger agent did not run it.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
+run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
+The swiftcore lane executes the paired Swift counterparts only. The PARTIAL
+shell-lane predicates S186-S188 execute in the offscreen Qt Quick shellwindow lane
+(deno task verify:shell over src/checks/editorqml/tst_ShellWindow.qml and its
+ShellQmlTests.swift bootstrap). The Qt Widget/Quick delivery, Cocoa-gated, and
+harness-timing observations inventoried here execute only in the native Qt check
+harness, never in that lane.
 
 Execution and ownership
 The paired Swift checks execute under runProjectSessionSuite and
@@ -74,7 +89,7 @@ Related-but-outside suites invoked by the same file — runEditorDrawerChecks
 (EditorDrawerChecks.swift), runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
 carry their own predicates in their own files and are not inventoried here.
-Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063) are the ones cited as PARTIAL mappings below.
+Of these, the MouseHints ownership predicates (S002–S009) and the dirty-tracking predicates (S030, S057, S060–S063) are the ones cited as PARTIAL mappings below. The offscreen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml with its src/checks/editorqml/ShellQmlTests.swift bootstrap) owns S186-S188.
 
 Fixture, sequence and row constraints
 Two-song MainWindow session opened per test. No QTest _data rows. Loops expand single sites: the 16-track alternate-track search, the three-name Quick scrollbar search, the track-row counting loop, and header title/drop coordinate computation. completeSeed() EditorViewState values seed the close/reopen, reload, and switch cases; scroll-max seeding falls back when the viewport cannot move; QTRY/async gates order reload completion, hover claims, and drag settle.
@@ -128,8 +143,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A002 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:48
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S186 and S187 in src/checks/editorqml/tst_ShellWindow.qml (test_dCopyFromOneSongTabPastesIntoAnother drives the real close walk: tabCount holds at 2 while the dirty gate pauses the walk, then reaches 0 with pendingCloseId back to -1 after Discard); unproved: closing exactly one of two tabs while the sibling stays open — the walk closes both, so no predicate observes openTabCount() == 1. [S186][S187]
 Source context since previous assertion:
         MainWindow &window = *session->window;
         const EditorViewState state = completeSeed();
@@ -142,8 +157,8 @@ Original expression:
         QCOMPARE(window.m_workspace->openTabCount(), qsizetype{1})
 
 A003 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:49
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S187 and S188 in src/checks/editorqml/tst_ShellWindow.qml (test_dCopyFromOneSongTabPastesIntoAnother ends the close-all walk with tabCount 0, pendingCloseId -1 and the scene detached, and test_e re-selects the first tab by id); unproved: the named-tab lookup itself — no Swift predicate resolves a closed song name back to an absent tab. [S187][S188]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2719,3 +2734,25 @@ counterpart: the session_fixtures.swift/session_support.swift staging helpers
 (makeMidiFixture, stageTestProject, bytes/configLineBytes readers) assert
 nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
 live in their own files and are likewise outside this inventory.
+
+S186 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:455
+    shell.close() at :454 then verify(waitForNative(function() { return tabs.pendingCloseId ===
+    firstId }, 5000), "the window close walk pauses at the dirty destination") at :455-457, preceded
+    by mouseClick(firstButton, ...) with tryCompare(tabs, "selectedId", firstId, 3000, "the
+    destination is active when the close-all walk begins") at :449-451; then
+    compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab") at :458.
+
+S187 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:463
+    var discard = findChild(shell, "songTabDiscard") with verify(discard && discard.visible, "the
+    close gate exposes Discard") at :461-462; mouseClick(discard, discard.width / 2,
+    discard.height / 2) at :463 then verify(waitForNative(function() { return
+    shell.shellPresenter.closeReady && tabs.tabCount === 0 && shell.sceneLoader.item === null },
+    5000), "Discard advances the remaining clean tab and detaches the scene") at :464-467;
+    compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved") at :468.
+
+S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml:527
+    test_d :442-445 clicks songTabSelect_<secondId> with tryCompare(tabs, "selectedId", secondId,
+    3000) and :449-451 clicks songTabSelect_<firstId> with tryCompare(tabs, "selectedId", firstId,
+    3000); test_e :527-528 mouseClick(firstButton, ...) then tryCompare(shell.shellPresenter.session
+    .songTabs, "selectedId", firstId) and compare(findChild(tracksMenu, "shellAction_roll.solo_tracks")
+    .enabled, true, "Solo rebinds to the newly active song") at :529-531.

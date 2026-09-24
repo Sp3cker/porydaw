@@ -85,7 +85,7 @@ TestCase {
         return predicate()
     }
 
-    function openTwoSongShell() {
+    function openTwoSongShell(beforeOpen) {
         // MainWindowRoutingFixture::openSession: the original velocity/173
         // drawer seed, with absent nullopt heights in this fresh native domain.
         settings.setValue("editorDrawer/velocityVisible", true)
@@ -103,6 +103,8 @@ TestCase {
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
+        if (beforeOpen)
+            beforeOpen()
         var session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         waitForNative(function() {
@@ -443,6 +445,467 @@ TestCase {
         tryCompare(tabs, "selectedId", secondId, 3000)
         compare(selectedSurface().gridModel.noteSummary, sourceSummary,
                 "cross-tab Paste leaves the source song unchanged")
+
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId, 3000,
+                   "the destination is active when the close-all walk begins")
+        compare(shell.shellPresenter.session.documentDirty, true,
+                "only the pasted destination has unsaved changes")
+        shell.close()
+        verify(waitForNative(function() {
+            return tabs.pendingCloseId === firstId
+        }, 5000), "the window close walk pauses at the dirty destination")
+        compare(tabs.tabCount, 2, "the dirty gate cannot silently close a tab")
+        compare(destination.gridModel.noteSummary, JSON.stringify(destinationAfter),
+                "the dirty gate preserves the pasted note")
+        var discard = findChild(shell, "songTabDiscard")
+        verify(discard && discard.visible, "the close gate exposes Discard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() {
+            return shell.shellPresenter.closeReady && tabs.tabCount === 0
+                && shell.sceneLoader.item === null
+        }, 5000), "Discard advances the remaining clean tab and detaches the scene")
+        compare(tabs.pendingCloseId, -1, "the close-all gate is fully resolved")
+    }
+
+    function test_eTimeAndTracksMenuContainment() {
+        var timeIds = ["edit.insert_time", "edit.delete_time", "roll.duplicate_time",
+                       "edit.clear_time_selection", "edit.edit_time_signature",
+                       "edit.remove_time_signature"]
+        var trackIds = ["roll.mute_tracks", "roll.solo_tracks"]
+        var firstId = openTwoSongShell(function() {
+            var noSongTime = findChild(shell, "shellTimeMenu")
+            var noSongTracks = findChild(shell, "shellTracksMenu")
+            verify(noSongTime && noSongTracks, "both Edit submenus exist before any song")
+            for (var index = 0; index < timeIds.length; ++index) {
+                var action = findChild(noSongTime, "shellAction_" + timeIds[index])
+                verify(action, "Time has " + timeIds[index])
+                compare(action.enabled, false, "no song disables " + timeIds[index])
+            }
+            for (var trackIndex = 0; trackIndex < trackIds.length; ++trackIndex) {
+                var trackAction = findChild(noSongTracks,
+                                            "shellAction_" + trackIds[trackIndex])
+                verify(trackAction, "Tracks has " + trackIds[trackIndex])
+                compare(trackAction.enabled, false, "no song disables " + trackIds[trackIndex])
+            }
+        })
+        var editMenu = findChild(shell, "shellEditMenu")
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        var tracksMenu = findChild(shell, "shellTracksMenu")
+        verify(editMenu && timeMenu && tracksMenu, "the active shell exposes Edit submenus")
+        compare(timeMenu.title, "&Time")
+        compare(tracksMenu.title, "Tr&acks")
+        compare(timeMenu.count, timeIds.length, "Time contains the original six commands")
+        compare(tracksMenu.count, trackIds.length, "Tracks contains Mute and Solo")
+        for (var timeIndex = 0; timeIndex < timeIds.length; ++timeIndex)
+            compare(timeMenu.itemAt(timeIndex).objectName, "shellAction_" + timeIds[timeIndex],
+                    "Time keeps the original order at index " + timeIndex)
+        for (var tracksIndex = 0; tracksIndex < trackIds.length; ++tracksIndex)
+            compare(tracksMenu.itemAt(tracksIndex).objectName,
+                    "shellAction_" + trackIds[tracksIndex],
+                    "Tracks keeps the original order at index " + tracksIndex)
+        var timePosition = -1
+        var tracksPosition = -1
+        for (var menuIndex = 0; menuIndex < editMenu.count; ++menuIndex) {
+            if (editMenu.menuAt(menuIndex) === timeMenu)
+                timePosition = menuIndex
+            if (editMenu.menuAt(menuIndex) === tracksMenu)
+                tracksPosition = menuIndex
+        }
+        verify(timePosition >= 0 && tracksPosition > timePosition,
+               "Edit nests Time before Tracks")
+        editMenu.open()
+        compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, false,
+                "an open song without a time selection cannot insert a selected range")
+        compare(findChild(timeMenu, "shellAction_edit.delete_time").enabled, false,
+                "an open song without a time selection cannot delete a selected range")
+        compare(findChild(tracksMenu, "shellAction_roll.solo_tracks").enabled, true,
+                "the active song offers Solo")
+        var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        verify(firstButton, "the first song tab can retarget the Edit menu")
+        editMenu.close()
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(shell.shellPresenter.session.songTabs, "selectedId", firstId)
+        editMenu.open()
+        compare(findChild(tracksMenu, "shellAction_roll.solo_tracks").enabled, true,
+                "Solo rebinds to the newly active song")
+        editMenu.close()
+    }
+
+    function test_fPencilLatchTextAndSpaceOwnership() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the roll receives the pencil key")
+        var grid = surface.gridModel
+        var playhead = shell.shellPresenter.session.playheadPresenter()
+        var automation = shell.shellPresenter.session.automationPage()
+        compare(grid.pencilMode, false)
+        compare(automation.isPencilMode, false)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyPress(Qt.Key_B)
+        tryCompare(grid, "pencilMode", true, 3000)
+        tryCompare(automation, "isPencilMode", true, 3000)
+        wait(520)
+        compare(grid.pencilMode, true, "holding B never toggles the pencil twice")
+        compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
+        keyRelease(Qt.Key_B)
+        compare(grid.pencilMode, true, "releasing B keeps the pencil latched")
+        compare(automation.isPencilMode, true, "releasing B keeps automation pencil latched")
+        var beforeSpace = grid.noteSummary
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000)
+        compare(grid.pencilMode, true, "roll Space never unlatches the pencil")
+        compare(automation.isPencilMode, true, "roll Space leaves automation pencil armed")
+        compare(grid.noteSummary, beforeSpace, "roll Space never changes selected notes")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000)
+        keyPress(Qt.Key_B)
+        tryCompare(grid, "pencilMode", false, 3000)
+        tryCompare(automation, "isPencilMode", false, 3000)
+        keyRelease(Qt.Key_B)
+        compare(grid.pencilMode, false, "releasing the second B preserves the off state")
+        compare(automation.isPencilMode, false,
+                "releasing the second B preserves the automation off state")
+
+        var textProbe = textProbeComponent.createObject(shell.contentItem,
+                                                        { x: 20, y: 20 })
+        verify(textProbe, "the focused text probe belongs to the production window")
+        textProbe.text = ""
+        textProbe.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(textProbe, "activeFocus", true, 3000)
+        keyClick(Qt.Key_B)
+        compare(textProbe.text.toLowerCase(), "b", "text focus keeps its typed B")
+        compare(grid.pencilMode, false, "text-field B never enables the pencil")
+        compare(automation.isPencilMode, false,
+                "text-field B never changes automation pencil mode")
+        textProbe.destroy()
+
+        selectDrawnVelocityNote(surface)
+        shell.shellPresenter.session.performGridCommand(bootstrap.setVelocityCommand())
+        tryCompare(shell.shellPresenter.session.velocityPage(), "promptOpen", true, 3000)
+        var field = findChild(surface, "noteVelocityInput")
+        verify(field, "the numeric prompt exposes its real input")
+        tryCompare(field, "activeFocus", true, 3000)
+        var numericText = field.text
+        keyClick(Qt.Key_B)
+        compare(field.text, numericText, "numeric text rejects the nonnumeric B")
+        compare(grid.pencilMode, false, "numeric B never reaches the pencil shortcut")
+        compare(automation.isPencilMode, false,
+                "numeric B never changes automation pencil mode")
+        keyClick(Qt.Key_Escape)
+        tryCompare(shell.shellPresenter.session.velocityPage(), "promptOpen", false, 3000)
+    }
+
+    function test_gEditorRoutedNoteKeysAndChromeArrows() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the focused roll receives editor keys")
+        selectDrawnVelocityNote(surface)
+        var grid = surface.gridModel
+        var chosen = JSON.parse(grid.noteSummary).filter(function(note) { return note.selected })
+        compare(chosen.length, 1, "the pointer selected one source note")
+        var original = chosen[0]
+        function selectedNote() {
+            var selection = JSON.parse(grid.noteSummary).filter(function(note) {
+                return note.selected && note.id === original.id
+            })
+            compare(selection.length, 1, "the edited source note stays selected")
+            return selection[0]
+        }
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Up)
+        compare(selectedNote().pitch, original.pitch + 1, "Up transposes one semitone")
+        keyClick(Qt.Key_Down)
+        compare(selectedNote().pitch, original.pitch, "Down reverses Up")
+        keyClick(Qt.Key_Up, Qt.ShiftModifier)
+        compare(selectedNote().pitch, original.pitch + 12, "Shift+Up transposes an octave")
+        keyClick(Qt.Key_Down, Qt.ShiftModifier)
+        compare(selectedNote().pitch, original.pitch, "Shift+Down reverses the octave")
+        keyClick(Qt.Key_Right)
+        verify(selectedNote().tick > original.tick, "Right nudges the selected note forward")
+        keyClick(Qt.Key_Left)
+        compare(selectedNote().tick, original.tick, "Left returns the selected note")
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        verify(selectedNote().duration > original.duration,
+               "Shift+Right lengthens the selected note")
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(selectedNote().duration, original.duration,
+                "Shift+Left restores the selected note duration")
+
+        var drawer = findChild(surface, "editorDrawer")
+        var grip = findChild(drawer, "drawerHandle_velocity")
+        verify(grip && grip.visible, "the drawer resize grip is available")
+        grip.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(grip, "activeFocus", true, 3000)
+        var beforeGrip = grid.noteSummary
+        var heightBefore = surface.drawerPresenter.section(
+                    bootstrap.velocitySectionKind()).bodyHeight
+        keyClick(Qt.Key_Up)
+        verify(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight
+               > heightBefore, "grip Up resizes the drawer locally")
+        keyClick(Qt.Key_Down)
+        compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
+                heightBefore, "grip Down restores its height")
+        keyClick(Qt.Key_Left)
+        keyClick(Qt.Key_Right)
+        compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
+    }
+
+    function test_hKeyboardFocusAndDrawerSpacePriority() {
+        var firstId = openTwoSongShell()
+        var surface = selectedSurface()
+        var roll = findChild(surface, "swiftRollInput")
+        var drawer = findChild(surface, "editorDrawer")
+        var toggle = findChild(drawer, "drawerToggle_velocity")
+        verify(roll && toggle, "the roll and drawer chrome are visible")
+        var tabs = shell.shellPresenter.session.songTabs
+        var secondId = tabs.selectedId
+        var firstButton = findChild(shell.sceneLoader.item, "songTabSelect_" + firstId)
+        var secondButton = findChild(shell.sceneLoader.item, "songTabSelect_" + secondId)
+        verify(firstButton && secondButton, "the production tab buttons are mounted")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        var noteSnapshot = surface.gridModel.noteSummary
+        var playhead = shell.shellPresenter.session.playheadPresenter()
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000)
+        compare(surface.gridModel.noteSummary, noteSnapshot, "roll Space leaves notes unchanged")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000)
+
+        toggle.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(toggle, "activeFocus", true, 3000)
+        var section = surface.drawerPresenter.section(bootstrap.velocitySectionKind())
+        var sectionVisible = section.visible
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000)
+        compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
+        compare(surface.gridModel.noteSummary, noteSnapshot,
+                "chrome Space never changes musical selection")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000)
+
+        var textProbe = textProbeComponent.createObject(shell.contentItem,
+                                                        { x: 20, y: 20 })
+        verify(textProbe, "the text field mounts inside the production window")
+        textProbe.text = "local"
+        textProbe.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(textProbe, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Space)
+        compare(textProbe.text, "local ", "literal text Space belongs to text entry")
+        compare(playhead.playing, false, "literal text Space does not start transport")
+        textProbe.destroy()
+
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Tab)
+        verify(shell.activeFocusItem !== roll, "Tab traverses away from the roll")
+        keyClick(Qt.Key_Backtab)
+        tryCompare(roll, "activeFocus", true, 3000)
+        mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2)
+        tryCompare(tabs, "selectedId", firstId, 3000)
+        mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2)
+        tryCompare(tabs, "selectedId", secondId, 3000)
+        var editMenu = findChild(shell.menuBar, "shellEditMenu")
+        verify(editMenu, "the production Edit menu is mounted")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        editMenu.open()
+        tryCompare(editMenu, "visible", true, 3000)
+        editMenu.close()
+        tryCompare(roll, "activeFocus", true, 3000,
+                   "closing the Edit menu restores the prior roll focus")
+    }
+
+    function test_iEditorCommandDeliveryAndTextLocalKeys() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        verify(roll && roll.visible, "the production roll routes editor commands")
+        selectDrawnVelocityNote(surface)
+        var original = JSON.parse(grid.noteSummary).filter(function(note) { return note.selected })[0]
+        verify(original, "the selected fixture note is available")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_D, Qt.ControlModifier)
+        var duplicated = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected && note.id !== original.id
+                && note.pitch === original.pitch && note.tick > original.tick
+        })
+        compare(duplicated.length, 1, "Ctrl+D duplicates and selects the original note")
+        keySequence(StandardKey.SelectAll)
+        var selectedForJoin = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected && note.track === original.track
+        })
+        verify(selectedForJoin.some(function(note) { return note.id === original.id })
+               && selectedForJoin.some(function(note) { return note.id === duplicated[0].id }),
+               "Select All includes both same-track notes")
+        keyClick(Qt.Key_J, Qt.ControlModifier)
+        var joined = JSON.parse(grid.noteSummary)
+        verify(joined.filter(function(note) { return note.track === original.track }).length
+               < selectedForJoin.length,
+               "Ctrl+J merges the adjacent same-pitch notes")
+        var selectedJoined = joined.filter(function(note) {
+            return note.selected && note.track === original.track
+                && note.pitch === original.pitch && note.duration > grid.snapTicks
+        })
+        verify(selectedJoined.length > 0, "Join selects a subdividable merged note")
+        keyClick(Qt.Key_E, Qt.ControlModifier)
+        var split = JSON.parse(grid.noteSummary)
+        verify(split.length > joined.length, "Ctrl+E splits selected notes on grid boundaries")
+        verify(split.some(function(note) { return note.selected && note.pitch === original.pitch }),
+               "Split keeps the resulting note fragments selected")
+
+        var beforeCut = split.length
+        keySequence(StandardKey.Cut)
+        var afterCut = JSON.parse(grid.noteSummary)
+        verify(afterCut.length < beforeCut, "Cut deletes selected notes from the focused roll")
+        var cutClip = JSON.parse(bootstrap.copiedClipSummary())
+        compare(cutClip[0], 1, "Cut writes a decodable single-track clipboard clip")
+        verify(cutClip[1] > 0, "Cut preserves at least one copied note")
+        keySequence(StandardKey.Paste)
+        var afterPaste = JSON.parse(grid.noteSummary)
+        verify(afterPaste.length > afterCut.length, "Paste inserts clipboard notes into the roll")
+        verify(afterPaste.some(function(note) { return note.selected }),
+               "Paste selects at least one inserted note")
+
+        var textProbe = textProbeComponent.createObject(shell.contentItem,
+                                                        { x: 20, y: 20 })
+        verify(textProbe, "a text editor mounts in the real window")
+        textProbe.text = "text"
+        textProbe.cursorPosition = 0
+        textProbe.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(textProbe, "activeFocus", true, 3000)
+        var notesBeforeLocalKeys = grid.noteSummary
+        keyClick(Qt.Key_D, Qt.ControlModifier)
+        compare(grid.noteSummary, notesBeforeLocalKeys,
+                "text-focused Duplicate never changes the musical notes")
+        keyClick(Qt.Key_Delete)
+        compare(textProbe.text, "ext", "text-focused Delete edits the local text")
+        compare(grid.noteSummary, notesBeforeLocalKeys,
+                "text-focused Delete never deletes selected notes")
+        textProbe.destroy()
+
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keySequence(StandardKey.SelectAll)
+        var selectedAll = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.selected && note.track === original.track
+        })
+        verify(selectedAll.length > 0, "Select All targets the currently focused roll track")
+        keyClick(Qt.Key_Delete)
+        var remaining = JSON.parse(grid.noteSummary)
+        compare(remaining.filter(function(note) { return note.track === original.track }).length,
+                0, "Delete removes only the selected track's notes")
+    }
+
+    function test_jTimeSelectionInsertAndDeleteMutatesDocument() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var grid = surface.gridModel
+        var toggle = findChild(surface, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the real automation section can be opened")
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the active song mounts its automation plot")
+        var volumeTab = null
+        for (var index = 0; index < page.pageModel.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.text === "Volume") {
+                volumeTab = candidate
+                break
+            }
+        }
+        verify(volumeTab && volumeTab.enabled, "the active track exposes Volume")
+        var tabPress = findChild(volumeTab, "automationParameterTabPress"
+                               + volumeTab.model.index)
+        verify(tabPress, "the selector owns a real mouse press")
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
+        tryCompare(volumeTab, "checked", true, 3000)
+        var plot = findChild(page, "automationPlotInput")
+        verify(plot && plot.width > 280 && plot.height > 20,
+               "the automation plot has room for a real sweep and time range")
+        var notesBefore = grid.noteSummary
+        var row = Math.round(plot.height / 2)
+        mousePress(plot, 120, row, Qt.LeftButton)
+        mouseMove(plot, 180, row, -1, Qt.LeftButton)
+        mouseMove(plot, 240, row, -1, Qt.LeftButton)
+        mouseRelease(plot, 240, row, Qt.LeftButton)
+        tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
+                  "a mouse sweep writes Volume automation into the document")
+
+        function writtenTicks(item, result) {
+            if (item.objectName === "automationNode" && item.model
+                && !item.model.projected && !item.model.phantom)
+                result.push(item.model.tick)
+            for (var child = 0; child < item.children.length; ++child)
+                writtenTicks(item.children[child], result)
+            return result
+        }
+        var originalTicks = writtenTicks(page, []).sort(function(a, b) { return a - b })
+        verify(originalTicks.length >= 2
+               && originalTicks[originalTicks.length - 1] > originalTicks[0],
+               "the sweep leaves written Volume events at distinct ticks")
+        var beforeSelectionRevision = grid.appliedRevisionText
+        mousePress(plot, 130, row, Qt.RightButton)
+        mouseMove(plot, 205, row, -1, Qt.RightButton)
+        mouseRelease(plot, 205, row, Qt.RightButton)
+        var timeMenu = findChild(shell, "shellTimeMenu")
+        verify(timeMenu, "the production Time submenu is available")
+        var insertTime = findChild(timeMenu, "shellAction_edit.insert_time")
+        var deleteTime = findChild(timeMenu, "shellAction_edit.delete_time")
+        verify(insertTime && deleteTime, "both original time-edit commands exist")
+        tryCompare(insertTime, "enabled", true, 3000,
+                   "the selected lane range enables Insert Time")
+        tryCompare(deleteTime, "enabled", true, 3000,
+                   "the selected lane range enables Delete Time")
+        compare(grid.appliedRevisionText, beforeSelectionRevision,
+                "selecting a range does not write the document")
+        keyClick(Qt.Key_I, Qt.ControlModifier | Qt.ShiftModifier)
+        verify(waitForNative(function() {
+            var moved = writtenTicks(page, []).sort(function(a, b) { return a - b })
+            return moved.length === originalTicks.length
+                && moved.some(function(tick, index) { return tick > originalTicks[index] })
+        }, 3000), "the window Insert Time shortcut shifts written Volume events forward; "
+                 + "before=" + JSON.stringify(originalTicks)
+                 + "; after=" + JSON.stringify(writtenTicks(page, []))
+                 + "; revision=" + beforeSelectionRevision + " to "
+                 + grid.appliedRevisionText)
+        var shiftedTicks = writtenTicks(page, []).sort(function(a, b) { return a - b })
+        var shift = shiftedTicks[shiftedTicks.length - 1]
+                    - originalTicks[originalTicks.length - 1]
+        verify(shift > 0, "inserting the selected blank range shifts later events")
+        var firstShifted = shiftedTicks.findIndex(function(tick, index) {
+            return tick !== originalTicks[index]
+        })
+        for (var tickIndex = 0; tickIndex < originalTicks.length; ++tickIndex)
+            compare(shiftedTicks[tickIndex],
+                    originalTicks[tickIndex] + (tickIndex >= firstShifted ? shift : 0),
+                    "Insert Time shifts all later events by the same range span")
+        verify(grid.appliedRevisionText !== beforeSelectionRevision
+               && session.documentDirty, "Insert Time commits an unsaved document change")
+        compare(grid.noteSummary, notesBefore, "a Volume-only selection does not move notes")
+
+        var editMenu = findChild(shell, "shellEditMenu")
+        verify(editMenu, "the Edit menu contains the live Time submenu")
+        editMenu.open()
+        timeMenu.open()
+        tryCompare(deleteTime, "enabled", true, 3000)
+        mouseClick(deleteTime, deleteTime.width / 2, deleteTime.height / 2)
+        tryVerify(function() {
+            var restored = writtenTicks(page, []).sort(function(a, b) { return a - b })
+            return restored.length === originalTicks.length
+                && restored.every(function(tick, index) { return tick === originalTicks[index] })
+        }, 3000, "the Time menu Delete Time removes the inserted blank range")
+        compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes")
     }
 
 }

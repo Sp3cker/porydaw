@@ -70,6 +70,43 @@ public func runKeybindingRegistryChecks(
         settingsSeeds,
         "Control still arms detent unlock")
 
+    let deliveryScopes = "KeymapCheckTest::deliveryScopes"
+    let scopeRows: [(id: String, expected: KeybindingScope)] = [
+        ("edit.insert_time", .window),
+        ("edit.delete_time", .window),
+        ("transport.play_pause", .window),
+        ("roll.copy", .window),
+        ("roll.solo_tracks", .window),
+        ("roll.cut", .editorRouted),
+        ("roll.duplicate_time", .editorRouted),
+        ("roll.split", .editorRouted),
+        ("roll.join", .editorRouted),
+        ("roll.paste", .editorRouted),
+        ("roll.select_all", .editorRouted),
+        ("roll.delete", .editorRouted),
+        ("automation.pencil_mode", .editorRouted),
+        ("eventlist.move_up", .editorRouted),
+        ("eventlist.move_down", .editorRouted),
+    ]
+    for row in scopeRows {
+        onAssertion(registry.scope(row.id) == row.expected, deliveryScopes, row.id)
+    }
+    onAssertion(
+        registry.sequences("edit.insert_time").map(\.strokes) ==
+            [[QtKeyCode.i.rawValue | QtKeyboardModifier.control.rawValue |
+                QtKeyboardModifier.shift.rawValue]],
+        deliveryScopes,
+        "Insert Time keeps Ctrl+Shift+I")
+    onAssertion(
+        registry.sequences("edit.delete_time").isEmpty,
+        deliveryScopes,
+        "Delete Time remains unbound")
+    onAssertion(
+        registry.sequences("automation.pencil_mode").map(\.strokes) ==
+            [[QtKeyCode.b.rawValue]],
+        deliveryScopes,
+        "Pencil Mode keeps unmodified B")
+
     let defaultMatching = "KeymapCheckTest::defaultMatching"
     let rows: [(name: String, id: String, key: Int, modifiers: Int, expected: Bool)] = [
         ("semitone-up", "roll.transpose_up", QtKeyCode.up.rawValue, QtKeyboardModifier.none.rawValue, true),

@@ -195,6 +195,48 @@ ApplicationWindow {
             title: qsTr("&Edit")
             onAboutToShow: ++root.actionRevision
             MenuSeparator {}
+            Menu {
+                id: timeMenu
+                objectName: "shellTimeMenu"
+                title: qsTr("&Time")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.timeActionIds
+                    delegate: MenuItem {
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: {
+                            root.actionRevision
+                            return shell.actionEnabled(modelData)
+                        }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => timeMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => timeMenu.removeItem(object)
+                }
+            }
+            Menu {
+                id: tracksMenu
+                objectName: "shellTracksMenu"
+                title: qsTr("Tr&acks")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.tracksActionIds
+                    delegate: MenuItem {
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: {
+                            root.actionRevision
+                            return shell.actionEnabled(modelData)
+                        }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => tracksMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
+                }
+            }
             Instantiator {
                 model: shell.editActionIds
                 delegate: MenuItem {
@@ -207,7 +249,13 @@ ApplicationWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) => editMenu.insertItem(index < 2 ? index : index + 1, object)
+                onObjectAdded: (index, object) => {
+                    const firstNotes = shell.editActionIds.indexOf("roll.transpose_up")
+                    const firstAutomation = shell.editActionIds.indexOf("automation.pencil_mode")
+                    const offset = index < 2 ? 0 : index < firstNotes ? 1
+                                 : index < firstAutomation ? 2 : 3
+                    editMenu.insertItem(index + offset, object)
+                }
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
         }

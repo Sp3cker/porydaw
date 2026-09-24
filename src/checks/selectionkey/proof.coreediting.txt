@@ -5,18 +5,23 @@ Original: src/checks/selectionkey/coreediting.cpp
 Original SHA-256: b7d9cbae89ad503c6650e245838dc43a02d476bd5784746e639c27dcd3df748c
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 1c92461ad5e5507e556b0f3567caaad9acc7d0836695d231c04ba175a4627cee
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired numeric-prompt transaction, listed after the inventory. That transaction covers prompt open/draft/cancel only; this file's audition, range, hover-delete, arrow, clipboard, and select-all cases deliver real keys and mouse events to native inputs, so entries below are NATIVE (delivery, focus, clipboard, action-set, audio observations) or GAP (document-model facts with no related Swift predicate). MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
+Tally: MATCHED 0, PARTIAL 2, GAP 11, NATIVE 40.
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired counterparts, listed after the inventory. The numeric-prompt transaction covers prompt open/draft/cancel only; this file's audition, range, hover-delete, arrow, clipboard, and select-all cases deliver real keys and mouse events to native inputs, so most entries below are NATIVE (delivery, focus, clipboard, action-set, audio observations) or GAP (document-model facts with no related Swift predicate). The frozen shellwindow lane (src/checks/editorqml/tst_ShellWindow.qml :: test_iEditorCommandDeliveryAndTextLocalKeys, S009-S015, plus the cross-tab Paste cursor row of test_dCopyFromOneSongTabPastesIntoAnother, S016) delivers real Duplicate, Select All, Join, Split, Cut, Paste, Delete and text-local keys to the production roll, so A041 (Paste) and A047 (Select All) are PARTIAL and each names its unproved condition. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose (controller-observed)
+Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skipped); run_checks PASS. That run executes the paired prompt-transaction predicates S001-S008 only.
+Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
+Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S009-S016 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
 Execution ownership
-drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) is the only paired Swift check; it covers the numeric-prompt transaction only and does not execute any of this file's audition, range, hover, arrow, clipboard, or select-all cases. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
+drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) is the only paired Swift check; it covers the numeric-prompt transaction only and does not execute any of this file's audition, range, hover, arrow, clipboard, or select-all cases. The shellwindow lane reaches the same production roll through ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46) and executes the S009-S016 rows. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
 
 Fixture, sequence and row constraints
 Per-method fixtures (drawer-audition, automation-range, pencil-hover, vertical-arrow, horizontal-arrow, clipboard, select-all) guard each case; key and mouse delivery rows expand one document assertion per delivered event (press, release, autorepeat, Delete, Up, Right, paste). Audition-count and hover-point rows expand one site per callback invocation and per hovered point.
@@ -268,7 +273,7 @@ Original expression:
 
 A015 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:132
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift predicate delivers Delete to a lane-scoped automation range: the shell lane never stages an automation time range for Delete-key delivery (test_j selects a plot range only for Insert/Delete-Time), and the paired transaction covers the numeric prompt only. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 
@@ -423,7 +428,7 @@ Original expression:
 
 A025 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:209
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift predicate delivers hover-targeted Delete: the shell lane has no mouse-hover point-targeting path (test_g and test_i click drawn notes and deliver keys; nothing stages a hover miss over a lane point). Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           break;
@@ -435,7 +440,7 @@ Original expression:
 
 A026 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:218
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this lane-nudge fixture. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
           break;
@@ -477,7 +482,7 @@ Original expression:
 
 A029 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:229
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift predicate delivers arrows to a lane-scoped automation input: shell Up/Down go to the focused roll and transpose notes (test_g), never to lanes. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 
@@ -487,7 +492,7 @@ Original expression:
 
 A030 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:236
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this lane-nudge fixture. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
   }
@@ -529,7 +534,7 @@ Original expression:
 
 A033 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:250
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift predicate nudges lane points with a horizontal arrow: shell Left/Right nudge roll notes (test_g), never lane points or the selected interval. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
       const auto &moved = m_fixture->view().selectionModel().timeSelection();
@@ -544,7 +549,7 @@ Original expression:
 
 A034 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:275
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Binding-existence row with no executing predicate in this lane: test_i delivers StandardKey.Paste without asserting the roll.paste binding itself, and the keyboard-lane delivery-scope predicate asserts scope, not this single-key binding. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
   }
@@ -572,7 +577,7 @@ Original expression:
 
 A035 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:278
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this per-band clipboard fixture. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 
@@ -642,8 +647,8 @@ Original expression:
                "Quick window did not accept the keyboard Paste binding")
 
 A041 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013 and S016 in src/checks/editorqml/tst_ShellWindow.qml: the production roll receives StandardKey.Paste and inserts clipboard notes into the focused roll, selecting at least one inserted note (S013), and the cross-tab Paste case asserts the destination edit cursor advance past the inserted note (S016). Unproved as stated: the exact committed-cursor landing tick of the pasted clip and the note key (the shell rows assert a count increase plus selection and a relative cursor advance, not the kPasteTick/key-60 identity).
 Source context since previous assertion:
   ;
 
@@ -667,7 +672,7 @@ Original expression:
 
 A043 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:309
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this Select All fixture. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 
@@ -714,8 +719,8 @@ Original expression:
                "Select All key did not reach the velocity band")
 
 A047 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:324
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S010 and S015 in src/checks/editorqml/tst_ShellWindow.qml: Select All delivered to the focused production roll selects the focused track notes (S015: selectedAll.length > 0, "Select All targets the currently focused roll track"; S010: the selection includes both same-track notes after Duplicate). Unproved as stated: the >= primary-track note-count extent of the C++ fixture and the !timeSelection.active() condition of the empty-selection row.
 Source context since previous assertion:
   ;
       // >= is deliberate: the project fixture carries pre-existing primary-track notes.
@@ -741,7 +746,7 @@ Original expression:
 
 A049 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:335
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this ruler-click Select All fixture. Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
 
@@ -793,7 +798,7 @@ Original expression:
 
 A053 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:354
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: No Swift predicate stages a ruler-click time selection: the shell lane has no ruler-click or time-selection path (test_i Select All runs from a note selection, never a ruler click). Original predicate and setup below remain an open obligation.
 Source context since previous assertion:
   ;
       // >= is deliberate: the project fixture carries pre-existing primary-track notes.
@@ -839,3 +844,76 @@ S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
+
+S009 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:734
+  keyClick(Qt.Key_D, Qt.ControlModifier)
+  var duplicated = JSON.parse(grid.noteSummary).filter(function(note) {
+      return note.selected && note.id !== original.id
+          && note.pitch === original.pitch && note.tick > original.tick
+  })
+  compare(duplicated.length, 1, "Ctrl+D duplicates and selects the original note")
+  // Reaches the production roll through ShellQmlLane
+  // (src/checks/editorqml/ShellQmlTests.swift:46).
+
+S010 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:740
+  keySequence(StandardKey.SelectAll)
+  var selectedForJoin = JSON.parse(grid.noteSummary).filter(function(note) {
+      return note.selected && note.track === original.track
+  })
+  verify(selectedForJoin.some(function(note) { return note.id === original.id })
+         && selectedForJoin.some(function(note) { return note.id === duplicated[0].id }),
+         "Select All includes both same-track notes")
+
+S011 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:747
+  keyClick(Qt.Key_J, Qt.ControlModifier)
+  verify(joined.filter(function(note) { return note.track === original.track }).length
+         < selectedForJoin.length,
+         "Ctrl+J merges the adjacent same-pitch notes")
+  var selectedJoined = joined.filter(function(note) {
+      return note.selected && note.track === original.track
+          && note.pitch === original.pitch && note.duration > grid.snapTicks
+  })
+  verify(selectedJoined.length > 0, "Join selects a subdividable merged note")
+
+S012 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:757
+  keyClick(Qt.Key_E, Qt.ControlModifier)
+  verify(split.length > joined.length, "Ctrl+E splits selected notes on grid boundaries")
+  verify(split.some(function(note) { return note.selected && note.pitch === original.pitch }),
+         "Split keeps the resulting note fragments selected")
+
+S013 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:764
+  keySequence(StandardKey.Cut)
+  verify(afterCut.length < beforeCut, "Cut deletes selected notes from the focused roll")
+  var cutClip = JSON.parse(bootstrap.copiedClipSummary())
+  compare(cutClip[0], 1, "Cut writes a decodable single-track clipboard clip")
+  verify(cutClip[1] > 0, "Cut preserves at least one copied note")
+  keySequence(StandardKey.Paste)
+  verify(afterPaste.length > afterCut.length, "Paste inserts clipboard notes into the roll")
+  verify(afterPaste.some(function(note) { return note.selected }),
+         "Paste selects at least one inserted note")
+
+S014 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:784
+  keyClick(Qt.Key_D, Qt.ControlModifier)
+  compare(grid.noteSummary, notesBeforeLocalKeys,
+          "text-focused Duplicate never changes the musical notes")
+  keyClick(Qt.Key_Delete)
+  compare(textProbe.text, "ext", "text-focused Delete edits the local text")
+  compare(grid.noteSummary, notesBeforeLocalKeys,
+          "text-focused Delete never deletes selected notes")
+
+S015 | test_iEditorCommandDeliveryAndTextLocalKeys | src/checks/editorqml/tst_ShellWindow.qml:795
+  keySequence(StandardKey.SelectAll)
+  verify(selectedAll.length > 0, "Select All targets the currently focused roll track")
+  keyClick(Qt.Key_Delete)
+  compare(remaining.filter(function(note) { return note.track === original.track }).length,
+          0, "Delete removes only the selected track's notes")
+
+S016 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml:438
+  compare(inserted.length, 1, "Paste changes only the destination by one note")
+  compare(destination.gridModel.editCursorTick, inserted[0].tick + inserted[0].duration,
+          "Paste advances the destination edit cursor past the inserted note")
+
+Shared helpers
+selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml:153) and
+openTwoSongShell (:88) stage the fixture and select the drawn velocity note; the
+helper itself asserts selectedCount 1 (:166) and carries no other predicate.
