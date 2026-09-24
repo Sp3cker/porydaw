@@ -49,6 +49,7 @@ submenu, reset, stay-open). QTRY_VERIFY2 sites wait on real event delivery
 (focus return, insertTimePrompt rendering, submenu navigation). Target ids come
 from checks::support::alternateGridMenuId and the live view state, so
 re-execution order is fixed by the suite sequence.
+Swift sequence: the shell lane opens mus_route101 in a ShellWindow, drives division (kind 1, nine snapScale rows -4..4) and feel (kind 2, rows 0/1) menus through real mouseClick/keyClick, then drives timeSig (one row, actionId 9) and header (five rows, actionIds 1..5) menus; waits use tryCompare/tryVerify plus the native pump (waitForNative).
 
 Tally: MATCHED 38, PARTIAL 0, GAP 28, NATIVE 0, RETIRED-REPRESENTATION 100.
 

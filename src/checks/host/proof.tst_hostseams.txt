@@ -14,11 +14,13 @@ Dispositions and no-ingress evidence
 NATIVE is no longer used: every site that observed a native-window, embedding, delivery, framebuffer, settings, popup, or harness obligation is RETIRED-REPRESENTATION, because the mechanism that carried it is gone (this C++ file was deleted at 31ea635f, appears in no CMake target, and checkcatalog.cpp registers no host entry; re-verified 2026-09-24). GAP sites are behavior assertions whose Swift owners exist but whose original predicates have no executed Swift equivalent; each mapping names the owner verified under src/swift/app. The Reference revision and Original SHA-256 below were re-verified against each other (git show <revision>:<path> | shasum -a 256) before any retirement claim.
 
 Verification
+Command: deno task verify:qml-roll --filter swiftroll-window
+Result: PASS 1/1 (quoted post-merge fc39ba34 result; lane not re-run here). The lane close handshake (bootstrap.hostClosing() then bootstrap.acknowledgeSceneRemoval(), forwarding to ApplicationSession.hostClosing()/acknowledgeGridDetached()) executes the Swift close path named in the RETIRED-REPRESENTATION mappings. swiftcore/shell lanes are not cited: no site maps to their predicates.
 Command: deno task proof check
-Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity. No integrated verification result was provided for this snapshot, and no lane executes this deleted harness, so execution evidence is unknown.
+Result: PASS - structure, entry IDs, metadata, and present tallies only; not source freshness, execution, or parity.
 
 Execution ownership
-No Swift entry point executes the deleted host checks; no Swift fixture is paired.
+The deleted host harness has no Swift entry point and no paired fixture. The Swift close path named in the RETIRED-REPRESENTATION mappings (ApplicationSession.hostClosing/acknowledgeGridDetached, ShellPresenter.beginClose/sceneDestroyed) is source-verified under src/swift/app; the session half executes in the swiftroll-window lane close handshake. GAP sites name their Swift owners verified under src/swift/app, with no executed equivalent predicate.
 
 Fixture, sequence and row constraints
 drawerContextTick boundary rows (-1.0, 0.49, 0.5, 0.51 ticks) expand one conversion site into four edge cases. The embedded-window case runs a two-phase sequence (take for embedding, then detach) with detach-count and identity sites per phase; the unhosted-detach case asserts the same obligations after synchronous window destruction.
