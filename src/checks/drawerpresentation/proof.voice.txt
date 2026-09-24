@@ -4,13 +4,15 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/voice.cpp
 Original SHA-256: 04bbd1e55a88644cc282ac56db873f1b027b9cbac8d7456456524e81184373f1
 Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
-Swift SHA-256: 63088cc97982d4262cfb8e8d4649f8f2ad60d8b95c4905a171c94e72f1456a80
+Swift SHA-256: ca29d1134c8d6dc32cfad25fe7a0db1dfd1b5e943b02403ec55713e64d6ea009
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift SHA-256: 97cb8d8afce68b22bcf551446e61d50034d959648ccb427514cc5b3263cab618
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
+Converted-window counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -29,7 +31,25 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Provided by the lane owner for the settled tree; this ledger pass did not re-run it.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (1/14 ok, 13 skipped; swiftcore 16.06 s).
+Executed: the swiftcore target runs the shared suite that calls runVoiceChangesPageChecks
+(src/checks/workspace/SessionChecks.swift:70), which drives every paired voice scenario named
+in the S index below.
+QML: the production voice cases PASS (VoiceChangesPageMountsAndRenders,
+VoiceChangesPointerAndMenuTransactions, VoiceChangesPickerKeyboardAndCancellation,
+VoicePickerPointerAudition, VoiceChangesPlayheadPerformance, VoiceChangesModalLayerComposition,
+VoiceChangesSpacePriority); reference profiles verified.
+Not run here: no build, formatter, linter or project-wide check ran for this ledger pass; the
+dispositions below cite predicates under this evidence and claim no further execution.
+Review-fix re-run (lane owner, after the strengthened readout/hover rect predicates and the
+drawn composition asserts landed): deno task verify --filter swiftcore --verbose PASS
+(1/14 ok, 13 skipped; swiftcore 10.17 s), with the new predicate strings confirmed in the test
+binary by the lane owner. Targeted run of test_productionVoiceChangesPageMountsAndRenders PASS
+(3/3), including the new drawn readout and hover asserts. Neither run was repeated by this
+ledger pass; both are recorded here as lane-owner observations. Those drawn predicates live in
+src/checks/editorqml/tst_EditorDrawer.qml under the QML SHA-256 recorded above.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -197,468 +217,468 @@ src/checks/drawerpresentation/voice.cpp:479 | sendMouse(fixture.input(), QEvent:
 Original assertion inventory
 
 A001 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted production case test_productionVoiceChangesPageMountsAndRenders composes and asserts the plot, grid, readout and hover-label objects; the native TimelineQuickScene object identity is unproved.
 Original expression:
   QVERIFY(scene)
 
 A002 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the same mounted case asserts the composed voiceGutter item and its shared-column width; the native gutter input item handle is unproved.
 Original expression:
   QVERIFY(gutter)
 
 A003 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by the mounted QML case test_productionVoiceChangesPageMountsAndRenders (mountProductionVoice): the production Voice Changes drawer section is asserted visible before the case drives it.
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A004 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: Swift publishes plotOrigin/plotWidth/plotHeight (VoiceChangesPage.swift:106-108) and the mounted case asserts the drawn plot's real width and height; the native plotRect object itself is unproved.
 Original expression:
   QVERIFY(!fixture.plotRect().isEmpty())
 
 A005 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted case asserts plot.x == gutter.width and gutter.width == surface.timelineSplitX; the native plotRect/timelineSplitX relation is unproved.
 Original expression:
   QCOMPARE(fixture.plotRect().x(), view.timelineSplitX())
 
 A006 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted case drives voicePlotInput in plot-local coordinates but asserts no input bounds; native input bounds equal to the plot size is unproved.
 Original expression:
   QCOMPARE(fixture.input().bounds(), QRectF(QPointF{}, fixture.plotRect().size()))
 
 A007 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted case asserts the gutter is the shared column and fills the body height; the native gutter local bounds (fixed span x band height) are unproved.
 Original expression:
   QCOMPARE(gutter->bounds(),
                QRectF(QPointF{}, QSizeF(fixture.fixedSpan(), fixture.bandRect().height())))
 
 A008 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S002 (drawerVoiceMarkerProjection): the projection keeps one published marker per lane change; S105 (drawerVoicePickerInsertion) republishes one extra marker for an accepted insertion.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A009 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S006 (drawerVoiceMarkerProjection) and S026 (drawerVoiceSlotLabels): every marker label carries its own zero-padded program number.
 Original expression:
   QVERIFY(markers.at(0).startsWith(QStringLiteral("000 ")))
 
 A010 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S027 and S028 (drawerVoiceSlotLabels): a slot label carries its bank voice's source symbol and declared type, and S006 publishes that label per marker.
 Original expression:
   QVERIFY(markers.at(1).contains(QStringLiteral("voice-check")))
 
 A011 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S005 and S001 (drawerVoiceMarkerProjection): each marker draws at the shared camera's projection for its own tick, and the fixture publishes the original tick set.
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48}))
 
 A012 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S059 (drawerVoiceCurrentVoiceContext), S217 (drawerVoiceUndoRedoRefresh) and S237 (drawerVoicePlayheadDiagnostics): the readout publishes the context slot's label for the presented track.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A013 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S002 (drawerVoiceMarkerProjection) and S105 (drawerVoicePickerInsertion): one marker per change; the Swift fixture stages three changes and an accepted insertion publishes one more.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 3)
 
 A014 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S027 and S006: the third marker's label is published by the same slot-label derivation and per-marker program prefix these predicates exercise.
 Original expression:
   QVERIFY(voiceTexts(labels).last().contains(QStringLiteral("alt-voice")))
 
 A015 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S001 and S005 (drawerVoiceMarkerProjection): the Swift fixture publishes the change at 120 as well, so all three marker ticks project at their own position.
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48, 120}))
 
 A016 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S103 (drawerVoicePickerInsertion) and S291 (drawerVoiceOriginalPickerRows): one committed lane write is exactly baseline.revision + 1.
 Original expression:
   QCOMPARE(fixture.document.revision(), before.revision + 1)
 
 A017 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: history identity and MIDI byte predicates replace private Qt stack-index inspection (S104, S129, S292); the private undo-stack index itself is unproved.
 Original expression:
   QCOMPARE(fixture.document.undoStack()->index(), before.undoIndex + 1)
 
 A018 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S110 (drawerVoicePickerInsertion) and S216 (drawerVoiceUndoRedoRefresh): undo restores the marker set the projection had before the edit.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A019 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S110 and S005: after undo the projection republishes the original marker ticks and their camera positions.
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48}))
 
 A020 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S292 (drawerVoiceOriginalPickerRows): byte-level MIDI equality is the Swift replacement for the original smf write comparison; S115 covers the untouched document.
 Original expression:
   QVERIFY(fixture.document.smf().write() == before.smf)
 
 A021 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S231 and S228 (drawerVoicePlayheadDiagnostics): the readout names the same program throughout a span and playhead-only movement rebuilds no content.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A022 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S231 and S228 (drawerVoicePlayheadDiagnostics): the readout names the same program throughout a span and playhead-only movement rebuilds no content.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A023 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation; the Swift suite publishes no rendered image.
 Original expression:
   QVERIFY(!sameSpan.isNull())
 
 A024 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S234 and S237 (drawerVoicePlayheadDiagnostics): crossing a span updates the presented context and the readout names the new span's program.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(1)})
 
 A025 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S228 (drawerVoicePlayheadDiagnostics): playhead-only movement inside one span rebuilds no marker content, so the labels the original re-reads stay put.
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A026 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S314 (drawerVoiceMarkerProjection): the context readout publishes a rect whose width and height are both > 0 — QRectF::isValid parity at model level, the same publication the original validates; S317 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) asserts the drawn readout rect is likewise usable.
 Original expression:
   QVERIFY(readoutRect.isValid())
 
 A027 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!nextSpan.isNull())
 
 A028 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the changedPixels region comparison is a retained native QImage pixel obligation over the readout rect.
 Original expression:
   QVERIFY(changedPixels(sameSpan, nextSpan,
                             deviceRect(readoutRect, nextSpan.devicePixelRatio(), nextSpan.size())) >
               0)
 
 A029 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S238 (drawerVoicePlayheadDiagnostics): the stopped context follows the edit cursor, so the readout returns to the cursor's program.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A030 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S221 and S223 (drawerVoiceUndoRedoRefresh): an equal refresh leaves every marker identity in place and replaces no published marker row.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A031 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S238 (drawerVoicePlayheadDiagnostics): the stopped context follows the edit cursor, so the readout returns to the cursor's program.
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A032 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted production case composes and asserts the plot, grid, readout and hover-label objects; the native TimelineQuickScene identity is unproved.
 Original expression:
   QVERIFY(scene)
 
 A033 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S002 (drawerVoiceMarkerProjection): one published marker per lane change.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A034 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand idle image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!idle.isNull())
 
 A035 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 (drawerVoiceMarkerProjection): a background hover publishes its snapped tick's slot label.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 1)
 
 A036 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018 (drawerVoiceMarkerProjection): the background hover publishes exactly one label and that label keeps the legacy arrow prefix.
 Original expression:
   QCOMPARE(hoveredText.size(), 1)
 
 A037 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S018 and S027: the hover label is the slot label with the arrow prefix, and the slot label carries its bank voice's symbol.
 Original expression:
   QVERIFY(hoveredText.first().contains(QStringLiteral("voice-check")))
 
 A038 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S019 (drawerVoiceMarkerProjection): a hover repaints no marker label.
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A039 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S316 (drawerVoiceMarkerProjection): the background hover label publishes a rect whose width and height are both > 0 — QRectF::isValid parity at model level, the same publication the original validates; S319 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) drives the background hover and asserts the drawn label visible with a usable rect.
 Original expression:
   QVERIFY(hoverRect.isValid())
 
 A040 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand hovered image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!hovered.isNull())
 
 A041 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the changedPixels comparison over the hover rect is a retained native QImage pixel obligation.
 Original expression:
   QVERIFY(changedPixels(idle, hovered,
                             deviceRect(hoverRect, hovered.devicePixelRatio(), hovered.size())) > 0)
 
 A042 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the published-hover predicates assert one background hover publication (S017, S018); hover survival across a pointer move inside one span is unproved.
 Original expression:
   QCOMPARE(voiceTexts(hover), hoveredText)
 
 A043 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: hover survival across a same-span playhead presentation is unproved; no predicate re-reads the hover after refreshPlayhead.
 Original expression:
   QCOMPARE(voiceTexts(hover), hoveredText)
 
 A044 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S022 (drawerVoiceMarkerProjection) asserts only that a pointer leave clears the hover; the clear on a crossed playhead boundary is unproved.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A045 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018: a fresh background hover republishes the slot label with its arrow prefix.
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A046 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S022 asserts only that a pointer leave clears the hover; the clear when the playhead stops and returns the context is unproved.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A047 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018: a fresh background hover republishes the slot label with its arrow prefix.
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A048 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S020 and S021 (drawerVoiceMarkerProjection): a marker hover publishes no background label and publishes its own tick, so the hover row count is zero.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A049 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S020 and S021 assert the marker hover's own publication; marker-label invariance while a marker is hovered is unproved (S019 covers only the background hover).
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A050 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018: a fresh background hover republishes the slot label with its arrow prefix.
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A051 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S022 (drawerVoiceMarkerProjection): leaving the plot clears the hover.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A052 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:228
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018: a fresh background hover republishes the slot label with its arrow prefix.
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A053 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S022 asserts only that a pointer leave clears the hover; the clear of a keyboard-cancelled hover is unproved.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A054 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S017 and S018: a fresh background hover republishes the slot label with its arrow prefix.
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A055 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the page's hide path is asserted through cancelSectionInteraction (S203, S204) and the mounted picker case hides the section; the native input item's visibility on hide is unproved.
 Original expression:
   QVERIFY(!fixture.input().isVisible())
 
 A056 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted case re-shows the section and asserts its visibility; the native input item's visibility after re-show is unproved.
 Original expression:
   QTRY_VERIFY(fixture.input().isVisible())
 
 A057 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S203 cancels the in-flight interaction on a hide and S022 clears a hover on leave; the hover clear across the hide/show cycle is unproved.
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A058 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S221 and S223 cover an equal refresh; the marker re-derivation across a hide/show cycle is unproved.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A059 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:248
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S002 (drawerVoiceMarkerProjection): one published marker per lane change.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A060 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S027 and S006: the second marker's label carries its bank slot's source symbol.
 Original expression:
   QVERIFY(track0.at(1).contains(QStringLiteral("voice-check")))
 
 A061 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S069 (drawerVoiceCurrentVoiceContext): the secondary track publishes only its own single change.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 1)
 
 A062 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S069 and S070: the secondary track's single label is published from the current bank slot and the readout follows the newly selected track.
 Original expression:
   QVERIFY(voiceTexts(labels).first().contains(QStringLiteral("alt-voice")))
 
 A063 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S315 (drawerVoiceMarkerProjection) and S318 (EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders): the page publishes the legacy right readout alignment and the mounted composition draws the readout right-aligned; S317 asserts that drawn readout rect is usable. The Swift predicate alone compares the published policy to itself, so the drawn QML right-alignment is the executing observation that answers the tautology.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), voiceTexts(labels))
 
 A064 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the page's hide path is asserted through cancelSectionInteraction (S203, S204); the native input item's visibility on hide is unproved.
 Original expression:
   QVERIFY(!fixture.input().isVisible())
 
 A065 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the native input item's visibility after the section is shown again is unproved; the mounted case asserts only the section's own visibility.
 Original expression:
   QTRY_VERIFY(fixture.input().isVisible())
 
 A066 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S071 (drawerVoiceCurrentVoiceContext): returning to the primary track restores its markers.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A067 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S315, S318 (drawerVoiceMarkerProjection / EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders) and S059 (drawerVoiceCurrentVoiceContext): the readout publishes the legacy right alignment, the mounted composition draws it right-aligned, and the readout names the context slot's label; S317 asserts the drawn readout rect is usable. S315's policy self-comparison is answered by the drawn QML observation.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), QStringList{track0.at(0)})
 
 A068 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the no-symbol label derivation is covered by S029 and S046-S048; the voicegroup-removal trigger is unproved because DocumentSession.bankSlots exposes no public mutation API.
 Original expression:
   QTRY_VERIFY(!voiceTexts(labels).join(' ').contains(QStringLiteral("voice-check")))
 
 A069 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the whole-lane label set after the voicegroup is removed is unproved; the blank-slot predicates cover one slot (S048, S271), not the fallback lane.
 Original expression:
   QCOMPARE(voiceTexts(labels).size(), 2)
 
 A070 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S026 and S029: a slot with no source symbol publishes its zero-padded program number and its declared type.
 Original expression:
   QVERIFY(voiceTexts(labels).at(1).startsWith(QStringLiteral("003 ")))
 
 A071 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the voicegroup re-install and refresh is unproved; S071 covers a track switch restoring the primary markers, not a bank re-install.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A072 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!original.isNull())
 
 A073 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S009 (drawerVoiceMarkerProjection): every marker publishes a label box with a real width.
 Original expression:
   QVERIFY(originalRect.isValid())
 
 A074 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the slot-label derivation from the current bank is covered (S027, S029); the rename-triggered refresh is unproved because DocumentSession.bankSlots exposes no public mutation API.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), renamedLabels)
 
 A075 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S009 (drawerVoiceMarkerProjection): every marker publishes a label box with a real width.
 Original expression:
   QVERIFY(renamedRect.isValid())
 
 A076 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the captureQuickBand image validity is a retained native rendering obligation.
 Original expression:
   QVERIFY(!renamed.isNull())
 
 A077 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the changedPixels union-region comparison is a retained native QImage pixel obligation.
 Original expression:
   QVERIFY(changedPixels(
                   original, renamed,
@@ -666,52 +686,52 @@ Original expression:
                              renamed.devicePixelRatio(), renamed.size())) > 0)
 
 A078 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the voicegroup name restore and refresh is unproved; no executing predicate re-drives the restored bank.
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A079 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:309
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S285 (drawerVoiceOriginalPickerRows): the double-click on the marker at tick 48 opens the picker (expect(page.pickerOpen, 309)).
+Swift counterpart expression (S285):
   expect(page.pickerOpen, 309)
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A080 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the mounted cases test_productionVoiceChangesPickerKeyboardAndCancellation and test_productionVoiceChangesPointerAndMenuTransactions assert the production search field's active focus; the native Qt focus item is unproved.
 Original expression:
   QTRY_VERIFY(picker.search->hasActiveFocus())
 
 A081 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S286 (drawerVoiceOriginalPickerRows): the opened picker's current row is program 3 (expect(page.pickerIndex == 3, 311)).
+Swift counterpart expression (S286):
   expect(page.pickerIndex == 3, 311)
 Original expression:
   QCOMPARE(picker.list->property("currentIndex").toInt(), 3)
 
 A082 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:313
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S287 (drawerVoiceOriginalPickerRows): the 005 filter leaves exactly row program 5 current (expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 313)).
+Swift counterpart expression (S287):
   expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 313)
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 5))
 
 A083 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:315
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S288 (drawerVoiceOriginalPickerRows): acceptance closes the picker (expect(!page.pickerOpen, 315)).
+Swift counterpart expression (S288):
   expect(!page.pickerOpen, 315)
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A084 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:317
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S289 (drawerVoiceOriginalPickerRows): the accepted insertion is present at tick 48 (expect(value(48) != nil, 317)).
 Swift counterpart expression (S289):
   expect(value(48) != nil, 317)
 Original expression:
@@ -719,7 +739,7 @@ Original expression:
 
 A085 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:318
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S290 (drawerVoiceOriginalPickerRows): the inserted occurrence carries program 5 (expect(value(48) == 5, 318)).
 Swift counterpart expression (S290):
   expect(value(48) == 5, 318)
 Original expression:
@@ -727,15 +747,15 @@ Original expression:
 
 A086 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:319
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S291 (drawerVoiceOriginalPickerRows): the insertion is one revision (expect(document.revision == baseline.revision + 1, 319)).
 Swift counterpart expression (S291):
   expect(document.revision == baseline.revision + 1, 319)
 Original expression:
   QCOMPARE(fixture.document().revision(), baseline.revision + 1)
 
 A087 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:320
-Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Disposition: PARTIAL
+Mapping/reason: Partial: history identity and MIDI byte predicates replace private Qt stack-index inspection; S292 compares the full baseline bytes, the history identity and canUndo after one undo and the written bytes and identity after redo (expect(..., 320)); the stack index itself is unproved.
 Swift counterpart expression (S292):
   expect(oneUndoRestored && (try! document.captureSave().bytes) == writtenBytes
       && document.history.currentIdentity == writtenIdentity, 320)
@@ -743,268 +763,268 @@ Original expression:
   QCOMPARE(fixture.document().undoStack()->index(), baseline.undoIndex + 1)
 
 A088 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S293 (drawerVoiceOriginalPickerRows): the picker reopens on the marker (expect(page.pickerOpen, 324)).
+Swift counterpart expression (S293):
   expect(page.pickerOpen, 324)
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A089 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:326
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S294 (drawerVoiceOriginalPickerRows): the 005 filter leaves row program 5 current (expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 326)).
+Swift counterpart expression (S294):
   expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 326)
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 5))
 
 A090 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:328
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S295 (drawerVoiceOriginalPickerRows): acceptance closes the picker (expect(!page.pickerOpen, 328)).
+Swift counterpart expression (S295):
   expect(!page.pickerOpen, 328)
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A091 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:329
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S296 (drawerVoiceOriginalPickerRows): the same-value acceptance leaves the document snapshot unchanged (expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 329)).
 Swift counterpart expression (S296):
   expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 329)
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A092 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:332
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S297 (drawerVoiceOriginalPickerRows): the picker reopens for the unmatched-filter case (expect(page.pickerOpen, 332)).
+Swift counterpart expression (S297):
   expect(page.pickerOpen, 332)
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A093 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:334
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S298 (drawerVoiceOriginalPickerRows): an unmatched filter publishes no match, no row and no current index (expect(..., 334)); S119 records that such a filter cannot be accepted.
+Swift counterpart expression (S298):
   expect(!page.pickerHasMatch && page.pickerRowPrograms.isEmpty && page.pickerIndex == -1, 334)
 Original expression:
   QTRY_VERIFY(!picker.accept->isEnabled())
 
 A094 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:336
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S299 (drawerVoiceOriginalPickerRows): the 007 filter leaves row program 7 current (expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 336)).
+Swift counterpart expression (S299):
   expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 336)
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 7))
 
 A095 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:338
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S300 (drawerVoiceOriginalPickerRows): cancellation closes the picker (expect(!page.pickerOpen, 338)).
+Swift counterpart expression (S300):
   expect(!page.pickerOpen, 338)
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A096 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:339
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S301 (drawerVoiceOriginalPickerRows): the cancelled acceptance leaves the document snapshot unchanged (expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 339)).
 Swift counterpart expression (S301):
   expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 339)
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A097 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native: the original observes SongView::auditionVoice through a QSignalSpy; that spy handle is a retained native signal obligation, replaced in Swift by the typed onAuditionVoice callback (S275, S282).
 Original expression:
   QVERIFY(audition.isValid())
 
 A098 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S131 (drawerVoicePickerValueReplacement) and S297 (drawerVoiceOriginalPickerRows): the picker reopens on a double-click for the Escape case.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A099 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the filtered row's publication is covered by S299; the native picker row item the original then presses for the held pointer is unproved.
 Original expression:
   QVERIFY(escapeHeldRow)
 
 A100 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 (drawerVoiceAuditionCapability): a row hold publishes one audition call for its program, and the mounted case test_productionVoicePickerPointerAudition asserts the same production tag on a real row press.
 Original expression:
   QTRY_COMPARE(audition.count(), 1)
 
 A101 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S133 and the mounted case test_productionVoiceChangesPickerKeyboardAndCancellation: a real Escape closes the picker and writes nothing.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A102 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275: one hold plus its release publishes exactly that pair of calls; the mounted audition case asserts the same pair.
 Original expression:
   QTRY_COMPARE(audition.count(), 2)
 
 A103 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries the held program, note 60 and velocity 0.
 Original expression:
   QCOMPARE(audition.at(1).at(0).toInt(), 7)
 
 A104 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries note 60 at the same program.
 Original expression:
   QCOMPARE(audition.at(1).at(1).toInt(), 60)
 
 A105 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries velocity 0.
 Original expression:
   QCOMPARE(audition.at(1).at(2).toInt(), 0)
 
 A106 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 (drawerVoiceAuditionCapability): held program replacement releases once before the next note, so the call count stays at the pair.
 Original expression:
   QCOMPARE(audition.count(), 2)
 
 A107 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S134 and S296: Escape writes nothing and the document snapshot is unchanged.
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A108 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S131 (drawerVoicePickerValueReplacement) and S293 (drawerVoiceOriginalPickerRows): the picker reopens on the double-click for the outside-dismissal case.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A109 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the filtered row's publication is covered by S299; the native picker row item the original then presses for the held pointer is unproved.
 Original expression:
   QVERIFY(outsideHeldRow)
 
 A110 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275: a row hold publishes one audition call for its program.
 Original expression:
   QTRY_COMPARE(audition.count(), 1)
 
 A111 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:387
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275: the physical release publishes the second call and no more.
 Original expression:
   QTRY_COMPARE(audition.count(), 2)
 
 A112 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries the held program.
 Original expression:
   QCOMPARE(audition.at(1).at(0).toInt(), 7)
 
 A113 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries note 60.
 Original expression:
   QCOMPARE(audition.at(1).at(1).toInt(), 60)
 
 A114 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S275 and S282: the released call carries velocity 0.
 Original expression:
   QCOMPARE(audition.at(1).at(2).toInt(), 0)
 
 A115 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S136 (drawerVoicePickerValueReplacement) and the mounted cases: an outside press dismisses the open picker without a write.
 Original expression:
   QVERIFY(checks::voicepicker::dismissOutside(picker))
 
 A116 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S136 and S305: the outside dismissal closes the picker (expect(!page.pickerOpen, 412)).
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A117 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S138 and S282: the dismissed press and its release write nothing and release no extra audition.
 Original expression:
   QCOMPARE(audition.count(), 2)
 
 A118 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:394
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S138 and S305: the outside dismissal leaves the document snapshot unchanged.
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A119 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S131 and S293: the picker opens on the double-click before the song-replacement case.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A120 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S299: the 007 filter publishes row program 7.
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 7))
 
 A121 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the document-change cancellation is covered by S140 (a document change cancels the open picker) and S205 (detach cancels every interaction); the prepareForSongReplacement and setSong workspace retire path is unproved.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A122 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:403
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the same workspace retire path is unproved; S142 and S208 record that the document survives a stale or detached interaction unchanged.
 Original expression:
   QVERIFY(fixture.snapshot() == frozen)
 
 A123 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:407
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S302 (drawerVoiceOriginalPickerRows): the picker opens on the empty lane at tick 96 (expect(page.pickerOpen, 407)).
+Swift counterpart expression (S302):
   expect(page.pickerOpen, 407)
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A124 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:408
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S303 (drawerVoiceOriginalPickerRows): the picker opens on the context slot (expect(page.pickerIndex == 5, 408)).
+Swift counterpart expression (S303):
   expect(page.pickerIndex == 5, 408)
 Original expression:
   QCOMPARE(picker.list->property("currentIndex").toInt(), 5)
 
 A125 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:410
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S304 (drawerVoiceOriginalPickerRows): the 003 filter leaves row program 3 current (expect(page.pickerRowPrograms == [3] && page.pickerIndex == 0, 410)).
+Swift counterpart expression (S304):
   expect(page.pickerRowPrograms == [3] && page.pickerIndex == 0, 410)
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 3))
 
 A126 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:412
-Disposition: PARTIAL
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: Matched by S305 (drawerVoiceOriginalPickerRows): acceptance closes the picker (expect(!page.pickerOpen, 412)).
+Swift counterpart expression (S305):
   expect(!page.pickerOpen, 412)
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A127 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:413
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S306 (drawerVoiceOriginalPickerRows): the accepted insertion is present at tick 96 (expect(value(96) != nil, 413)).
 Swift counterpart expression (S306):
   expect(value(96) != nil, 413)
 Original expression:
@@ -1012,7 +1032,7 @@ Original expression:
 
 A128 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:414
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S307 (drawerVoiceOriginalPickerRows): the inserted occurrence carries program 3 (expect(value(96) == 3, 414)).
 Swift counterpart expression (S307):
   expect(value(96) == 3, 414)
 Original expression:
@@ -1020,7 +1040,7 @@ Original expression:
 
 A129 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:416
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S308 (drawerVoiceOriginalPickerRows): one undo removes the occurrence at tick 96 (expect(value(96) == nil, 416)).
 Swift counterpart expression (S308):
   expect(value(96) == nil, 416)
 Original expression:
@@ -1028,106 +1048,106 @@ Original expression:
 
 A130 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:418
 Disposition: MATCHED
-Mapping/reason: Exact original MIDI fixture and row values exercised by drawerVoiceOriginalPickerRows at src/checks/drawerpresentation/voice_picker.swift (drawerVoiceOriginalPickerRows). Direct Swift execution PASS (swiftcore, 1.92s). Mounted popup/focus/visible-delegate predicates additionally require existing editorqml production picker cases; direct model state alone does not establish native-input equivalence. Swift uses the live project bank with the same128 program slots.
+Mapping/reason: Matched by S309 (drawerVoiceOriginalPickerRows): redo restores the occurrence at tick 96 (expect(value(96) != nil, 418)).
 Swift counterpart expression (S309):
   expect(value(96) != nil, 418)
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &point))
 
 A131 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the model path is covered by S194 and S196 (cancellation ends the live drag and commits nothing); the native Escape key delivery into the input item is unproved.
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A132 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:439
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S164 (drawerVoiceMarkerDragTransactions): the source tick no longer holds the occurrence.
 Original expression:
   QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, 48, &atOld))
 
 A133 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:440
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S161 (drawerVoiceMarkerDragTransactions): the release commits the occurrence at the preview tick.
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &atOld))
 
 A134 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:441
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S162 (drawerVoiceMarkerDragTransactions): the move is one revision.
 Original expression:
   QCOMPARE(committed.revision, baseline.revision + 1)
 
 A135 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:442
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: history identity and MIDI byte predicates replace private Qt stack-index inspection; S163 records one history entry for the move, and the stack index itself is unproved.
 Original expression:
   QCOMPARE(committed.undoIndex, baseline.undoIndex + 1)
 
 A136 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:443
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S292 and S161: byte-level MIDI comparison replaces the original smf write; the commit changes the bytes one undo restores.
 Original expression:
   QVERIFY(committed.smf != baseline.smf)
 
 A137 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S292 and S166: one undo restores the baseline bytes and the restored tick.
 Original expression:
   QCOMPARE(undone.smf, baseline.smf)
 
 A138 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:447
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: history identity and byte predicates replace private Qt stack-index inspection; S292 records that one undo restores the baseline identity and canUndo, and the stack index is unproved.
 Original expression:
   QCOMPARE(undone.undoIndex, baseline.undoIndex)
 
 A139 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: S292 observes the restored bytes and history identity, not the revision an undo advances to; the undo revision step is unproved.
 Original expression:
   QCOMPARE(undone.revision, committed.revision + 1)
 
 A140 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S292 and S169: redo restores the written bytes and reapplies the move.
 Original expression:
   QCOMPARE(redone.smf, committed.smf)
 
 A141 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: history identity and byte predicates replace private Qt stack-index inspection; S292 records the redone identity, and the stack index is unproved.
 Original expression:
   QCOMPARE(redone.undoIndex, committed.undoIndex)
 
 A142 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Partial: the revision a redo advances to is unproved; S292 observes the redone bytes and history identity instead.
 Original expression:
   QCOMPARE(redone.revision, undone.revision + 1)
 
 A143 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:454
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Matched by S169: redo reapplies the move at the preview tick.
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &atOld))
 
 A144 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:469
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Gap: pointer-camera behavior not owned by voice page (camera math in timeline lane; wheel delivery native). The original zoom/pan assertions read SongView's camera after native wheel and middle-button delivery; no voice-page predicate executes them (the page owns panRevision but no check asserts a pan).
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoom)
 
 A145 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:470
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Gap: pointer-camera behavior not owned by voice page (camera math in timeline lane; wheel delivery native). The original zoom/pan assertions read SongView's camera after native wheel and middle-button delivery; no voice-page predicate executes them (the page owns panRevision but no check asserts a pan).
 Original expression:
   QVERIFY(std::abs(view.camera().displayX(tick, 0.0, fixture.input().devicePixelRatio()) -
                        anchor.x()) <= 1.0 / fixture.input().devicePixelRatio())
 
 A146 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:478
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Gap: pointer-camera behavior not owned by voice page (camera math in timeline lane; wheel delivery native). The original zoom/pan assertions read SongView's camera after native wheel and middle-button delivery; no voice-page predicate executes them (the page owns panRevision but no check asserts a pan).
 Original expression:
   QCOMPARE(view.camera().scrollX(), floor)
 
@@ -1143,411 +1163,414 @@ Mapping/reason: Retained native harness guard; the production Qt object/device/w
 Original expression:
   qFatal("%s", qPrintable(error))
 
-Swift executable assertion index
-The S entries are exact predicates already called by the suite. Their presence alone
-does not close any A entry. Preserve their surrounding setup and order in the paired sources.
+Executable assertion index
+The S entries are exact predicates already called by the suite: S001-S313 are paired Swift
+counterpart predicates, S314-S316 are the lane-added projection predicates on the final
+voice_projection.swift, and S317-S319 are the drawn production-QML predicates of
+test_productionVoiceChangesPageMountsAndRenders. Their presence alone does not close any A
+entry. Preserve their surrounding setup and order in the paired sources.
 
-S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:13
+S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:10
 Swift expression:
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceProjectionID,
                          what: "every DOC_CC_VOICE event of the primary track publishes a marker")
 
-S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:15
+S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:12
 Swift expression:
   report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceProjectionID,
                          what: "the projection keeps one marker per change")
 
-S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:17
+S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:14
 Swift expression:
   report.expect(page.publishedMarkers.allSatisfy { !$0.identity.isEmpty }, cppID: drawerVoiceProjectionID,
                     message: "every marker carries its occurrence identity")
 
-S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:19
+S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:16
 Swift expression:
   report.expectEqual(3, Set(page.markerIdentities).count, cppID: drawerVoiceProjectionID,
                          what: "the identities are distinct per occurrence")
 
-S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:26
+S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:23
 Swift expression:
   report.expectEqual(fixture.markerX(tick), marker.x, cppID: drawerVoiceProjectionID,
                              what: "marker \(tick) draws at the shared camera's projection")
 
-S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:28
+S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:25
 Swift expression:
   report.expect(marker.label.hasPrefix(String(format: "%03d", expectedProgram)),
                         cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) labels its own program slot "
                             + "(\"\(marker.label)\")")
 
-S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:32
+S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:29
 Swift expression:
   report.expect(marker.lineBottom > marker.lineTop, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a vertical rule")
 
-S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:34
+S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:31
 Swift expression:
   report.expect(marker.lineWidth > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) draws a rule of a real width")
 
-S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:36
+S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:33
 Swift expression:
   report.expect((marker.labelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) publishes a label box with a real width")
 
-S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:38
+S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:35
 Swift expression:
   report.expect(!marker.offscreen, cppID: drawerVoiceProjectionID,
                         message: "marker \(tick) is inside the visible plot")
 
-S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:45
+S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:39
 Swift expression:
   report.expectEqual(2 + tail, page.heldSpans.count, cppID: drawerVoiceProjectionID,
                          what: "each program section publishes one held span "
                              + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
 
-S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:48
+S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:42
 Swift expression:
   report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "a resolved track publishes the band's tracking facts")
 
-S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:50
+S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:44
 Swift expression:
   report.expect(!page.readoutText.isEmpty, cppID: drawerVoiceProjectionID,
                     message: "the context readout names the program at the context tick")
 
-S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:52
+S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:46
 Swift expression:
   report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
                     message: "the readout is published for a presented track")
 
-S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:59
+S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:57
 Swift expression:
   report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
                          what: "a press inside the marker hit radius takes that marker")
 
-S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:63
+S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:61
 Swift expression:
   report.expect(!page.hasGesture, cppID: drawerVoiceProjectionID,
                     message: "a press beyond the marker hit radius starts no marker gesture")
 
-S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:71
+S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:67
 Swift expression:
   report.expect(page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a background hover publishes its slot label")
 
-S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:73
+S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:69
 Swift expression:
   report.expect(page.hoverText.hasPrefix("→ "), cppID: drawerVoiceProjectionID,
                     message: "the hover label keeps the legacy arrow prefix")
 
-S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:75
+S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:71
 Swift expression:
   report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
                          what: "a hover repaints no marker label")
 
-S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:80
+S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:79
 Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "a marker hover publishes no background label")
 
-S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:82
+S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:81
 Swift expression:
   report.expectEqual(48, Tick(page.hoverTick), cppID: drawerVoiceProjectionID,
                          what: "the marker hover publishes its own tick")
 
-S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:90
+S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:89
 Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
                     message: "leaving the plot clears the hover")
 
-S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:96
+S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:95
 Swift expression:
   report.expect(!page.trackAvailable, cppID: drawerVoiceProjectionID,
                     message: "no selected track publishes the unavailable state")
 
-S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:98
+S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:97
 Swift expression:
   report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceProjectionID,
                          what: "no selected track publishes no marker")
 
-S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:100
+S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:99
 Swift expression:
   report.expectEqual("No track selected", page.plotMessage, cppID: drawerVoiceProjectionID,
                          what: "the plot names the missing track")
 
-S026 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:110
+S026 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:109
 Swift expression:
   report.expect(label.hasPrefix(String(format: "%03d ", slot)), cppID: drawerVoiceLabelID,
                     message: "a slot label starts with its zero-padded program number "
                         + "(\"\(label)\")")
 
-S027 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:115
+S027 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:114
 Swift expression:
   report.expect(label.contains(symbol), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its source symbol")
 
-S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:117
+S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:116
 Swift expression:
   report.expect(label.contains("(\(type))"), cppID: drawerVoiceLabelID,
                         message: "a named slot label carries its declared type in parentheses")
 
-S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:120
+S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:119
 Swift expression:
   report.expect(label.contains(type), cppID: drawerVoiceLabelID,
                         message: "a slot with no source symbol names its declared type "
                             + "(\"\(label)\")")
 
-S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:124
+S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:123
 Swift expression:
   report.expectEqual("→ \(label)", VoiceLanePolicy.hoverLabel(label), cppID: drawerVoiceLabelID,
                          what: "the hover spelling is the label with the legacy arrow")
 
-S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:126
+S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:125
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.hoverLabel(""), cppID: drawerVoiceLabelID,
                          what: "an unresolvable slot publishes no hover label at all")
 
-S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:129
+S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:128
 Swift expression:
   report.expectEqual("Sample", voiceTypeName(macro: BankVoiceMacro.directSound),
                          cppID: drawerVoiceLabelID, what: "Direct Sound is the Sample type")
 
-S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:131
+S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:130
 Swift expression:
   report.expectEqual("Sample (fixed pitch)",
                          voiceTypeName(macro: BankVoiceMacro.directSoundNoResample),
                          cppID: drawerVoiceLabelID, what: "the no-resample form names its fixed pitch")
 
-S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:134
+S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:133
 Swift expression:
   report.expectEqual("Sample (reverse)", voiceTypeName(macro: BankVoiceMacro.directSoundAlt),
                          cppID: drawerVoiceLabelID, what: "the alternate form names its reverse playback")
 
-S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:136
+S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:135
 Swift expression:
   report.expectEqual("Square 1", voiceTypeName(macro: BankVoiceMacro.square1), cppID: drawerVoiceLabelID,
                          what: "the square-1 macro names Square 1")
 
-S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:138
+S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:137
 Swift expression:
   report.expectEqual("Square 2", voiceTypeName(macro: BankVoiceMacro.square2), cppID: drawerVoiceLabelID,
                          what: "the square-2 macro names Square 2")
 
-S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:140
+S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:139
 Swift expression:
   report.expectEqual("Wave", voiceTypeName(macro: BankVoiceMacro.programmableWave),
                          cppID: drawerVoiceLabelID, what: "the wave macro names Wave")
 
-S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:142
+S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:141
 Swift expression:
   report.expectEqual("Noise", voiceTypeName(macro: BankVoiceMacro.noise), cppID: drawerVoiceLabelID,
                          what: "the noise macro names Noise")
 
-S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:144
+S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:143
 Swift expression:
   report.expectEqual("Drumkit", voiceTypeName(macro: BankVoiceMacro.keysplitAll),
                          cppID: drawerVoiceLabelID, what: "the drumkit macro names Drumkit")
 
-S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:146
+S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:145
 Swift expression:
   report.expectEqual("", voiceTypeName(macro: nil), cppID: drawerVoiceLabelID,
                          what: "no macro names no type")
 
-S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:151
+S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:150
 Swift expression:
   report.expectEqual(String(format: "%03d", 7), VoiceLanePolicy.label(slot: 7, view: blank),
                          cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes only its program number")
 
-S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:154
+S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:153
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.label(slot: -1, view: blank), cppID: drawerVoiceLabelID,
                          what: "a missing slot publishes no label at all")
 
-S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:156
+S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:155
 Swift expression:
   report.expectEqual("", VoiceLanePolicy.label(slot: session.bankSlots.count, view: nil),
                          cppID: drawerVoiceLabelID, what: "an out-of-range slot publishes no label")
 
-S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:164
+S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:163
 Swift expression:
   report.expect(true, cppID: drawerVoiceLabelID,
                         message: "the staged bank publishes no blank slot to drive")
 
-S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:171
+S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:170
 Swift expression:
   report.fail(drawerVoiceLabelID, "the blank-slot fixture published no marker at tick 48")
 
-S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:174
+S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:173
 Swift expression:
   report.expect(marker.slotBlank, cppID: drawerVoiceLabelID,
                     message: "a change into a blank slot publishes blank truth")
 
-S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:176
+S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:175
 Swift expression:
   report.expectEqual("", marker.symbol, cppID: drawerVoiceLabelID,
                          what: "a blank slot publishes no symbol")
 
-S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:178
+S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:177
 Swift expression:
   report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceLabelID,
                          what: "a blank slot's marker label is its program number")
 
-S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:181
+S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:180
 Swift expression:
   report.expect(fixture.page.contextBlank, cppID: drawerVoiceLabelID,
                     message: "the context readout publishes the blank truth too")
 
-S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:183
+S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:182
 Swift expression:
   report.expectEqual(blankIndex, fixture.page.contextSlot, cppID: drawerVoiceLabelID,
                          what: "the blank context names the blank slot")
 
-S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:185
+S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift:184
 Swift expression:
   report.expectEqual("", fixture.page.contextSymbol, cppID: drawerVoiceLabelID,
                          what: "the blank context publishes no symbol")
 
-S052 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:196
+S052 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:195
 Swift expression:
   report.expectEqual(programs[0], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 0,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "tick 0 resolves the opening program")
 
-S053 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:199
+S053 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:198
 Swift expression:
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 48,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "a change takes effect at its own tick")
 
-S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:202
+S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:201
 Swift expression:
   report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 119,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the context holds until the next change")
 
-S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:205
+S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:204
 Swift expression:
   report.expectEqual(programs[2], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 120,
                                                            points: points),
                          cppID: drawerVoiceContextID, what: "the late change takes effect at its tick")
 
-S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:208
+S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:207
 Swift expression:
   report.expectEqual(48, VoiceLanePolicy.endTick(after: 0, points: points), cppID: drawerVoiceContextID,
                          what: "the opening span ends at the first change")
 
-S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:210
+S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:209
 Swift expression:
   report.expectEqual(nil, VoiceLanePolicy.endTick(after: 120, points: points), cppID: drawerVoiceContextID,
                          what: "the last span runs to the song's end")
 
-S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:218
+S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:217
 Swift expression:
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context resolves at the published edit cursor")
 
-S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:220
+S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:219
 Swift expression:
   report.expectEqual(VoiceLanePolicy.label(slot: programs[1],
                                                view: fixture.session.bankSlots[programs[1]]),
                          page.readoutText, cppID: drawerVoiceContextID,
                          what: "the readout names the edit cursor's program")
 
-S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:224
+S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:223
 Swift expression:
   report.expectEqual(cursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "cursor-only publication rebuilds no marker content")
 
-S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:226
+S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:225
 Swift expression:
   report.expectEqual(cursorDocument, fixture.snapshot, cppID: drawerVoiceContextID,
                          what: "cursor-only publication changes no document or history state")
 
-S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:231
+S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:230
 Swift expression:
   report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "the playing context resolves at the shared tick, not the cursor")
 
-S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:233
+S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:232
 Swift expression:
   report.expect(page.presentedPlaying, cppID: drawerVoiceContextID,
                     message: "the presentation publishes its own playing state")
 
-S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:236
+S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:235
 Swift expression:
   report.expectEqual(programs[1], page.presentedContextSlot, cppID: drawerVoiceContextID,
                          what: "a rounded playing tick crosses into the next span")
 
-S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:238
+S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:237
 Swift expression:
   report.expectEqual(96, page.presentedContextTick, cppID: drawerVoiceContextID,
                          what: "the presented tick is the rounded shared tick")
 
-S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:243
+S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:242
 Swift expression:
   report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the stopped context returns to the edit cursor")
 
-S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:247
+S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:246
 Swift expression:
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "a moved edit cursor re-resolves the stopped context")
 
-S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:249
+S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:248
 Swift expression:
   report.expectEqual(laterCursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
                          what: "a later cursor-only publication remains readout-only")
 
-S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:255
+S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:254
 Swift expression:
   report.expectEqual([0], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "the secondary track publishes only its own change")
 
-S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:257
+S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:256
 Swift expression:
   report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
                          what: "the readout follows the newly selected track")
 
-S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:261
+S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice_projection.swift:260
 Swift expression:
   report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceContextID,
                          what: "returning to the primary track restores its markers")
 
-S072 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:271
+S072 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:270
 Swift expression:
   report.expectEqual(points.map { VoiceOccurrence($0).text }, page.markerIdentities,
                          cppID: drawerVoiceIdentityID,
                          what: "a marker's identity is its lane occurrence's own identity")
 
-S073 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:274
+S073 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:273
 Swift expression:
   report.expect(page.markerIdentities.allSatisfy {
           $0.split(separator: ".").count == 4
       }, cppID: drawerVoiceIdentityID,
                     message: "an identity names chunk, event index, tick and value")
 
-S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:283
+S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:282
 Swift expression:
   report.expectEqual(VoiceOccurrence(first),
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first), in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the identity resolves the occurrence it names")
 
-S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:287
+S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:286
 Swift expression:
   report.expectEqual(VoiceOccurrence(second),
                          VoiceLanePolicy.occurrence(at: 48, in: [first, second]),
                          cppID: drawerVoiceIdentityID,
                          what: "the tick lookup takes the document's last event at that tick")
 
-S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:293
+S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:292
 Swift expression:
   report.expect(VoiceLanePolicy.occurrence(mutated, in: [first, second]) == nil,
                     cppID: drawerVoiceIdentityID,
                     message: "a different value is never accepted as the frozen occurrence")
 
-S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:296
+S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:295
 Swift expression:
   report.expectEqual(first.eventIndex,
                          VoiceLanePolicy.occurrence(VoiceOccurrence(first),
@@ -1555,47 +1578,47 @@ Swift expression:
                          cppID: drawerVoiceIdentityID,
                          what: "the resolved occurrence keeps the document's event index")
 
-S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:307
+S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:306
 Swift expression:
   report.expectEqual(VoiceOccurrence(points[1]), frozen, cppID: drawerVoiceIdentityID,
                          what: "the press freezes the marker's own occurrence")
 
-S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:310
+S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:309
 Swift expression:
   report.expectEqual(before, page.markerIdentities, cppID: drawerVoiceIdentityID,
                          what: "a camera scroll changes no marker identity")
 
-S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:312
+S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:311
 Swift expression:
   report.expect(page.publishedMarkers[1].x != x, cppID: drawerVoiceIdentityID,
                     message: "a camera scroll does move the projection")
 
-S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:314
+S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:313
 Swift expression:
   report.expectEqual(frozen, page.frozenOccurrence, cppID: drawerVoiceIdentityID,
                          what: "the frozen occurrence survives a camera scroll")
 
-S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:317
+S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:316
 Swift expression:
   report.expect(!page.hasGesture, cppID: drawerVoiceIdentityID,
                     message: "the release ends the gesture without a draft")
 
-S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:327
+S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:326
 Swift expression:
   report.expect(page.acceptPicker(), cppID: drawerVoiceIdentityID,
                     message: "an insertion between the changes lands in the document")
 
-S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:329
+S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:328
 Swift expression:
   report.expectEqual(4, page.markerIdentities.count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence joins the projection")
 
-S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:331
+S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:330
 Swift expression:
   report.expectEqual(4, Set(page.markerIdentities).count, cppID: drawerVoiceIdentityID,
                          what: "the inserted occurrence has an identity of its own")
 
-S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:333
+S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice_projection.swift:332
 Swift expression:
   report.expectEqual(earlier,
                          page.publishedMarkers.filter { Tick($0.tick) <= 48 }.map(\.identity),
@@ -2768,4 +2791,56 @@ OMP structural correction checkpoint
 drawerVoiceOriginalPickerRows is now a direct runVoiceChangesPageChecks call immediately after drawerVoicePickerInsertion. Its original MIDI setup and assertions are unchanged; no fixture or undo semantics were merged.
 Suite order is explicit; no generic fixture abstraction was introduced.
 Static diff check passed; Debug execution of this refactor is pending root.
-Existing assertion dispositions are unchanged; this is not a completion claim.
+Existing assertion dispositions are unchanged for that refactor; the current dispositions
+were reconciled afterwards in the same tree.
+
+Final settlement of this ledger
+Superseding the pending notes above: the lane owner's deno task verify --filter swiftcore run
+and the seven production voice QML cases PASS on this tree, including
+VoiceChangesPointerAndMenuTransactions, whose earlier typed-menu failure is gone. The A-entry
+dispositions cite the S predicates under that evidence; the native rendering, pixel-compare,
+QSignalSpy and key/wheel delivery obligations recorded as NATIVE remain native.
+
+Lane-added projection predicates on the final voice_projection.swift (readout rect,
+published readout alignment, hover label rect) plus the drawn production-QML predicates of
+test_productionVoiceChangesPageMountsAndRenders (drawn readout rect, drawn readout
+right-alignment, drawn hover label rect). They are appended after the scenario groups above
+rather than renumbered into it. Every Swift file:line anchor in the index above was
+re-derived against this final voice_projection.swift after the lane deleted its stale
+comments; voice_picker.swift, voice_interaction.swift and voice_lifecycle.swift are
+unchanged, and their anchors and hashes were left as recorded.
+
+S314 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:48
+Swift expression:
+  report.expect((page.readoutRect["width"] as? Double ?? 0) > 0 &&
+                (page.readoutRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                message: "the context readout publishes a usable rect")
+
+S315 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:51
+Swift expression:
+  report.expectEqual(VoiceChangesPagePolicy.readoutAlignment, page.readoutAlignment,
+                         cppID: drawerVoiceProjectionID,
+                         what: "the readout publishes the legacy right alignment the composition draws")
+
+S316 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice_projection.swift:73
+Swift expression:
+  report.expect((page.hoverLabelRect["width"] as? Double ?? 0) > 0 &&
+                (page.hoverLabelRect["height"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                message: "the background hover publishes a usable label rect")
+
+S317 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3429
+QML expression:
+  verify(readout.width > 0 && readout.height > 0,
+         "the readout draws a usable rect")
+
+S318 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3431
+QML expression:
+  compare(readout.horizontalAlignment, Text.AlignRight,
+          "the readout draws right-aligned")
+
+S319 | EditorDrawerLane.test_productionVoiceChangesPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3438
+QML expression:
+  tryVerify(function() { return hoverLabel.visible }, 1000,
+            "the background hover draws its label")
+  verify(hoverLabel.width > 0 && hoverLabel.height > 0,
+         "the hover draws a usable label rect")

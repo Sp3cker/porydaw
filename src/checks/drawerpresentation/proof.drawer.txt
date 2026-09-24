@@ -4,11 +4,15 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/drawer.cpp
 Original SHA-256: 3fb9b03a6e12fb8c61b20290669da95031c0451fec4dca5fd706afeabc777508
 Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
-Swift SHA-256: 9a1a3fdd4b7c1167ecd28acdad3c3e4acac15e48aea120ce413dffce071ca8b0
+Swift SHA-256: 2b0985c935710b0c8f98e55ca9f9eacf2f90210d0530dea666c0b33b88ae2fb8
 Swift counterpart: src/checks/drawerpresentation/drawer_resize.swift
-Swift SHA-256: 7d0cb530d1cbb484b3f7a1d4f3a225ca14d9f4acb32c1c2ace60552ca0964b85
+Swift SHA-256: 8b8335b50d58d2abdd7797e4bc0c9d3987acb922305a63560f20d246f444903a
 Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Swift SHA-256: 6a43240c7187acec4711a949fca0a313cba927544d5c680f7ad2a7d4c168b1cf
+Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
+Swift SHA-256: 984ccac33dbdb6835edf02479ad55b298cb4c6e68723395eb56e8dffde9e60d5
+QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -27,7 +31,18 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Recorded by the lane owner on the settled tree; this bookkeeping pass ran none of these commands.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (1 of 14 ok, 13 skipped; swiftcore 16.06s) for the Swift drawer predicates indexed as S001-S087 at that run.
+Command: deno task verify --filter swiftcore --verbose (re-run after the lane added the voice-changes toggle, declared-maximum step and narrow-host predicate blocks)
+Result: PASS (1 of 14 ok; swiftcore 10.01s); the lane owner confirmed the added predicate strings in the test binary.
+Command: PORYDAW_EDITOR_QML_PHASE=container deno task verify:qml --verbose --qt
+Result: PASS 7/7 EditorDrawerLane container cases, including the new grip hover highlight and right-button grip no-op assertions indexed as S091 and S098.
+Note: the unfiltered verify:qml run has one pre-existing peer-owned failure, test_productionAutomationRangeSubmenu, unrelated to the drawer sites.
+Command: deno task verify --filter swiftcore --verbose (lane-owner re-run on this final tree, after the fresh velocity-default predicate)
+Result: PASS (1 of 14 ok; swiftcore 10.17s); the lane owner confirmed the new predicate strings in the test binary. This ledger's S112 records that predicate.
+Command: PORYDAW_EDITOR_QML_PHASE=container deno task verify:qml --verbose --qt (lane-owner targeted re-run after the QML comment deletions)
+Result: PASS for the container drawer cases re-run. Both re-runs are lane-owner observations; this bookkeeping pass ran neither command.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -158,318 +173,318 @@ Original expression:
   Q_ASSERT(window)
 
 A003 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S008 (drawer_basics.swift:43) executes the Swift layout owner publishing an empty container; unproved: the C++ EditorDrawer object identity.
 Original expression:
   QVERIFY(drawer)
 
 A004 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S088 (tst_EditorDrawer.qml:785) asserts the mounted roll band and roll input heights in the QML container; unproved: the C++ TimelineInputItem identity.
 Original expression:
   QVERIFY(roll)
 
 A005 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S055 (drawer_resize.swift:258) attaches an automation page and asserts its published default body; S103 (tst_EditorDrawer.qml:3961) asserts the mounted production automation page item; unproved: the C++ AutomationPage identity.
 Original expression:
   QVERIFY(automation)
 
 A006 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S011 (drawer_basics.swift:75) attaches the velocity page and asserts its availability, content URL and published body; unproved: the C++ VelocityPage identity.
 Original expression:
   QVERIFY(velocity)
 
 A007 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S043 (drawer_resize.swift:142) attaches the voice-changes page and asserts its stored and published heights; unproved: the C++ VoiceChangesPage identity.
 Original expression:
   QVERIFY(voice)
 
 A008 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window creation; retained native window obligation.
 Original expression:
   QVERIFY(fixture.quick->quickWindow())
 
 A009 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S001 (drawer_basics.swift:6) asserts the resolved metrics including minimumBody 44 at base font 13, the value EditorDrawerTypes.resolve derives as Int(fontPx(base, 17.0/5.0)); S005 (drawer_basics.swift:20) asserts the same floor at its reserve boundary.
 Original expression:
   QCOMPARE(drawer->minimumSectionHeight(), layout::fontPx(17.0 / 5.0))
 
 A010 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: quickWindowIsUnmasked is a native window property; retained native window obligation.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
 A011 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:847) verifies the drawn bar rectangle against the published barX/barY/barWidth/barHeight; unproved: the C++ DrawerChrome barRect.
 Original expression:
   QVERIFY(!chrome.barRect().isEmpty())
 
 A012 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:861) verifies the drawn voice-changes toggle rectangle against its published geometry; unproved: the C++ DrawerChrome toggle rect.
 Original expression:
   QVERIFY(!chrome.voiceChangesToggleRect().isEmpty())
 
 A013 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:861) verifies the drawn velocity toggle rectangle against its published geometry; unproved: the C++ DrawerChrome toggle rect.
 Original expression:
   QVERIFY(!chrome.velocityToggleRect().isEmpty())
 
 A014 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:861) verifies the drawn automation toggle rectangle against its published geometry; unproved: the C++ DrawerChrome toggle rect.
 Original expression:
   QVERIFY(!chrome.automationToggleRect().isEmpty())
 
 A015 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S001 (drawer_basics.swift:6) asserts the resolved hairline pixel 1, the value layout::singlePixel returns; unproved: the C++ chrome border width and the QML border rendering.
 Original expression:
   QCOMPARE(chrome.barBorderWidth(), layout::singlePixel())
 
 A016 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 (tst_EditorDrawer.qml:950) asserts the drawn checked toggle background is the shared palette selection ring; unproved: the C++ QPalette Highlight identity.
 Original expression:
   QCOMPARE(chrome.toggleCheckedBackground(),
                QGuiApplication::palette().color(QPalette::Highlight))
 
 A017 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:115
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No executing predicate reads the bar background colour or its alpha; the QML lane asserts only bar and control geometry and the checked toggle fill (S089, S093).
 Original expression:
   QCOMPARE(chrome.barBackground().alpha(), 255)
 
 A018 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:116
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No executing predicate reads the bar outline colour or its alpha; the QML lane asserts only the grip outline colour on hover (S091).
 Original expression:
   QCOMPARE(chrome.barOutline().alpha(), 255)
 
 A019 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:117
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: chrome icon revision publication; the Swift drawer owner publishes no icon revision and no QML predicate asserts one.
 Original expression:
   QVERIFY(chrome.iconRevision() > 0)
 
 A020 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S010 (drawer_basics.swift:61) asserts isVisible(.automation) is retained when the stored visibility preference is absent, the same initial default as the C++ fixture.
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A021 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 (drawer_basics.swift:132) attaches a velocity page to a fresh harness that restores no preferences and asserts isVisible(.velocity) is false, the untouched hidden default the original reads; the executing predicate message states that the attached section keeps its hidden default.
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A022 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S010 (drawer_basics.swift:65) asserts isVisible(.voiceChanges) is false while its stored visibility preference is absent, the same initial default as the C++ fixture.
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A023 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S010 (drawer_basics.swift:66) asserts activePage == .automation with the stored page preference absent, the same initial default as the C++ fixture; S014 (drawer_basics.swift:110) asserts the same after ignored detached calls.
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
 
 A024 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 (tst_EditorDrawer.qml:987) shows the section again after a click and asserts it visible; S085 (drawer_basics.swift:328) re-opens automation after a collapse; S066 (drawer_state.swift:95) toggles voice changes and publishes the retargeted request.
 Original expression:
   QVERIFY(view.drawerSectionVisible(page))
 
 A025 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 (drawer_basics.swift:253) asserts a toggle moves the active page to the toggled kind; S084 (drawer_basics.swift:324) records the automation active page; S066 (drawer_state.swift:95) retargets focus to the toggled voice-changes section.
 Original expression:
   QCOMPARE(view.drawerActivePage(), page)
 
 A026 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S023 (drawer_basics.swift:235) asserts the automation body after re-showing, S026 (drawer_basics.swift:263) the velocity body and S038 (drawer_resize.swift:77) the voice-changes body; the C++ optional bodyRect is the Swift published body height.
 Original expression:
   QVERIFY(view.editorDrawer()->bodyRect(page).has_value())
 
 A027 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 (drawer_basics.swift:253) hides velocity through the toggle; S083 (drawer_basics.swift:314) asserts every kind hidden after the last toggle.
 Original expression:
   QVERIFY(!view.drawerSectionVisible(page))
 
 A028 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 (drawer_basics.swift:339) hides voice changes through the toggle and asserts the stored height 50; S025 (drawer_basics.swift:253) keeps the velocity stored height 60 and S083 (drawer_basics.swift:314) leaves the automation stored value untouched while every section is hidden.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), originalHeight)
 
 A029 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 (tst_EditorDrawer.qml:987) shows the section again and asserts it visible; S085 (drawer_basics.swift:328) re-opens automation; S066 (drawer_state.swift:95) shows voice changes through the toggle.
 Original expression:
   QVERIFY(view.drawerSectionVisible(page))
 
 A030 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 (drawer_basics.swift:344) re-shows voice changes through the toggle and asserts the restored body height 50; S026 (drawer_basics.swift:263) restores the velocity body height 60 and S085 (drawer_basics.swift:328) the automation default body 80.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), originalHeight)
 
 A031 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 (drawer_basics.swift:286) asserts a zero section body height is recorded as the unset stored marker; S027 (drawer_basics.swift:271) asserts the same unset mapping.
 Original expression:
   QVERIFY(!view.editorViewState().velocity.height.has_value())
 
 A032 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:861) verifies the drawn velocity toggle rectangle in the QML container; unproved: the C++ QQuickItem identity of the name-addressed toggle.
 Original expression:
   QVERIFY(toggle)
 
 A033 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S094 (tst_EditorDrawer.qml:584) asserts the drawn toggle is focusable and its accessible state follows the section; unproved: the C++ activeFocusOnTab property.
 Original expression:
   QVERIFY(toggle->property("activeFocusOnTab").toBool())
 
 A034 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 (drawer_basics.swift:295) asserts re-showing a zeroed velocity section leaves it visible with the page default body; S085 (drawer_basics.swift:328) re-opens automation after a collapse.
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A035 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 (drawer_basics.swift:253) keeps the remaining visible sections allocated while one kind is toggled: the snapshot height still carries the voice-changes and automation bodies.
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A036 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 (drawer_basics.swift:253) asserts a velocity toggle moves the active page to velocity.
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A037 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 (tst_EditorDrawer.qml:950) asserts the drawn checked toggle background is the selection ring and S094 (tst_EditorDrawer.qml:584) the accessible checked state; unproved: the C++ DrawerChrome velocityChecked flag.
 Original expression:
   QVERIFY(fixture.chrome().velocityChecked())
 
 A038 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:863) verifies the drawn handle rectangle for a visible section; unproved: the native handle isVisible result for this zero-height then keyboard sequence.
 Original expression:
   QVERIFY(fixture.velocityHandle->isVisible())
 
 A039 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 (drawer_basics.swift:286) and S080 (drawer_basics.swift:295) keep the zeroed velocity section on the unset stored marker while it publishes the page default body.
 Original expression:
   QVERIFY(!view.editorViewState().velocity.height.has_value())
 
 A040 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 (drawer_resize.swift:77) publishes the voice-changes body height; unproved: the C++ optional bodyRect presence before the handle step.
 Original expression:
   QVERIFY(beforeBody)
 
 A041 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S041 (drawer_resize.swift:105) applies one handle step through the resize path and ends its session; unproved: the C++ optional bodyRect presence after the step.
 Original expression:
   QVERIFY(afterBody)
 
 A042 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S041 (drawer_resize.swift:105) publishes the stepped height after the direction retry; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(afterBody)
 
 A043 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 (drawer_resize.swift:105) asserts one handle step changes the stored height by drawerLayoutDrawerResizeStep 7 and S001 (drawer_basics.swift:6) pins that step against the resolved metrics; layout::space(Space::Two) resolves to 7 at base font 13 (SPACE_MULTIPLIERS entry 0.5).
 Original expression:
   QCOMPARE(std::abs(afterBody->height() - beforeBody->height()),
                layout::space(layout::Space::Two))
 
 A044 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S042 (drawer_resize.swift:116) asserts a step that resolves back to the drag start publishes nothing; S035 (drawer_resize.swift:49) restores the original stored height.
 Original expression:
   QVERIFY(view.editorDrawer()->bodyRect(EditorDrawerPage::VoiceChanges) == beforeBody)
 
 A045 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:210
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: handle hover publication; the Swift owner publishes no hovered handle. S091 (tst_EditorDrawer.qml:904) asserts only the drawn grip outline colour on hover.
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), static_cast<int>(DrawerChromeTarget::VoiceChangesHandle))
 
 A046 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:211
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: handle hover cursor publication; no Swift or QML predicate asserts the SizeVerCursor shape. S091 (tst_EditorDrawer.qml:904) asserts only the drawn grip colour.
 Original expression:
   QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor)
 
 A047 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:215
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: handle hover cursor publication; no predicate asserts the cursor leaves the SizeVerCursor shape after the click.
 Original expression:
   QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor)
 
 A048 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:218
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: handle hover publication; no predicate asserts the hovered handle clears on leave; S091 (tst_EditorDrawer.qml:912) asserts only the drawn grip colour returning to its outline.
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), -1)
 
 A049 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 (tst_EditorDrawer.qml:887) asserts the drawn velocity body above voice changes; S006 (drawer_basics.swift:23) pins the stack order.
 Original expression:
   QVERIFY(velocity.y() < voice.y())
 
 A050 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 (tst_EditorDrawer.qml:889) asserts the drawn voice-changes body above automations; S006 (drawer_basics.swift:23) pins the stack order.
 Original expression:
   QVERIFY(voice.y() < automation.y())
 
 A051 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 (drawer_basics.swift:153) places the velocity handle at the container top above its body and S087 (drawer_basics.swift:160) the voice-changes handle below it.
 Original expression:
   QVERIFY(chrome.velocityHandleRect().y() < chrome.voiceChangesHandleRect().y())
 
 A052 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 (drawer_basics.swift:164) places the automation body below the voice-changes body and its handle, ordering the automation handle below the voice-changes handle.
 Original expression:
   QVERIFY(chrome.voiceChangesHandleRect().y() < chrome.automationHandleRect().y())
 
 A053 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 (drawer_basics.swift:180) places voice changes in the first toggle slot and automations in the second at the fixed inset gap; S006 (drawer_basics.swift:23) pins the toggle order.
 Original expression:
   QCOMPARE(chrome.automationToggleRect().x(), chrome.voiceChangesToggleRect().x() +
                                                       chrome.voiceChangesToggleRect().width() +
                                                       layout::space(layout::Space::One))
 
 A054 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 (drawer_basics.swift:183) places automations in the second toggle slot and velocity in the third at the fixed inset gap; S006 (drawer_basics.swift:23) pins the toggle order.
 Original expression:
   QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
                                                     chrome.automationToggleRect().width() +
@@ -477,7 +492,7 @@ Original expression:
 
 A055 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:241
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane addresses inputs by their Swift names (swiftRollInput, velocityPlotInput, automationPlotInput) and never pairs timelineRollInput with timelineRollGutterInput.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
@@ -485,7 +500,7 @@ Original expression:
 
 A056 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:244
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineVelocityInput with timelineVelocityGutterInput.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
@@ -493,7 +508,7 @@ Original expression:
 
 A057 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:247
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineVoiceChangesInput with timelineVoiceChangesGutterInput.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
@@ -502,7 +517,7 @@ Original expression:
 
 A058 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:251
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No predicate asserts the C++ per-band canonical and physical input pairing; the QML lane never pairs timelineAutomationInput with timelineAutomationGutterInput.
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
@@ -510,262 +525,262 @@ Original expression:
           QStringLiteral("timelineAutomationGutterInput")))
 
 A059 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S090 (tst_EditorDrawer.qml:883) asserts the container plot origin equals the surface split and S103 (tst_EditorDrawer.qml:3966) the page column width; unproved: the per-band TimelineBandLayout geometry.
 Original expression:
   QVERIFY(geometry)
 
 A060 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S090 (tst_EditorDrawer.qml:883) asserts the container plot origin equals the surface split; unproved: the per-band geometry plot origin.
 Original expression:
   QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
 
 A061 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S090 (tst_EditorDrawer.qml:883) asserts the container plot origin and S103 (tst_EditorDrawer.qml:3968) the page plot beside the selector; unproved: the per-band geometry plot right edge.
 Original expression:
   QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
 
 A062 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S103 (tst_EditorDrawer.qml:3971) asserts the page plot height equals the body height; unproved: the per-band geometry plot height.
 Original expression:
   QCOMPARE(geometry->plotRect.height(), geometry->rect.height())
 
 A063 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2787) asserts the selector clips its scrolling content instead of a separate scrollbar strip; unproved: the absence of the C++ drawerAutomationScrollBar object.
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                   fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A064 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Quick window handle; retained native window obligation.
 Original expression:
   QVERIFY(quickWindow)
 
 A065 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:847) verifies the drawn bar and control rectangles against the published geometry; unproved: the C++ published chrome rectangle union.
 Original expression:
   QVERIFY(!published.isEmpty())
 
 A066 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S096 (tst_EditorDrawer.qml:1033) keeps the container above the status strip and S098 (tst_EditorDrawer.qml:1040) the body inside the container; unproved: containment inside the native window rect.
 Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(quickWindow->size())).contains(published))
 
 A067 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:863) verifies the drawn handle rectangle for the resized kind; unproved: the C++ TimelineInputItem handle identity.
 Original expression:
   QVERIFY(handle)
 
 A068 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S090 (tst_EditorDrawer.qml:887) publishes the drawn body rectangles for every visible section; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(bodyBefore)
 
 A069 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native item window precondition; retained native obligation.
 Original expression:
   QVERIFY(handle->window())
 
 A070 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 (tst_EditorDrawer.qml:1100) asserts a right-button drag on the handle resizes nothing; S033 (drawer_resize.swift:37) asserts apply and end without a live session are ignored.
 Original expression:
   QVERIFY(drawer->bodyRect(page) == bodyBefore)
 
 A071 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 (tst_EditorDrawer.qml:1100) leaves the body height unchanged through the right-button press, move and release; S033 (drawer_resize.swift:37) keeps the stored height without a session.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), storedBefore)
 
 A072 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: mouseGrabberItem is native input delivery; retained native obligation.
 Original expression:
   QCOMPARE(handle->window()->mouseGrabberItem(), handle)
 
 A073 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S096 (tst_EditorDrawer.qml:1030) asserts the dragged body grows and S031 (drawer_resize.swift:19) publishes the grown body; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(liveBody)
 
 A074 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 (tst_EditorDrawer.qml:1030) asserts the drag grows the body by its delta; S031 (drawer_resize.swift:19) asserts a positive drag delta grows the body.
 Original expression:
   QVERIFY(liveBody->height() > bodyBefore->height())
 
 A075 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S096 (tst_EditorDrawer.qml:1031) asserts the container grows with the body; unproved: the C++ overlay rect.
 Original expression:
   QCOMPARE(drawer->overlayRect().bottom(), overlay.bottom())
 
 A076 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: mouseGrabberItem release is native input delivery; retained native obligation.
 Original expression:
   QVERIFY(!handle->window()->mouseGrabberItem())
 
 A077 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 (drawer_resize.swift:19) asserts the stored and drawn heights agree after the drag; S096 (tst_EditorDrawer.qml:1091) keeps the applied height after the release.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), liveBody->height())
 
 A078 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 (drawer_resize.swift:19) asserts the grown stored height and S096 (tst_EditorDrawer.qml:1031) the container growth.
 Original expression:
   QVERIFY(view.drawerSectionHeight(page) > storedBefore)
 
 A079 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 (drawer_resize.swift:67) asserts the available-height clamp fills the host exactly and S038 (drawer_resize.swift:77) the page-declared maximum; S096 (tst_EditorDrawer.qml:1033) keeps the container above the status strip.
 Original expression:
   QVERIFY(view.drawerSectionHeight(page) <= drawer->maximumSectionHeight())
 
 A080 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 (drawer_basics.swift:301) publishes no detent for a hidden velocity section and S082 (drawer_basics.swift:306) returns it to the velocity body lower-left when shown; S019 (drawer_basics.swift:189) keeps the detent inside the velocity body.
 Original expression:
   QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity)
 
 A081 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) asserts the clamped allocation of the drawer owner; unproved: the C++ EditorDrawer object identity.
 Original expression:
   QVERIFY(drawer)
 
 A082 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S103 (tst_EditorDrawer.qml:3965) asserts the mounted production page composes its selector column and plot; unproved: the C++ AutomationPage and canvas identity.
 Original expression:
   QVERIFY(automationPage && automationPage->canvas())
 
 A083 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) asserts the voice-changes drawn body in the clamped allocation; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceBefore)
 
 A084 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) asserts the velocity drawn body and handle in the clamped allocation; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(velocityBefore)
 
 A085 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S001 (drawer_basics.swift:6) asserts the resolved minimumBody 44 and S005 (drawer_basics.swift:20) the floor boundary, both positive section minimums.
 Original expression:
   QVERIFY(sectionMinimum > 0)
 
 A086 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 (drawer_basics.swift:280) asserts a drawn body at the font-relative minimum and S034 (drawer_resize.swift:44) a shrink clamped at the minimum body height.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), sectionMinimum)
 
 A087 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:352
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S034 (drawer_resize.swift:44) publishes the clamped body; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(flooredBody)
 
 A088 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 (drawer_basics.swift:280) asserts the drawn body equals the minimum body and S034 (drawer_resize.swift:44) the clamp at that minimum.
 Original expression:
   QCOMPARE(flooredBody->height(), sectionMinimum)
 
 A089 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the voice-changes body in the clamped allocation; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceAtFloor)
 
 A090 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the velocity body and handle in the clamped allocation; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(velocityAtFloor)
 
 A091 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) keeps the voice-changes drawn body at its stored height while automations is clamped.
 Original expression:
   QCOMPARE(voiceAtFloor->height(), voiceBefore->height())
 
 A092 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) keeps the velocity drawn body and handle while automations is clamped, so the sibling sizes do not move.
 Original expression:
   QCOMPARE(velocityAtFloor->height(), velocityBefore->height())
 
 A093 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2806) finds the automation gutter at the shared column width and height; unproved: the C++ TimelineInputItem identity.
 Original expression:
   QVERIFY(gutter)
 
 A094 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2806) asserts the requested height is clamped to the derived minimum and the gutter holds it; unproved: the identity of the QML derived minimum with the C++ sectionMinimum.
 Original expression:
   QTRY_COMPARE(qCeil(gutter->height()), sectionMinimum)
 
 A095 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2806) asserts the gutter has a positive height; unproved: the C++ QRectF gutter bounds.
 Original expression:
   QVERIFY(!gutterBounds.isEmpty())
 
 A096 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2813) finds the automation tabs scroller inside the gutter.
 Original expression:
   QVERIFY(scroller)
 
 A097 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2787) asserts the selector clips its scrolling content.
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
 A098 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2814) asserts the catalog content is taller than the scroller at the minimum height.
 Original expression:
   QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
 
 A099 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2819) asserts the first parameter is visible at the content top.
 Original expression:
   QVERIFY(firstTab)
 
 A100 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2819) asserts the first parameter lies inside the scroller viewport at the content top and S102 (tst_EditorDrawer.qml:2812) keeps every tab inside the gutter.
 Original expression:
   QTRY_VERIFY(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
                                               gutterBounds))
 
 A101 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2812) asserts every parameter tab has positive bounds with rendered ink.
 Original expression:
   QTRY_VERIFY(
               (label = checks::support::visualDescendant(
@@ -773,473 +788,473 @@ Original expression:
               label->isVisible() && label->width() > 0.0 && label->height() > 0.0)
 
 A102 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 (tst_EditorDrawer.qml:2812) asserts each parameter tab stays inside the widened gutter.
 Original expression:
   QTRY_VERIFY(checks::support::rectInside(label->mapRectToScene(label->boundingRect()),
                                                   gutterBounds))
 
 A103 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the voice-changes and velocity bodies after the label pass; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceAfterLabels && velocityAfterLabels)
 
 A104 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) keeps the voice-changes drawn body at its stored height across the allocation.
 Original expression:
   QCOMPARE(voiceAfterLabels->height(), voiceBefore->height())
 
 A105 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) keeps the velocity drawn body and handle across the allocation.
 Original expression:
   QCOMPARE(velocityAfterLabels->height(), velocityBefore->height())
 
 A106 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:408
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S043 (drawer_resize.swift:142) executes the spill on the drawer owner; unproved: the C++ EditorDrawer object identity.
 Original expression:
   QVERIFY(drawer)
 
 A107 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 (drawer_resize.swift:77) publishes the voice-changes body before the spill; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceBefore)
 
 A108 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:415
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 (drawer_basics.swift:280) asserts a drawn body never falls below the font-relative minimum body; S056 (drawer_resize.swift:266) keeps a default body at its minimum.
 Original expression:
   QCOMPARE(voiceBefore->height(), voiceMin)
 
 A109 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 (drawer_resize.swift:77) applies a page-declared maximum above the minimum body.
 Original expression:
   QVERIFY(voiceMax > voiceMin)
 
 A110 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:423
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 (drawer_resize.swift:77) publishes the stepped voice-changes body; unproved: the C++ optional bodyRect presence inside the step loop.
 Original expression:
   QVERIFY(voice)
 
 A111 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 (drawer_resize.swift:105) asserts one handle step grows the stored height by the resize step.
 Original expression:
   QVERIFY(voice->height() > previous)
 
 A112 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 (drawer_resize.swift:77) caps a page-declared maximum after the available-height clamp.
 Original expression:
   QVERIFY(voice->height() <= voiceMax)
 
 A113 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 (drawer_resize.swift:77) publishes the capped voice-changes body; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceAtMax)
 
 A114 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 (drawer_resize.swift:77) asserts the body lands exactly on the page-declared maximum.
 Original expression:
   QCOMPARE(voiceAtMax->height(), voiceMax)
 
 A115 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 (drawer_resize.swift:77) publishes the capped body after the extra step; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceAfter)
 
 A116 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 (drawer_resize.swift:124) steps at the page-declared maximum and asserts the published change-set, storedBodyHeight(.voiceChanges) == 110 and the drawn body 110; S110 (drawer_resize.swift:130) publishes the further step and mirrors both height conjuncts, so the capped drawn body stays at the maximum.
 Original expression:
   QCOMPARE(voiceAfter->height(), voiceMax)
 
 A117 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S043 (drawer_resize.swift:142) publishes the voice-changes body before the overflow drag; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(voiceBefore)
 
 A118 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S043 (drawer_resize.swift:142) publishes the automations partner body; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(automationBefore)
 
 A119 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S055 (drawer_resize.swift:258) attaches an automation page; S103 (tst_EditorDrawer.qml:3961) asserts the mounted production automation page item.
 Original expression:
   QVERIFY(drawer.automationPage())
 
 A120 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:455
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 (drawer_resize.swift:181) stops spilled automations at the minimum body and S056 (drawer_resize.swift:266) keeps a default body at its minimum.
 Original expression:
   QVERIFY(automationBefore->height() >= automationMinimum)
 
 A121 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:469
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S043 (drawer_resize.swift:142) publishes the overflowed automations body; unproved: the C++ optional bodyRect presence.
 Original expression:
   QVERIFY(automationOverflowed)
 
 A122 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:470
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S043 (drawer_resize.swift:142) moves the automations stored height by the excess; S099 (tst_EditorDrawer.qml:1170) moves the automations body by the excess alone.
 Original expression:
   QCOMPARE(automationOverflowed->height(), automationBefore->height() + overflow)
 
 A123 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:471
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 (drawer_resize.swift:181) keeps the spilled automations body at or above the minimum body.
 Original expression:
   QVERIFY(automationOverflowed->height() >= automationMinimum)
 
 A124 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 (drawer_resize.swift:77) caps the voice-changes body at its page-declared maximum; S043 (drawer_resize.swift:142) holds that cap through the spill.
 Original expression:
   QCOMPARE(drawer.bodyRect(EditorDrawerPage::VoiceChanges)->height(),
                drawer.voiceChangesMaximumBodyHeight())
 
 A125 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:477
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S044 (drawer_resize.swift:151) asserts a stationary pointer cannot add the same spill twice.
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationOverflowed)
 
 A126 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:479
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S046 (drawer_resize.swift:170) restores both original stored heights when the drag returns to its start; S099 (tst_EditorDrawer.qml:1157) returns the capped section to its stored height.
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::VoiceChanges) == voiceBefore)
 
 A127 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:480
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S046 (drawer_resize.swift:170) restores the spilled automations height on the return.
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationBefore)
 
 A128 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:482
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S046 (drawer_resize.swift:170) restores the voice-changes stored height; unproved: the C++ EditorViewState equality, the Swift owner records preference change-sets instead.
 Original expression:
   QVERIFY(view.editorViewState().voiceChanges == stateBefore.voiceChanges)
 
 A129 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:483
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S046 (drawer_resize.swift:170) restores the automations stored height; unproved: the C++ EditorViewState equality, the Swift owner records preference change-sets instead.
 Original expression:
   QVERIFY(view.editorViewState().automation == stateBefore.automation)
 
 A130 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:494
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 (drawer_basics.swift:314) asserts voice changes hidden after the toggle.
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A131 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:495
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 (drawer_basics.swift:253) keeps the stored height while a section is hidden; S083 (drawer_basics.swift:314) retains the voice-changes stored height through the collapse.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
 
 A132 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:502
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S022 (drawer_basics.swift:218) keeps the automation stored height while hidden and S083 (drawer_basics.swift:314) retains the stored heights through the collapse.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), collapsedVelocityHeight)
 
 A133 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:503
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 (drawer_basics.swift:314) retains the voice-changes stored height of 50 through the collapse.
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), collapsedVoiceHeight)
 
 A134 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 (drawer_basics.swift:314) asserts every kind hidden with only the bar row left.
 Original expression:
   QVERIFY(!view.hasVisibleDrawerSection())
 
 A135 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S083 (drawer_basics.swift:314) hides every section and S095 (tst_EditorDrawer.qml:998) leaves no body for the hidden section; unproved: the C++ TimelineBandLayout geometry absence.
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Velocity))
 
 A136 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:507
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S083 (drawer_basics.swift:314) hides every section and S095 (tst_EditorDrawer.qml:998) leaves no body for the hidden section; unproved: the C++ TimelineBandLayout geometry absence.
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Automation))
 
 A137 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:508
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S083 (drawer_basics.swift:314) hides every section and S095 (tst_EditorDrawer.qml:998) leaves no body for the hidden section; unproved: the C++ TimelineBandLayout geometry absence.
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges))
 
 A138 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:509
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S088 (tst_EditorDrawer.qml:822) asserts the roll band and roll input heights in the QML container; unproved: the C++ TimelineBandLayout roll geometry.
 Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Roll))
 
 A139 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:510
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: feature not yet ported: OtherEvents band layout; the Swift drawer surface publishes only the drawer sections and no OtherEvents band geometry.
 Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents))
 
 A140 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:516
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 (drawer_basics.swift:328) re-shows automation after a collapse; S095 (tst_EditorDrawer.qml:987) shows the section again after a click.
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A141 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:517
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 (drawer_basics.swift:314) hides automations through the toggle.
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A142 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:518
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 (drawer_basics.swift:324) records the automation active page while hiding it; S083 (drawer_basics.swift:314) keeps activePage .automation with every section hidden.
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
 
 A143 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:528
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S064 (drawer_state.swift:61) requests the roll when the last visible section hides; S100 (tst_EditorDrawer.qml:1238) lands focus in the roll input; unproved: the native focus call result.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A144 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:529
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band; the request target is matched by S064 (drawer_state.swift:61) and the QML focus landing by S100 (tst_EditorDrawer.qml:1238).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A145 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:532
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native bar active focus; the QML blank-chrome case S104 (tst_EditorDrawer.qml:2303) asserts the drawer takes focus.
 Original expression:
   QTRY_VERIFY(fixture.bar->hasActiveFocus())
 
 A146 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S104 (tst_EditorDrawer.qml:2303) asserts blank drawer chrome takes focus; unproved: the native focusedTimelineBand emptiness.
 Original expression:
   QVERIFY(!view.focusedTimelineBand())
 
 A147 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:535
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band; the request target for the first remaining visible section is matched by S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A148 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:538
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S063 (drawer_state.swift:54) targets the shown section when the drawer owns focus; unproved: the native focus call result.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
 A149 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:539
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band after showing voice changes; related request targets are S063 (drawer_state.swift:54) and S066 (drawer_state.swift:95).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
 
 A150 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:542
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band after hiding voice changes; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A151 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band after hiding velocity; the related request target for the first remaining visible section is S057 (drawer_state.swift:10).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Automation)
 
 A152 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:548
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: QTRY polling of the native focused band after hiding the last section; the related roll request is S064 (drawer_state.swift:61).
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A153 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:560
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (tst_EditorDrawer.qml:847) publishes non-empty drawn chrome rectangles; unproved: the C++ host bounds union with the overlay rect.
 Original expression:
   QVERIFY(!hostBounds.isEmpty())
 
 A154 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S088 (tst_EditorDrawer.qml:822) asserts the roll band and roll input in the QML container; unproved: the C++ TimelineBandLayout roll geometry.
 Original expression:
   QVERIFY(rollGeometry)
 
 A155 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:566
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 (drawer_resize.swift:278) configures a host narrower than the plot origin (hostWidth gutterWidth - 1) and asserts the published plotWidth is 0; S008 (drawer_basics.swift:43) publishes the positive-width case.
 Original expression:
   QCOMPARE(drawer->plotWidth(), 0)
 
 A156 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:567
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S050 (drawer_resize.swift:215) re-clamps the container on a host shrink without rewriting stored heights; unproved: the C++ roll band geometry.
 Original expression:
   QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).top(), rollBefore.top())
 
 A157 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:568
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S050 (drawer_resize.swift:215) keeps the stored heights across the host shrink; unproved: the C++ roll band geometry.
 Original expression:
   QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).height(), rollBefore.height())
 
 A158 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:580
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the voice-changes body in the clamped allocation.
 Original expression:
   QVERIFY(voice)
 
 A159 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:581
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the velocity body at zero height with its handle in the clamped allocation.
 Original expression:
   QVERIFY(velocity)
 
 A160 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 (drawer_resize.swift:221) publishes the automation body in the clamped allocation.
 Original expression:
   QVERIFY(automation)
 
 A161 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 (drawer_resize.swift:227) keeps every drawn rectangle in the constrained container ordered and non-negative.
 Original expression:
   QVERIFY(voice->height() >= 0)
 
 A162 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:584
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 (drawer_resize.swift:227) keeps every drawn rectangle in the constrained container ordered and non-negative.
 Original expression:
   QVERIFY(velocity->height() >= 0)
 
 A163 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:585
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 (drawer_resize.swift:227) keeps every drawn rectangle in the constrained container ordered and non-negative.
 Original expression:
   QVERIFY(automation->height() >= 0)
 
 A164 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 (drawer_resize.swift:227) orders each body above the next one; S006 (drawer_basics.swift:23) pins the stack order.
 Original expression:
   QVERIFY(velocity->bottom() <= voice->top())
 
 A165 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:587
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 (drawer_resize.swift:227) orders the voice-changes body above the automation body; S006 (drawer_basics.swift:23) pins the stack order.
 Original expression:
   QVERIFY(voice->bottom() <= automation->top())
 
 A166 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S106 (tst_EditorDrawer.qml:2013) asserts the header band and its input are mounted and visible; unproved: the C++ TrackHeaderModel object identity.
 Original expression:
   QVERIFY(headers)
 
 A167 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:595
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S106 (tst_EditorDrawer.qml:2021) asserts the header input width and height against the band beside the scrollbar; unproved: the C++ TimelineInputItem identity.
 Original expression:
   QVERIFY(input)
 
 A168 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:596
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native item window precondition; retained native obligation.
 Original expression:
   QVERIFY(input->window())
 
 A169 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:597
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S106 (tst_EditorDrawer.qml:2024) asserts the song publishes more than one header row with a consistent content height; the exact 16-row count is a trackheader-lane fact (runTrackHeadersChecks).
 Original expression:
   QCOMPARE(headers->rowCount(), 16)
 
 A170 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:601
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: track-header selection owned by trackheader lane (runTrackHeadersChecks); no drawer predicate asserts the row title-rect hit.
 Original expression:
   QVERIFY(input->bounds().contains(point))
 
 A171 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:603
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: mouseGrabberItem is native input delivery; retained native obligation.
 Original expression:
   QCOMPARE(input->window()->mouseGrabberItem(), input)
 
 A172 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: mouseGrabberItem release is native input delivery; retained native obligation.
 Original expression:
   QVERIFY(!input->window()->mouseGrabberItem())
 
 A173 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:607
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: track-header selection owned by trackheader lane (runTrackHeadersChecks); no drawer predicate asserts the primary track selection.
 Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(),
                headers->data(index, songview::TrackHeaderModel::TrackRole).toInt())
 
 A174 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:611
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S103 (tst_EditorDrawer.qml:3965) asserts the mounted production page composes its selector column and S102 (tst_EditorDrawer.qml:2806) finds the same gutter; unproved: the C++ TimelineInputItem identity.
 Original expression:
   QVERIFY(automationGutter)
 
 A175 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:614
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2806) asserts the automation gutter has a positive height; unproved: the native isVisible flag for this sequence.
 Original expression:
   QVERIFY(automationGutter->isVisible())
 
 A176 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:615
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S102 (tst_EditorDrawer.qml:2806) lays the gutter out at the shared column with a positive height; unproved: the native QRectF self-containment.
 Original expression:
   QVERIFY(automationGutter->bounds().contains(automationGutter->bounds().center()))
 
 A177 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:616
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S103 (tst_EditorDrawer.qml:3966) asserts the automation plot column starts at the gutter; unproved: the native automation band rect containment.
 Original expression:
   QVERIFY(automationBand.contains(QPoint(automationBand.left(), automationBand.center().y())))
 
 A178 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:617
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: quickWindowIsUnmasked is a native window property; retained native window obligation.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
@@ -1247,7 +1262,7 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired sources.
 
-S001 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:9
+S001 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:6
 Swift expression:
   report.expectEqual(
           EditorDrawerMetrics(barHeight: drawerLayoutDrawerBarHeight, handleHeight: drawerLayoutDrawerHandleHeight,
@@ -1256,29 +1271,29 @@ Swift expression:
           metrics, cppID: drawerLayoutMetricsID,
           what: "resolved metrics derive the production bar row, handle, body floor, reserve, inset, step and hairline")
 
-S002 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:15
+S002 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:12
 Swift expression:
   report.expectEqual(
           6, EditorDrawerMetrics.resolve(baseFontPx: 13, appFontLineSpacing: -8).barHeight,
           cppID: drawerLayoutMetricsID,
           what: "a negative application line spacing does not shrink the bar below its own padding")
 
-S003 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:19
+S003 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:16
 Swift expression:
   report.expectEqual(270, metrics.maximumDefaultBodyHeight(hostHeight: 400), cppID: drawerLayoutMetricsID,
                          what: "the piano-roll reserve bounds a default body height")
 
-S004 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:21
+S004 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:18
 Swift expression:
   report.expectEqual(173, metrics.maximumDefaultBodyHeight(hostHeight: 173), cppID: drawerLayoutMetricsID,
                          what: "a host shorter than reserve plus floor keeps the whole host height")
 
-S005 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:23
+S005 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:20
 Swift expression:
   report.expectEqual(44, metrics.maximumDefaultBodyHeight(hostHeight: 174), cppID: drawerLayoutMetricsID,
                          what: "the reserve bound meets the body floor exactly at its boundary")
 
-S006 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:26
+S006 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:23
 Swift expression:
   report.expect(DrawerSectionKind.automation.rawValue == 0 &&
                     DrawerSectionKind.velocity.rawValue == 1 &&
@@ -1288,7 +1303,7 @@ Swift expression:
                     cppID: drawerLayoutMetricsID,
                     message: "section identities keep production raw values and the fixed stack and toggle orders")
 
-S007 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:33
+S007 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer_basics.swift:30
 Swift expression:
   report.expect(DrawerSectionKind.allCases.map(\.name) == ["automations", "velocity", "voiceChanges"] &&
                     DrawerSectionKind.allCases.map(\.keyName) == ["automation", "velocity", "voiceChanges"] &&
@@ -1298,14 +1313,14 @@ Swift expression:
                     cppID: drawerLayoutMetricsID,
                     message: "preference key names and toggle icon resources follow the historical formats")
 
-S008 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:46
+S008 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:43
 Swift expression:
   report.expect(empty.height == 0 && !empty.barVisible && empty.plotOrigin == drawerLayoutDrawerGutterWidth &&
                     empty.plotWidth == drawerLayoutDrawerHostWidth - drawerLayoutDrawerGutterWidth &&
                     empty.barWidth == 0 && empty.barHeight == 0, cppID: drawerLayoutAvailabilityID,
                     message: "a container with no attached page contributes zero height and no bar")
 
-S009 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:52
+S009 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:49
 Swift expression:
   report.expect(!geometry.available && geometry.contentUrl.isEmpty &&
                         geometry.bodyWidth == 0 && geometry.bodyHeight == 0 &&
@@ -1313,7 +1328,7 @@ Swift expression:
                         cppID: drawerLayoutAvailabilityID,
                         message: "\(kind.name) publishes no control, no body and an empty URL with no page attached")
 
-S010 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:64
+S010 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:61
 Swift expression:
   report.expect(harness.layout.isVisible(.velocity) &&
                     harness.layout.storedBodyHeight(.velocity) == 220 &&
@@ -1324,7 +1339,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "restored section intent is retained as stored preference while no page is attached")
 
-S011 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:78
+S011 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:75
 Swift expression:
   report.expect(attached.published && harness.layout.isAvailable(.velocity) &&
                     attached.snapshot[.velocity].contentUrl == drawerLayoutDrawerVelocityUrl &&
@@ -1334,7 +1349,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "attaching a page turns a stored visible section into visible content in the same publication")
 
-S012 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:87
+S012 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:84
 Swift expression:
   report.expect(!duplicate.published && duplicate.isEmpty &&
                     harness.layout.attachedPage(.velocity) === velocity &&
@@ -1342,7 +1357,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "a kind that already holds a page rejects a second attach and publishes nothing")
 
-S013 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:96
+S013 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:93
 Swift expression:
   report.expect(!rejected.published && rejected.isEmpty &&
                     !harness.layout.isAvailable(.voiceChanges) &&
@@ -1351,7 +1366,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "an empty content URL is rejected without changing any state")
 
-S014 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:109
+S014 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:106
 Swift expression:
   report.expect(!detachedToggle.published && !detachedHeight.published &&
                     !detachedVisible.published && !detachedResize.published &&
@@ -1362,7 +1377,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "visibility, height and resize calls are ignored for a kind with no attached page")
 
-S015 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:119
+S015 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:116
 Swift expression:
   report.expect(detached.published && !harness.layout.isAvailable(.velocity) &&
                     harness.layout.attachedPage(.velocity) == nil &&
@@ -1373,7 +1388,7 @@ Swift expression:
                     cppID: drawerLayoutAvailabilityID,
                     message: "detaching cancels its page synchronously and drops its controls while stored visibility and height survive")
 
-S016 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:135
+S016 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:141
 Swift expression:
   report.expect(snapshot.height == drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100 &&
                     snapshot.barVisible && snapshot.plotOrigin == drawerLayoutDrawerGutterWidth &&
@@ -1381,7 +1396,7 @@ Swift expression:
                     cppID: drawerLayoutStackingID,
                     message: "three visible sections stack their bodies, handles and bar into one container height")
 
-S017 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:163
+S017 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:169
 Swift expression:
   report.expect(snapshot.barX == 0 && snapshot.barY == snapshot.height - drawerLayoutDrawerBarHeight &&
                     snapshot.barWidth == drawerLayoutDrawerHostWidth && snapshot.barHeight == drawerLayoutDrawerBarHeight &&
@@ -1389,27 +1404,27 @@ Swift expression:
                     cppID: drawerLayoutStackingID,
                     message: "the bar spans the host width as the last row, directly below the lowest body")
 
-S018 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:170
+S018 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:176
 Swift expression:
   report.expect(buttonSize == 16 && velocity.toggleSize == buttonSize &&
                     voiceChanges.toggleSize == buttonSize && automation.toggleSize == buttonSize,
                     cppID: drawerLayoutStackingID,
                     message: "toggle buttons take the production size for the resolved bar row")
 
-S019 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:183
+S019 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:189
 Swift expression:
   report.expect(snapshot.detentX == 0 && snapshot.detentY == 48 &&
                     snapshot.detentSize == 16 && snapshot.detentIconInset == 1.5,
                     cppID: drawerLayoutStackingID,
                     message: "detents occupy the velocity body's lower-left corner, not the bar")
 
-S020 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:190
+S020 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:196
 Swift expression:
   report.expect(narrow.detentSize == 9 && narrow.detentY == 55,
                     cppID: drawerLayoutStackingID,
                     message: "detent hit geometry is bounded by the visible velocity gutter")
 
-S021 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:197
+S021 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:203
 Swift expression:
   report.expect(detached.published && afterDetach[.automation].toggleX == 1 + buttonSize + 3 &&
                     afterDetach[.velocity].toggleX == 1 + 2 * (buttonSize + 3) &&
@@ -1418,7 +1433,7 @@ Swift expression:
                     cppID: drawerLayoutStackingID,
                     message: "detaching one kind leaves the surviving toggle slots and their controls unmoved")
 
-S022 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:212
+S022 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:218
 Swift expression:
   report.expect(hidden.published && harness.layout.storedBodyHeight(.automation) == 100 &&
                     harness.layout.snapshot.height ==
@@ -1431,7 +1446,7 @@ Swift expression:
                     cppID: drawerLayoutVisibilityID,
                     message: "hiding a section releases its body and handle while its toggle, URL and stored height stay")
 
-S023 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:229
+S023 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:235
 Swift expression:
   report.expect(shown.published && harness.layout.snapshot.height ==
                         drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100 &&
@@ -1439,7 +1454,7 @@ Swift expression:
                     cppID: drawerLayoutVisibilityID,
                     message: "re-showing a hidden section restores its stored body height")
 
-S024 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:240
+S024 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:246
 Swift expression:
   report.expect(!equalVisibility.published && equalVisibility.isEmpty &&
                     equalVisibility.focusRequest == nil && !equalHeight.published &&
@@ -1447,7 +1462,7 @@ Swift expression:
                     cppID: drawerLayoutVisibilityID,
                     message: "equal visibility and height setters publish nothing and request no focus")
 
-S025 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:247
+S025 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:253
 Swift expression:
   report.expect(toggled.published && !harness.layout.isVisible(.velocity) &&
                     harness.layout.storedBodyHeight(.velocity) == 60 &&
@@ -1458,7 +1473,7 @@ Swift expression:
                     cppID: drawerLayoutVisibilityID,
                     message: "toggling hides the section, keeps its stored height, moves the active page and records both")
 
-S026 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:257
+S026 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:263
 Swift expression:
   report.expect(restoredHeight.published && harness.layout.isVisible(.velocity) &&
                     harness.layout.snapshot[.velocity].bodyHeight == 60 &&
@@ -1467,26 +1482,26 @@ Swift expression:
                     cppID: drawerLayoutVisibilityID,
                     message: "re-showing through the toggle restores the height and records no page change")
 
-S027 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:265
+S027 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:271
 Swift expression:
   report.expect(unset.published && harness.layout.storedBodyHeight(.automation) == nil &&
                     harness.layout.snapshot[.automation].bodyHeight == 80,
                     cppID: drawerLayoutVisibilityID,
                     message: "a height below one maps to the unset marker and the page default takes over")
 
-S028 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:274
+S028 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:280
 Swift expression:
   report.expect(floored.published && harness.layout.storedBodyHeight(.velocity) == 20 &&
                     harness.layout.snapshot[.velocity].bodyHeight == drawerLayoutDrawerMinimumBody,
                     cppID: drawerLayoutVisibilityID,
                     message: "a drawn body never falls below the font-relative minimum body")
 
-S029 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:10
+S029 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:7
 Swift expression:
   report.expect(harness.layout.resizeKind == .automation, cppID: drawerLayoutResizeID,
                     message: "beginning a resize claims the session for its kind")
 
-S030 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:15
+S030 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:12
 Swift expression:
   report.expect(!crossKind.published && !crossEnd.published && crossKind.isEmpty &&
                     harness.layout.resizeKind == .automation &&
@@ -1494,41 +1509,41 @@ Swift expression:
                     cppID: drawerLayoutResizeID,
                     message: "a resize session belongs to one kind and ignores other kinds")
 
-S031 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:22
+S031 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:19
 Swift expression:
   report.expect(grown.published && harness.layout.storedBodyHeight(.automation) == 130 &&
                     harness.layout.snapshot[.automation].bodyHeight == 130,
                     cppID: drawerLayoutResizeID,
                     message: "a positive drag delta grows the body by the rounded delta, above the reserve bound")
 
-S032 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:30
+S032 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:27
 Swift expression:
   report.expect(harness.layout.resizeKind == nil &&
                     harness.layout.storedBodyHeight(.automation) == 130 &&
                     ended.sectionPreferences.count == 1, cppID: drawerLayoutResizeID,
                     message: "ending the resize records the changed section preference once")
 
-S033 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:40
+S033 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:37
 Swift expression:
   report.expect(!sessionless.published && !sessionlessEnd.published &&
                     harness.layout.storedBodyHeight(.automation) == 130,
                     cppID: drawerLayoutResizeID,
                     message: "apply and end without a live session are ignored")
 
-S034 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:47
+S034 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:44
 Swift expression:
   report.expect(shrunk.published &&
                     harness.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
                     cppID: drawerLayoutResizeID,
                     message: "a shrink clamps at the minimum body height")
 
-S035 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:52
+S035 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:49
 Swift expression:
   report.expect(returned.published && harness.layout.storedBodyHeight(.automation) == 130,
                     cppID: drawerLayoutResizeID,
                     message: "returning to the drag-start height restores the original stored height")
 
-S036 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:61
+S036 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:58
 Swift expression:
   report.expect(returnedToUnset.published &&
                     unsetReturn.layout.storedBodyHeight(.automation) == nil &&
@@ -1536,7 +1551,7 @@ Swift expression:
                     cppID: drawerLayoutResizeID,
                     message: "returning to the drag start restores the unset marker, not a concrete height")
 
-S037 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:70
+S037 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:67
 Swift expression:
   report.expect(clamped.published && available.layout.storedBodyHeight(.velocity) == 216 &&
                     available.layout.snapshot[.velocity].bodyHeight == 216 &&
@@ -1544,7 +1559,7 @@ Swift expression:
                     cppID: drawerLayoutResizeID,
                     message: "the available-height clamp fills the host exactly and never overflows it")
 
-S038 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:80
+S038 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:77
 Swift expression:
   report.expect(cappedResize.published &&
                     declared.layout.storedBodyHeight(.voiceChanges) == 110 &&
@@ -1552,7 +1567,7 @@ Swift expression:
                     cppID: drawerLayoutResizeID,
                     message: "a page-declared maximum applies after the available-height clamp without a spill partner")
 
-S039 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:90
+S039 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:87
 Swift expression:
   report.expect(!cancelChange.published && cancelChange.isEmpty &&
                     cancelled.layout.resizeKind == nil &&
@@ -1561,28 +1576,28 @@ Swift expression:
                     cppID: drawerLayoutResizeID,
                     message: "cancelling a resize drops the session, keeps the applied height and records nothing")
 
-S040 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:101
+S040 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:98
 Swift expression:
   report.expect(interrupted.layout.resizeKind == nil &&
                     interrupted.layout.storedBodyHeight(.voiceChanges) == 70,
                     cppID: drawerLayoutResizeID,
                     message: "global cancellation drops a live resize session and keeps the applied height")
 
-S041 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:108
+S041 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:105
 Swift expression:
   report.expect(step.published &&
                     stepped.layout.storedBodyHeight(.automation) == 100 + drawerLayoutDrawerResizeStep &&
                     stepped.layout.resizeKind == nil, cppID: drawerLayoutResizeID,
                     message: "a handle step applies one resize step through the resize path and ends its own session")
 
-S042 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:119
+S042 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:116
 Swift expression:
   report.expect(!floorStep.published && floorStep.isEmpty &&
                     flooredStep.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
                     cppID: drawerLayoutResizeID,
                     message: "a handle step that resolves to the drag start publishes nothing")
 
-S043 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:130
+S043 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:142
 Swift expression:
   report.expect(spilled.published && harness.layout.storedBodyHeight(.voiceChanges) == 110 &&
                     harness.layout.storedBodyHeight(.automation) == 130 &&
@@ -1592,13 +1607,13 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "a voice-change drag past its declared maximum moves the automations stored height by the excess")
 
-S044 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:139
+S044 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:151
 Swift expression:
   report.expect(!stationary.published && harness.layout.storedBodyHeight(.automation) == 130,
                     cppID: drawerLayoutSpillID,
                     message: "a stationary pointer cannot add the same spill twice")
 
-S045 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:144
+S045 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:156
 Swift expression:
   report.expect(spilledEnd.sectionPreferences.count == 2 &&
                     spilledEnd.sectionPreferences.contains {
@@ -1610,7 +1625,7 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "ending a spilled resize records both changed kinds")
 
-S046 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:158
+S046 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:170
 Swift expression:
   report.expect(returned.published &&
                     reverted.layout.storedBodyHeight(.voiceChanges) == 50 &&
@@ -1620,7 +1635,7 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "returning to the drag start restores both original stored heights")
 
-S047 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:169
+S047 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:181
 Swift expression:
   report.expect(floored.published &&
                     crowded.layout.storedBodyHeight(.voiceChanges) == 106 &&
@@ -1628,7 +1643,7 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "spilled automations stop at the minimum body when the available height is exhausted")
 
-S048 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:179
+S048 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:191
 Swift expression:
   report.expect(withoutPartner.published &&
                     unspilled.layout.storedBodyHeight(.voiceChanges) == 110 &&
@@ -1636,7 +1651,7 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "a voice-change drag without a visible automations partner keeps the automations height")
 
-S049 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:188
+S049 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer_resize.swift:200
 Swift expression:
   report.expect(velocityGrowth.published &&
                     uncapped.layout.storedBodyHeight(.velocity) == 90 &&
@@ -1644,7 +1659,7 @@ Swift expression:
                     cppID: drawerLayoutSpillID,
                     message: "a kind with no declared maximum never spills into the automations section")
 
-S050 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:203
+S050 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:215
 Swift expression:
   report.expect(shrunk.published && snapshot.height == 120 && snapshot.barY == 98 &&
                     harness.layout.storedBodyHeight(.velocity) == 60 &&
@@ -1653,7 +1668,7 @@ Swift expression:
                     cppID: drawerLayoutClampID,
                     message: "a host shrink re-clamps the container without rewriting stored heights")
 
-S051 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:209
+S051 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:221
 Swift expression:
   report.expect(snapshot[.voiceChanges].bodyHeight == 50 &&
                     snapshot[.automation].bodyHeight == 36 &&
@@ -1662,7 +1677,7 @@ Swift expression:
                     cppID: drawerLayoutClampID,
                     message: "the clamped allocation fills voice changes first, automations second and velocity with the remainder")
 
-S052 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:215
+S052 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:227
 Swift expression:
   report.expect(snapshot[.automation].bodyY ==
                         snapshot[.velocity].bodyY + snapshot[.velocity].bodyHeight +
@@ -1672,28 +1687,28 @@ Swift expression:
                     cppID: drawerLayoutClampID,
                     message: "a constrained container keeps every drawn rectangle ordered and non-negative")
 
-S053 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:229
+S053 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:241
 Swift expression:
   report.expect(reserved.layout.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 350 &&
                     reserved.layout.snapshot[.automation].bodyHeight == 350,
                     cppID: drawerLayoutClampID,
                     message: "the piano-roll reserve never caps a stored body or the aggregate height")
 
-S054 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:236
+S054 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:248
 Swift expression:
   report.expect(grown.published && reserved.layout.storedBodyHeight(.automation) == 374 &&
                     reserved.layout.snapshot.height == drawerLayoutDrawerHostHeight,
                     cppID: drawerLayoutClampID,
                     message: "the reserve never caps a resize, and the aggregate may fill the host exactly")
 
-S055 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:246
+S055 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:258
 Swift expression:
   report.expect(defaults.layout.snapshot[.automation].bodyHeight == 80 &&
                     defaults.layout.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 80,
                     cppID: drawerLayoutClampID,
                     message: "a page default is bounded by the reserve through maximumDefaultBodyHeight")
 
-S056 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:254
+S056 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:266
 Swift expression:
   report.expect(defaults.layout.snapshot[.automation].bodyHeight == drawerLayoutDrawerMinimumBody &&
                     defaults.layout.snapshot.height ==
@@ -1874,3 +1889,303 @@ Swift expression:
                     harness.layout.storedBodyHeight(.voiceChanges) == 96,
                     cppID: drawerLayoutPersistenceID,
                     message: "an unavailable kind never has its keys written and keeps its stored preference")
+
+S079 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:286
+Swift expression:
+  report.expect(zeroed.published && harness.layout.storedBodyHeight(.velocity) == nil &&
+                harness.layout.snapshot[.velocity].bodyHeight == 66,
+                cppID: drawerLayoutVisibilityID,
+                message: "a zero height clears the stored height and the page default takes over")
+
+S080 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:295
+Swift expression:
+  report.expect(zeroedShown.published && harness.layout.isVisible(.velocity) &&
+                harness.layout.snapshot[.velocity].bodyHeight == 66,
+                cppID: drawerLayoutVisibilityID,
+                message: "re-showing a zeroed section restores the page default body, not the cleared height")
+
+S081 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:301
+Swift expression:
+  report.expect(harness.layout.snapshot.detentSize == 0,
+                cppID: drawerLayoutVisibilityID,
+                message: "a hidden velocity section publishes no detent")
+
+S082 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:306
+Swift expression:
+  report.expect(detent.detentSize == 16 && detent.detentX == 0 &&
+                detent.detentY == detent[.velocity].bodyY + detent[.velocity].bodyHeight - 16,
+                cppID: drawerLayoutVisibilityID,
+                message: "a shown velocity section returns the detent to the body's lower-left corner")
+
+S083 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:314
+Swift expression:
+  report.expect(!harness.layout.isVisible(.velocity) && !harness.layout.isVisible(.voiceChanges) &&
+                !harness.layout.isVisible(.automation) &&
+                harness.layout.snapshot.height == drawerLayoutDrawerBarHeight &&
+                harness.layout.snapshot.barVisible &&
+                harness.layout.activePage == .automation &&
+                harness.layout.storedBodyHeight(.velocity) == nil &&
+                harness.layout.storedBodyHeight(.voiceChanges) == 50 &&
+                harness.layout.storedBodyHeight(.automation) == nil,
+                cppID: drawerLayoutVisibilityID,
+                message: "hiding every section leaves the bar row, keeps every stored height and the active page")
+
+S084 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:324
+Swift expression:
+  report.expect(collapsed.activePagePreference == .automation,
+                cppID: drawerLayoutVisibilityID,
+                message: "hiding the last section records the active page it keeps")
+
+S085 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:328
+Swift expression:
+  report.expect(reopened.published && harness.layout.isVisible(.automation) &&
+                harness.layout.snapshot[.automation].bodyHeight == 80,
+                cppID: drawerLayoutVisibilityID,
+                message: "re-showing after a collapse restores the default body for a cleared height")
+
+S086 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:333
+Swift expression:
+  report.expect(voiceRestored.published &&
+                harness.layout.snapshot[.voiceChanges].bodyHeight == 50,
+                cppID: drawerLayoutVisibilityID,
+                message: "re-showing after a collapse restores the retained stored height")
+
+S087 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer_basics.swift:150
+Swift expression:
+  drawerLayoutExpectDrawerBody(report, cppID: drawerLayoutStackingID, velocity,
+                x: 0, y: drawerLayoutDrawerHandleHeight, width: drawerLayoutDrawerHostWidth, height: 60)
+  drawerLayoutExpectDrawerHandle(report, cppID: drawerLayoutStackingID, velocity, velocity,
+                y: 0, height: drawerLayoutDrawerHandleHeight)
+  drawerLayoutExpectDrawerBody(report, cppID: drawerLayoutStackingID, voiceChanges, x: 0,
+                y: drawerLayoutDrawerHandleHeight + 60 + drawerLayoutDrawerHandleHeight,
+                width: drawerLayoutDrawerHostWidth, height: 50)
+  drawerLayoutExpectDrawerHandle(report, cppID: drawerLayoutStackingID, voiceChanges, voiceChanges,
+                y: drawerLayoutDrawerHandleHeight + 60, height: drawerLayoutDrawerHandleHeight)
+  drawerLayoutExpectDrawerBody(report, cppID: drawerLayoutStackingID, automation, x: 0,
+                y: voiceChanges.bodyY + voiceChanges.bodyHeight + drawerLayoutDrawerHandleHeight,
+                width: drawerLayoutDrawerHostWidth, height: 100)
+  drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID, voiceChanges,
+                x: 1, y: snapshot.barY + 3, size: buttonSize)
+  drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID, automation,
+                x: 1 + buttonSize + 3, y: snapshot.barY + 3, size: buttonSize)
+  drawerLayoutExpectDrawerToggle(report, cppID: drawerLayoutStackingID, velocity,
+                x: 1 + 2 * (buttonSize + 3), y: snapshot.barY + 3, size: buttonSize)
+  Each helper asserts the named geometry fields (bodyX/bodyY/bodyWidth/bodyHeight, handleY/handleHeight,
+  or toggleX/toggleY/toggleSize) for its kind; the calls occupy lines 150-188.
+
+S088 | EditorDrawerLane.test_noPageContributesNothing | src/checks/editorqml/tst_EditorDrawer.qml:785
+QML expression:
+  compare(testCase.presenter().height, 0, "no page contributes no height")
+  compare(testCase.presenter().barVisible, false, "no page claims a bar")
+  compare(testCase.presenter().plotOrigin, testCase.surface.timelineSplitX, "the plot origin includes the headers and keyboard")
+  compare(testCase.rollBand().height, testCase.editorHeight(), "the roll fills the editor above the persistent status strip")
+  compare(testCase.rollInput().height, testCase.editorHeight() - testCase.surface.gridModel.rulerHeight, "the roll input fills the editor below the ruler and above the persistent status strip")
+
+S089 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:847
+QML expression:
+  testCase.verifyRect(testCase.bar(), presenter.barX, presenter.barY, presenter.barWidth, presenter.barHeight, "bar")
+  testCase.verifyRect(testCase.toggle(kind), state.toggleX, state.toggleY, state.toggleSize, state.toggleSize, what + " toggle")
+  testCase.verifyRect(testCase.grip(kind), 0, state.handleY, testCase.drawer().width, state.handleHeight, what + " handle")
+  testCase.verifyRect(loader, state.bodyX, state.bodyY, state.bodyWidth, state.bodyHeight, what + " body")
+  verifyRect maps the item into the drawer item and fuzzy-compares x, y, width and height (helper at line 543).
+
+S090 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:883
+QML expression:
+  compare(presenter.plotOrigin, testCase.surface.timelineSplitX, "the container publishes the combined gutter")
+  fuzzyCompare(presenter.height, aggregate, 0.01, "the container fits its sections and bar")
+  verify(rects.velocity.y + rects.velocity.height <= rects.voiceChanges.y + 0.01, "velocity sits above voice changes")
+  verify(rects.voiceChanges.y + rects.voiceChanges.height <= rects.automation.y + 0.01, "voice changes sit above automations")
+  verify(barRect.y >= rects.automation.y + rects.automation.height - 0.01, "the bar sits below every body")
+  fuzzyCompare(barRect.y + barRect.height, presenter.height, 0.01, "the bar closes the container")
+
+S091 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:904
+QML expression:
+  mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
+  tryVerify(function() { return String(hoverGrip.color).toUpperCase() === String(testCase.drawerPalette().selectionRing).toUpperCase() }, 1000, "a hovered handle highlights")
+  mouseMove(testCase.bar(), 2, 2)
+  tryVerify(function() { return String(hoverGrip.color).toUpperCase() === String(testCase.drawerPalette().outline).toUpperCase() }, 1000, "leaving the handle returns its outline")
+
+S092 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:919
+QML expression:
+  keyClick(Qt.Key_Return)
+  compare(testCase.section(testCase.voiceChangesKind).visible, false, "Return hides the section")
+  compare(testCase.returnPropagations, 0, "the toggle claims Return")
+  keyClick(Qt.Key_Enter)
+  compare(testCase.section(testCase.velocityKind).visible, false, "Enter hides the section")
+  keyClick(Qt.Key_Space)
+  compare(testCase.spacePropagations, 1, "bare Space propagates unclaimed")
+  compare(testCase.section(testCase.automationKind).visible, true, "Space does not toggle")
+
+S093 | EditorDrawerLane.test_hostedChromeAndStacking | src/checks/editorqml/tst_EditorDrawer.qml:942
+QML expression:
+  testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().windowBackground, "unchecked toggle")
+  testCase.verifyToggleRendering(testCase.automationKind, testCase.drawerPalette().selectionRing, "checked toggle")
+  verifyToggleRendering (helper at line 720) samples one surface grab through the drawn control's region and
+  requires a pixel nearest each expected colour plus an exact two-colour blend over the control interior.
+
+S094 | EditorDrawerLane.verifyToggleAccessibility | src/checks/editorqml/tst_EditorDrawer.qml:578
+QML expression:
+  compare(control.Accessible.role, Accessible.Button, name + ": role")
+  compare(control.Accessible.name, name, name + ": name")
+  compare(control.Accessible.checkable, true, name + ": checkable")
+  compare(control.Accessible.checked, testCase.section(kind).visible, name + ": checked")
+  compare(control.Accessible.focusable, true, name + ": focusable")
+  verifyGripAccessibility (helper at line 587) asserts the Grip role, the name, the resize description and
+  focusable; both helpers are called for all three kinds at lines 897-902.
+
+S095 | EditorDrawerLane.test_toggleRetainsStoredHeight | src/checks/editorqml/tst_EditorDrawer.qml:987
+QML expression:
+  compare(testCase.section(kind).visible, false, "the click hides the section")
+  compare(presenter.height, barRow, "a hidden section releases its height")
+  compare(testCase.grip(kind).visible, false, "no handle while hidden")
+  compare(testCase.body(kind).visible, false, "no body while hidden")
+  fuzzyCompare(testCase.section(kind).bodyHeight, stored, 0.01, "the stored body height returns")
+  fuzzyCompare(presenter.height, openHeight, 0.01, "the container height returns")
+  compare(testCase.bar().visible, true, "the bar stays for the last hidden section")
+  compare(testCase.toggle(kind).visible, true, "the toggle stays too")
+  compare(presenter.height, barRow, "the container is the bar row")
+  fuzzyCompare(testCase.section(kind).bodyHeight, stored, 0.01, "re-showing restores the same body height")
+
+S096 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1030
+QML expression:
+  fuzzyCompare(testCase.section(kind).bodyHeight, stored + 40, 1, "the drag grows the body by its delta")
+  fuzzyCompare(presenter.height, openHeight + 40, 1, "the container grows with the body")
+  verify(presenter.height <= testCase.editorHeight(), "the container stays above the status strip")
+  verify(testCase.bodyInsideContainer(kind), "the body stays inside the container")
+  fuzzyCompare(presenter.height, testCase.editorHeight(), 0.01, "the container clamps above the status strip")
+  fuzzyCompare(testCase.section(kind).bodyHeight, applied, 0.01, "releasing after a cancellation keeps the applied height")
+
+S097 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1048
+QML expression:
+  fuzzyCompare(testCase.section(kind).bodyHeight, floorHeight, 0.01, "the keyboard path shares the minimum body")
+  verify(step > 0, "Up grows the body by the resize step")
+  fuzzyCompare(testCase.section(kind).bodyHeight, beforeStep + 2 * step, 0.01, "each press adds one resize step")
+  fuzzyCompare(testCase.section(kind).bodyHeight, beforeStep + step, 0.01, "Down takes one step back")
+  compare(testCase.leftPropagations, 0, "the grip consumes the cross-axis arrows")
+  fuzzyCompare(testCase.section(kind).bodyHeight, beforeStep + step, 0.01, "the cross-axis arrows resize nothing")
+
+S098 | EditorDrawerLane.test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1100
+QML expression:
+  mousePress(rightGrip, rightGrip.width / 2, rightGrip.height / 2, Qt.RightButton)
+  mouseMove(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+  mouseRelease(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+  fuzzyCompare(testCase.section(kind).bodyHeight, rightStart, 0.01, "a right-button drag on the handle resizes nothing")
+
+S099 | EditorDrawerLane.test_voiceChangesSpillAndDetach | src/checks/editorqml/tst_EditorDrawer.qml:1143
+QML expression:
+  fuzzyCompare(voiceStart, 60, 0.01, "the stored voice-changes height is restored")
+  fuzzyCompare(testCase.section(voiceKind).bodyHeight, 90, 0.01, "the voice-changes body stops at its declared maximum")
+  verify(spilled > automationStart, "the excess moves the automations body")
+  fuzzyCompare(presenter.height, host, 0.01, "the spilled pair fills the host")
+  fuzzyCompare(testCase.section(voiceKind).bodyHeight, voiceStart, 0.01, "the capped section returns to its stored height")
+  fuzzyCompare(testCase.section(automationKind).bodyHeight, automationStart + overshoot, 1, "the excess alone moves the automations body")
+  compare(bootstrap.pageCancelCount, cancels + 1, "the release cancels the page once")
+
+S100 | EditorDrawerLane.test_focusReturnAndPageCancellation | src/checks/editorqml/tst_EditorDrawer.qml:1238
+QML expression:
+  tryVerify(function() { return testCase.focusIsIn(testCase.rollInput()) }, 1000, "hiding the only visible section returns focus to the roll input")
+  compare(bootstrap.pageCancelCount, cancels + 1, "hiding cancels the page once")
+  tryVerify(function() { return testCase.focusIsIn(automationPage) }, 1000, "showing focuses the page item's own scope")
+  compare(bootstrap.pageCancelCount, cancels + 2, "losing the active slot cancels once")
+
+S101 | EditorDrawerLane.test_preferencesRoundTrip | src/checks/editorqml/tst_EditorDrawer.qml:1310
+QML expression:
+  testCase.compareSnapshots(testCase.snapshotStore(location), seeded, "mounting writes nothing back")
+  compare(testCase.section(velocityKind).visible, true, "the stored visibility applies")
+  fuzzyCompare(testCase.section(voiceKind).bodyHeight, 150, 0.01, "the stored voice height")
+  compare(written.velocityVisible, "boolean:false", "visibility is written as a bool")
+  compare(written.activePage, "string:velocity", "the page keeps its historical name")
+  compare(testCase.snapshotStore(location).velocityHeight, "number:0", "an unset height is written as 0")
+
+S102 | EditorDrawerLane.test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2806
+QML expression:
+  verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
+  fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
+  verify(scroller.contentHeight > scroller.height, "the catalog scrolls at minimum height")
+  verify(firstOrigin.y >= -0.5 && firstOrigin.y + first.height <= scroller.height + 0.5, "the first parameter is visible at the content top")
+  The case also calls verifyAutomationLabelsFitGutter (line 2812), whose assertions occupy lines 2737-2787:
+  verify(gutter && scroller, "the selector exposes its gutter and clipped scroller")
+  fuzzyCompare(gutter.width, testCase.surface.timelineSplitX, 0.01, "the label gutter includes the track headers and keyboard")
+  verify(tab && tab.width > 0 && tab.height > 0, "the parameter tab has bounds")
+  verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5, "parameter ... stays inside the widened gutter")
+  compare(scroller.clip, true, "the selector clips its scrolling content")
+
+S103 | EditorDrawerLane.test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:3961
+QML expression:
+  compare(page.objectName, "automationPage", "the hosted item is the production page")
+  verify(gutter && plot, "the page composed its selector column and plot")
+  fuzzyCompare(gutter.width, testCase.surface.timelineSplitX, 0.01, "the selector column is the shared gutter")
+  fuzzyCompare(plot.x, gutter.width, 0.01, "the plot starts at the shared origin")
+  fuzzyCompare(plot.width, page.width - gutter.width, 0.01, "the plot spans the body beside the selector")
+  fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
+
+S104 | EditorDrawerLane.test_productionDrawerBlankBarFocus | src/checks/editorqml/tst_EditorDrawer.qml:2303
+QML expression:
+  mouseClick(bar, bar.width - 3, bar.height / 2, Qt.LeftButton)
+  tryVerify(function() { return testCase.drawer().activeFocus }, 1000, "blank drawer chrome takes focus from the roll")
+  compare(bootstrap.automationDocumentRevision(), revision, "blank chrome does not execute a document command")
+  testCase.compareSnapshots(testCase.snapshotStore(location), before, "blank chrome changes no section preference")
+
+S105 | EditorDrawerLane.test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2278
+QML expression:
+  verify(detent, "the drawer composed its original detent control")
+  compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
+  compare(detent.Accessible.checkable, true, "the detent control is checkable")
+  compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled, "the detent control shows the page's own preference")
+
+S106 | EditorDrawerLane.test_quickSurfacePublishesAndRendersHeaders | src/checks/editorqml/tst_EditorDrawer.qml:2012
+QML expression:
+  verify(band && input && rows && scrollbar, "the production header surface is mounted")
+  verify(band.visible && input.visible, "the header band and its input are visible")
+  fuzzyCompare(input.width + scrollbar.width, band.width, 0.01)
+  fuzzyCompare(input.height, band.height, 0.01)
+  fuzzyCompare(scrollbar.x, input.width, 0.01)
+  tryVerify(function() { return rows.count > 1 }, 2000, "the song publishes its header rows")
+  compare(testCase.surface.headersModel.contentHeight, rows.count * testCase.surface.headersModel.rowHeight)
+
+S107 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:339
+Swift expression:
+  report.expect(voiceHidden.published && !harness.layout.isVisible(.voiceChanges) &&
+                harness.layout.storedBodyHeight(.voiceChanges) == 50,
+                cppID: drawerLayoutVisibilityID,
+                message: "toggling hides the voice-changes section and keeps its stored height")
+
+S108 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer_basics.swift:344
+Swift expression:
+  report.expect(voiceShown.published && harness.layout.isVisible(.voiceChanges) &&
+                harness.layout.snapshot[.voiceChanges].bodyHeight == 50,
+                cppID: drawerLayoutVisibilityID,
+                message: "re-showing the voice-changes section restores its stored height")
+
+S109 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:124
+Swift expression:
+  report.expect(steppedToMax.published &&
+                atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                cppID: drawerLayoutResizeID,
+                message: "a step at the declared maximum keeps the stored height and the capped body at its maximum")
+
+S110 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer_resize.swift:130
+Swift expression:
+  report.expect(pastMax.published &&
+                atMax.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                atMax.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                cppID: drawerLayoutResizeID,
+                message: "a further step past the declared maximum publishes the spill while the capped body and its stored height stay at the maximum")
+
+S111 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer_resize.swift:278
+Swift expression:
+  report.expect(narrow.layout.snapshot.plotWidth == 0,
+                cppID: drawerLayoutClampID,
+                message: "a host narrower than the plot origin publishes no plot width")
+  The block configures hostWidth: drawerLayoutDrawerGutterWidth - 1 (55 against the 56 gutter) at lines 272-277.
+
+S112 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift:132
+Swift expression:
+  report.expect(!fresh.layout.isVisible(.velocity),
+                cppID: drawerLayoutAvailabilityID,
+                message: "an attached velocity section keeps its hidden default until restored or shown")
+  The block builds a fresh harness, attaches a velocity stub page and applies no restore preferences, so the
+  predicate reads the untouched layout default rather than a restored preference.
+
+Tally: MATCHED 76, PARTIAL 69, GAP 14, NATIVE 17, NATIVE-SETUP 2

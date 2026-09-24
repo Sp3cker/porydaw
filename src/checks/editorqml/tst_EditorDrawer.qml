@@ -901,6 +901,18 @@ TestCase {
         testCase.verifyGripAccessibility(testCase.voiceChangesKind, "Resize voice-change drawer")
         testCase.verifyGripAccessibility(testCase.automationKind, "Resize automation drawer")
 
+        var hoverGrip = testCase.grip(testCase.velocityKind)
+        mouseMove(hoverGrip, hoverGrip.width / 2, hoverGrip.height / 2)
+        tryVerify(function() {
+            return String(hoverGrip.color).toUpperCase()
+                === String(testCase.drawerPalette().selectionRing).toUpperCase()
+        }, 1000, "a hovered handle highlights")
+        mouseMove(testCase.bar(), 2, 2)
+        tryVerify(function() {
+            return String(hoverGrip.color).toUpperCase()
+                === String(testCase.drawerPalette().outline).toUpperCase()
+        }, 1000, "leaving the handle returns its outline")
+
         // Return and Enter activate a focused toggle and are claimed by it.
         testCase.focusControl(testCase.toggle(testCase.voiceChangesKind))
         testCase.returnPropagations = 0
@@ -1077,6 +1089,16 @@ TestCase {
         testCase.releaseGrip(kind)
         fuzzyCompare(testCase.section(kind).bodyHeight, applied, 0.01,
                      "releasing after a cancellation keeps the applied height")
+
+        testCase.awaitRenderedLayout()
+        var rightStart = testCase.section(kind).bodyHeight
+        var rightGrip = testCase.grip(kind)
+        mousePress(rightGrip, rightGrip.width / 2, rightGrip.height / 2, Qt.RightButton)
+        var rightLocal = rightGrip.mapFromItem(null, 0, testCase.dragSceneY - 40)
+        mouseMove(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+        mouseRelease(rightGrip, rightLocal.x, rightLocal.y, Qt.RightButton)
+        fuzzyCompare(testCase.section(kind).bodyHeight, rightStart, 0.01,
+                     "a right-button drag on the handle resizes nothing")
 
         // The host shrink re-clamps the drawn body and keeps the stored height.
         testCase.surface.height = host - 250
@@ -3403,6 +3425,20 @@ TestCase {
         compare(String(findChild(page, "voiceReadout").text).length > 0, true,
                 "the readout draws the presented track's context")
         testCase.auditVisibleTextInk(page, "voice page")
+        var readout = findChild(page, "voiceReadout")
+        verify(readout.width > 0 && readout.height > 0,
+               "the readout draws a usable rect")
+        compare(readout.horizontalAlignment, Text.AlignRight,
+                "the readout draws right-aligned")
+        var hoverInput = testCase.voicePlotInput()
+        var hoverColumn = testCase.freeVoiceColumn(120)
+        verify(hoverColumn >= 0, "the lane leaves a free column to hover")
+        mouseMove(hoverInput, hoverColumn, hoverInput.height / 2)
+        var hoverLabel = findChild(page, "voiceHoverLabel")
+        tryVerify(function() { return hoverLabel.visible }, 1000,
+                  "the background hover draws its label")
+        verify(hoverLabel.width > 0 && hoverLabel.height > 0,
+               "the hover draws a usable label rect")
     }
 
     // Real pointer input on the drawn composition: the double-click picker entry,

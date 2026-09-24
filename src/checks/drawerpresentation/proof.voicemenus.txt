@@ -12,7 +12,8 @@ Repeated rows and loops execute a site more than once. The source SHA pins the e
 original sequence; the context inventory below records its rows, loops and fixtures.
 MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
 a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+established; NATIVE identifies a retained native window, rendering, focus or
+input-delivery obligation; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
@@ -23,9 +24,11 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-deno task verify --filter swiftcore --verbose passed on the current worktree at
-d1b7aaf9d55968b677352ff14ad80e7be94ef1a2: build ok in 32.07s; swiftcore ok
-in 8.49s; 1/24 harnesses selected, 23 skipped.
+deno task verify --filter swiftcore --verbose: PASS on the current worktree —
+1/14 harnesses ok, 13 skipped, swiftcore 16.06s. The QML case
+test_productionVoiceChangesPointerAndMenuTransactions PASSES: it drives real
+menu-row input through the production composition. Both are the lane owner
+observations reported as given; this ledger re-ran neither.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -137,8 +140,8 @@ Original expression:
   QVERIFY2(inserted.session, qUtf8Printable(inserted.diagnostic))
 
 A002 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S019 activates the insert row typed action on the same empty-144 fixture and opens the picker; the passing QML case test_productionVoiceChangesPointerAndMenuTransactions drives real rendered menu rows through the production composition (S057) and clicks only the Delete row. Unproved: a real Insert-row pick through a rendered row delegate, and the native QuickPopupSession row delivery the original uses.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*inserted.session, inserted.insertRow),
                "the Insert row did not receive a real click")
@@ -217,8 +220,8 @@ Original expression:
   QVERIFY2(changeMenu.session, qUtf8Printable(changeMenu.diagnostic))
 
 A012 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S036 activates the change row typed action on the same 144 fixture and opens the preselecting picker; the passing QML case drives real rendered rows through the production composition (S057) and clicks only the Delete row. Unproved: a real Change-row pick through a rendered row delegate, and the native QuickPopupSession row delivery the original uses.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*changeMenu.session, changeMenu.changeRow),
                "the Change Voice row did not receive a real click")
@@ -295,8 +298,8 @@ Original expression:
   QVERIFY2(deleteMenu.session, qUtf8Printable(deleteMenu.diagnostic))
 
 A022 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S012 activates the delete row typed action (the captured occurrence is removed) and S045 asserts the consumed menu; the passing QML case clicks the rendered Delete row through the production composition (S058) and drops exactly the captured occurrence while the page-owned modal retires. Unproved: the same row click delivered by the native QuickPopupSession panel the original addresses.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*deleteMenu.session, deleteMenu.deleteRow),
                "the Delete row did not receive a real click")
@@ -307,6 +310,7 @@ Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresenta
 Swift counterpart expression (S045):
   expect(!page.menuOpen, 156)
 Original expression:
+  QVERIFY2(!deleteMenu.session->isOpen(), "the Delete pick left the voice menu open");
 
 A024 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:157
 Disposition: MATCHED
@@ -330,6 +334,7 @@ Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresenta
 Swift counterpart expression (S048):
   expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
 Original expression:
+  QCOMPARE(fixture.document().undoStack()->index(), changedAgain.undoIndex + 1);
 
 A027 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:163
 Disposition: MATCHED
@@ -380,253 +385,253 @@ Original expression:
   QVERIFY(fixture.document().smf().write() == before.smf)
 
 A033 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S001 asserts the same right-press on the same program3-at-48 fixture leaves the page menu live and open (menuOpen mirrors menu != nil), and S006/S007/S008 assert the capture survives the camera scroll. Original native popup existence, drawn rows or ListView state remains an open UI assertion. No keyboard/focus/window equivalence is claimed.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A034 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S006 asserts the identical observable on the same fixture and sequence: the menu stays open across a camera-only scroll, with S007/S008 pinning the captured identity and tick. Central execution passed in the recorded swiftcore run.
 Original expression:
   QVERIFY2(menu.session->isOpen(), "a camera-only scroll closed the useful voice menu")
 
 A035 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S036 activates the change action on the same fixture and opens the preselecting picker; the passing QML case drives real rendered rows through the production composition (S057) but never after a camera scroll. Unproved: a real Change-row pick on the scrolled panel through a rendered row delegate, and the native QuickPopupSession row delivery.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.changeRow),
                "the scrolled Change Voice row did not receive a real click")
 
 A036 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S037/S029 assert the picker opens on the change action with the captured target tick in the 144 sequence; the Swift camera-scroll block (S006/S007/S008) stops after the non-drift assertions and never activates the scrolled row. Unproved: picker activation after a camera-scroll pick; presenter state only, no native popup or rendered panel equivalence.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(view)))
 
 A037 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S023 asserts the consumed menu closes after a row activation in the insert sequence; the Swift change sequence (S037/S038) never asserts the menu closed, and the camera-scroll block never opens the picker. Unproved: the scrolled row pick leaving no menu panel up; native panel state is only reachable at presenter level here.
 Original expression:
   QVERIFY2(!quick_popup::menuPanel(*picker.session),
                "the Change pick left the voice menu panel up")
 
 A038 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S038 asserts the picker preselects the captured marker voice on the same fixture in the 144 sequence; the camera-scroll block never opens the picker. Unproved: the captured voice preselection surviving a camera scroll, and the native list currentIndex the original reads.
 Original expression:
   QCOMPARE(picker.list->property("currentIndex").toInt(), kMarkerVoice)
 
 A039 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S031/S039 assert the filtered row appears and the index resets in the 144 sequences; the camera-scroll block never opens the picker. Unproved: filtering a picker opened after a camera scroll, and the native list row state.
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 7))
 
 A040 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:202
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S032/S040 assert the picker closes after accept in the 144 sequences; the camera-scroll block never opens the picker. Unproved: accept-after-scroll closure; presenter state only.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(view))
 
 A041 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S016 asserts the surviving marker projection ([0,120]) in the delete sequence, the closest point-population predicate, and S013 the removed occurrence; no predicate compares the full voice lane point set across a change pick. Unproved: point-set count and equality across the scrolled change pick.
 Original expression:
   QCOMPARE(afterPoints.size(), beforePoints.size())
 
 A042 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S016 asserts the surviving marker projection after the delete sequence, and S051/S054 assert state restoration at the undo steps; no predicate re-reads the lane after a change pick. Unproved: per-point survival across the scrolled change pick.
 Original expression:
   QVERIFY2(fixture.document().findLanePoint(0, DOC_CC_VOICE, beforePoint.tick, &afterPoint),
                    "a pre-existing lane point went missing across the camera scroll")
 
 A043 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S034 asserts the picked program 7 lands on the captured tick in the insert sequence, and S053 asserts value 7 in the undo walk. Unproved: the value at the captured marker after the scrolled change pick, which the Swift camera-scroll block never performs.
 Original expression:
   QCOMPARE(afterPoint.value, 7)
 
 A044 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S016 asserts only the surviving marker ticks after the delete sequence; no predicate compares unchanged neighbours across a change pick. Unproved: unrelated lane point values across the scrolled change pick.
 Original expression:
   QCOMPARE(afterPoint.value, beforePoint.value)
 
 A045 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S035/S043 assert one revision per pick in the 144 sequences; the camera-scroll block commits nothing. Unproved: the revision delta of a pick taken after a camera scroll.
 Original expression:
   QCOMPARE(fixture.document().revision(), before.revision + 1)
 
 A046 | DrawerPresentationTest::voiceMenuTargetHoldsAcrossCameraScroll | src/checks/drawerpresentation/voicemenus.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S015 and S054 replace private stack-index inspection with public history observables (canUndo, currentIdentity, byte equality) in the other sequences. Unproved: a per-step history observation for this scrolled change pick.
 Original expression:
   QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1)
 
 A047 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S001 asserts the same right-press on the same program3-at-48 fixture leaves the page menu live and open (menuOpen mirrors menu != nil). The original native popup session object, its rendered panel and drawn rows remain an open UI assertion. No keyboard/focus/window equivalence is claimed.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A048 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native rendering precondition: the original resolves the native popup panel before the stale probe. The Swift page composes a page-owned QML modal from bridged rows (src/ui/songview/quick/drawer/VoiceChangeMenu.qml:53 voiceMenuPanel) and exposes no native panel, so no Swift predicate discharges this native rendering obligation.
 Original expression:
   QVERIFY2(panel, "the voice menu lost its rendered panel before the stale probe")
 
 A049 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native rendering precondition: the original resolves the native rendered Delete-row centre (menuRowSceneCenter) to aim the native pointer path. No Swift predicate replaces this native row-geometry obligation; the page-owned QML modal is a different surface.
 Original expression:
   QVERIFY2(!deleteCenter.isNull(), "the Delete row never rendered")
 
 A050 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:240
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native window obligation: the original delivers the stale press and release through the native menu window (mapToGlobal plus QTest::mousePress/mouseRelease). No Swift predicate replaces this native input-delivery obligation.
 Original expression:
   QVERIFY(menuWindow)
 
 A051 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 asserts the same observable under the same fixture and sequence: a document change cancels the open menu, so the stale release leaves no popup open (hasMenu mirrors menu != nil). Central execution passed in the recorded swiftcore run.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "the stale request left a popup open")
 
 A052 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 asserts the page menu surface is closed after the rewrite and S026 asserts the post-cancellation activation writes nothing, so no popup can be reopened; the page owns one menu surface, the observable the original reads through the shared popup session accessor.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(view)->isOpen(), "the stale request reopened a popup")
 
 A053 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the identical observable: the stale activation leaves the post-rewrite snapshot (revision, history identity, canUndo/canRedo) as the only change.
 Original expression:
   QVERIFY(fixture.snapshot() == rewritten)
 
 A054 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the post-rewrite snapshot is unchanged by the stale activation, so nothing was committed and the captured marker at 48 is untouched; the Swift sequence reads the snapshot rather than re-finding the single point.
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point))
 
 A055 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the post-rewrite snapshot is unchanged by the stale activation, so the captured voice at 48 stands; the Swift sequence never re-reads the single point.
 Original expression:
   QCOMPARE(point.value, kMarkerVoice)
 
 A056 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S027 asserts only that nothing changed after the stale activation; the Swift stale rewrite writes the existing tick-0 value instead of adding an independent point at 144. Unproved: an added independent point landing and surviving the stale release, since no predicate observes the rewrite own effect.
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A057 | DrawerPresentationTest::voiceMenuStaleDocumentRejectsPick | src/checks/drawerpresentation/voicemenus.cpp:267
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S027 asserts only that nothing changed after the stale activation, and the Swift stale sequence never creates a point at 144. Unproved: the value 5 the original reads at the added point, and that the rewrite own effect landed.
 Original expression:
   QCOMPARE(point.value, 5)
 
 A058 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Native band-focus staging: the original stages the voice band active focus before the dismissal so the restore can be observed. The Swift page has no timeline-band focus item; the passing QML cases assert focus return only to the page own plot item (test_productionVoiceChangesPickerKeyboardAndCancellation at src/checks/editorqml/tst_EditorDrawer.qml:3600). Unproved: timeline-band focus staging at Qt-item level.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
 A059 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native focus-item obligation: the original polls the native quick view focused timeline band (QTRY over Qt focus items). No Swift predicate replaces this native focus obligation.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
 
 A060 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:288
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S001 asserts the same right-press on the same program3-at-48 fixture leaves the page menu live and open (menuOpen mirrors menu != nil). The original native popup session object, its rendered panel and drawn rows remain an open UI assertion. No keyboard/focus/window equivalence is claimed.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A061 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native window obligation: the original delivers the outside press and its paired release through the native menu window (mapToScene plus QTest::mouseEvent). No Swift predicate replaces this native input-delivery obligation.
 Original expression:
   QVERIFY(menuWindow)
 
 A062 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S009 asserts the dismissal closes the page menu on the same fixture (hasMenu and menuOpen mirror menu != nil) and S010 that it releases the interaction gate; the passing QML case dismisses through a real outside press on voiceMenuUnderlay (tst_EditorDrawer.qml:3536, S059). The Swift scenario dismisses by explicit call rather than a pointer press.
 Original expression:
   QVERIFY2(!menu.session->isOpen(), "an outside right press did not dismiss the voice menu")
 
 A063 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:298
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S009/S010 assert the dismissal leaves the menu closed and no active interaction, and the passing QML outside click delivers a real press plus release pair with no write (S059). Unproved: the swallowed paired release starting nothing, because the Swift scenario never replays a release after the dismissal.
 Original expression:
   QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
                "the dismissed voice menu leaked its paired release into a new popup")
 
 A064 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S010 asserts no active interaction after the dismissal; interactionActive is computed from picker != nil, menu != nil, drag != nil and panRevision != nil (src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift:510), so an active picker would fail it.
 Original expression:
   QVERIFY(!checks::voicepicker::active(view))
 
 A065 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S011 asserts the identical observable: the dismissal writes nothing, snapshot equality on the same fixture.
 Original expression:
   QVERIFY(fixture.snapshot() == before)
 
 A066 | DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget | src/checks/drawerpresentation/voicemenus.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native focus-item obligation: the original polls the native quick view focused band (QTRY) after the dismissal. No Swift predicate replaces this native focus-restoration obligation.
 Original expression:
   QTRY_VERIFY2(view.quickView()->focusedBand() == songview::TimelineBand::VoiceChanges,
                    "the dismissal did not restore the voice band focus")
 
 A067 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S001 asserts the same right-press on the same program3-at-48 fixture leaves the page menu live and open (menuOpen mirrors menu != nil). The original native popup session object, its rendered panel and drawn rows remain an open UI assertion. No keyboard/focus/window equivalence is claimed.
 Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A068 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native item-graph obligation: the original resolves the native quick view root object to reach the ruler real open method. The Swift drawer page exposes no equivalent native item graph; the new roll composition ruler items belong to the timeline/ruler lane.
 Original expression:
   QVERIFY(root)
 
 A069 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native item-graph obligation: the original resolves the native timelineRulerInput TimelineInputItem to reach the ruler. The Swift drawer page exposes no equivalent item lookup; the new roll composition ruler items belong to the timeline/ruler lane.
 Original expression:
   QVERIFY(rulerInput)
 
 A070 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native item-graph obligation: the original dynamic_casts the ruler input interaction to the native TimeRuler before opening its division menu. The Swift drawer page has no ruler interaction object; the ruler division menu belongs to the timeline/ruler lane.
 Original expression:
   QVERIFY(ruler)
 
 A071 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:329
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Retained native item-graph obligation: the original resolves the native timelineRulerDivisionControl item to aim the ruler division open. The Swift drawer page composes no such item; the ruler division control belongs to the timeline/ruler lane.
 Original expression:
   QVERIFY(division)
 
 A072 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The site reads the shared canvas popup session accessor, a mechanism whose production ingress is gone. No-ingress proof: scoped grep of QuickPopupSession, QuickMenuModel, quick_popup, popupSession, rowForId, clickMenuRow, menuRowSceneCenter and menuPanel( over src/swift and the page QML (src/ui/songview/quick/drawer, src/ui/songview/quick/swiftroll) returns zero hits; each page hosts its own QML modal (drawer/VoiceChangeMenu.qml:10,34,58 rows via model.activateMenuRow, covered by the QML case test_automationModalsRetireWithPage) and the C++ owners (src/ui/songview.cpp, src/ui/editordrawer/voicechangearea/voicechangemenu.cpp) appear in no CMake target.
 Original expression:
   QVERIFY(live)
 
 A073 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: A foreign session takeover cannot occur in the page-owned modal composition, so the foreign-panel publication site has no equivalent observation. No-ingress as A072: QuickPopupSession, QuickMenuModel, quick_popup, popupSession, rowForId, clickMenuRow, menuRowSceneCenter and menuPanel( have zero hits across src/swift and the page QML (src/ui/songview/quick/drawer, src/ui/songview/quick/swiftroll); each page hosts its own modal (QML case test_automationModalsRetireWithPage).
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const foreignPanel = quick_popup::menuPanel(*live);
@@ -637,64 +642,64 @@ Original expression:
 
 A074 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:347
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Ruler division menu owned by timeline/ruler lane, not the voice page: no Swift or QML predicate asserts the division menu rows. Scoped search finds no grid-selection or division-menu predicate in src/checks/*.swift and no GridSelection API in src/swift, and the new roll QML owns the menu rows (src/ui/songview/quick/swiftroll/EditorSurface.qml:27,368).
 Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator")
 
 A075 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:348
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Ruler division menu owned by timeline/ruler lane, not the voice page: the real division-row click is that lane obligation. No Swift predicate activates a division row; there is no grid-selection or division-menu predicate in src/checks/*.swift and no GridSelection API in src/swift.
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the foreign division row did not receive a real click")
 
 A076 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:351
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Ruler division menu owned by timeline/ruler lane, not the voice page: the menu closure after the ruler pick is that lane observation. No Swift predicate asserts a division menu closing; the voice page owns only its own menu surface.
 Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open")
 
 A077 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:352
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Ruler division menu owned by timeline/ruler lane, not the voice page: no Swift grid-selection API exists (GridSelection has zero hits in src/swift and src/checks/*.swift), so the division pick effect on the grid is unasserted on the Swift surface.
 Original expression:
   QCOMPARE(view.viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A078 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:354
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Ruler division menu owned by timeline/ruler lane, not the voice page: focus return to the ruler control is that lane Qt-item observation. No Swift predicate observes the ruler control focus, and the drawer page item is not the ruler control.
 Original expression:
   QTRY_VERIFY2(division->hasActiveFocus(),
                    "the foreign pick did not return focus to the ruler control")
 
 A079 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the stale activation leaves the post-rewrite snapshot as the only change and S025 cancels the displaced menu, so the displaced voice target writes nothing. The Swift proves the never-fires outcome through the document-change cancellation path; a foreign session takeover is unrepresentable with page-owned modals.
 Original expression:
   QVERIFY(fixture.snapshot() == before)
 
 A080 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 asserts the activation after the cancellation writes nothing and S027 the unchanged snapshot, so the marker at 48 is untouched. The Swift proves it through the cancellation path, since a foreign takeover is unrepresentable with page-owned modals.
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kMarkerTick, &point))
 
 A081 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026/S027 prove the cancelled target committed nothing, so the captured voice at the marker stands; the Swift path is the document-change cancellation, not a foreign takeover.
 Original expression:
   QCOMPARE(point.value, kMarkerVoice)
 
 A082 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 asserts the activation after the cancellation writes nothing and S010 asserts no active interaction; interactionActive is computed from picker != nil (src/swift/app/drawer/voicechanges/VoiceChangesInteraction.swift:510), so no late picker can surface.
 Original expression:
   QVERIFY(!checks::voicepicker::active(view))
 
 A083 | DrawerPresentationTest::voiceMenuForeignTakeoverStaysUsable | src/checks/drawerpresentation/voicemenus.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 asserts the page menu surface is cancelled and not open (hasMenu mirrors menu != nil); the page owns the single menu surface, so no popup stands after the cancellation.
 Original expression:
   QVERIFY(!quick_popup::popupSession(view)->isOpen())
 
@@ -969,12 +974,42 @@ marker144 delete, and the original three-undo walk. Expected values are pinned
 from the C++ behavioral oracle, not a second migration implementation.
 Swift uses the live project bank rather than the native fixture voice names;
 these transaction assertions depend on128 legal program slots, not label/audio
-identity. Native row-click assertions112/135/154 remain GAP; no synthetic
-keyboard, focus, native-window or rendered-menu parity is claimed.
-Existing scenarios remain called in their original order. Execution pending.
+identity. Native row-click assertions112/135/154 are PARTIAL against the passing
+QML production-input case plus the Swift activation predicates; the native window,
+focus-poll and rendered-popup sites stay NATIVE. No synthetic keyboard, focus,
+native-window or rendered-menu parity is claimed.
+Existing scenarios remain called in their original order; the execution evidence
+is recorded in the Verification evidence section.
 
 OMP structural correction checkpoint
 drawerVoiceOriginalMenuTransactions is now a direct runVoiceChangesPageChecks call immediately after drawerVoiceContextMenuTransactions. The distinct undoable program3-at48 setup remains unchanged.
 Suite order is explicit; no generic fixture abstraction was introduced.
 Static diff check passed; Debug execution of this refactor is pending root.
-Existing assertion dispositions are unchanged; this is not a completion claim.
+This reconciliation supersedes the checkpoint: every site is reconciled against the
+final Swift predicates and the recorded lane evidence.
+
+Production QML composition predicates
+These entries record the passing production-composition case that drives real Qt input
+through the drawer pages; they are the QML half of the row-click, dismissal and
+modal-ownership mappings above.
+
+S057 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3504
+QML expression:
+  mouseClick(input, markerPoint.x, markerPoint.y, Qt.RightButton) at :3504 opens the
+  context menu (tryVerify(model.menuOpen, 1000) at :3505) on the production page, whose
+  rendered delegate rows resolve by typed action id (menuRowByAction at :3513 and :3514
+  through panel.rowItem(i).model.actionId at :2652) and publish the popup-menu role at
+  :3511 and menu-item roles at :3516.
+
+S058 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3520
+QML expression:
+  mouseClick(deleteRow, deleteRow.width / 2, deleteRow.height / 2, Qt.LeftButton) at :3520
+  with tryVerify(voiceMarkerLines().length === drawnBefore, 1000) at :3521 and
+  awaitVoiceModal("voiceChangeMenu", false) at :3523: the rendered Delete row removes
+  exactly the captured occurrence and the page-owned modal retires.
+
+S059 | test_productionVoiceChangesPointerAndMenuTransactions | src/checks/editorqml/tst_EditorDrawer.qml:3536
+QML expression:
+  mouseClick(underlay, 4, 4, Qt.LeftButton) at :3536 on voiceMenuUnderlay with
+  tryVerify(!model.menuOpen, 1000) at :3537 and voiceMarkerLines().length === settled at
+  :3539: the outside press dismisses the menu without a write.

@@ -2,9 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 
-// Existing scenarios paired with velocity.cpp.
-// Entry order remains in VelocityPageChecks.swift.
-
 @MainActor
 func drawerVelocityValueAxisLadder(_ report: CheckReport) {
     var geometry = VelocityAxisGeometry()
@@ -93,6 +90,9 @@ func drawerVelocityPsgIntrinsicRows(_ report: CheckReport) {
     let wave = VelocityAxisModel(map: VelocityMap(voiceKind: .wave), geometry: geometry)
     report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
                        what: "Programmable Wave publishes five volume levels")
+    let noise = VelocityAxisModel(map: VelocityMap(voiceKind: .noise), geometry: geometry)
+    report.expectEqual(16, noise.graduations.count, cppID: drawerVelocityPsgID,
+                       what: "Noise publishes sixteen volume levels")
     report.expectEqual("Vol 10", square.graduations[9].text, cppID: drawerVelocityPsgID,
                        what: "a graduation names its own level")
     report.expectEqual(76, square.graduations[9].velocity, cppID: drawerVelocityPsgID,
