@@ -8,8 +8,12 @@ import PorydawPlayback
 
 @MainActor
 internal func runProjectSessionSuite(_ report: CheckReport) {
+    runKeybindingRegistryChecks { passed, cppID, message in
+        report.expect(passed, cppID: cppID, message: message)
+    }
     runEditorCameraChecks(report)
     runEditorDrawerChecks(report)
+    runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {

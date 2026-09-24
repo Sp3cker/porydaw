@@ -38,10 +38,6 @@ TestCase {
     property string openFailure: ""
     property var voiceRequests: []
 
-    // Production session creation: RewriteWindow.cpp builds
-    // "import PorydawApp\nApplicationSession {}\n" and injects that instance
-    // into the composition. The bootstrap holds it through the framework's
-    // QML-child seam.
     RollQmlBootstrap {
         id: bootstrap
 
@@ -322,11 +318,6 @@ TestCase {
         }, 5000, "the opposite wheel restores the ready roll zoom")
     }
 
-    // The window-level half of the C++ gridContrastPreviewAndApply oracle: a
-    // palette push repaints the live grid, and restoring the palette restores
-    // the frame. The C++ ThemeDialog/ThemeController settings half stays
-    // NATIVE — the Swift scene's contract is palette -> reloadVisuals ->
-    // repaint, the same seam RewriteWindow drives on a theme change.
     function test_gridContrastPreviewAndApply() {
         var surface = testCase.selectedSurface()
         var plot = testCase.rollPlot()

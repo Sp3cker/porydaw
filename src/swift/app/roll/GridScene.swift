@@ -597,7 +597,8 @@ public final class GridScene {
                                 accidentalRow: GridScene.isBlackKey(pitch))
                             : PaletteMath.noteFill(
                                 track: note.track,
-                                velocity: note.velocity),
+                                velocity: note.velocity,
+                                zeroColor: p.noteVelocityZero),
                         primitiveName: name))
                 if ghostPass { continue }
                 if input.isSelected(note.noteId) {
@@ -638,7 +639,8 @@ public final class GridScene {
                     x: box.x, y: box.y, width: box.w, height: box.h,
                     fillColor: PaletteMath.noteFill(
                         track: 0,
-                        velocity: input.lastVelocity),
+                        velocity: input.lastVelocity,
+                        zeroColor: p.noteVelocityZero),
                     primitiveName: "drawPreview"))
             addNoteBorder(&overlay, box: box, insetPixels: 0, input: input)
         }

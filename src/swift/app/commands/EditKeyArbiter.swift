@@ -1,14 +1,3 @@
-// EditKeyArbiter.swift — Swift port of SongView::handleEditKey's policy
-// branches (src/ui/songview/editkeyrouting.cpp, the production oracle).
-// Pure functions over value inputs: the host delivers an already-resolved
-// EditCommand (keymap::Registry lookup stays C++, spec §8) plus a surface
-// snapshot, and the resolver returns the routing decision — decline,
-// consume, or execute. Decision order is the contract: the gates run in
-// handleEditKey statement order, and each rule cites its source line.
-// RewriteWindow resolves canonical keymap bindings, then ApplicationSession
-// delegates each matched editor command here before the host consumes or
-// executes it (spec §8).
-
 /// Mirrors `SongView::EditKeyOrigin` (src/ui/songview.h): which editor
 /// surface physically received the key.
 public enum EditKeyOrigin: Int {

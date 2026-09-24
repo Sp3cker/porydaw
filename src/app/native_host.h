@@ -8,8 +8,6 @@
 extern "C" {
 #endif
 
-void pd_app_register_types(void);
-
 typedef void (*PdConsumeBytesCallback)(void *context, const uint8_t *bytes, size_t count);
 
 bool pd_clipboard_write(const uint8_t *bytes, size_t count);

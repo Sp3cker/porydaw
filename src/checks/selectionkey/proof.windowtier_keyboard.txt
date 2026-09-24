@@ -5,18 +5,23 @@ Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Swift SHA-256: 0b1d5de7907758291583092f0d482a14eec5af37dd8d4f610689ea2e64d8c1eb
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired numeric-prompt transaction, listed after the inventory. The prompt keyboard-ownership block's lane lookup and insertion-prompt open (volume lane, tick 5808, value 48) are MATCHED by S011/S012/S013; the remaining block sites (draft selectedText, no mutation, preserved selection, Escape close) are PARTIAL against that transaction; keyboard routing, clipboard, focus, binding, tap-tempo, toggle, and committed-edit observations stay NATIVE or GAP. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired numeric-prompt transaction and in the frozen shellwindow Qt Quick lane, listed after the inventory. The prompt keyboard-ownership block's lane lookup and insertion-prompt open (volume lane, tick 5808, value 48) are MATCHED by S011/S012/S013; the remaining block sites (draft selectedText, no mutation, preserved selection, Escape close) are PARTIAL against that transaction. The window Copy/Solo case's one-selected-note setup, its window Copy/Solo single-key bindings, the Copy activation count, the decoded native clipboard, the document-dirty fact, the first and second Solo activation counts with their soloed states, and the window-Space-priority sites are MATCHED by the shellwindow lane predicates S018 through S036, with the parameter-label and tap-button sites carrying the drawer-toggle substitution recorded in their reasons. The keyboard-routing, grip, Tab-traversal, drawer-height, tap-tempo and committed-edit observations outside the sites named above stay NATIVE or GAP. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove the Swift replacement.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
+The shellwindow-lane predicates cited below (S018 through S036) execute the frozen revision pinned by the Additional Swift SHA-256 lines above; the controller reports that lane green, and this inventory did not re-run it.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
 Execution ownership
-drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S019); the file's keyboard-routing, clipboard, focus, tap-tempo, toggle, and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
+drawerOriginalNumericPromptTransaction in src/checks/selectionkey/localinputtier_text.swift (called by the swiftcore session suite) executes the paired prompt-transaction predicates (S002 through S017); the window-tier Copy/Solo, clipboard, document-dirty, soloed-state and window-Space-priority sites are executed by test_cWindowShortcutsAndNumericOwnership in src/checks/editorqml/tst_ShellWindow.qml (the shellwindow entry of ShellQmlTests.swift), whose predicates are S018 through S036; the file's remaining keyboard-routing, grip/Tab-traversal, drawer-height, tap-tempo and committed-edit cases have no executing Swift entry point. The drawerAutomationAutomationFixture struct carries no report predicates, so no Shared helper section applies. The transaction also carries a report.fail path for fixture-note creation failure, which short-circuits before any predicate; no deleted C++ site corresponds to it.
 
 Fixture, sequence and row constraints
 Copy/solo count rows, grip-arrow rows, label-activation rows, and the prompt keyboard-ownership block (open, select-all, copy, delete, paste, Escape, then post-prompt copy/remove/paste/move rows) expand one site per delivered key. The note-move loop expands tick/key assertions per selected note id; tap-button rows expand Enter, Return, auto-repeat, and Space delivery into per-key count and document-identity sites.
@@ -25,8 +30,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:97
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership starts from a real one-note selection on the production two-song project: selectDrawnVelocityNote clicks the drawn velocity note and observes selectedCount 1 (S019), and the drawn grid model yields exactly one selected note (S023, "the real node click selected one note"), with openTwoSongShell staging that project and second song (S018). The reserved tick-960 fixture note pair is replaced by that staged velocity note; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
   // Selection keyboard routing through the production Quick window: parameter
   // labels keep activation local and leave shared editing commands to SongView.
@@ -139,8 +144,8 @@ Original expression:
   QVERIFY2(focusAutomationBand(view), "could not focus the automation band")
 
 A003 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: The production presenter carries both single-key window bindings: actionSequences("roll.copy").length > 0 (S020) and actionSequences("roll.solo_tracks")[0] == "S" (S021). The QWidget-era binding lookup over the Quick window is replaced by the native ShellPresenter actionSequences; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
   ;
       const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
@@ -150,8 +155,8 @@ Original expression:
   QVERIFY2(copy.has_value() && solo.has_value(), "window Copy/Solo have no single-key bindings")
 
 A004 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:108
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: The production window Copy Shortcut (shellShortcut_roll.copy) is activated exactly once by native StandardKey.Copy delivered to the focused production roll: keySequence(StandardKey.Copy) then copyActivatedSpy.count == 1 (S026, "native Copy activates the window shortcut once"), after the roll recovers active focus from the Edit menu (S025). The QML Shortcut activated signal count replaces the QWidget QAction activation counter; QAction pointer identity is not claimed.
 Source context since previous assertion:
   ;
 
@@ -164,8 +169,8 @@ Original expression:
   QCOMPARE(m_counts.copy, 1)
 
 A005 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:109
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: The native clipboard written by that window Copy decodes through production pd_clipboard_read and ClipboardCodec.decode into one track, one selected note, and that note key equal to the selected pitch (S027: clip[0] == 1, clip[1] == 1, clip[2] == copied[0].pitch; helper S036, ShellQmlBootstrap.copiedClipSummary). A decodable native payload replaces the QWidget presence-only clip-MIME probe; no QWidget clipboard layer exists in the Swift app.
 Source context since previous assertion:
   ;
 
@@ -174,8 +179,8 @@ Original expression:
                "window Copy from timeline/automation focus did not capture the selected notes")
 
 A006 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:111
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: The native session documentDirty is false from a clean start (S024) and remains false across the window Copy (S028, "the native window Copy never edits the song"), so that Copy edited nothing. The Swift shell reports document mutation through the session dirty flag instead of comparing SMF bytes; no QWidget document snapshot exists.
 Source context since previous assertion:
   ;
 
@@ -183,8 +188,8 @@ Original expression:
   QVERIFY2(document().smf().write() == before, "window Copy mutated the document")
 
 A007 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:114
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: One real S key press delivered to a focused non-text window child activates the production Solo window Shortcut exactly once: soloActivatedSpy.count == 1 (S029, "first non-text S activates Solo once"). The QML Shortcut activated signal count replaces the QWidget QAction activation counter; QAction pointer identity is not claimed.
 Source context since previous assertion:
   ;
 
@@ -194,8 +199,8 @@ Original expression:
   QCOMPARE(m_counts.solo, 1)
 
 A008 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:115
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: That same single Solo press leaves the selected track header delegate soloChecked true (S029: tryCompare(firstTrack, "soloChecked", true)). The Swift shell exposes the soloed state on the drawn header delegate; no QWidget track widget exists.
 Source context since previous assertion:
   ;
 
@@ -203,8 +208,8 @@ Original expression:
   QVERIFY2(view.trackSoloed(kTrack), "one Solo press did not leave the track soloed once")
 
 A009 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:118
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: A second real S press activates Solo a second time and untoggles exactly once: soloActivatedSpy.count == 2 (S030) with soloChecked back to false (S030: tryCompare(firstTrack, "soloChecked", false)). QML Shortcut signal counts replace the QWidget QAction counter.
 Source context since previous assertion:
   ;
 
@@ -450,8 +455,8 @@ Original expression:
                "the focused parameter label was already the active parameter before Space")
 
 A026 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:229
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: The window-Space-priority rule is exercised by the drawer-toggle probe: with the production drawerToggle_velocity owning active focus (S031) and the production transport.play_pause sequence bound to Space (S022), bare Space drives the transport presenter playing state while the focused section visibility and documentDirty stay unchanged (S032-S034). The original focused parameter-label chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome; the pinned local no-change fact is observed on that control, and the original playPause trigger count is observed as a presenter playing-state transition rather than a native signal count.
 Source context since previous assertion:
   ;
       QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
@@ -1224,8 +1229,8 @@ Original expression:
                "Shift+Return on the focused Tap button registered a tap")
 
 A098 | SelectionWindowTierTest::tapButtonKeysAndTransportCession | src/checks/selectionkey/windowtier_keyboard.cpp:425
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: Bare Space on the focused persistent chrome requests transport without a local change: the drawer-toggle probe observes the transport presenter playing state toggle once with the section visibility and documentDirty unchanged (S032-S034), and the production transport.play_pause sequence is Space (S022). The original tap-button chrome has no focusable Swift-shell counterpart, so the persistent drawer toggle (Rectangle with activeFocusOnTab and Return/Enter-only local keys) stands in for that retired chrome, and the trigger count is observed as a presenter playing-state transition rather than a native signal count.
 Source context since previous assertion:
   ;
 
@@ -1392,8 +1397,8 @@ Original expression:
                "the routed Up arrow did not transpose exactly the selected notes")
 
 A112 | SelectionWindowTierTest::chromeToggleRoutesNoteArrows | src/checks/selectionkey/windowtier_keyboard.cpp:484
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: The drawer-toggle probe exercises the same rule on the shell persistent chrome: drawerToggle_velocity (Rectangle with activeFocusOnTab and Return/Enter-only local keys) owns active focus (S031) and one bare Space toggles playhead.playing with the focused section visibility and documentDirty unchanged (S032-S034, "bare Space on focused drawer chrome owns transport"), then a second bare Space stops transport (S035, "the second chrome Space stops transport"). Space stays with the window Shortcut; the focused chrome never activates.
 Source context since previous assertion:
   ;
       // Bare Space on the focused toggle is transport input, not toggle
@@ -1536,6 +1541,100 @@ S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
+S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:107
+  session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+  session.openSong("mus_littleroot_test")
+  // The shellwindow entry of ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46)
+  // stages the same two-song fixture; the velocity drawer seed rows above it
+  // reproduce MainWindowRoutingFixture::openSession.
+
+S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:164
+  tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
+  // After a real mouseClick on the drawn velocityNodeFill hit target.
+
+S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:225
+  verify(shell.shellPresenter.actionSequences("roll.copy").length > 0,
+               "native Copy is registered as a window shortcut")
+
+S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:227
+  compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S")
+
+S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:228
+  compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
+
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:271
+  compare(copied.length, 1, "the real node click selected one note")
+
+S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:272
+  compare(session.documentDirty, false, "Copy starts from a clean song")
+
+S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:273
+  roll.forceActiveFocus(Qt.OtherFocusReason)
+  tryCompare(roll, "activeFocus", true, 3000,
+             "the Edit menu returned keyboard focus to the roll")
+
+S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:276
+  keySequence(StandardKey.Copy)
+  compare(copyActivatedSpy.count, 1, "native Copy activates the window shortcut once")
+  // copyActivatedSpy targets the production window Shortcut objectName
+  // "shellShortcut_roll.copy" selected by windowShortcut().
+
+S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:278
+  var clip = JSON.parse(bootstrap.copiedClipSummary())
+  compare(clip.length, 3, "the native clipboard carries a decodable song clip")
+  compare(clip[0], 1, "the copied clip contains one track")
+  compare(clip[1], 1, "the copied track contains one selected note")
+  compare(clip[2], copied[0].pitch, "the copied note retains its original key")
+
+S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:283
+  compare(session.documentDirty, false, "the native window Copy never edits the song")
+
+S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:306
+  keyClick(Qt.Key_S)
+  tryCompare(firstTrack, "soloChecked", true, 3000)
+  compare(soloActivatedSpy.count, 1, "first non-text S activates Solo once")
+  // firstTrack is headers.itemAt(surface.gridModel.trackIndex); the key goes to
+  // the focused non-text window child shortcutTarget, and soloActivatedSpy
+  // targets the production "shellShortcut_roll.solo_tracks" Shortcut.
+
+S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:309
+  keyClick(Qt.Key_S)
+  tryCompare(firstTrack, "soloChecked", false, 3000)
+  compare(soloActivatedSpy.count, 2, "second non-text S activates Solo twice total")
+
+S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:375
+  var velocityToggle = findChild(drawer, "drawerToggle_velocity")
+  verify(velocityToggle && velocityToggle.visible, "the velocity toggle is drawn")
+  velocityToggle.forceActiveFocus(Qt.OtherFocusReason)
+  tryCompare(velocityToggle, "activeFocus", true, 3000,
+             "drawer chrome takes keyboard focus")
+  // The focused control is the production EditorDrawer toggle Rectangle
+  // (src/ui/songview/quick/drawer/EditorDrawer.qml:316) with activeFocusOnTab
+  // and Return/Enter-only local keys; bare Space is not consumed there.
+
+S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:382
+  keyClick(Qt.Key_Space)
+  tryCompare(playhead, "playing", true, 3000,
+             "bare Space on focused drawer chrome owns transport")
+
+S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:385
+  compare(surface.drawerPresenter.section(
+              bootstrap.velocitySectionKind()).visible, toggleSectionVisible,
+          "chrome Space never toggles the focused section")
+
+S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:388
+  compare(session.documentDirty, false, "chrome Space never edits the song")
+
+S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:389
+  keyClick(Qt.Key_Space)
+  tryCompare(playhead, "playing", false, 3000,
+             "the second chrome Space stops transport")
+
+S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:183
+  return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"
+  // Reads the native clip through production pd_clipboard_read and
+  // ClipboardCodec.decode (ShellQmlTests.swift:176-180); "[]" means absent.
+
 Supplemental converted-window evidence
 
 Executable: src/checks/swiftrollgated/drawerparity.cpp
@@ -1550,9 +1649,10 @@ arrows do not resize. The document revision and selected-note summary remain
 unchanged.
 
 The staged song and selected note differ from the original reserved note pair.
-This check does not replace the original QWidget-window Copy/Solo action-counter
-assertions or establish those other window-tier scenarios. Original dispositions
-and aggregate parity counts remain unchanged.
+This standalone check does not replace the original QWidget-window Copy/Solo
+action-counter assertions; the shellwindow lane predicates S018 through S036
+cover those window-tier sites, and this check does not establish them. The
+grip-arrow dispositions recorded above are unchanged by that crosswalk.
 
 Investigation also found that Tab can leave the temporary RewriteWindow's last
 Quick control and fail to re-enter its QWidget container. No container workaround

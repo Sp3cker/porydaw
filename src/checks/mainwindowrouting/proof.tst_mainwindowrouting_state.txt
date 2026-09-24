@@ -21,6 +21,10 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
 
 Status and evidence
 Sixteen test methods covering drawer seed projection, cross-tab fanout, event-list gating, focus fallback, hide retention, tab-switch refocus, edit-action projection/identity/unbound start, editor-view-state fanout and lane remap/mutation/noop persistence, and four MouseHints scope/layout cases.
@@ -34,18 +38,24 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 0 / PARTIAL 12 / GAP 142 / NATIVE 113. No MATCHED site is claimed:
-no same-dir Swift counterpart exists for this suite, and none of the
-paired SessionChecks-suite predicates asserts the same Qt-routing observation.
+Tally: MATCHED 8 / PARTIAL 13 / GAP 151 / NATIVE 95. The MATCHED sites are the
+Edit-action projection, retarget and enablement rows (A067, A073, A074, A080,
+A081, A086, A092, A093) crosswalked to the offscreen Qt Quick shellwindow lane
+(S186–S192); the un-matched Qt-routing observations still have no same-dir Swift
+counterpart, and the paired SessionChecks-suite predicates do not assert them.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
-The swiftcore lane executes the Swift counterpart only. The Qt Widget/Quick
-delivery, Cocoa-gated, and harness-timing observations inventoried here execute
-only in the native Qt check harness, never in that lane.
+The swiftcore lane executes the Swift counterpart only. The MATCHED shell-lane
+predicates S186–S192 execute in the offscreen Qt Quick shellwindow lane
+(deno task verify:shell over src/checks/editorqml/tst_ShellWindow.qml and its
+ShellQmlTests.swift bootstrap), reported green by the controller for the frozen
+sources pinned here. The original Qt Widget/Quick delivery, Cocoa-gated, and
+harness-timing observations inventoried here execute only in the native Qt check
+harness, never in that lane.
 
 Execution and ownership
 The paired Swift checks execute under runProjectSessionSuite and
@@ -722,8 +732,8 @@ Original expression:
         QVERIFY(focus == session->b || session->b->isAncestorOf(focus))
 
 A067 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:213
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: MATCHED
+Mapping/reason: tst_ShellWindow.qml openTwoSongShell opens mus_route101 then mus_littleroot_test from the same staged two-song fixture, observing tabCount 1 then 2 with Littleroot as the selected second tab (S186, staged by S192); that open is the two-song session precondition this site guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     }
 
@@ -734,8 +744,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A068 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:224
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 in src/checks/editorqml/tst_ShellWindow.qml (test_cWindowShortcutsAndNumericOwnership finds shellAction_roll.copy and shellAction_roll.solo_tracks inside the production Edit menu); unproved: the InsertTime/DeleteTime half of this conjunction — ShellWindow editActionIds carry no time rows, so no shell action counterpart exists for insertTime/deleteTime and those missing rows are named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *a = session->a;
@@ -752,7 +762,7 @@ Original expression:
 
 A069 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:225
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer identity between the window member and the canonical edit-action set for Copy, with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.copy serves both tabs. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -760,7 +770,7 @@ Original expression:
 
 A070 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:226
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer identity between the window member and the canonical edit-action set for Solo, with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.solo_tracks serves both tabs. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -768,7 +778,7 @@ Original expression:
 
 A071 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:227
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer identity between the window member and the canonical edit-action set for InsertTime; no shell action counterpart exists (ShellWindow editActionIds carry no time rows), so the identity has no Swift-app observation. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -776,31 +786,31 @@ Original expression:
 
 A072 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:228
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer identity between the window member and the canonical edit-action set for DeleteTime; no shell action counterpart exists (ShellWindow editActionIds carry no time rows), so the identity has no Swift-app observation. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(deleteTime, window.m_editActions->action(SongView::EditCommand::DeleteTime))
 
 A073 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:230
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership resolves shell.menuBar child shellEditMenu and verifies the production Edit menu exists (S187); the QML Menu replaces the QWidget QMenu this site looked up. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         QMenu *edit = editMenu(window);
 Original expression:
         QVERIFY(edit)
 
 A074 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:231
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership finds shellAction_roll.copy as a child of the production Edit menu and verifies it and shellAction_roll.solo_tracks are real Edit-menu actions (S188); the QML menu item replaces the QAction containment check on the QMenu action list. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(edit->actions().contains(copy))
 
 A075 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:234
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: ShellWindow mounts only File, Edit and Transport menus and no Time submenu exists, so no predicate observes this submenu; missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         QMenu *timeMenu = submenuWithTitle(*edit, QStringLiteral("Time"));
         QMenu *tracksMenu = submenuWithTitle(*edit, QStringLiteral("Tracks"));
@@ -808,40 +818,40 @@ Original expression:
         QVERIFY(timeMenu)
 
 A076 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:235
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: ShellWindow mounts only File, Edit and Transport menus and no Tracks submenu exists, so no predicate observes this submenu; missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(tracksMenu)
 
 A077 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:236
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: Submenu containment has no counterpart without the Time submenu (see A075); nothing in the Swift shell nests the InsertTime command under a Time menu. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(timeMenu->actions().contains(insertTime))
 
 A078 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:237
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: Submenu containment has no counterpart without the Time submenu (see A075); nothing in the Swift shell nests the DeleteTime command under a Time menu. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(timeMenu->actions().contains(deleteTime))
 
 A079 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:238
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: Submenu containment has no counterpart without the Tracks submenu (see A076); shellAction_roll.solo_tracks is projected directly into the Edit menu and nothing nests the Solo command under a Tracks menu. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(tracksMenu->actions().contains(solo))
 
 A080 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:242
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership clicks the first tab control and observes the controller retargeting selectedId to the first song (S189; "a real first-tab click retargets the selected workspace"); target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
         // Retargeting follows the selection; the projected objects do not.
@@ -850,8 +860,8 @@ Original expression:
         QCOMPARE(window.m_editActions->target(), &a->view())
 
 A081 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:244
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership clicks the second tab control and observes the controller retargeting selectedId back to Littleroot (S190; "a real second-tab click restores Littleroot's workspace"); target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         window.m_workspace->selectSongTab(b);
 Original expression:
@@ -859,7 +869,7 @@ Original expression:
 
 A082 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:245
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer stability across the tab switch (the window member still equals the projected object), with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.copy serves both tabs. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -867,7 +877,7 @@ Original expression:
 
 A083 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:246
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer stability across the tab switch (the window member still equals the projected object), with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.solo_tracks serves both tabs. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -875,7 +885,7 @@ Original expression:
 
 A084 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:247
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer stability for InsertTime across the tab switch; no shell action counterpart exists (ShellWindow editActionIds carry no time rows), so the stability has no Swift-app observation. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -883,15 +893,15 @@ Original expression:
 
 A085 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:248
 Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Pure QAction pointer stability for DeleteTime across the tab switch; no shell action counterpart exists (ShellWindow editActionIds carry no time rows), so the stability has no Swift-app observation. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_deleteTimeAction, deleteTime)
 
 A086 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:252
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: test_cWindowShortcutsAndNumericOwnership compares menuSolo.enabled true after the second page one-note selection (S191; "Solo is enabled for the selected track"); QML menu-item enablement replaces QAction::isEnabled() on a QWidget menu. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         // A ready selected tab opens the readiness-gated commands; an
         // explicit unbind through the production seam disables everything
@@ -900,56 +910,56 @@ Original expression:
         QVERIFY(solo->isEnabled())
 
 A087 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:254
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: No rebind(null) seam exists in the Swift app, so the unbound-with-selection state is unreachable and no predicate observes a null target after an explicit unbind; the missing seam is named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         window.m_editActions->rebind(nullptr);
 Original expression:
         QVERIFY(!window.m_editActions->target())
 
 A088 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:255
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: The unbound enablement state is unreachable without the explicit rebind seam (see A087); no predicate observes Copy disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!copy->isEnabled())
 
 A089 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:256
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: The unbound enablement state is unreachable without the explicit rebind seam (see A087); no predicate observes Solo disabled by an explicit unbind. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!solo->isEnabled())
 
 A090 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:257
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: Unreachable without the explicit rebind seam (see A087), and InsertTime has no shell action counterpart (ShellWindow editActionIds carry no time rows; see A068); no predicate observes that command disabled. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!insertTime->isEnabled())
 
 A091 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:258
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: Unreachable without the explicit rebind seam (see A087), and DeleteTime has no shell action counterpart (ShellWindow editActionIds carry no time rows; see A068); no predicate observes that command disabled. Missing behavior named here, not silently dropped. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!deleteTime->isEnabled())
 
 A092 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:260
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: The re-selection after the unbind is the same first-tab retarget observation as A080 (S189; "a real first-tab click retargets the selected workspace"); the unbind that precedes it stays GAP at A087 and target-pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         window.m_workspace->selectSongTab(a);
 Original expression:
         QCOMPARE(window.m_editActions->target(), &a->view())
 
 A093 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:261
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: The readiness-gated Solo enablement after the retarget is the same observation as A086 (S191; "Solo is enabled for the selected track"); QAction::isEnabled() has no QWidget counterpart. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -3573,3 +3583,42 @@ counterpart: the session_fixtures.swift/session_support.swift staging helpers
 (makeMidiFixture, stageTestProject, bytes/configLineBytes readers) assert
 nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
 live in their own files and are likewise outside this inventory.
+
+S186 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:113
+    session.openProjectAndSong(bootstrap.projectRoot, "mus_route101") at :107 with
+    verify(session.songOpen, "Route 101 loads from the original mainwindowrouting project") at :111,
+    then tryCompare(session.songTabs, "tabCount", 1); the same session's
+    session.openSong("mus_littleroot_test") at :115 with
+    verify(session.songTabs.tabCount === 2, "Littleroot opens in the second tab of the same project")
+    at :119 and the second tab selected (tryVerify selectedId !== firstId at :122).
+
+S187 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:241
+    var editMenu = findChild(shell.menuBar, "shellEditMenu");
+    verify(editMenu, "the production Edit menu exists")
+
+S188 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:242
+    var menuCopy = findChild(editMenu, "shellAction_roll.copy");
+    var menuSolo = findChild(editMenu, "shellAction_roll.solo_tracks");
+    verify(menuCopy && menuSolo, "Copy and Solo are real Edit-menu actions")
+
+S189 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:218
+    mouseClick(firstButton, firstButton.width / 3, firstButton.height / 2) then
+    tryCompare(tabs, "selectedId", firstId, 3000,
+               "a real first-tab click retargets the selected workspace")
+
+S190 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:221
+    mouseClick(secondButton, secondButton.width / 3, secondButton.height / 2) then
+    tryCompare(tabs, "selectedId", secondId, 3000,
+               "a real second-tab click restores Littleroot's workspace")
+
+S191 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:266
+    editMenu.open() at :263 with one note selected on the selected second tab
+    (selectDrawnVelocityNote(surface) at :239) then
+    compare(menuSolo.enabled, true, "Solo is enabled for the selected track")
+
+S192 | shellwindow manifest staging (ShellQmlLane) | src/checks/editorqml/ShellQmlTests.swift:46
+    Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
+    fixtureFiles: songs("mus_route101", "mus_littleroot_test")) stages both original songs
+    with the decomp-project fixture into one scratch directory;
+    ShellQmlBootstrap.stage(projectRoot: scratch) at :103 publishes that directory
+    through bootstrap.projectRoot.

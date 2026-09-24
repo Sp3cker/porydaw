@@ -54,7 +54,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   "editor-drawer": 0.19,
   trackactivitymetercheck: 0.18,
   trackactivitycheck: 0.18,
-  themecheck: 0.17,
   ignorecheck: 0.17,
   "velocity-model": 0.16,
   "trackactivitymetercheck-fractional-dpr": 0.16,
@@ -62,11 +61,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   scalecheck: 0.16,
   noteidcheck: 0.16,
   "production-startup": 0.14,
-  fontcheck: 0.13,
-  darkbasecheck: 0.11,
-  "editor-layout-18": 0.05,
-  "editor-layout-16": 0.05,
-  "editor-layout-12": 0.05,
 };
 
 export function wallEstimate(name: string): number {

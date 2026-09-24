@@ -1,7 +1,7 @@
 #include "checkregistry.hpp"
 #include "checkcatalog.h"
 
-#include "ui/applicationstartup.h"
+#include "support/checkstartup.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -162,7 +162,7 @@ std::optional<int> runRequested(QApplication &application, const QStringList &ar
             return 1;
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
-        if (!ui::initializePorydawApplication(application))
+        if (!initializeCheckApplication(application))
             return 1;
         return definition.handler(application, checkArguments, qtArguments);
     }

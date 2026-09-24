@@ -24,6 +24,7 @@ class SwiftCoreTest final : public QObject
     void timeEdits();
     void projectSession();
     void bankHistory();
+    void themeColor();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

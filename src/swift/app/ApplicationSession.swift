@@ -869,12 +869,3 @@ public struct EditorCommandRouter {
         grid.performCommand(command: command.rawValue)
     }
 }
-
-/// C-only registration boundary. The native host calls this on the Qt main
-/// thread before asking QQmlEngine to instantiate ApplicationSession.
-@_cdecl("pd_app_register_types")
-public func pdAppRegisterTypes() {
-    MainActor.assumeIsolated {
-        ApplicationSession.registerQmlElement()
-    }
-}

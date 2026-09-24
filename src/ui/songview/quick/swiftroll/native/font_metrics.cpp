@@ -19,6 +19,8 @@ SGFontMetrics *sgf_create(const char *family, int pixel_size, int weight, double
     font.setPixelSize(pixel_size);
     font.setWeight(QFont::Weight(weight));
     font.setLetterSpacing(QFont::AbsoluteSpacing, letter_spacing);
+    font.setHintingPreference(QFont::PreferNoHinting);
+    font.setFeature(QFont::Tag("tnum"), 1);
     return new SGFontMetrics(std::move(font));
 }
 

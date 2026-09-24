@@ -7,6 +7,9 @@ Item {
     objectName: "swiftRollOverlay"
     clip: true
     required property QtObject applicationSession
+    property font applicationFont: Application.font
+    property var shellRouter: null
+    signal contextMenuAt(real x, real y)
     property url drawerPreferenceLocation: ""
     readonly property int cancelReasonPointerUngrabbed: 1
     readonly property int cancelReasonHidden: 2
@@ -51,7 +54,7 @@ Item {
     // chromeRowHeight() measures its dock and tab rows.
     FontMetrics {
         id: applicationFontMetrics
-        font: Application.font
+        font: root.applicationFont
     }
 
     onWidthChanged: configureViewport()
@@ -68,6 +71,10 @@ Item {
         target: root.gridModel
         function onContextMenuRequested(x, y) {
             root.applicationSession.requestGridContextMenu(x, y)
+            if (root.shellRouter) {
+                const position = rollInput.mapToItem(null, x, y)
+                root.contextMenuAt(position.x, position.y)
+            }
         }
     }
 
@@ -427,6 +434,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: implicitHeight
+        applicationFont: root.applicationFont
         presenter: root.hintService
         statusPalette: root.gridModel.palette
         onHeightChanged: root.configureViewport()

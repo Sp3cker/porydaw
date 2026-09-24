@@ -5,6 +5,12 @@ Original: src/checks/swiftrollgated/gesturechecks.cpp
 Original SHA-256: 23f74a1e29e13c8b004ef4daddd2e30bd688c4fbd91fd6f3e543d7b6be1b0936
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: 93db81e39293714fcfacff95dafdbaebfe857e7bb39bddff9fed0fb60be5f3fe
+Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
+Additional Swift SHA-256: 043f58b9ffa588ffc12a32f2ab6680d27d984be1fbf926d24bb68c4b54baf718
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -17,26 +23,28 @@ GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state that a
 presenter-level Swift check cannot establish. Unsure between PARTIAL and GAP
 is recorded as GAP. Bookkeeping must not overclaim.
-Pointer editing, bands, cancellation, track follow, command routing and Space priority across the swiftrollgated / swiftbandkeys / swiftqtml / selectionkey modes. Fixture setup, rendered observations, object lifetimes and real input delivery are NATIVE; tick/duration/pitch/selection/revision accounting is PARTIAL against the Swift commit/band/cancel predicates; track, pencil and playback obligations are GAP.
+Pointer editing, bands, cancellation, track follow, command routing and Space priority across the swiftrollgated / swiftbandkeys / swiftqtml / selectionkey modes. Modes are harness routing only: the shell-grid-input lane (ShellQmlTests.swift entry shell-grid-input) runs every slot unconditionally against the production Swift shell (ShellWindow + SongTabs + EditorSurface + PianoGrid), so 90 of 96 sites are MATCHED to the named shell predicates S049-S061 below. 6 stay NATIVE (native framebuffer pixel diff, QQuickView replacement across reload, QPointer deletion after teardown, QSignalSpy machinery), each with a reason naming the missing counterpart. No QWidget layer exists in the Swift app. QAction delivery is replaced by QML window Shortcuts and the SongTabs routeEditorKey path; pointer identity is never claimed.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify:shell --filter shell-grid-input --verbose
+Result: PASS — ShellGridInput 11/11 slots (init/cleanup plus 9 gesture tests), 1.69 s test, 2.56 s wall; build ok.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS — ShellWindow still passes (0.81 s test); no regression.
 The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
 
 Execution and ownership
-runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) also executes checkOrderedSelection, checkViewport, checkProjection, checkIsolation, checkPresenterMetrics, checkCommandRouting, checkEdgeResize, checkDrawLatchAndCancel, and checkTrackOwnerRemap; see indexed report.expect sites below.
+test_drawMoveNeighborTrim, test_resizeMinimum, test_undoRedoRerenders, test_rightDragCommit, test_escapeCancel, test_ungrabCancel, test_trackFollowReload, test_focusedRouting and test_bareSpace in src/checks/editorqml/tst_ShellGridInput.qml (entry shell-grid-input in src/checks/editorqml/ShellQmlTests.swift, probe src/checks/editorqml/GridInputClipProbe.swift, registered in ShellQmlLane.run and src/checks/CMakeLists.txt :: shell_qml_lane) drive real pointer/key input into the production grid inside ShellWindow; see indexed S049-S061 below. Headless Swift predicates S001-S048 (runEditorGridCameraChecks) remain related coverage for selection/projection invariants.
 
 Fixture, sequence and row constraints
-Each method opens a GridFixture on the retained song and stages notes on a free lane (lengths 12/18/4 snaps); draw/neighbor staging guards on free-lane availability. Resize asserts the snap minimum clamp on both edges. Escape/ungrab bands require a fully visible staged note; idle-Escape expands per-note over every published field (id, tick, duration, pitch, track, velocity, selected). Track-follow guards on full view/root/grid replacement; tiling and cursor tests guard on snapTicks > 0.
+Each test opens openRoute101 (mus_route101 from the staged decomp project, S049) and resolves the selected tab page swiftRollOverlay, its gridModel, swiftRollInput and timelineQuickRollPlot. Draw/resize stage notes on a computed free lane (lengths 12/18/4 snaps, snapTicks > 0) with the same tick*pixelsPerTick-scrollX / (127-pitch+0.5)*rowHeight-scrollY mapping as the C++ fixture. Band tests require a fully visible staged note whose note rect +/-3 px fits the roll. Idle-Escape expands per-note over every published field (id, tick, duration, pitch, track, velocity, selected). Track-follow asserts in-place reload (same window, replaced grid, trackIndex reset); clipboard-adjacent cursor tests guard on snapTicks > 0.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:305
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_drawMoveNeighborTrim unconditionally, so the observation executes; see S049.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
@@ -346,8 +354,8 @@ Original expression:
         QSKIP("actual pointer editing belongs to swiftrollgated");
 
 A002 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:308
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -355,16 +363,16 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A003 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:310
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S050), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const auto lane = fixture.freeLane(12, &error);
 Original expression:
     QVERIFY2(lane.has_value(), qPrintable(error));
 
 A004 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:316
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S050), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const int snap = fixture.snap();
     const int tick = lane->first;
@@ -375,32 +383,32 @@ Original expression:
     QVERIFY2(moving.has_value() && neighbor.has_value(), qPrintable(error));
 
 A005 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:317
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S050), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(moving->tick, tick);
 
 A006 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:318
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S050), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(moving->duration, 2 * snap);
 
 A007 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:319
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S050), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(moving->pitch, pitch);
 
 A008 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:323
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Body drag moves one note and trims its neighbor with exact ticks/durations, and the gridNote_ face stays visible and tracks the moved tick (S051).
 Source context since previous assertion:
 
     dragMouse(fixture.view(), Qt::LeftButton, fixture.pointFor(tick + snap, pitch),
@@ -419,8 +427,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A009 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:336
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Body drag moves one note and trims its neighbor with exact ticks/durations, and the gridNote_ face stays visible and tracks the moved tick (S051).
 Source context since previous assertion:
 
     QQuickItem *const rendered = fixture.noteItem(moving->id);
@@ -429,7 +437,7 @@ Original expression:
 
 A010 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:338
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Native framebuffer grab (QQuickView::grabWindow null check) has no offscreen-QML counterpart; the rendered-face follow it guards is MATCHED by S051. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QImage frame = fixture.view()->grabWindow();
 Original expression:
@@ -437,7 +445,7 @@ Original expression:
 
 A011 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:342
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Native framebuffer pixel diff (pixelAt/colorsNear) cannot run offscreen; the face-follow observable is MATCHED by S051 (gridNote_ face exists, visible, tracks the moved tick). No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QColor expected(rendered->property("fillColor").toString());
     const QColor actual = gridcheck::pixelAt(
@@ -447,8 +455,8 @@ Original expression:
              "moved note summary changed but its rendered face did not follow");
 
 A012 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:349
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_resizeMinimum unconditionally, so the observation executes; see S052.
 Source context since previous assertion:
 }
 
@@ -459,8 +467,8 @@ Original expression:
         QSKIP("actual resize editing belongs to swiftrollgated");
 
 A013 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:352
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -468,16 +476,16 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A014 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:354
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S052), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const auto lane = fixture.freeLane(18, &error);
 Original expression:
     QVERIFY2(lane.has_value(), qPrintable(error));
 
 A015 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:360
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S052), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const int snap = fixture.snap();
     const int tick = lane->first;
@@ -488,8 +496,8 @@ Original expression:
     QVERIFY2(trailing.has_value() && leading.has_value(), qPrintable(error));
 
 A016 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:365
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Edge-grip drags clamp both edges at the snap minimum with exact tick/duration (S052).
 Source context since previous assertion:
 
     dragMouse(fixture.view(), Qt::LeftButton,
@@ -505,8 +513,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A017 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:376
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Edge-grip drags clamp both edges at the snap minimum with exact tick/duration (S052).
 Source context since previous assertion:
 
     const int leadingEnd = leading->tick + leading->duration;
@@ -522,8 +530,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A018 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:388
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_undoRedoRerenders unconditionally, so the observation executes; see S053.
 Source context since previous assertion:
 }
 
@@ -534,8 +542,8 @@ Original expression:
         QSKIP("window history rerender belongs to swiftrollgated");
 
 A019 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:391
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -543,8 +551,8 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A020 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:394
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S053), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const int baseline = fixture.grid()->property("renderedNoteCount").toInt();
     const auto lane = fixture.freeLane(4, &error);
@@ -552,32 +560,32 @@ Original expression:
     QVERIFY2(lane.has_value(), qPrintable(error));
 
 A021 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:396
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-drag draw on a free lane stages notes with exact tick/duration/pitch (S053), same empty-lane guard and pointer path as the original.
 Source context since previous assertion:
     const auto added = drawNote(fixture, lane->first, 2 * fixture.snap(), lane->second, &error);
 Original expression:
     QVERIFY2(added.has_value(), qPrintable(error));
 
 A022 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:397
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey Undo/Redo delivery through the production window shortcuts removes/restores the note and its rendered face (S053); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(fixture.noteItem(added->id) != nullptr);
 
 A023 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:399
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey Undo/Redo delivery through the production window shortcuts removes/restores the note and its rendered face (S053); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(fixture.view(), fixture.action(QStringLiteral("Undo"))));
 
 A024 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:400
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey Undo/Redo delivery through the production window shortcuts removes/restores the note and its rendered face (S053); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -589,16 +597,16 @@ Original expression:
         kSettleTimeoutMs));
 
 A025 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:406
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey Undo/Redo delivery through the production window shortcuts removes/restores the note and its rendered face (S053); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(fixture.view(), fixture.action(QStringLiteral("Redo"))));
 
 A026 | SwiftRollGatedTest::windowUndoRedoRerenders | src/checks/swiftrollgated/gesturechecks.cpp:407
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey Undo/Redo delivery through the production window shortcuts removes/restores the note and its rendered face (S053); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -612,8 +620,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A027 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:420
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_rightDragCommit unconditionally, so the observation executes; see S054.
 Source context since previous assertion:
 }
 
@@ -624,8 +632,8 @@ Original expression:
         QSKIP("right-drag selection belongs to swiftbandkeys");
 
 A028 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:423
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -633,32 +641,32 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A029 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:425
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S054).
 Source context since previous assertion:
     const auto target = firstVisibleNote(fixture, &error);
 Original expression:
     QVERIFY2(target.has_value(), qPrintable(error));
 
 A030 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:426
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S054).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!target->selected);
 
 A031 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:428
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S054).
 Source context since previous assertion:
     const auto band = selectionBand(fixture, target->id);
 Original expression:
     QVERIFY(band.has_value());
 
 A032 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:430
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S054).
 Source context since previous assertion:
     dragMouse(fixture.view(), Qt::RightButton, band->first, band->second);
 Original expression:
@@ -671,8 +679,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A033 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:442
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_escapeCancel unconditionally, so the observation executes; see S055.
 Source context since previous assertion:
 }
 
@@ -683,8 +691,8 @@ Original expression:
         QSKIP("Escape cancellation belongs to swiftbandkeys");
 
 A034 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:445
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -692,8 +700,8 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A035 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:448
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S055).
 Source context since previous assertion:
     const QString before = fixture.grid()->property("noteSummary").toString();
     const auto target = firstVisibleNote(fixture, &error);
@@ -701,16 +709,16 @@ Original expression:
     QVERIFY2(target.has_value(), qPrintable(error));
 
 A036 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:450
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Right-drag band over a fully visible note commits selection through the production beginRightPointer/updateRightPointer/endRightPointer path (S055).
 Source context since previous assertion:
     const auto band = selectionBand(fixture, target->id);
 Original expression:
     QVERIFY(band.has_value());
 
 A037 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:454
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held right band previews selection, Escape restores noteSummary with no document edit and leaves lastCancelReason untouched (S055); absolute -1 from the RewriteWindow fixture does not transfer because the shell records hidden-cancel 2 while mounting. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     QTest::mouseMove(fixture.view(), band->first);
     QTest::mousePress(fixture.view(), Qt::RightButton, Qt::NoModifier, band->first);
@@ -725,8 +733,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A038 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:464
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held right band previews selection, Escape restores noteSummary with no document edit and leaves lastCancelReason untouched (S055); absolute -1 from the RewriteWindow fixture does not transfer because the shell records hidden-cancel 2 while mounting. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     fixture.input()->forceActiveFocus(Qt::OtherFocusReason);
     QTest::keyClick(fixture.view(), Qt::Key_Escape);
@@ -737,16 +745,16 @@ Original expression:
         kSettleTimeoutMs));
 
 A039 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:467
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held right band previews selection, Escape restores noteSummary with no document edit and leaves lastCancelReason untouched (S055); absolute -1 from the RewriteWindow fixture does not transfer because the shell records hidden-cancel 2 while mounting. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), -1);
 
 A040 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:472
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
     // Idle Escape clears the ephemeral note selection without a document or
     // history edit: the same notes at the same revision, none selected, and
@@ -756,8 +764,8 @@ Original expression:
     QVERIFY(idleItem != nullptr);
 
 A041 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:475
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
     const QPoint idleCenter = idleItem->mapToScene(idleItem->boundingRect().center()).toPoint();
     QTest::mouseClick(fixture.view(), Qt::LeftButton, Qt::NoModifier, idleCenter);
@@ -771,8 +779,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A042 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:484
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Successful JSON.parse of noteSummary on every read proves parse health; the parsing guard executes wherever S056 reads notes.
 Source context since previous assertion:
     QString idleError;
     const QList<NoteState> idleBefore = fixture.notes(&idleError);
@@ -780,8 +788,8 @@ Original expression:
     QVERIFY2(idleError.isEmpty(), qPrintable(idleError));
 
 A043 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:489
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
     const QString idleRevision = fixture.grid()->property("appliedRevisionText").toString();
     const int idleReason = fixture.grid()->property("lastCancelReason").toInt();
@@ -797,8 +805,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A044 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:498
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Successful JSON.parse of noteSummary on every read proves parse health; the parsing guard executes wherever S056 reads notes.
 Source context since previous assertion:
     QString idleAfterError;
     const QList<NoteState> idleAfter = fixture.notes(&idleAfterError);
@@ -806,88 +814,88 @@ Original expression:
     QVERIFY2(idleAfterError.isEmpty(), qPrintable(idleAfterError));
 
 A045 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:499
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(idleAfter.size(), idleBefore.size());
 
 A046 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:501
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
     for (int index = 0; index < idleBefore.size(); ++index) {
 Original expression:
         QCOMPARE(idleAfter[index].id, idleBefore[index].id);
 
 A047 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QCOMPARE(idleAfter[index].tick, idleBefore[index].tick);
 
 A048 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:503
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QCOMPARE(idleAfter[index].duration, idleBefore[index].duration);
 
 A049 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:504
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QCOMPARE(idleAfter[index].pitch, idleBefore[index].pitch);
 
 A050 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:505
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QCOMPARE(idleAfter[index].track, idleBefore[index].track);
 
 A051 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:506
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QCOMPARE(idleAfter[index].velocity, idleBefore[index].velocity);
 
 A052 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:507
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QVERIFY(!idleAfter[index].selected);
 
 A053 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:509
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
     }
 Original expression:
     QCOMPARE(fixture.grid()->property("appliedRevisionText").toString(), idleRevision);
 
 A054 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:510
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Idle Escape clears the ephemeral selection while every published field, the count, the revision and the cancel reason stay put (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), idleReason);
 
 A055 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:516
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_ungrabCancel unconditionally, so the observation executes; see S057.
 Source context since previous assertion:
 }
 
@@ -898,8 +906,8 @@ Original expression:
         QSKIP("pointer-ungrab cancellation belongs to swiftbandkeys");
 
 A056 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:519
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -907,8 +915,8 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A057 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:522
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Real right press/move followed by the production inputCancelled(1) slot — the same slot EditorSurface onCanceled calls; QML cannot synthesize QEvent::UngrabMouse — restores noteSummary with lastCancelReason 1 (S057).
 Source context since previous assertion:
     const QString before = fixture.grid()->property("noteSummary").toString();
     const auto target = firstVisibleNote(fixture, &error);
@@ -916,16 +924,16 @@ Original expression:
     QVERIFY2(target.has_value(), qPrintable(error));
 
 A058 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:524
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Real right press/move followed by the production inputCancelled(1) slot — the same slot EditorSurface onCanceled calls; QML cannot synthesize QEvent::UngrabMouse — restores noteSummary with lastCancelReason 1 (S057).
 Source context since previous assertion:
     const auto band = selectionBand(fixture, target->id);
 Original expression:
     QVERIFY(band.has_value());
 
 A059 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:531
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Real right press/move followed by the production inputCancelled(1) slot — the same slot EditorSurface onCanceled calls; QML cannot synthesize QEvent::UngrabMouse — restores noteSummary with lastCancelReason 1 (S057).
 Source context since previous assertion:
     QTest::mouseMove(fixture.view(), band->first);
     QTest::mousePress(fixture.view(), Qt::RightButton, Qt::NoModifier, band->first);
@@ -942,8 +950,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A060 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:542
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_trackFollowReload unconditionally, so the observation executes; see S058.
 Source context since previous assertion:
 }
 
@@ -954,8 +962,8 @@ Original expression:
         QSKIP("QML object-return lifetime belongs to swiftqtml");
 
 A061 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:548
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     QPointer<QObject> finalGrid;
     QPointer<QQuickView> finalView;
@@ -966,16 +974,16 @@ Original expression:
         QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A062 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:549
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
         QVERIFY(QMetaObject::invokeMethod(fixture.grid(), "setTrack", Q_ARG(int, 1)));
 
 A063 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:550
-Disposition: GAP
-Mapping/reason: Track-switch publication (trackIndex Notes filtered to the new track) has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -992,8 +1000,8 @@ Original expression:
             kSettleTimeoutMs));
 
 A064 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:565
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: session.openSong("mus_route101") on the selected tab is the in-place reload path through the same close gate (S058).
 Source context since previous assertion:
 
         QPointer<QQuickView> oldView = fixture.view();
@@ -1005,7 +1013,7 @@ Original expression:
 
 A065 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:567
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1018,8 +1026,8 @@ Original expression:
             kOpenTimeoutMs));
 
 A066 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:576
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
 Source context since previous assertion:
         finalView = fixture.window().gridView();
         finalGrid = finalView->rootObject()->property("gridModel").value<QObject *>();
@@ -1028,7 +1036,7 @@ Original expression:
 
 A067 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:580
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
 Source context since previous assertion:
     }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -1038,15 +1046,15 @@ Original expression:
 
 A068 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(finalGrid.isNull());
 
 A069 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:587
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_focusedRouting unconditionally, so the observation executes; see S059.
 Source context since previous assertion:
 }
 
@@ -1057,8 +1065,8 @@ Original expression:
         QSKIP("focused-grid command routing belongs to selectionkey");
 
 A070 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:590
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -1066,24 +1074,24 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A071 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:592
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const auto target = firstVisibleNote(fixture, &error);
 Original expression:
     QVERIFY2(target.has_value(), qPrintable(error));
 
 A072 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:594
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     QQuickItem *const item = fixture.noteItem(target->id);
 Original expression:
     QVERIFY(item != nullptr);
 
 A073 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:598
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S059 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QPoint center = item->mapToScene(item->boundingRect().center()).toPoint();
     QTest::mouseClick(fixture.view(), Qt::LeftButton, Qt::NoModifier, center);
@@ -1092,24 +1100,24 @@ Original expression:
     QVERIFY(nudge != nullptr);
 
 A074 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:599
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S059 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(nudge->isEnabled(), kSettleTimeoutMs);
 
 A075 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:600
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(fixture.view(), nudge));
 
 A076 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:601
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1123,8 +1131,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A077 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:611
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     QAction *const pencil = fixture.action(QStringLiteral("Pencil Mode"));
@@ -1132,16 +1140,16 @@ Original expression:
     QVERIFY(pencil != nullptr && sendShortcut(fixture.view(), pencil));
 
 A078 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:612
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 A079 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:616
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Left-click selection plus real Right/B key delivery through the SongTabs routeEditorKey path nudges by one snap and toggles Pencil Mode; auto-repeat B is consumed without retoggling (S059). QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QKeyCombination pencilKey = pencil->shortcuts().front()[0];
     QKeyEvent repeat(QEvent::KeyPress, pencilKey.key(), pencilKey.keyboardModifiers(), {}, true);
@@ -1150,16 +1158,16 @@ Original expression:
     QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 A080 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:618
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S060 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     QAction *const deleteNotes = fixture.action(QStringLiteral("Delete Notes"));
 Original expression:
     QVERIFY(deleteNotes != nullptr && deleteNotes->isEnabled());
 
 A081 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:623
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
     // Press at the moved note's current scene position. No extra click here:
     // a click immediately before the press would double-click and delete
@@ -1169,8 +1177,8 @@ Original expression:
     QVERIFY(movedItem != nullptr);
 
 A082 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:631
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
     const QPoint movedCenter = movedItem->mapToScene(movedItem->boundingRect().center()).toPoint();
     const QString beforeGesture = fixture.grid()->property("noteSummary").toString();
@@ -1183,16 +1191,16 @@ Original expression:
     QVERIFY(sendShortcut(fixture.view(), deleteNotes));
 
 A083 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:632
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 A084 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:635
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
     // The surviving Pencil row still executes from the keyboard mid-gesture.
     const bool pencilBefore = fixture.grid()->property("pencilMode").toBool();
@@ -1200,56 +1208,56 @@ Original expression:
     QVERIFY(sendShortcut(fixture.view(), pencil));
 
 A085 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:636
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("pencilMode").toBool(), !pencilBefore);
 
 A086 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:637
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 A087 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:638
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(fixture.view(), pencil));
 
 A088 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:639
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("pencilMode").toBool(), pencilBefore);
 
 A089 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:640
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 A090 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:642
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Held left press plus real Delete/B delivery: Delete is blocked (noteSummary unchanged) while Pencil Mode toggles twice and release commits nothing (S060); only survivesPointerGesture rows survive, per the production gate.
 Source context since previous assertion:
     QTest::mouseRelease(fixture.view(), Qt::LeftButton, Qt::NoModifier, movedCenter);
 Original expression:
     QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
 
 A091 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:648
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the mode gate routes this slot to its native surface. The shell-grid-input lane runs test_bareSpace unconditionally, so the observation executes; see S061.
 Source context since previous assertion:
 }
 
@@ -1260,8 +1268,8 @@ Original expression:
         QSKIP("bare-Space window priority belongs to selectionkey");
 
 A092 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:651
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and publishes grid notes via openRoute101 (S049); replaces RewriteWindow/GridFixture mounting.
 Source context since previous assertion:
     GridFixture fixture(m_projectRoot, m_songLabel);
     QString error;
@@ -1269,8 +1277,8 @@ Original expression:
     QVERIFY2(fixture.open(&error), qPrintable(error));
 
 A093 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:653
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S061 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     QAction *const playPause = fixture.action(QStringLiteral("Play/Pause"));
 Original expression:
@@ -1278,15 +1286,15 @@ Original expression:
 
 A094 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:655
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: QSignalSpy validity is test machinery, not behavior; transport activation itself is MATCHED by S061 (playing transitions). No signal identity is claimed.
 Source context since previous assertion:
     QSignalSpy triggered(playPause, &QAction::triggered);
 Original expression:
     QVERIFY(triggered.isValid());
 
 A095 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:659
-Disposition: GAP
-Mapping/reason: Play/Pause action triggering has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Bare Space with the grid focused toggles transport playing through the production window Shortcut with noteSummary unchanged (S061); playing-state transitions replace QAction triggered counts — signal identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const QString before = fixture.grid()->property("noteSummary").toString();
     QTest::keyClick(fixture.view(), Qt::Key_Space);
@@ -1295,8 +1303,8 @@ Original expression:
     QCOMPARE(triggered.count(), 1);
 
 A096 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:660
-Disposition: PARTIAL
-Mapping/reason: Related S009/S025/S030/S031/S032/S033/S034/S035 (selection invariants, commit, band-select, cancel/Escape predicates); unproved: exact tick/duration/pitch/selection/revision accounting via the real QTest pointer, key, shortcut, or history path.
+Disposition: MATCHED
+Mapping/reason: Bare Space with the grid focused toggles transport playing through the production window Shortcut with noteSummary unchanged (S061); playing-state transitions replace QAction triggered counts — signal identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1573,3 +1581,42 @@ S048 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swi
         cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S049 | openRoute101 | src/checks/editorqml/tst_ShellGridInput.qml:70
+    shell = shellComponent.createObject(null); shell.requestActivate(); session.openProjectAndSong(bootstrap.projectRoot, "mus_route101"); waitForNative(songOpen); tryVerify(renderedNoteCount > 0)
+
+S050 | test_drawMoveNeighborTrim draws | src/checks/editorqml/tst_ShellGridInput.qml:191
+    freeLane(12) guard; left drags draw moving (tick, 2*snap) and neighbor (tick+4*snap, 4*snap) with exact tick/duration/pitch; count grows by one per drag
+
+S051 | test_drawMoveNeighborTrim moves | src/checks/editorqml/tst_ShellGridInput.qml:191
+    body drag commits moved.tick == tick+3*snap (duration kept) and neighbor trimmed to tick+5*snap/duration 3*snap; gridNote_ face exists, is visible, and tracks the moved tick
+
+S052 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml:262
+    trailing right-edge drag clamps to (tick, snap); leading left-edge drag clamps to (leadingEnd-snap, snap)
+
+S053 | test_undoRedoRerenders | src/checks/editorqml/tst_ShellGridInput.qml:323
+    drawn note renders; StandardKey.Undo removes it and its face (renderedNoteCount back to baseline); StandardKey.Redo restores exact tick/duration and the face
+
+S054 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml:371
+    first fully bandable note starts unselected; right-drag band commits selected through begin/update/endRightPointer
+
+S055 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml:388
+    held right band previews selection; Escape restores noteSummary with no document edit and leaves lastCancelReason untouched
+
+S056 | test_escapeCancel idle | src/checks/editorqml/tst_ShellGridInput.qml:388
+    idle click selects; idle Escape clears selection while note count, every published field, appliedRevisionText and lastCancelReason stay put
+
+S057 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml:447
+    real right press/move plus production inputCancelled(1) restores noteSummary with lastCancelReason 1 (QML cannot synthesize QEvent::UngrabMouse; same slot as onCanceled)
+
+S058 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml:470
+    grid.setTrack(1) publishes trackIndex 1 with all notes/faces on track 1; session.openSong("mus_route101") replaces the grid in place (same window, tabCount 1, pendingCloseId -1, new grid object) and resets trackIndex 0 with published notes
+
+S059 | test_focusedRouting keys | src/checks/editorqml/tst_ShellGridInput.qml:507
+    left click selects; actionEnabled roll.nudge_right; Right nudges tick by one snap; B toggles pencilMode true and auto-repeat B is consumed without retoggling
+
+S060 | test_focusedRouting mid-gesture | src/checks/editorqml/tst_ShellGridInput.qml:507
+    held left press: Delete blocked (noteSummary unchanged); B toggles Pencil twice with notes unchanged; release commits nothing
+
+S061 | test_bareSpace | src/checks/editorqml/tst_ShellGridInput.qml:558
+    actionEnabled transport.play_pause; bare Space with grid focus starts transport (playhead.playing) with noteSummary unchanged; second Space stops it

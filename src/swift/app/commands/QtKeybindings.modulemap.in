@@ -1,0 +1,4 @@
+module QtKeybindings {
+    header "@QT_GUI_HEADERS@/qkeysequence.h"
+    export *
+}

@@ -112,7 +112,7 @@ enum RollQmlLane {
         app.setInputDir(inputDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
-        pdAppRegisterTypes()
+        ApplicationSession.registerQmlElement()
         RollQmlBootstrap.registerQmlElement()
         // ApplicationSession itself supplies the Swift ruler form bridge.
         let inputFile = URL(fileURLWithPath: inputDirectory, isDirectory: true)
@@ -345,22 +345,12 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
 
     // ---- the host's own close path ------------------------------------------
 
-    /// `RewriteWindow` invokes `hostClosing()` and only then removes the Quick
-    /// scene. Nothing is released here — the scene still binds to the
-    /// document-bound owners — so `true` means the session still presents its
-    /// document while the scene exists. The lane destroys the scene between
-    /// this call and `acknowledgeSceneRemoval()`, which is the order the
-    /// accepted lifecycle uses.
     public func hostClosing() -> Bool {
         guard let session else { return false }
         session.hostClosing()
         return session.songOpen
     }
 
-    /// `RewriteWindow.detachGridScene()` calls `acknowledgeGridDetached()` once
-    /// the scene is gone, and the session releases the page slot, the grid, the
-    /// audio binding and the document session exactly there. `true` means the
-    /// session presents no document any more.
     public func acknowledgeSceneRemoval() -> Bool {
         guard let session else { return false }
         session.acknowledgeGridDetached()

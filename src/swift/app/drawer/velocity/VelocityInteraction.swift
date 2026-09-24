@@ -326,9 +326,8 @@ extension VelocityPage {
     /// `keymap::Registry::matchesModifier`: the binding is exactly Control, with
     /// Shift admitted only where production admits it (`allowShift`).
     private func detentUnlocked(modifiers: Int, allowShift: Bool) -> Bool {
-        let held = modifiers & VelocityModifier.shortcutMask
-        return held == VelocityModifier.control
-            || (allowShift && held == (VelocityModifier.control | VelocityModifier.shift))
+        KeybindingRegistry().matchesModifier(
+            modifiers, "velocity.detent_unlock", allowShift: allowShift)
     }
 
     /// The page's whole unlock rule: a disabled detent set unlocks everything,

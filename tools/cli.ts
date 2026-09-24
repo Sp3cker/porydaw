@@ -7,6 +7,7 @@
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
 // deno task verify:qml-roll [verify options] -> build roll_qml_tests + mid2agb, run that lane
+// deno task verify:shell [verify options] -> build shell_qml_tests + mid2agb, run that lane
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
@@ -32,6 +33,7 @@ type Subcommand =
   | "verify"
   | "verify:qml"
   | "verify:qml-roll"
+  | "verify:shell"
   | "format";
 
 function help(command?: Subcommand): string {
@@ -45,6 +47,11 @@ function help(command?: Subcommand): string {
       return VERIFY_HELP.replaceAll(
         "deno task verify",
         "deno task verify:qml-roll",
+      );
+    case "verify:shell":
+      return VERIFY_HELP.replaceAll(
+        "deno task verify",
+        "deno task verify:shell",
       );
     case "build:app":
     case "build:checks":
@@ -81,6 +88,7 @@ Examples:
   verify        build and run checks
   verify:qml    build and run the QML drawer lane
   verify:qml-roll  build and run the QML roll window lane
+  verify:shell  build and run the production QML shell lane
   format        format sources (or --check)
 help: deno task <command> --help`;
   }
@@ -249,7 +257,11 @@ async function runBuild(
 // One verify lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
 interface VerifyLane {
-  readonly command: "verify" | "verify:qml" | "verify:qml-roll";
+  readonly command:
+    | "verify"
+    | "verify:qml"
+    | "verify:qml-roll"
+    | "verify:shell";
   /** Harness executable name inside the build directory. */
   readonly binary: string;
   buildTargets(options: CheckOptions): string[];
@@ -269,7 +281,7 @@ function verifyBuildTargets(options: CheckOptions): string[] {
 }
 
 const VERIFY_LANES: Record<
-  "verify" | "verify:qml" | "verify:qml-roll",
+  "verify" | "verify:qml" | "verify:qml-roll" | "verify:shell",
   VerifyLane
 > = {
   "verify": {
@@ -290,6 +302,11 @@ const VERIFY_LANES: Record<
     command: "verify:qml-roll",
     binary: "roll_qml_tests",
     buildTargets: () => ["roll_qml_tests", "mid2agb"],
+  },
+  "verify:shell": {
+    command: "verify:shell",
+    binary: "shell_qml_tests",
+    buildTargets: () => ["shell_qml_tests", "mid2agb"],
   },
 };
 
@@ -455,6 +472,7 @@ if (sub === "verify-qml") sub = "verify:qml";
 if (sub === "verify-qml-roll" || sub === "verify:qmlroll") {
   sub = "verify:qml-roll";
 }
+if (sub === "verify-shell") sub = "verify:shell";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
@@ -482,6 +500,8 @@ switch (normalized) {
     break;
   case "verify:qml-roll":
     await runVerify(rest, VERIFY_LANES["verify:qml-roll"]);
+  case "verify:shell":
+    await runVerify(rest, VERIFY_LANES["verify:shell"]);
     break;
   case "format":
     await runFormat(rest);

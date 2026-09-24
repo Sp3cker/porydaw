@@ -6,7 +6,7 @@
 #include <QWindow>
 
 #include "checkregistry.hpp"
-#include "ui/applicationstartup.h"
+#include "support/checkstartup.h"
 
 namespace {
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     if (!qEnvironmentVariableIsSet("PORYDAW_AUDIO_BACKEND"))
         qputenv("PORYDAW_AUDIO_BACKEND", "null");
     auto application = QApplication{argc, argv};
-    ui::installOffscreenSystemFont(application);
+    checks::installOffscreenSystemFont(application);
 
     const auto arguments = application.arguments();
     if (checks::writeManifest(arguments))

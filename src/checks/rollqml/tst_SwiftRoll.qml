@@ -42,10 +42,6 @@ TestCase {
     // its cause instead of only timing out.
     property string openFailure: ""
 
-    // Production session creation: RewriteWindow.cpp builds
-    // "import PorydawApp\nApplicationSession {}\n" and injects that instance
-    // into the composition. The bootstrap holds it through the framework's
-    // QML-child seam.
     RollQmlBootstrap {
         id: bootstrap
 
@@ -87,13 +83,6 @@ TestCase {
         return predicate()
     }
 
-    // The staged route101 project and song open through the real production
-    // path: RewriteWindow.cpp builds "import PorydawApp\nApplicationSession
-    // {}\n" and calls openProjectAndSong(path:label:) with the project root
-    // and the label the staged project's song table declares
-    // (sound/song_table.inc). The open is asynchronous, so the lane drives the
-    // event loop, stops as soon as the session reports a failure, and names
-    // the cause it was given.
     function initTestCase() {
         // QtCore.Settings uses QGuiApplication's identity, not the test
         // runner's executable name. Establish it before any Settings or the

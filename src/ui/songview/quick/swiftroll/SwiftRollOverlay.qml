@@ -1,10 +1,5 @@
 import QtQuick
 
-// The mounted roll surface: the song tab strip over one page per open song.
-// The window installs the production session as the `appSession` context
-// property before it loads this document (RewriteWindow::attachGridScene), and
-// every mounted-surface consumer reads the selected page's grid from the view
-// root.
 Item {
     id: root
     objectName: "swiftRollOverlay"

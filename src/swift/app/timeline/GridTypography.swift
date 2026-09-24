@@ -10,6 +10,7 @@ struct GridFontSpec {
     let pixelSize: Int
     let weight: Int
     let letterSpacing: Double
+    let features: [String: QVariantSettable] = ["tnum": 1]
 
     var map: [String: QVariantSettable] {
         [
@@ -17,9 +18,13 @@ struct GridFontSpec {
             "pixelSize": pixelSize,
             "weight": weight,
             "letterSpacing": letterSpacing,
+            "features": features,
+            "hintingPreference": fontPreferNoHinting,
         ]
     }
 }
+
+let fontPreferNoHinting = 1
 
 @MainActor
 struct GridTypography {
@@ -102,7 +107,9 @@ struct GridTypography {
 }
 
 @MainActor
-private final class NativeFontMetrics {
+// Visible to the swiftcore harness for the fitted-maximality check; the
+// canvas remains the only production consumer.
+final class NativeFontMetrics {
     let session: OpaquePointer
     let extents: SGFontExtents
 
