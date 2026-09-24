@@ -11,8 +11,12 @@ Item {
     property bool hintScopeAllowed: true
     signal closed(bool restoreFocus)
     readonly property bool opened: model.promptOpen
-    visible: opened
-    enabled: opened
+    property bool consumingOutsidePress: false
+    visible: opened || consumingOutsidePress
+    enabled: visible
+    function finishOutsidePress() {
+        consumingOutsidePress = false
+    }
     z: 100
     onOpenedChanged: {
         if (opened)
@@ -24,16 +28,25 @@ Item {
         objectName: "velocityPromptUnderlay"
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        preventStealing: true
         onPressed: mouse => {
-            if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
-                    || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height)
-                prompt.cancelDisplayed()
+            // Keep the modal underlay alive through the matching release.
+            // Otherwise closing on press exposes the roll to a right release
+            // that can clear selection or start another interaction.
             mouse.accepted = true
+            if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
+                    || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height) {
+                promptRoot.consumingOutsidePress = true
+                prompt.cancelDisplayed()
+            }
         }
+        onReleased: Qt.callLater(promptRoot.finishOutsidePress)
+        onCanceled: Qt.callLater(promptRoot.finishOutsidePress)
     }
 
     PromptCard {
         id: prompt
+        visible: promptRoot.opened
 
         objectName: "velocityPromptCard"
         anchors.centerIn: parent

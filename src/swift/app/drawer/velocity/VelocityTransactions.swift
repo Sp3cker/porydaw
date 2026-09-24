@@ -237,9 +237,9 @@ public enum VelocityPromptPolicy {
     public static let maximum = 127
 
     public static func value(draft: String) -> Int? {
-        let trimmed = draft.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, trimmed.count <= 3, trimmed.allSatisfy(\.isNumber),
-              let value = Int(trimmed), (minimum...maximum).contains(value)
+        guard !draft.isEmpty, draft.count <= 3,
+              draft.utf8.allSatisfy({ (48...57).contains($0) }),
+              let value = Int(draft), (minimum...maximum).contains(value)
         else { return nil }
         return value
     }

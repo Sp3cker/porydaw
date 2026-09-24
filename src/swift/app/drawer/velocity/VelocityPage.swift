@@ -176,10 +176,10 @@ public final class VelocityPage: EditorDrawerPage {
     public var rampLength: Double = 0
     public var rampSlopeY: Double = 0
     public var rampColor: String = ""
-    public var promptOpen: Bool = false
+    @QtTracked public var promptOpen: Bool = false
     public var promptAppearance: [String: QVariantSettable] = [:]
     public var promptFont: [String: QVariantSettable] = [:]
-    public var promptDraft: String = ""
+    @QtTracked public var promptDraft: String = ""
     public var promptError: String = ""
     public var promptTitle: String = "Note velocity"
     public var promptLabel: String = "Velocity (1-127):"

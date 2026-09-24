@@ -288,6 +288,7 @@ Item {
         activeFocusOnTab: true
 
         property alias text: input.text
+        readonly property string selectedText: input.selectedText
         property alias acceptableInput: input.acceptableInput
 
         // Host policy marker; printable ShortcutOverride precedes QML handlers.
