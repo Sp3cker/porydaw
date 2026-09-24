@@ -4,11 +4,8 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/velocity/tst_velocityediting.cpp
 Original SHA-256: 3e4a4992d28bc5e1443b055ea741e59fff79643504e57a2f0889ea60c84bc08b
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
-Additional Swift SHA-256: 683e47a7dc048626180d7d0c8a0643753020c6759ab2d24ef21389351fa2e0cc
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
@@ -37,7 +34,6 @@ drawerVelocityRollCore* function below), so the passing swiftcore harness exerci
 No differential comparison against the native C++ original is claimed; the legacy velocity
 cpp is absent from every CMake target and unregistered in checkcatalog.cpp. A later pass must
 record the final tree if it changes.
-Tally: MATCHED 66, PARTIAL 43, GAP 0, NATIVE 0, NATIVE-SETUP 5, RETIRED-REPRESENTATION 14 (128 sites).
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -974,41 +970,49 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:14
+S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: function
 Swift expression:
   report.fail(drawerVelocityTransactionID, "the synthetic fixture published fewer than three notes")
 
-S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:26
+S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one released drag advances the document revision once"
 Swift expression:
   report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityTransactionID,
                          what: "one released drag advances the document revision once")
 
-S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:28
+S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one released drag makes exactly one history entry"
 Swift expression:
   report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
                     message: "one released drag makes exactly one history entry")
 
-S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:30
+S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the drag's entry becomes undoable"
 Swift expression:
   report.expect(committed.canUndo && !baseline.canUndo, cppID: drawerVelocityTransactionID,
                     message: "the drag's entry becomes undoable")
 
-S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:32
+S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the drag's commit reached the document"
 Swift expression:
   report.expect(document.note(notes[0].id)?.velocity != notes[0].velocity, cppID: drawerVelocityTransactionID,
                     message: "the drag's commit reached the document")
 
-S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:34
+S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "every selected target moved with the gesture"
 Swift expression:
   report.expect(document.note(notes[1].id)?.velocity != notes[1].velocity, cppID: drawerVelocityTransactionID,
                     message: "every selected target moved with the gesture")
 
-S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:36
+S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a released gesture clears its preview"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityTransactionID,
                     message: "a released gesture clears its preview")
 
-S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:38
+S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the published handle follows the committed value (before \(before) "
 Swift expression:
   report.expect(fixture.handle(notes[0])?.y != before, cppID: drawerVelocityProjectionID,
                     message: "the published handle follows the committed value (before \(before) "
@@ -1016,403 +1020,495 @@ Swift expression:
                         + "\(document.note(notes[0].id)?.velocity ?? 0) level "
                         + "\(fixture.handle(notes[0])?.level ?? -99)")
 
-S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:45
+S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo restores the captured velocity"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                          cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
 
-S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:47
+S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo restores every target of the transaction"
 Swift expression:
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0),
                          cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
 
-S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:50
+S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo rebuilds the page without losing its handles"
 Swift expression:
   report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityHistoryID,
                          what: "Undo rebuilds the page without losing its handles")
 
-S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:53
+S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Redo restores the committed history identity"
 Swift expression:
   report.expectEqual(committed.identity, drawerVelocityDocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
                          what: "Redo restores the committed history identity")
 
-S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:61
+S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stationary click records no history"
 Swift expression:
   report.expectEqual(pointerBaseline.revision, drawerVelocityDocumentSnapshot(document).revision,
                          cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
 
-S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:63
+S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stationary click selects only its own note"
 Swift expression:
   report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
                     message: "a stationary click selects only its own note")
 
-S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:74
+S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag previews before release"
 Swift expression:
   report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                         message: "a live drag previews before release")
 
-S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:76
+S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag reports an active interaction"
 Swift expression:
   report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
                         message: "a live drag reports an active interaction")
 
-S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:78
+S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape is claimed while a gesture is live"
 Swift expression:
   report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
                         message: "Escape is claimed while a gesture is live")
 
-S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:81
+S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape clears the frozen preview"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityCancellationID,
                     message: "Escape clears the frozen preview")
 
-S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:83
+S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape writes nothing at all"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
                     message: "Escape writes nothing at all")
 
-S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:85
+S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape restores selection membership and insertion order"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
                     message: "Escape restores selection membership and insertion order")
 
-S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:96
+S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a release after a foreign change writes nothing"
 Swift expression:
   report.expectEqual(foreignRevision + 1, document.revision, cppID: drawerVelocityCancellationID,
                              what: "a release after a foreign change writes nothing")
 
-S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:98
+S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stale release ends the gesture"
 Swift expression:
   report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
                         message: "a stale release ends the gesture")
 
-S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:109
+S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the ruler consumes its own press"
 Swift expression:
   report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
                     cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
 
-S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:112
+S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one ruler click makes one revision"
 Swift expression:
   report.expectEqual(rulerBaseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID,
                          what: "one ruler click makes one revision")
 
-S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:114
+S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one ruler click makes one history entry"
 Swift expression:
   report.expect(document.history.currentIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
                     message: "one ruler click makes one history entry")
 
-S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:116
+S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a press inside the plot is not the ruler's"
 Swift expression:
   report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
                     cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
 
-S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:130
+S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a middle drag pans the shared camera"
 Swift expression:
   report.expect(fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
                     message: "a middle drag pans the shared camera")
 
-S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:132
+S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live pan suspends follow through the page's own interaction"
 Swift expression:
   report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
                     message: "a live pan suspends follow through the page's own interaction")
 
-S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:135
+S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the pan ends on release"
 Swift expression:
   report.expect(!page.hasGesture, cppID: drawerVelocityTransactionID, message: "the pan ends on release")
 
-S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:136
+S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "panning writes no document state"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                     message: "panning writes no document state")
 
-S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:143
+S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a PSG context offers the detent control, enabled by default"
 Swift expression:
   report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityTransactionID,
                     message: "a PSG context offers the detent control, enabled by default")
 
-S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:145
+S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the PSG context presents the intrinsic ruler"
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode,
                          cppID: drawerVelocityTransactionID,
                          what: "the PSG context presents the intrinsic ruler")
 
-S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:148
+S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "an enabled detent set draws the level graduations"
 Swift expression:
   report.expect(page.axisGraduationsVisible, cppID: drawerVelocityTransactionID,
                     message: "an enabled detent set draws the level graduations")
 
-S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:153
+S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the detent case starts from a live preview"
 Swift expression:
   report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                         message: "the detent case starts from a live preview")
 
-S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:156
+S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "toggling detents cancels the live interaction"
 Swift expression:
   report.expect(!page.detentsEnabled && page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                         message: "toggling detents cancels the live interaction")
 
-S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:159
+S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "disabled detents put the ruler on the continuous rendering"
 Swift expression:
   report.expect(page.axisGraduationsVisible == false, cppID: drawerVelocityTransactionID,
                     message: "disabled detents put the ruler on the continuous rendering")
 
-S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:161
+S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the voice's own map stays intrinsic under the ruler switch"
 Swift expression:
   report.expect(page.axisModel.mode == .intrinsic, cppID: drawerVelocityTransactionID,
                     message: "the voice's own map stays intrinsic under the ruler switch")
 
-S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:165
+S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a disabled detent set places nodes at their exact velocity"
 Swift expression:
   report.expect(abs(handle.y - exactY) < 0.001, cppID: drawerVelocityTransactionID,
                         message: "a disabled detent set places nodes at their exact velocity")
 
-S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:168
+S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the detent toggle writes no document state"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                     message: "the detent toggle writes no document state")
 
-S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:181
+S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a band selection writes nothing"
 Swift expression:
   report.expectEqual(bandBaseline.revision, document.revision, cppID: drawerVelocityTransactionID,
                          what: "a band selection writes nothing")
 
-S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:183
+S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the band selected every note it covered"
 Swift expression:
   report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
                          what: "the band selected every note it covered")
 
-S042 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:39
+S042 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the fixture track carries exactly three notes"
 Swift expression:
   report.expectEqual(3, notes.count, cppID: drawerVelocityRollCoreFixtureID, what: "the fixture track carries exactly three notes")
 
-S043 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:41
+S043 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "fixture notes resolve in SMF event order"
 Swift expression:
   report.expectEqual([0, 24, 96], notes.map { Int($0.tick) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes resolve in SMF event order")
 
-S044 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:42
+S044 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "fixture notes carry the staged keys"
 Swift expression:
   report.expectEqual([60, 67, 72], notes.map { Int($0.pitch) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry the staged keys")
 
-S045 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:43
+S045 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "fixture notes carry their literal velocities"
 Swift expression:
   report.expectEqual([100, 64, 32], notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
 
-S046 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:44
+S046 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the three fixture notes hold distinct identities"
 Swift expression:
   report.expect(notes[0].id != notes[1].id && notes[0].id != notes[2].id && notes[1].id != notes[2].id, cppID: drawerVelocityRollCoreFixtureID, message: "the three fixture notes hold distinct identities")
 
-S047 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:45
+S047 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the axis resolves a positive drawable span"
 Swift expression:
   report.expect(fixture.page.axisModel.drawableSpan > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the axis resolves a positive drawable span")
 
-S048 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:46
+S048 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the configured body publishes a non-empty plot extent"
 Swift expression:
   report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the configured body publishes a non-empty plot extent")
 
-S049 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:47
+S049 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "every fixture note resolves to a published handle on the live extent"
 Swift expression:
   report.expect(notes.allSatisfy { fixture.handle($0) != nil }, cppID: drawerVelocityRollCoreFixtureID, message: "every fixture note resolves to a published handle on the live extent")
 
-S050 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:70
+S050 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the first held move stages a preview for both selected notes"
 Swift expression:
   report.expect(firstQuiet != nil && firstLater != nil, cppID: drawerVelocityRollCoreDragID, message: "the first held move stages a preview for both selected notes")
 
-S051 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:71
+S051 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the unselected note stages no preview"
 Swift expression:
   report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityRollCoreDragID, message: "the unselected note stages no preview")
 
-S052 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:74
+S052 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one relative delta covers every frozen note at once"
 Swift expression:
   report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "one relative delta covers every frozen note at once")
 
-S053 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:76
+S053 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the first held move writes no document state"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreDragID, message: "the first held move writes no document state")
 
-S054 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:77
+S054 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the first held move leaves history depth and song bytes frozen"
 Swift expression:
   report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the first held move leaves history depth and song bytes frozen")
 
-S055 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:78
+S055 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged drag leaves the first document value alone"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the first document value alone")
 
-S056 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:79
+S056 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged drag leaves the second document value alone"
 Swift expression:
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the second document value alone")
 
-S057 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:80
+S057 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged drag leaves the unselected document value alone"
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the unselected document value alone")
 
-S058 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:81
+S058 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "staging preserves the drag pair selection"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "staging preserves the drag pair selection")
 
-S059 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:85
+S059 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the second held move keeps a preview for both selected notes"
 Swift expression:
   report.expect(secondQuiet != nil && secondLater != nil, cppID: drawerVelocityRollCoreDragID, message: "the second held move keeps a preview for both selected notes")
 
-S060 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:87
+S060 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the preview is live, not stuck: the second move changed it"
 Swift expression:
   report.expect(before != after, cppID: drawerVelocityRollCoreDragID, message: "the preview is live, not stuck: the second move changed it")
 
-S061 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:90
+S061 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the updated previews still share one relative delta"
 Swift expression:
   report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "the updated previews still share one relative delta")
 
-S062 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:92
+S062 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the second held move still defers everything"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the second held move still defers everything")
 
-S063 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:96
+S063 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one release advances the revision once"
 Swift expression:
   report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreDragID, what: "one release advances the revision once")
 
-S064 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:97
+S064 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one release makes exactly one undoable history entry"
 Swift expression:
   report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreDragID, message: "one release makes exactly one undoable history entry")
 
-S065 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:98
+S065 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one release records one history entry"
 Swift expression:
   report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreDragID, message: "one release records one history entry")
 
-S066 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:99
+S066 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the released gesture clears its preview"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreDragID, message: "the released gesture clears its preview")
 
-S067 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:101
+S067 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the commit wrote the staged first value"
 Swift expression:
   report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged first value")
 
-S068 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:102
+S068 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the commit wrote the staged second value"
 Swift expression:
   report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged second value")
 
-S069 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:104
+S069 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the unselected note keeps its literal velocity"
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the unselected note keeps its literal velocity")
 
-S070 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:105
+S070 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the selection survives the commit"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "the selection survives the commit")
 
-S071 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:107
+S071 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "undo restores the first literal"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the first literal")
 
-S072 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:108
+S072 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "undo restores the second literal"
 Swift expression:
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the second literal")
 
-S073 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:109
+S073 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "undo restores the exact pre-drag song bytes"
 Swift expression:
   report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "undo restores the exact pre-drag song bytes")
 
-S074 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:110
+S074 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "undo keeps the selection identities"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "undo keeps the selection identities")
 
-S075 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:113
+S075 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "redo reapplies the staged first value"
 Swift expression:
   report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged first value")
 
-S076 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:114
+S076 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "redo reapplies the staged second value"
 Swift expression:
   report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged second value")
 
-S077 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:116
+S077 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "redo restores the exact committed song bytes"
 Swift expression:
   report.expect(coreTimeBytes(document) == committedBytes, cppID: drawerVelocityRollCoreDragID, message: "redo restores the exact committed song bytes")
 
-S078 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:139
+S078 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the drag staged before Escape"
 Swift expression:
   report.expect(stagedQuiet != nil && stagedLater != nil, cppID: drawerVelocityRollCoreCancelID, message: "the drag staged before Escape")
 
-S079 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:141
+S079 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged previews share one relative delta"
 Swift expression:
   report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreCancelID, what: "the staged previews share one relative delta")
 
-S080 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:146
+S080 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the second move restaged before Escape"
 Swift expression:
   report.expect(restagedQuiet != nil && restagedLater != nil, cppID: drawerVelocityRollCoreCancelID, message: "the second move restaged before Escape")
 
-S081 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:148
+S081 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the restage moved the preview before Escape owned it"
 Swift expression:
   report.expect(before != after, cppID: drawerVelocityRollCoreCancelID, message: "the restage moved the preview before Escape owned it")
 
-S082 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:150
+S082 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape is claimed while the gesture is live"
 Swift expression:
   report.expect(page.handleEscape(), cppID: drawerVelocityRollCoreCancelID, message: "Escape is claimed while the gesture is live")
 
-S083 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:151
+S083 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape clears the frozen preview"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreCancelID, message: "Escape clears the frozen preview")
 
-S084 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:152
+S084 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape writes nothing at all"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreCancelID, message: "Escape writes nothing at all")
 
-S085 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:153
+S085 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape leaves history depth and song bytes frozen"
 Swift expression:
   report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreCancelID, message: "Escape leaves history depth and song bytes frozen")
 
-S086 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:154
+S086 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape restores selection membership and insertion order"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[1].id, notes[0].id], cppID: drawerVelocityRollCoreCancelID, message: "Escape restores selection membership and insertion order")
 
-S087 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:155
+S087 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape leaves the first literal alone"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the first literal alone")
 
-S088 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:156
+S088 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape leaves the second literal alone"
 Swift expression:
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the second literal alone")
 
-S089 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:157
+S089 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape leaves the unselected literal alone"
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the unselected literal alone")
 
-S090 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:160
+S090 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a move and release after the cancel stages nothing"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreCancelID, message: "a move and release after the cancel stages nothing")
 
-S091 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:161
+S091 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a move and release after the cancel commits nothing"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreCancelID, message: "a move and release after the cancel commits nothing")
 
-S092 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:177
+S092 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the noop case starts with no selection"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityRollCoreStillID, message: "the noop case starts with no selection")
 
-S093 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:182
+S093 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the press proposes no change before any move"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityRollCoreStillID, message: "the press proposes no change before any move")
 
-S094 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:184
+S094 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a stationary press records no history"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreStillID, message: "a stationary press records no history")
 
-S095 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:185
+S095 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a stationary press leaves undo depth and song bytes alone"
 Swift expression:
   report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreStillID, message: "a stationary press leaves undo depth and song bytes alone")
 
-S096 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:186
+S096 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "no preview survives the stationary release"
 Swift expression:
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreStillID, message: "no preview survives the stationary release")
 
-S097 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:187
+S097 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the click still selects its own note"
 Swift expression:
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityRollCoreStillID, message: "the click still selects its own note")
 
-S098 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:188
+S098 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the pressed literal is untouched"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the pressed literal is untouched")
 
-S099 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:189
+S099 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the companion literal is untouched"
 Swift expression:
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the companion literal is untouched")
 
-S100 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:49
+S100 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the mixed square and noise selection presents the continuous ruler"
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityPaintID, what: "the mixed square and noise selection presents the continuous ruler")

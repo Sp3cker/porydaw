@@ -4,9 +4,7 @@ Reference revision: 60ff8b12d2515cbebc56aa87e171f74f9a6565dd
 Original: src/checks/eventviews/viewbuckets_grid.cpp
 Original SHA-256: d3ad829216699fa3927ce6e77368ef530c2472a66f89163fee74290a1823fe91
 Swift counterpart: src/checks/editcheck/EventViewsRemapBucketsParity.swift
-Swift SHA-256: 32493219bd91ccbd1b891301c7aacbdc54641b16fc8ccfea9f265c0e077e07d4
 Additional Swift counterpart: src/swift/app/timeline/TimelineSnapPolicy.swift
-Additional Swift SHA-256: 72209a4a6101efa697d7388bd601855133376e9c5a0b2fb0a1affdae3bb99bb9 (absolute snapDown/snapUp/nextAfter helpers removed; file now ends after fineSnap)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -14,7 +12,7 @@ This is an assertion-site inventory, not a count-based equivalence claim. Every 
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (1/6 ok, 10.32s), zero failures with `deno task verify:qml --verbose` PASS (1/1 ok, 33.87s, velocity-lane profiles verified) and `deno task proof check` PASS (224 files) on the frozen post-fix tree; focused thermo re-review verdict PASS, zero blocking findings; source hashes pin the tree inspected here.
+Result: PASS (1/6 ok, 10.32s), zero failures with `deno task verify:qml --verbose` PASS (1/1 ok, 33.87s, velocity-lane profiles verified) and `deno task proof check` PASS (224 files) on the frozen post-fix tree; focused thermo re-review verdict PASS, zero blocking findings.
 
 Execution and ownership
 Swift execution: runEventEditsSuite (src/checks/editcheck/EventChecks.swift, suite 6) calls runEventViewsRemapBucketsParityChecks, which runs bucketParitySum (S001-S010) and clockParityLattice (S011-S013; the five snapDown/snapUp/nextAfter predicates S014-S018 were deleted with the unwired helpers). Narrow runs proved the eventEdits slot (all eventviews predicates incl. B1 mint lines). Native ownership: runViewBucketsGridCheck in this file drives ViewBucketsGridTest (bucketSum, quirkProjection, snapLadder, gridLinesSnappable, clockLatticeCrossesSignatureSeam, fixedGridPaintDensityGuard, paintSmoke). The Basic/Signatures rig/tab fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp.
@@ -761,41 +759,54 @@ int runViewBucketsGridCheck(const QStringList &qtArguments)
 
 Swift assertion predicates
 
-S001 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:200
+S001 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expect(!document.rawChunks.isEmpty, cppID: bucketSumID, message: entry.name + ": single chunk fixture is present")
 
-S002 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:202
+S002 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expect(timeline.ticksPerBeat == 24, cppID: bucketSumID, message: entry.name + ": timeline keeps the fixture timebase")
 
-S003 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:203
+S003 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expect(timeline.tempoMap.count == 1 && timeline.tempoMap[0].tick == 0 && timeline.tempoMap[0].microsecondsPerQuarterNote == TimeDefaults.defaultTempoMicrosecondsPerQuarterNote, cppID: bucketSumID, message: entry.name + ": synthetic tick-zero tempo default exists")
 
-S004 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:205
+S004 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(entry.notes, notes.count, cppID: bucketSumID, what: entry.name + ": paired note count")
 
-S005 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:208
+S005 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(3, laneSeven + laneTen, cppID: bucketSumID, what: entry.name + ": audible lane point count")
 
-S006 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:209
+S006 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(1, document.lanePoints(track: 0, lane: .voice).count, cppID: bucketSumID, what: entry.name + ": voice point count")
 
-S007 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:212
+S007 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(expectedUnterminated, unterminated, cppID: bucketSumID, what: entry.name + ": unterminated note count")
 
-S008 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:213
+S008 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(entry.events, timeline.events.count, cppID: bucketSumID, what: entry.name + ": timeline event total with tempo")
 
-S009 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:214
+S009 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(1, timeline.otherEvents.count, cppID: bucketSumID, what: entry.name + ": marker survives as one other event")
 
-S010 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift:216
+S010 | bucketParitySum | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: function
   report.expectEqual(entry.pairedOffs, terminated, cppID: bucketSumID, what: entry.name + ": paired off count follows terminated notes")
 
-S011 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:244
+S011 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: message "off-lattice seam starts its own segment"
   report.expect(axis.segmentAt(37).start == 37, cppID: clockLatticeID, message: "off-lattice seam starts its own segment")
 
-S012 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:245
+S012 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: message "previous segment ends at the seam"
   report.expect(axis.segmentAt(36).next == 37, cppID: clockLatticeID, message: "previous segment ends at the seam")
 
-S013 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift:247
+S013 | clockParityLattice | src/checks/editcheck/EventViewsRemapBucketsParity.swift
+Anchor: message "seam sits off the clock lattice"
   report.expect(clock > 1 && 37 % clock != 0, cppID: clockLatticeID, message: "seam sits off the clock lattice")

@@ -4,9 +4,7 @@ Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
 Original: src/checks/editorqml/tst_Theme.qml
 Original SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
-Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 No assertion sites.
 
@@ -19,8 +17,8 @@ proof.tst_themelayout_color.txt, proof.tst_themelayout_chrome.txt and
 proof.tst_themelayout_settings.txt; the Swift value predicates live in
 src/checks/themecolor/ThemeColorChecks.swift (swiftcore suite 12).
 Production surface: src/ui/shell/ShellWindow.qml (appearanceStore restore +
-canonical writeback, ShellWindow.qml:53-71; Basic context-menu delegate
-bindings, ShellWindow.qml:282-340) driven by ShellPresenter.restoreAppearance
+canonical writeback, ShellWindow.qml; Basic context-menu delegate
+bindings, ShellWindow.qml) driven by ShellPresenter.restoreAppearance
 and ShellAppearance.apply. The TestCase is src/checks/editorqml/tst_Theme.qml;
 the lane entry is shell-theme in src/checks/editorqml/ShellQmlTests.swift
 (inputFileName tst_Theme.qml, fixture mus_route101 staged but never opened).

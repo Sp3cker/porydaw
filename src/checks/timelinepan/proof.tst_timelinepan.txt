@@ -4,7 +4,6 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/timelinepan/tst_timelinepan.cpp
 Original SHA-256: 2f7fbeac149980e4fce3f3ea25d4a5a092561bf4afc848fcfb58b117c7f25450
 Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
-Swift SHA-256: 22ebafab5676e0d2457b87e91f69288f39894ab1e5baa22918fbab01e356fc7d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence

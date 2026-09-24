@@ -4,7 +4,6 @@ Reference revision: 4ae6619dda9405bf0a3352e4171d9da54ef04f1f
 Original: src/checks/pitchbend/curve.cpp
 Original SHA-256: ede144e8a9476a21a34c2dce6a58f2cffa2b9879c675a004601f295b0d135a0e
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -30,7 +29,7 @@ resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution ownership
 No Swift entry point executes these checks, and no native one either: the T7A
@@ -1253,4 +1252,3 @@ Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
 
-Tally: 123 sites: MATCHED 0, PARTIAL 0, GAP 123, NATIVE 0.

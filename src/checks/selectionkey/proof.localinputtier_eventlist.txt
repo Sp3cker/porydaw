@@ -4,7 +4,6 @@ Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
 Original: src/checks/selectionkey/localinputtier_eventlist.cpp
 Original SHA-256: 74a64bf51297047af55fef6040172fe77411c8086268eca5cb8680b1347162c3
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -34,7 +33,7 @@ window, focus, delivery, clipboard, or window-action counts is NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution ownership
 SelectionLocalInputTierTest::eventListKeepsRowLocalKeys runs on the fresh
@@ -542,32 +541,40 @@ Remaining original source (closing sequence and helper bodies):
   }
 Swift assertion predicates
 
-S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:23
+S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original selected fixture note exists"
   report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
 
-S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:34
+S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original empty-tick numeric prompt opens"
   report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
                     message: "the original empty-tick numeric prompt opens")
 
-S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:37
+S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the production prompt retains the supplied numeric draft"
   report.expectEqual("12", page.promptDraft, cppID: id,
                          what: "the production prompt retains the supplied numeric draft")
 
-S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:39
+S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing does not mutate the song"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "draft editing does not mutate the song")
 
-S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:41
+S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing preserves note selection"
   report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
                          what: "draft editing preserves note selection")
 
-S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:44
+S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation closes the prompt"
   report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
 
-S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:45
+S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation leaves the original document unchanged"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "cancellation leaves the original document unchanged")
 
-S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
+S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft and cancellation preserve the full song contents"
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")

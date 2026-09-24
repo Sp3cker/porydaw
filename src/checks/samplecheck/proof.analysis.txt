@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/analysis.cpp
 Original SHA-256: da34a411ca0833f4ad3ed01404c49b8e8eee735abc4a5b49b321088e08fbb582
 Swift counterpart: src/checks/audio/AudioAuditionChecks.swift
-Swift SHA-256: eff42c2a96d3317784f2fb3d9c885add031181446b27c687c7e3c4a668c61699
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -442,7 +441,7 @@ Original expression:
 
 A022 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:242
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` in `src/checks/audio/AudioAuditionChecks.swift:170-175` refuses a missing initialized playback-engine fixture via `report.fail` under `samplecheck/SampleProcessingTest::auditionSlotLifecycle`; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` in `src/checks/audio/AudioAuditionChecks.swift` refuses a missing initialized playback-engine fixture via `report.fail` under `samplecheck/SampleProcessingTest::auditionSlotLifecycle`; the swiftcore run passed.
 Source context since previous assertion:
   ;
   }
@@ -456,7 +455,7 @@ Original expression:
 
 A023 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:252
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` `report.expect(publish(10, 60))` at `src/checks/audio/AudioAuditionChecks.swift:183` asserts first-slot publication with the same PCM length, pitch, loop, key, and ADSR; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` `report.expect(publish(10, 60))` at `src/checks/audio/AudioAuditionChecks.swift` asserts first-slot publication with the same PCM length, pitch, loop, key, and ADSR; the swiftcore run passed.
 Source context since previous assertion:
   ;
       M4AEngine *engine = &guarded.engine;
@@ -474,7 +473,7 @@ Original expression:
 
 A024 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:254
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:184-186` applies the published sample to the real preview engine and asserts exactly one sounding PCM channel; this is headless engine behavior, not a QWidget observation. The swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` applies the published sample to the real preview engine and asserts exactly one sounding PCM channel; this is headless engine behavior, not a QWidget observation. The swiftcore run passed.
 Source context since previous assertion:
   ;
       pool.apply(engine, 1);
@@ -484,7 +483,7 @@ Original expression:
 
 A025 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:260
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:187-189` checks the adopted channel's owned first byte, MIDI key, and audition flag on the real engine; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` checks the adopted channel's owned first byte, MIDI key, and audition flag on the real engine; the swiftcore run passed.
 Source context since previous assertion:
   ;
       const M4APCMChannel *chA = nullptr;
@@ -500,7 +499,7 @@ Original expression:
 
 A026 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:267
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:192-194` counts exactly three accepted publications during the 100-attempt storm, leaving the sounding slot occupied; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` counts exactly three accepted publications during the 100-attempt storm, leaving the sounding slot occupied; the swiftcore run passed.
 Source context since previous assertion:
   ;
 
@@ -514,7 +513,7 @@ Original expression:
 
 A027 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:269
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:195-196` reads the original sounding slot's PCM bytes after the publication storm; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` reads the original sounding slot's PCM bytes after the publication storm; the swiftcore run passed.
 Source context since previous assertion:
   ;
 
@@ -523,7 +522,7 @@ Original expression:
 
 A028 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:274
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:197-201` applies, renders, reapplies, and asserts one remaining PCM channel after retirement on the real engine. No dialog or window is involved; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` applies, renders, reapplies, and asserts one remaining PCM channel after retirement on the real engine. No dialog or window is involved; the swiftcore run passed.
 Source context since previous assertion:
   ;
 
@@ -536,7 +535,7 @@ Original expression:
 
 A029 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:280
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:200-203` checks the adopted channel's newest PCM first byte and MIDI key after retirement; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` checks the adopted channel's newest PCM first byte and MIDI key after retirement; the swiftcore run passed.
 Source context since previous assertion:
   ;
       const M4APCMChannel *chB = nullptr;
@@ -551,7 +550,7 @@ Original expression:
 
 A030 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:285
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:204-206` counts three reusable retired slots while the current sounding slot stays protected; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` counts three reusable retired slots while the current sounding slot stays protected; the swiftcore run passed.
 Source context since previous assertion:
   ;
       int freed = 0;
@@ -564,7 +563,7 @@ Original expression:
 
 A031 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:295
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:207-214` applies `sampleOff`, pumps the real engine, and asserts zero sounding PCM channels; this is not QWidget behavior. The swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` applies `sampleOff`, pumps the real engine, and asserts zero sounding PCM channels; this is not QWidget behavior. The swiftcore run passed.
 Source context since previous assertion:
   ;
 
@@ -581,7 +580,7 @@ Original expression:
 
 A032 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:299
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:215-217` counts all four slots reusable after full retirement; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` counts all four slots reusable after full retirement; the swiftcore run passed.
 Source context since previous assertion:
   ;
       int post = 0;
@@ -593,7 +592,7 @@ Original expression:
 
 A033 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:303
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:219-221` calls `pdc_playback_engine_reinitialize` on its real preview engine at 32768 Hz and asserts success; that test-only C wrapper destroys/reinitializes the same engine and restores its voicegroup. The swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` calls `pdc_playback_engine_reinitialize` on its real preview engine at 32768 Hz and asserts success; that test-only C wrapper destroys/reinitializes the same engine and restores its voicegroup. The swiftcore run passed.
 Source context since previous assertion:
   ;
 
@@ -605,7 +604,7 @@ Original expression:
 
 A034 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:305
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:222-223` resets the audition pool only after successful cold engine reinitialization, then asserts the 600-byte sample publishes again; the swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` resets the audition pool only after successful cold engine reinitialization, then asserts the 600-byte sample publishes again; the swiftcore run passed.
 Source context since previous assertion:
   ;
       pool.reset();
@@ -615,7 +614,7 @@ Original expression:
 
 A035 | SampleProcessingTest::auditionSlotLifecycle | src/checks/samplecheck/analysis.cpp:307
 Disposition: MATCHED
-Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift:224-225` applies that republished sample to the cold-reinitialized engine and asserts one sounding PCM channel; this is headless engine behavior. The swiftcore run passed.
+Mapping/reason: `checkSampleAuditionSlots` at `src/checks/audio/AudioAuditionChecks.swift` applies that republished sample to the cold-reinitialized engine and asserts one sounding PCM channel; this is headless engine behavior. The swiftcore run passed.
 Source context since previous assertion:
   ;
       pool.apply(engine, 1);
@@ -631,38 +630,52 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-S001 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:173
+S001 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: function
   report.fail(id, "fixture engine initialization failed")
-S002 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:183
+S002 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "first publish takes a slot"
   report.expect(publish(10, 60), cppID: id, message: "first publish takes a slot")
-S003 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:186
+S003 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "adopted audition keys one channel"
   report.expectEqual(1, first.count, cppID: id, what: "adopted audition keys one channel")
-S004 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:187
+S004 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "channel reads owned bytes and is audition flagged"
   report.expect(first.first?.audition == true && first.first?.midiKey == 60 &&
                 first.first?.wav?.pointee.data?[0] == 10, cppID: id,
                 message: "channel reads owned bytes and is audition flagged")
-S005 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:194
+S005 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "publish storm fills remaining slots"
   report.expectEqual(3, accepted, cppID: id, what: "publish storm fills remaining slots")
-S006 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:195
+S006 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "sounding slot survives publication storm"
   report.expect(first.first?.wav?.pointee.data?[0] == 10, cppID: id,
                 message: "sounding slot survives publication storm")
-S007 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:201
+S007 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "superseded audition fully retires"
   report.expectEqual(1, newest.count, cppID: id, what: "superseded audition fully retires")
-S008 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:202
+S008 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "adopted channel reads newest render"
   report.expect(newest.first?.midiKey == 62 && newest.first?.wav?.pointee.data?[0] == -20,
                 cppID: id, message: "adopted channel reads newest render")
-S009 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:206
+S009 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "retired slots reuse except sounding slot"
   report.expectEqual(3, accepted, cppID: id, what: "retired slots reuse except sounding slot")
-S010 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:214
+S010 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "sampleOff silences audition"
   report.expectEqual(0, engine.pcm(engine.preview).count, cppID: id, what: "sampleOff silences audition")
-S011 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:217
+S011 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "full retirement frees every slot"
   report.expectEqual(4, accepted, cppID: id, what: "full retirement frees every slot")
 
-S012 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:220
+S012 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "cold-reset audition engine reinitializes"
   report.expect(reinitialized, cppID: id, message: "cold-reset audition engine reinitializes")
-S013 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:223
+S013 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "cold reset retires every slot"
   report.expect(publish(10, 60), cppID: id, message: "cold reset retires every slot")
-S014 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift:225
+S014 | checkSampleAuditionSlots | src/checks/audio/AudioAuditionChecks.swift
+Anchor: message "audition works after reset"
   report.expectEqual(1, engine.pcm(engine.preview).count, cppID: id, what: "audition works after reset")
 
 Shared helpers

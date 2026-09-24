@@ -206,9 +206,6 @@ enum EditorQmlLane {
         return runProfileChildren(scratch: scratch)
     }
 
-    /// The container phase's child process, verified by its own exit status: its
-    /// cases are the evidence, and this process reports the child's output when
-    /// it fails.
     @MainActor
     private static func runPhaseChild(scratch: String) -> Int32 {
         print("editorqml-drawer: container phase child")
@@ -235,6 +232,8 @@ enum EditorQmlLane {
             return fail("container phase: child died with status \(child.terminationStatus)"
                 + " (signal \(child.terminationReason == .uncaughtSignal))\n" + output)
         }
+        print(output, terminator: "")
+        fflush(stdout)
         return 0
     }
 

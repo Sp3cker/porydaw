@@ -4,13 +4,9 @@ Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
 Original: src/checks/swiftrollgated/gesturechecks.cpp
 Original SHA-256: 23f74a1e29e13c8b004ef4daddd2e30bd688c4fbd91fd6f3e543d7b6be1b0936
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
-Additional Swift SHA-256: 043f58b9ffa588ffc12a32f2ab6680d27d984be1fbf926d24bb68c4b54baf718
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
-Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -1316,56 +1312,68 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:111
+S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
     report.expect(session.selectedNoteOrder == [b, a]
         && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
         cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
-S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:116
+S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "deselecting and re-adding appends the note"
     report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
                        what: "deselecting and re-adding appends the note")
 
-S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:119
+S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "replacement preserves first occurrence and removes duplicates"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "replacement preserves first occurrence and removes duplicates")
 
-S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:123
+S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "band keeps press order before newly covered notes"
     report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")
 
-S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:127
+S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "band cancellation restores selection order"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
 
-S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:131
+S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "order-only replacement publishes the selection domain"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement publishes the selection domain")
 
-S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:138
+S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "order-only replacement and additive selection coalesce"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement and additive selection coalesce")
 
-S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:143
+S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "unchanged normalized selection publishes nothing"
     report.expect(publications.isEmpty, cppID: id,
                   message: "unchanged normalized selection publishes nothing")
 
-S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:145
+S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "selection gestures never mutate document or history"
     report.expect(session.document.revision == revision
         && session.document.history.currentIdentity == history
         && session.document.isDirty == dirty,
         cppID: id, message: "selection gestures never mutate document or history")
 
-S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:151
+S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "deletion prunes membership and preserves survivor order"
     report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
                   cppID: id, message: "deletion prunes membership and preserves survivor order")
 
-S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:165
+S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "viewport dimensions are pushed into the session camera"
     report.expect(
         gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
         cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
 
-S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:168
+S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera bounds derive from viewport, document extent, and projection"
     report.expect(
         gridCameraNear(first.minHScroll, expectedMin)
             && gridCameraNear(first.maxHScroll,
@@ -1373,90 +1381,107 @@ S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:168
             && gridCameraNear(first.maxVScroll, expectedMaxV),
         cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
 
-S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:174
+S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "first viewport push homes vertically within camera bounds"
     report.expect(
         first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
         cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
 
-S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:177
+S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "published scales equal the session camera snapshot"
     report.expect(
         gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
         cppID: viewportID, message: "published scales equal the session camera snapshot")
 
-S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:188
+S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "identical viewport push preserves fractional offsets and publishes nothing"
     report.expect(
         session.camera.snapshot == fractional && counters.camera == 0,
         cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
 
-S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:196
+S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "roll-height increase reclamps vertical scroll"
     report.expect(
         tallViewport.maxVScroll < shortHeight.maxVScroll
             && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
         cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
 
-S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:211
+S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "double-font push applies the rounded font-relative defaults"
     report.expect(
         gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
         cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
 
-S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:214
+S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "font push back restores the exact earlier scale"
     report.expect(
         gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
         cppID: viewportID, message: "font push back restores the exact earlier scale")
 
-S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:217
+S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "each effective font push publishes exactly once"
     report.expect(
         counters.camera == 2,
         cppID: viewportID, message: "each effective font push publishes exactly once")
 
-S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:232
+S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pushed font defines time and key-height minimums"
     report.expect(
         gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
         cppID: viewportID, message: "pushed font defines time and key-height minimums")
 
-S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:235
+S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pushed font defines time and key-height maximums"
     report.expect(
         gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
         cppID: viewportID, message: "pushed font defines time and key-height maximums")
 
-S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:255
+S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "document shrink privately reconciles extent and reclamps horizontal scroll"
     report.expect(
         farID != nil && expandedLength > originalLength
             && session.timeline.lengthTicks < expandedLength
             && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
         cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
-S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:277
+S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "generated time marks stay inside the one-viewport culling window"
     report.expect(
         !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
         cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
 
-S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:280
+S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "generated time marks cover the visible plot"
     report.expect(
         (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
-S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:286
+S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera movement does not alter noteSummary document state"
     report.expect(
         grid.noteSummary == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
-S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:314
+S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "known note rectangle equals the camera projection"
     report.expect(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
-S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:322
+S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pre-roll mask presence follows the projected tick-zero position"
     report.expect(
         maskCount == (zeroX > 0 ? 1 : 0),
         cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
-S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:334
+S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "beginPointer selects the note under the projected rectangle"
     report.expect(
         session.selectedNotes.contains(originalNote.id),
         cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
-S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:352
+S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
     report.expect(
         previewRect.map {
             gridCameraNear($0.x, session.camera.displayX(
@@ -1465,47 +1490,55 @@ S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:352
         } ?? false,
         cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
 
-S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:363
+S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "endPointer commits one revision at the snapped tick and pitch"
     report.expect(
         session.document.revision == originalRevision + 1
             && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
         cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
 
-S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:407
+S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "draw drag on an empty row adds one snapped note"
     report.expect(
         session.document.revision == drawRevision + 1
             && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
         cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
-S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:421
+S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "right-drag band selects exactly the visible intersecting notes"
     report.expect(
         session.selectedNotes == visibleIDs,
         cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
-S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:430
+S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "inputCancelled discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
 
-S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:437
+S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "Escape discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "Escape discards an active gesture without document mutation")
 
-S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:445
+S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "press outside projected pitch rows is rejected"
     report.expect(
         session.document.revision == cancelRevision,
         cppID: projectionID, message: "press outside projected pitch rows is rejected")
 
-S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:480
+S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "ensureTickVisible uses the reveal fraction in one publication"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
         cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
 
-S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:493
+S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "preferEnd true aligns an oversized range to the right edge"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(
@@ -1514,34 +1547,40 @@ S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:493
                     + 1 / grid.devicePixelRatio),
         cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
-S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:509
+S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "preferEnd false aligns an oversized range to its start"
     report.expect(
         counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
         cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
-S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:517
+S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "ensureKeyVisible aligns the bottom pitch at the viewport edge"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
         cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
 
-S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:521
+S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "presenter scroll values track the revealed session camera"
     report.expect(
         gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
             && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
         cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
-S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:541
+S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "redundant, non-finite, hidden, and already-visible navigation is silent"
     report.expect(
         counters.camera == before,
         cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
-S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:547
+S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "direct edit-cursor change neither moves camera nor republishes presenter cursor"
     report.expect(
         session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
         cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
 
-S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:550
+S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera navigation is isolated from document, playback, dirty state, and history"
     report.expect(
         counters.document == 0 && counters.playback == 0 && counters.cursor == 1
             && session.document.revision == revision && session.document.isDirty == dirty
@@ -1549,22 +1588,26 @@ S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:550
             && session.document.history.canRedo == canRedo,
         cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
 
-S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:568
+S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "committed document edit performs no standalone camera publication"
     report.expect(
         inserted?.count == 1 && counters.camera == 0,
         cppID: isolationID, message: "committed document edit performs no standalone camera publication")
 
-S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:571
+S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
     report.expect(
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
-S046 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:809
+S046 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "overshot right-edge drag stops at one snap cell"
     report.expect(
         session.document.note(a).map { Int($0.duration) == snap } == true,
         cppID: id, message: "overshot right-edge drag stops at one snap cell")
 
-S047 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:991
+S047 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "\(reason) cancel discards the gesture, records the reason, and keeps the summary"
         report.expect(
             session.document.revision == cancelRevision
                 && session.document.notes(in: grid.trackIndex).count == cancelCount
@@ -1574,7 +1617,8 @@ S047 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swi
             cppID: id,
             message: "\(reason) cancel discards the gesture, records the reason, and keeps the summary")
 
-S048 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:1005
+S048 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "idle Escape clears selection without a cancel reason or mutation"
     report.expect(
         session.selectedNotes.isEmpty && session.document.revision == escapeRevision
             && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
@@ -1582,41 +1626,54 @@ S048 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swi
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
 
-S049 | openRoute101 | src/checks/editorqml/tst_ShellGridInput.qml:70
+S049 | openRoute101 | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mus_route101"
     shell = shellComponent.createObject(null); shell.requestActivate(); session.openProjectAndSong(bootstrap.projectRoot, "mus_route101"); waitForNative(songOpen); tryVerify(renderedNoteCount > 0)
 
-S050 | test_drawMoveNeighborTrim draws | src/checks/editorqml/tst_ShellGridInput.qml:191
+S050 | test_drawMoveNeighborTrim draws | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     freeLane(12) guard; left drags draw moving (tick, 2*snap) and neighbor (tick+4*snap, 4*snap) with exact tick/duration/pitch; count grows by one per drag
 
-S051 | test_drawMoveNeighborTrim moves | src/checks/editorqml/tst_ShellGridInput.qml:191
+S051 | test_drawMoveNeighborTrim moves | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     body drag commits moved.tick == tick+3*snap (duration kept) and neighbor trimmed to tick+5*snap/duration 3*snap; gridNote_ face exists, is visible, and tracks the moved tick
 
-S052 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml:262
+S052 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     trailing right-edge drag clamps to (tick, snap); leading left-edge drag clamps to (leadingEnd-snap, snap)
 
-S053 | test_undoRedoRerenders | src/checks/editorqml/tst_ShellGridInput.qml:323
+S053 | test_undoRedoRerender | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     drawn note renders; StandardKey.Undo removes it and its face (renderedNoteCount back to baseline); StandardKey.Redo restores exact tick/duration and the face
 
-S054 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml:371
+S054 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     first fully bandable note starts unselected; right-drag band commits selected through begin/update/endRightPointer
 
-S055 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml:388
+S055 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     held right band previews selection; Escape restores noteSummary with no document edit and leaves lastCancelReason untouched
 
-S056 | test_escapeCancel idle | src/checks/editorqml/tst_ShellGridInput.qml:388
+S056 | test_escapeCancel idle | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     idle click selects; idle Escape clears selection while note count, every published field, appliedRevisionText and lastCancelReason stay put
 
-S057 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml:447
+S057 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     real right press/move plus production inputCancelled(1) restores noteSummary with lastCancelReason 1 (QML cannot synthesize QEvent::UngrabMouse; same slot as onCanceled)
 
-S058 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml:470
+S058 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "mus_route101"
     grid.setTrack(1) publishes trackIndex 1 with all notes/faces on track 1; session.openSong("mus_route101") replaces the grid in place (same window, tabCount 1, pendingCloseId -1, new grid object) and resets trackIndex 0 with published notes
 
-S059 | test_focusedRouting keys | src/checks/editorqml/tst_ShellGridInput.qml:507
+S059 | test_focusedRouting keys | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     left click selects; actionEnabled roll.nudge_right; Right nudges tick by one snap; B toggles pencilMode true and auto-repeat B is consumed without retoggling
 
-S060 | test_focusedRouting mid-gesture | src/checks/editorqml/tst_ShellGridInput.qml:507
+S060 | test_focusedRouting mid-gesture | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     held left press: Delete blocked (noteSummary unchanged); B toggles Pencil twice with notes unchanged; release commits nothing
 
-S061 | test_bareSpace | src/checks/editorqml/tst_ShellGridInput.qml:558
+S061 | test_bareSpace | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
     actionEnabled transport.play_pause; bare Space with grid focus starts transport (playhead.playing) with noteSummary unchanged; second Space stops it

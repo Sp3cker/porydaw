@@ -4,7 +4,6 @@ Reference revision: e3a54cb20be8167db96fdeb46c819581e3dec1f8
 Original: src/checks/swiftrollgated/chromevisuals.cpp
 Original SHA-256: fb16ea07001c2c341b736ab109630e712f3e52c06079bb24c64903ed21949bda
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 QML counterpart: src/checks/editorqml/tst_ShellChromeVisuals.qml
 QML SHA-256: bfb04f7eb6b624eecaa95735b5879aa71872281af70a813bd218afb31563933e
 Probe counterpart: src/checks/editorqml/GatedVisualsProbe.swift
@@ -25,7 +24,7 @@ Chrome raster parity for the swiftrollgated surface: C4/C#4 row role colors, key
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
 
 Execution and ownership
@@ -219,7 +218,7 @@ Original expression:
 
 A005 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:154
 Disposition: MATCHED
-Mapping: S048 (test_chromeRasterParity, tst_ShellChromeVisuals.qml:132-137) opens the retained fixture through the production session and observes songOpen plus published notes on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S048 (test_chromeRasterParity, tst_ShellChromeVisuals.qml) opens the retained fixture through the production session and observes songOpen plus published notes on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     gridcheck::NativeScene scene;
@@ -231,7 +230,7 @@ Original expression:
 
 A006 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:158
 Disposition: MATCHED
-Mapping: S048 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:136) executes the same observation, notes published before raster probes on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S048 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, notes published before raster probes on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -240,7 +239,7 @@ Original expression:
 
 A007 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:174
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:147) executes the same observation, roll plot mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, roll plot mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     QQuickItem *const plot =
@@ -263,7 +262,7 @@ Original expression:
 
 A008 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:175
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:148) executes the same observation, gutter mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, gutter mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -272,7 +271,7 @@ Original expression:
 
 A009 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:176
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:150) executes the same observation, piano grid surface mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, piano grid surface mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -281,7 +280,7 @@ Original expression:
 
 A010 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:177
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:151) executes the same observation, row layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, row layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -290,7 +289,7 @@ Original expression:
 
 A011 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:178
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:152) executes the same observation, time layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, time layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -299,7 +298,7 @@ Original expression:
 
 A012 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:179
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:153) executes the same observation, keyboard layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, keyboard layer mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -308,7 +307,7 @@ Original expression:
 
 A013 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:180
 Disposition: MATCHED
-Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:154) executes the same observation, hover chip mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S049 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, hover chip mounted on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -317,7 +316,7 @@ Original expression:
 
 A014 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:184
 Disposition: MATCHED
-Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:156) executes the same observation, row primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, row primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
@@ -328,7 +327,7 @@ Original expression:
 
 A015 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:185
 Disposition: MATCHED
-Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:159) executes the same observation, time primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, time primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -337,7 +336,7 @@ Original expression:
 
 A016 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:186
 Disposition: MATCHED
-Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:162) executes the same observation, keyboard primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S050 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, keyboard primitives drawn on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -346,7 +345,7 @@ Original expression:
 
 A017 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:190
 Disposition: MATCHED
-Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:168) executes the same observation, row height published on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, row height published on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const qreal rowHeight = grid->property("rowHeight").toDouble();
@@ -357,7 +356,7 @@ Original expression:
 
 A018 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:191
 Disposition: MATCHED
-Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:169) executes the same observation, keyboard width published on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, keyboard width published on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -366,7 +365,7 @@ Original expression:
 
 A019 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:195
 Disposition: MATCHED
-Mapping: S052 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:176) executes the same observation, rendered frame grabbed on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S052 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, rendered frame grabbed on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     QImage image;
@@ -376,7 +375,7 @@ Original expression:
 
 A020 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:196
 Disposition: MATCHED
-Mapping: S052 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:176) executes the same observation, grab carries device pixels on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S052 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, grab carries device pixels on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -385,7 +384,7 @@ Original expression:
 
 A021 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:202
 Disposition: MATCHED
-Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:188) executes the same observation, horizontal scroll finite on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, horizontal scroll finite on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const QColor natural = themes::color(themes::Role::song_view_piano_roll_background);
@@ -398,7 +397,7 @@ Original expression:
 
 A022 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:203
 Disposition: MATCHED
-Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:189) executes the same observation, vertical scroll finite on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S051 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, vertical scroll finite on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -407,7 +406,7 @@ Original expression:
 
 A023 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:214
 Disposition: MATCHED
-Mapping: S053 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:215) executes the same observation, C4/C#4 role colors exposed on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S053 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, C4/C#4 role colors exposed on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const qreal naturalY = rowCenter(kNaturalPitch, rowHeight) - cameraScrollY;
     const qreal accidentalY = rowCenter(kAccidentalPitch, rowHeight) - cameraScrollY;
@@ -425,7 +424,7 @@ Original expression:
 
 A024 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:216
 Disposition: MATCHED
-Mapping: S053 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:216) executes the same observation, quarter-region coverage on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S053 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, quarter-region coverage on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -435,7 +434,7 @@ Original expression:
 
 A025 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:225
 Disposition: MATCHED
-Mapping: S054 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:222) executes the same observation, C4 natural key role on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S054 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, C4 natural key role on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const QPoint naturalKey = gutter->mapToScene(QPointF(keyboardWidth * 0.25, naturalY)).toPoint();
@@ -451,7 +450,7 @@ Original expression:
 
 A026 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:226
 Disposition: MATCHED
-Mapping: S054 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:226) executes the same observation, C#4 black-key role on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S054 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, C#4 black-key role on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -460,7 +459,7 @@ Original expression:
 
 A027 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:235
 Disposition: MATCHED
-Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:240) executes the same observation, keyboard separator found on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, keyboard separator found on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const qreal cBoundary = (127.0 - kNaturalPitch + 1.0) * rowHeight - cameraScrollY;
@@ -476,7 +475,7 @@ Original expression:
 
 A028 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:236
 Disposition: MATCHED
-Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:241) executes the same observation, roll separator found on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, roll separator found on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -485,7 +484,7 @@ Original expression:
 
 A029 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:237
 Disposition: MATCHED
-Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:246) executes the same observation, one continuous C4 line within one device row at dpr 1 (independent per-side snapping recorded) on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S055 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, one continuous C4 line within one device row at dpr 1 (independent per-side snapping recorded) on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -494,7 +493,7 @@ Original expression:
 
 A030 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:249
 Disposition: MATCHED
-Mapping: S056 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:262) executes the same observation, bar distinguishability precondition on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S056 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, bar distinguishability precondition on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const QColor barInk = themes::color(themes::Role::song_view_grid);
@@ -513,7 +512,7 @@ Original expression:
 
 A031 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:252
 Disposition: MATCHED
-Mapping: S056 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:265) executes the same observation, beat distinguishability precondition on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S056 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, beat distinguishability precondition on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -524,7 +523,7 @@ Original expression:
 
 A032 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:260
 Disposition: MATCHED
-Mapping: S057 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:271) executes the same observation, bar line composited over both rows on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S057 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, bar line composited over both rows on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     // TimeAxis restarts its beat/bar lattice at each signature event, including
@@ -539,7 +538,7 @@ Original expression:
 
 A033 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:264
 Disposition: MATCHED
-Mapping: S057 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:274) executes the same observation, beat line composited over both rows on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S057 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, beat line composited over both rows on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const auto beatProbes = findLine(image, *surface, visibleLeft, visibleRight, naturalY,
                                      accidentalY, expectedBeatNatural, expectedBeatAccidental);
@@ -550,7 +549,7 @@ Original expression:
 
 A034 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:271
 Disposition: MATCHED
-Mapping: S058 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:283) executes the same observation, gutter wheel scrolls camera on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S058 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, gutter wheel scrolls camera on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const qreal initialScrollY = grid->property("cameraScrollY").toDouble();
@@ -564,7 +563,7 @@ Original expression:
 
 A035 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:281
 Disposition: MATCHED
-Mapping: S059 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:294) executes the same observation, hover pitch published and chip shown on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S059 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, hover pitch published and chip shown on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     const auto leavePointer =
@@ -582,7 +581,7 @@ Original expression:
 
 A036 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:286
 Disposition: MATCHED
-Mapping: S059 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml:299) executes the same observation, chip centered on hovered row on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
+Mapping: S059 (test_chromeRasterParity, src/checks/editorqml/tst_ShellChromeVisuals.qml) executes the same observation, chip centered on hovered row on the production Swift shell (shell-chrome-visuals entry, live GridPalette roles, grabImage raster); no QWidget layer exists in the Swift app.
 Source context since previous assertion:
     const qreal chipCenterY = chip->mapToScene(QPointF(0.0, chip->height() * 0.5)).y();
     const qreal oneDevicePixel = 1.0 / image.devicePixelRatio();
@@ -597,56 +596,68 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:111
+S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
     report.expect(session.selectedNoteOrder == [b, a]
         && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
         cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
-S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:116
+S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "deselecting and re-adding appends the note"
     report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
                        what: "deselecting and re-adding appends the note")
 
-S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:119
+S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "replacement preserves first occurrence and removes duplicates"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "replacement preserves first occurrence and removes duplicates")
 
-S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:123
+S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "band keeps press order before newly covered notes"
     report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")
 
-S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:127
+S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "band cancellation restores selection order"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
 
-S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:131
+S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "order-only replacement publishes the selection domain"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement publishes the selection domain")
 
-S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:138
+S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "order-only replacement and additive selection coalesce"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement and additive selection coalesce")
 
-S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:143
+S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "unchanged normalized selection publishes nothing"
     report.expect(publications.isEmpty, cppID: id,
                   message: "unchanged normalized selection publishes nothing")
 
-S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:145
+S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "selection gestures never mutate document or history"
     report.expect(session.document.revision == revision
         && session.document.history.currentIdentity == history
         && session.document.isDirty == dirty,
         cppID: id, message: "selection gestures never mutate document or history")
 
-S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:151
+S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "deletion prunes membership and preserves survivor order"
     report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
                   cppID: id, message: "deletion prunes membership and preserves survivor order")
 
-S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:165
+S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "viewport dimensions are pushed into the session camera"
     report.expect(
         gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
         cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
 
-S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:168
+S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera bounds derive from viewport, document extent, and projection"
     report.expect(
         gridCameraNear(first.minHScroll, expectedMin)
             && gridCameraNear(first.maxHScroll,
@@ -654,90 +665,107 @@ S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:168
             && gridCameraNear(first.maxVScroll, expectedMaxV),
         cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
 
-S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:174
+S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "first viewport push homes vertically within camera bounds"
     report.expect(
         first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
         cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
 
-S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:177
+S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "published scales equal the session camera snapshot"
     report.expect(
         gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
         cppID: viewportID, message: "published scales equal the session camera snapshot")
 
-S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:188
+S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "identical viewport push preserves fractional offsets and publishes nothing"
     report.expect(
         session.camera.snapshot == fractional && counters.camera == 0,
         cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
 
-S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:196
+S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "roll-height increase reclamps vertical scroll"
     report.expect(
         tallViewport.maxVScroll < shortHeight.maxVScroll
             && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
         cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
 
-S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:211
+S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "double-font push applies the rounded font-relative defaults"
     report.expect(
         gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
         cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
 
-S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:214
+S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "font push back restores the exact earlier scale"
     report.expect(
         gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
         cppID: viewportID, message: "font push back restores the exact earlier scale")
 
-S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:217
+S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "each effective font push publishes exactly once"
     report.expect(
         counters.camera == 2,
         cppID: viewportID, message: "each effective font push publishes exactly once")
 
-S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:232
+S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pushed font defines time and key-height minimums"
     report.expect(
         gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
         cppID: viewportID, message: "pushed font defines time and key-height minimums")
 
-S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:235
+S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pushed font defines time and key-height maximums"
     report.expect(
         gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
         cppID: viewportID, message: "pushed font defines time and key-height maximums")
 
-S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:255
+S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "document shrink privately reconciles extent and reclamps horizontal scroll"
     report.expect(
         farID != nil && expandedLength > originalLength
             && session.timeline.lengthTicks < expandedLength
             && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
         cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
 
-S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:277
+S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "generated time marks stay inside the one-viewport culling window"
     report.expect(
         !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
         cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
 
-S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:280
+S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "generated time marks cover the visible plot"
     report.expect(
         (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
         cppID: projectionID, message: "generated time marks cover the visible plot")
 
-S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:286
+S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera movement does not alter noteSummary document state"
     report.expect(
         grid.noteSummary == summaryBeforeCameraMove,
         cppID: projectionID, message: "camera movement does not alter noteSummary document state")
 
-S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:314
+S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "known note rectangle equals the camera projection"
     report.expect(
         projected,
         cppID: projectionID, message: "known note rectangle equals the camera projection")
 
-S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:322
+S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "pre-roll mask presence follows the projected tick-zero position"
     report.expect(
         maskCount == (zeroX > 0 ? 1 : 0),
         cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
 
-S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:334
+S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "beginPointer selects the note under the projected rectangle"
     report.expect(
         session.selectedNotes.contains(originalNote.id),
         cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
-S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:352
+S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "one-cell drag publishes the snapped tick and pitch preview"
     report.expect(
         previewRect.map {
             gridCameraNear($0.x, session.camera.displayX(
@@ -746,47 +774,55 @@ S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:352
         } ?? false,
         cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
 
-S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:363
+S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "endPointer commits one revision at the snapped tick and pitch"
     report.expect(
         session.document.revision == originalRevision + 1
             && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
         cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
 
-S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:407
+S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "draw drag on an empty row adds one snapped note"
     report.expect(
         session.document.revision == drawRevision + 1
             && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
         cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
 
-S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:421
+S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "right-drag band selects exactly the visible intersecting notes"
     report.expect(
         session.selectedNotes == visibleIDs,
         cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
-S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:430
+S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "inputCancelled discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
 
-S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:437
+S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "Escape discards an active gesture without document mutation"
     report.expect(
         session.document.revision == cancelRevision
             && session.document.notes(in: grid.trackIndex).count == cancelCount,
         cppID: projectionID, message: "Escape discards an active gesture without document mutation")
 
-S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:445
+S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "press outside projected pitch rows is rejected"
     report.expect(
         session.document.revision == cancelRevision,
         cppID: projectionID, message: "press outside projected pitch rows is rejected")
 
-S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:480
+S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "ensureTickVisible uses the reveal fraction in one publication"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
         cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
 
-S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:493
+S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "preferEnd true aligns an oversized range to the right edge"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(
@@ -795,34 +831,40 @@ S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:493
                     + 1 / grid.devicePixelRatio),
         cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
 
-S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:509
+S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "preferEnd false aligns an oversized range to its start"
     report.expect(
         counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
         cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
 
-S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:517
+S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "ensureKeyVisible aligns the bottom pitch at the viewport edge"
     report.expect(
         counters.camera == before + 1
             && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
         cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
 
-S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:521
+S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "presenter scroll values track the revealed session camera"
     report.expect(
         gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
             && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
         cppID: isolationID, message: "presenter scroll values track the revealed session camera")
 
-S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:541
+S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "redundant, non-finite, hidden, and already-visible navigation is silent"
     report.expect(
         counters.camera == before,
         cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
 
-S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:547
+S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "direct edit-cursor change neither moves camera nor republishes presenter cursor"
     report.expect(
         session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
         cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
 
-S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:550
+S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "camera navigation is isolated from document, playback, dirty state, and history"
     report.expect(
         counters.document == 0 && counters.playback == 0 && counters.cursor == 1
             && session.document.revision == revision && session.document.isDirty == dirty
@@ -830,61 +872,77 @@ S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:550
             && session.document.history.canRedo == canRedo,
         cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
 
-S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:568
+S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "committed document edit performs no standalone camera publication"
     report.expect(
         inserted?.count == 1 && counters.camera == 0,
         cppID: isolationID, message: "committed document edit performs no standalone camera publication")
 
-S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:571
+S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
     report.expect(
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
-S046 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift:585
+S046 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "viewport configuration publishes positive metric scale"
     report.expect(
         gridCameraNear(grid.baseFontPx, 13) && gridCameraNear(grid.devicePixelRatio, 2)
             && grid.rowHeight > 0 && grid.beatWidth > 0 && grid.keyboardWidth > 0,
         cppID: id, message: "viewport configuration publishes positive metric scale")
 
-S047 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift:617
+S047 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "noteSummary JSON carries every document note field and selection flag"
     report.expect(
         summaryMatches,
         cppID: id, message: "noteSummary JSON carries every document note field and selection flag")
 
-S048 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:132
+S048 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: message "timelineQuickPianoGridRows"
     verify(session.songOpen) after openProjectAndSong plus renderedNoteCount > 0: the retained fixture opens in the production shell with published notes.
 
-S049 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:147
+S049 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     verify(plot/gutter/piano/rows/time/keys/chip/fills !== null): every chrome layer the original descends into is mounted.
 
-S050 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:156
+S050 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     primitiveCount(rows/time/keys, clip) > 0: each layer draws visible primitives.
 
-S051 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:168
+S051 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     rowHeight/keyboardWidth > 0 and finite cameraScrollX/cameraScrollY: published chrome metrics.
 
-S052 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:176
+S052 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     grabImage(shell.contentItem) renders a frame with device pixels.
 
-S053 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:215
+S053 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     C4/C#4 row centers expose the live rollBackground/accidentalLane roles across the band with quarter coverage.
 
-S054 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:222
+S054 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: message "the keyboard C4 separator is role-colored"
     gutter samples match keyboardNatural/keyboardBlack at C4/C#4.
 
-S055 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:240
+S055 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: message "the theme keeps beat lines distinguishable from both row roles"
     keyboard and roll C4 separators are role-colored and agree within one device row (dpr-1 independent snapping).
 
-S056 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:262
+S056 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     bar/beat composites stay distinguishable from both row roles.
 
-S057 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:271
+S057 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     a visible bar line and beat line composite the grid role over both rows (full-column scan).
 
-S058 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:283
+S058 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     mouseWheel over the gutter moves cameraScrollY by more than 0.5.
 
-S059 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml:294
+S059 | test_chromeRasterParity | src/checks/editorqml/tst_ShellChromeVisuals.qml
+Anchor: function
     gutter hover publishes hoverKey with a visible chip centered on the hovered pitch row.
 
 Shared helper: src/checks/editorqml/GatedVisualsProbe.swift (relative-alpha/sourceOver composites from PaletteMath) and src/checks/editorqml/GatedVisualsHelpers.js (test-side sampling math); lane entries in src/checks/editorqml/ShellQmlTests.swift.

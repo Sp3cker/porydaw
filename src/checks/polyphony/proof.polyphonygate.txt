@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/polyphony/polyphonygate.cpp
 Original SHA-256: a774e7d77d8958c264bc662a3e488340f711bee41490f756bc6f56d72134de97
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -27,7 +26,7 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter polycheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 The native gate harness is not built: the T7A runtime cutover removed
@@ -253,4 +252,3 @@ Remaining original source (closing sequence and helper bodies):
       return QTest::qExec(&test, arguments);
   }
 
-Tally: 15 sites: MATCHED 0, PARTIAL 0, GAP 15, NATIVE 0.

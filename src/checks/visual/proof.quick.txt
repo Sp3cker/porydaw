@@ -4,7 +4,6 @@ Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/quick.cpp
 Original SHA-256: 2578af0aa756bab9d65068a4bf2a6b40ca068ae2ebef2b4c27910c5db808494a
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ This file: 17 assertion sites: 5 GAP, 12 RETIRED-REPRESENTATION. Dispositions ta
 
 Verification
 Command: deno task verify --filter visual --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The visual-* harnesses compare against frozen baselines under
 src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
 targets, their runVisual*Check entry points have zero callsites, and they are

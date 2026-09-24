@@ -5,9 +5,7 @@ Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_timerange.cpp
 Original SHA-256: f820b0e24134fb5daeca2bdd42f668ecc2a7feff3e25cfa1a94ce5ba9ae2005b
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 Covered native implementation: src/core/songdocument_timeeditor*.cpp, src/core/songdocument.cpp :: SongDocument::removeTimeRange, insertBlankTime, duplicateTimeRange, tempo/signature paths, buildTimeline.
 Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
@@ -2335,87 +2333,103 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
-S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:196
+S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "scoped gap removal commits" #1
   report.expect(document.removeTime(TimeRange(startTick: 20, endTick: 50),
                                         scope: TimeScope(tracks: [0])),
                     cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                     message: "scoped gap removal commits")
 
-S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:200
+S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "crossing note trims and later note ripples"
   report.expectEqual(["0:60:80", "80:60:10"], document.notes(in: 0).map(noteShape),
                          cppID: "editcheck/EditCheckTest::timeRangeRemove",
                          what: "crossing note trims and later note ripples")
 
-S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:203
+S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "last in-range value survives at the seam"
   report.expectEqual("20:44", document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
                          cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
                          what: "last in-range value survives at the seam")
 
-S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:206
+S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unscoped track is unchanged"
   report.expectEqual(untouched?.tick, document.note(ids[2])?.tick,
                          cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                          what: "unscoped track is unchanged")
 
-S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:210
+S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "single undo restores scoped removal"
   report.expectEqual(before, coreTimeBytes(document),
                          cppID: "editcheck/EditCheckTest::timeRangeRemove",
                          what: "single undo restores scoped removal")
 
-S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:221
+S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "whole-song close commits"
   report.expect(whole.removeTime(TimeRange(startTick: 61, endTick: 65),
                                     scope: TimeScope(wholeSong: true)),
                     cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                     message: "whole-song close commits")
 
-S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:225
+S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "globals are rescued to the closing seam"
   report.expect(whole.timeSignatures.contains { $0.tick == 61 && $0.numerator == 3 } &&
           whole.state.tempo.contains { $0.tick == 61 } &&
           whole.rawChunks[0].events.contains { $0.metaType == 0x06 && $0.tick == 61 },
           cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
           message: "globals are rescued to the closing seam")
 
-S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:235
+S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "whole-song removal closes every stored end tick"
   report.expect(closedEnds,
           cppID: "editcheck/EditCheckTest::songWholeSongRemove",
           message: "whole-song removal closes every stored end tick")
 
-S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:239
+S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores every stored end tick"
   report.expectEqual(oldEnd, whole.rawChunks.map(\.endTick),
                          cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                          what: "one undo restores every stored end tick")
 
-S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:242
+S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores globals, events, and end-of-track state"
   report.expectEqual(wholeBefore, coreTimeBytes(whole),
                          cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
                          what: "one undo restores globals, events, and end-of-track state")
 
-S011 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:384
+S011 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "blank insertion commits"
   report.expect(document.insertBlankTime(TimeRange(startTick: 40, endTick: 45),
                                              scope: TimeScope(tracks: [0])),
                     cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                     message: "blank insertion commits")
 
-S012 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:389
+S012 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "crossing note splits around a silent interval"
   report.expectEqual(["35:60:5", "45:60:5"], split.map(noteShape),
                          cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                          what: "crossing note splits around a silent interval")
 
-S013 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:392
+S013 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "split right half receives a new identity"
   report.expect(split.count == 2 && split[0].id == crossingID && split[1].id != crossingID,
                     cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                     message: "split right half receives a new identity")
 
-S014 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:395
+S014 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "later note shifts and preserves identity"
   report.expectEqual(Tick(65), document.note(laterID)?.tick,
                          cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                          what: "later note shifts and preserves identity")
 
-S015 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:404
+S015 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the split"
   report.expectEqual(before, coreTimeBytes(document),
                          cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                          what: "one undo restores the split")
 
-S016 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:522
+S016 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "empty and reserved ranges create no state or history"
           report.expect(!noopDoc.removeTime(TimeRange(startTick: 20, endTick: 20), scope: TimeScope()) &&
               !noopDoc.insertBlankTime(TimeRange(startTick: 20, endTick: 10), scope: TimeScope()) &&
               !noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: TimeDefaults.noTick),
@@ -2424,56 +2438,65 @@ S016 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:522
               cppID: "editcheck/EditCheckTest::timeRangeNoOps",
               message: "empty and reserved ranges create no state or history")
 
-S017 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:585
+S017 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "tick-zero insertion is an ordinary right shift"
   report.expect(zero.insertBlankTime(TimeRange(startTick: 0, endTick: 1),
                                          scope: TimeScope(tracks: [0])) &&
           zero.notes(in: 0).contains { $0.tick == 1 && $0.duration == 2 },
           cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
           message: "tick-zero insertion is an ordinary right shift")
 
-S018 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:608
+S018 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "maximum-tick overflow rejects before candidate installation"
   report.expect(!overflow.insertBlankTime(TimeRange(startTick: 0, endTick: 1),
                                               scope: TimeScope(tracks: [0])) &&
           overflow.state == overflowBefore,
           cppID: "editcheck/EditCheckTest::timeRangeInsertBlankOverflow",
           message: "maximum-tick overflow rejects before candidate installation")
 
-S019 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:636
+S019 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "time duplication commits" #1
   report.expect(document.duplicateTime(TimeRange(startTick: 600, endTick: 620),
                                            scope: TimeScope(tracks: [0])),
                     cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
                     message: "time duplication commits")
 
-S020 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:641
+S020 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "clipped duplicates all receive fresh identities"
   report.expect(copies.count == 2 && copies.allSatisfy { !originalIDs.contains($0.id) },
                     cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
                     message: "clipped duplicates all receive fresh identities")
 
-S021 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:644
+S021 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "duplicate seeds the effective value at its destination seam"
   report.expect(document.lanePoints(track: 0, lane: .controller(7)).contains {
           $0.tick == 620 && $0.value == 33
       }, cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
       message: "duplicate seeds the effective value at its destination seam")
 
-S022 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:649
+S022 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the duplicated range transaction"
   report.expectEqual(before, coreTimeBytes(document),
                          cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
                          what: "one undo restores the duplicated range transaction")
 
-S023 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:798
+S023 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "blank insertion closes and resumes an unterminated note"
   report.expect(parts.count == 2 && parts[0].id == leftID && parts[0].duration == 20 &&
           parts[1].id != leftID && parts[1].isUnterminated,
           cppID: "editcheck/EditCheckTest::timeRangeUnterminated",
           message: "blank insertion closes and resumes an unterminated note")
 
-S024 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:822
+S024 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "signature, opaque global and tempo duplicate with their stream rules"
   report.expect(globals.timeSignatures.contains { $0.tick == 980 && $0.numerator == 3 } &&
           globals.rawChunks[0].events.contains { $0.tick == 985 && $0.metaType == 0x01 } &&
           globals.state.tempo.contains { $0.tick == 990 },
           cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
           message: "signature, opaque global and tempo duplicate with their stream rules")
 
-S025 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:906
+S025 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "orphan note bytes use half-open remove and pinned seam ordering"
   report.expect(!hasChannel(orphanEvents, tick: 110, type: 0x9, key: 62) &&
           hasChannel(orphanEvents, tick: 100, type: 0x8, key: 63) &&
           hasChannel(orphanEvents, tick: 100, type: 0x9, key: 64) &&
@@ -2481,193 +2504,236 @@ S025 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:906
           cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
           message: "orphan note bytes use half-open remove and pinned seam ordering")
 
-S026 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:252
+S026 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #1
   report.expectEqual(2, trim.engineTracks.usedTrackCount, cppID: id,
                                what: "timeRangeFile fixture loads two editable tracks")
 
-S027 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:262
+S027 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 0 on/off pairs consistent before removal"
   report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
                           message: "track 0 on/off pairs consistent before removal")
 
-S028 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:264
+S028 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 1 on/off pairs consistent before removal"
   report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
                           message: "track 1 on/off pairs consistent before removal")
 
-S029 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:274
+S029 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 0 on/off pairs consistent after removal"
   report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
                           message: "track 0 on/off pairs consistent after removal")
 
-S030 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:276
+S030 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 1 on/off pairs consistent after removal"
   report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
                           message: "track 1 on/off pairs consistent after removal")
 
-S031 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:279
+S031 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "two notes remain after the scoped removal"
   report.expectEqual(2, notes.count, cppID: id,
                                what: "two notes remain after the scoped removal")
 
-S032 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:281
+S032 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "crossing note keeps its start tick"
   report.expectEqual(Tick(0), notes.first?.tick, cppID: id,
                                what: "crossing note keeps its start tick")
 
-S033 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:283
+S033 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "crossing note trims to the rippled neighbor"
   report.expectEqual(min(earlierEnd, Tick(80)), notes.first?.duration, cppID: id,
                                what: "crossing note trims to the rippled neighbor")
 
-S034 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:285
+S034 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "later note ripples left by the span"
   report.expectEqual(Tick(80), notes.last?.tick, cppID: id,
                                what: "later note ripples left by the span")
 
-S035 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:287
+S035 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "later note keeps its duration"
   report.expectEqual(Tick(10), notes.last?.duration, cppID: id,
                                what: "later note keeps its duration")
 
-S036 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:290
+S036 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "removal preserves note identity"
   report.expectEqual(source.id, note.id, cppID: id,
                                    what: "removal preserves note identity")
 
-S037 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:292
+S037 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "removal preserves note velocity"
   report.expectEqual(source.velocity, note.velocity, cppID: id,
                                    what: "removal preserves note velocity")
 
-S038 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:296
+S038 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unscoped track events are byte-identical"
   report.expectEqual(other, trim.rawChunks[otherChunk].events, cppID: id,
                                    what: "unscoped track events are byte-identical")
 
-S039 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:301
+S039 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "removal adds one history entry"
   report.expectEqual(trimPosition + 1,
                                try coreEditHistoryCountAtTip(trim, report: report, cppID: id),
                                cppID: id, what: "removal adds one history entry")
 
-S040 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:306
+S040 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the removal"
   report.expectEqual(trimBefore, coreTimeBytes(trim), cppID: id,
                                what: "one undo restores the removal")
 
-S041 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:309
+S041 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the removal"
   report.expectEqual(trimAfter, coreTimeBytes(trim), cppID: id,
                                what: "one redo restores the removal")
 
-S042 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:311
+S042 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 0 on/off pairs consistent after redo"
   report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
                           message: "track 0 on/off pairs consistent after redo")
 
-S043 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:313
+S043 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track 1 on/off pairs consistent after redo"
   report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
                           message: "track 1 on/off pairs consistent after redo")
 
-S044 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:323
+S044 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #2
   report.expectEqual(2, branch.engineTracks.usedTrackCount, cppID: id,
                                what: "timeRangeFile fixture loads two editable tracks")
 
-S045 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:329
+S045 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "on/off pairs consistent before the edit"
   report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
                           message: "on/off pairs consistent before the edit")
 
-S046 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:333
+S046 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "duplicate branch commits"
   report.expect(branch.duplicateTime(TimeRange(startTick: 10, endTick: 40),
                                                    scope: TimeScope(tracks: [0])),
                               cppID: id, message: "duplicate branch commits")
 
-S047 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:337
+S047 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "insert branch commits"
   report.expect(branch.insertBlankTime(TimeRange(startTick: 10, endTick: 40),
                                                      scope: TimeScope(tracks: [0])),
                               cppID: id, message: "insert branch commits")
 
-S048 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:341
+S048 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "on/off pairs consistent after the edit"
   report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
                           message: "on/off pairs consistent after the edit")
 
-S049 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:345
+S049 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the branch"
   report.expectEqual(branchBefore, coreTimeBytes(branch), cppID: id,
                                what: "one undo restores the branch")
 
-S050 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:348
+S050 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the branch"
   report.expectEqual(branchAfter, coreTimeBytes(branch), cppID: id,
                                what: "one redo restores the branch")
 
-S051 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:350
+S051 | removalAndSeams | src/checks/editcheck/TimeChecks.swift
+Anchor: message "on/off pairs consistent after redo"
   report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
                           message: "on/off pairs consistent after redo")
 
-S052 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:516
+S052 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #4
   report.expectEqual(2, noopDoc.engineTracks.usedTrackCount, cppID: noopID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S053 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:529
+S053 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "reversed range rejects duplicate"
   report.expect(!noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: 10),
                                              scope: TimeScope()),
                       cppID: noopID, message: "reversed range rejects duplicate")
 
-S054 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:532
+S054 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "invalid track rejects remove"
   report.expect(!noopDoc.removeTime(TimeRange(startTick: 20, endTick: 30),
                                           scope: TimeScope(tracks: [99])),
                       cppID: noopID, message: "invalid track rejects remove")
 
-S055 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:535
+S055 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "invalid track rejects insert"
   report.expect(!noopDoc.insertBlankTime(TimeRange(startTick: 20, endTick: 30),
                                                scope: TimeScope(tracks: [99])),
                       cppID: noopID, message: "invalid track rejects insert")
 
-S056 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:538
+S056 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "invalid track rejects duplicate"
   report.expect(!noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: 30),
                                              scope: TimeScope(tracks: [99])),
                       cppID: noopID, message: "invalid track rejects duplicate")
 
-S057 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:545
+S057 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "rejected ranges add no history"
   report.expectEqual(noopPosition,
                            try coreEditHistoryCountAtTip(noopDoc, report: report,
                                                          cppID: noopID),
                            cppID: noopID, what: "rejected ranges add no history")
 
-S058 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:555
+S058 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "reserved end tick rejects remove"
   report.expect(!noopDoc.removeTime(TimeRange(startTick: 20,
                                                     endTick: TimeDefaults.noTick),
                                           scope: TimeScope(tracks: [0])),
                       cppID: noopID, message: "reserved end tick rejects remove")
 
-S059 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:559
+S059 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "reserved end tick rejects insert"
   report.expect(!noopDoc.insertBlankTime(TimeRange(startTick: 20,
                                                          endTick: TimeDefaults.noTick),
                                                scope: TimeScope(tracks: [0])),
                       cppID: noopID, message: "reserved end tick rejects insert")
 
-S060 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:567
+S060 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "sentinel rejections leave bytes unchanged"
   report.expectEqual(sentinelBefore, coreTimeBytes(noopDoc), cppID: noopID,
                            what: "sentinel rejections leave bytes unchanged")
 
-S061 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:569
+S061 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "sentinel rejections leave tempo unchanged"
   report.expectEqual(noopTempos, noopDoc.state.tempo, cppID: noopID,
                            what: "sentinel rejections leave tempo unchanged")
 
-S062 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:571
+S062 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "sentinel rejections add no history"
   report.expectEqual(sentinelPosition,
                            try coreEditHistoryCountAtTip(noopDoc, report: report,
                                                          cppID: noopID),
                            cppID: noopID, what: "sentinel rejections add no history")
 
-S063 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:363
+S063 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #1
   report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: splitID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S064 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:369
+S064 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "pre-insertion note (0,60,61) exists"
   report.expect(document.notes(in: 0).contains { $0.tick == 60 && $0.pitch == 61 },
                       cppID: splitID, message: "pre-insertion note (0,60,61) exists")
 
-S065 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:398
+S065 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "insertion adds one history entry"
   report.expectEqual(splitPosition + 1,
                            try coreEditHistoryCountAtTip(document, report: report,
                                                          cppID: splitID),
                            cppID: splitID, what: "insertion adds one history entry")
 
-S066 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:408
+S066 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the split"
   report.expectEqual(splitAfter, coreTimeBytes(document),
                            cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                            what: "one redo restores the split")
 
-S067 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:420
+S067 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #2
   report.expectEqual(2, lane.engineTracks.usedTrackCount, cppID: laneID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S068 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:436
+S068 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "lane-scoped insertion commits"
   report.expect(lane.insertBlankTime(TimeRange(startTick: 300, endTick: 320),
                                            scope: TimeScope(lanes: [
                                                TimeScope.ScopedLane(track: 0,
@@ -2675,229 +2741,283 @@ S068 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:436
                                            ])),
                       cppID: laneID, message: "lane-scoped insertion commits")
 
-S069 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:442
+S069 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "scoped lane point shifts right"
   report.expectEqual("320:10", lane.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == 320 }).map(coreTimePointShape),
             cppID: laneID, what: "scoped lane point shifts right")
 
-S070 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:445
+S070 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unscoped lane on the same track stays"
   report.expectEqual("300:20", lane.lanePoints(track: 0, lane: .controller(10))
             .first(where: { $0.tick == 300 }).map(coreTimePointShape),
             cppID: laneID, what: "unscoped lane on the same track stays")
 
-S071 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:448
+S071 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "same lane on another track stays"
   report.expectEqual("300:30", lane.lanePoints(track: 1, lane: .controller(7))
             .first(where: { $0.tick == 300 }).map(coreTimePointShape),
             cppID: laneID, what: "same lane on another track stays")
 
-S072 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:451
+S072 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "selected chunk end tick grows"
   report.expectEqual(selectedEnd + 20, lane.rawChunks[selectedChunk].endTick,
                            cppID: laneID, what: "selected chunk end tick grows")
 
-S073 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:453
+S073 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "untouched chunk end tick stays"
   report.expectEqual(untouchedEnd, lane.rawChunks[untouchedChunk].endTick,
                            cppID: laneID, what: "untouched chunk end tick stays")
 
-S074 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:457
+S074 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the lane insertion"
   report.expectEqual(laneBefore, coreTimeBytes(lane), cppID: laneID,
                            what: "one undo restores the lane insertion")
 
-S075 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:460
+S075 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the lane insertion"
   report.expectEqual(laneAfter, coreTimeBytes(lane), cppID: laneID,
                            what: "one redo restores the lane insertion")
 
-S076 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:471
+S076 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #3
   report.expectEqual(2, track.engineTracks.usedTrackCount, cppID: trackID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S077 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:489
+S077 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track-scoped insertion commits"
   report.expect(track.insertBlankTime(TimeRange(startTick: 400, endTick: 420),
                                             scope: TimeScope(tracks: [0])),
                       cppID: trackID, message: "track-scoped insertion commits")
 
-S078 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:492
+S078 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "scoped track note shifts right"
   report.expect(track.notes(in: 0).contains { $0.tick == 420 && $0.pitch == 62 },
                       cppID: trackID, message: "scoped track note shifts right")
 
-S079 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:494
+S079 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unscoped track note stays"
   report.expect(track.notes(in: 1).contains { $0.tick == 400 && $0.pitch == 63 },
                       cppID: trackID, message: "unscoped track note stays")
 
-S080 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:496
+S080 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "scoped chunk end tick grows"
   report.expectEqual(trackEnd + 20, track.rawChunks[trackChunk].endTick,
                            cppID: trackID, what: "scoped chunk end tick grows")
 
-S081 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:498
+S081 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unscoped chunk end tick stays"
   report.expectEqual(otherEnd, track.rawChunks[otherChunk].endTick,
                            cppID: trackID, what: "unscoped chunk end tick stays")
 
-S082 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:502
+S082 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the track insertion"
   report.expectEqual(trackBefore, coreTimeBytes(track), cppID: trackID,
                            what: "one undo restores the track insertion")
 
-S083 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:505
+S083 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the track insertion"
   report.expectEqual(trackAfter, coreTimeBytes(track), cppID: trackID,
                            what: "one redo restores the track insertion")
 
-S084 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:751
+S084 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #2
   report.expectEqual(2, unterminated.engineTracks.usedTrackCount, cppID: unterminatedID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S085 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:754
+S085 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(unterminatedID, "engine track 0 has no MIDI chunk")
 
-S086 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:763
+S086 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(unterminatedID, "unterminated source note missing")
 
-S087 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:766
+S087 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "raw note-on without a note-off is unterminated"
   report.expect(source.isUnterminated, cppID: unterminatedID,
                       message: "raw note-on without a note-off is unterminated")
 
-S088 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:770
+S088 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "blank insertion commits"
   report.expect(unterminated.insertBlankTime(TimeRange(startTick: 240, endTick: 250),
                                                    scope: TimeScope(tracks: [0])),
                       cppID: unterminatedID, message: "blank insertion commits")
 
-S089 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:778
+S089 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(unterminatedID, "split halves missing after insertion")
 
-S090 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:781
+S090 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "left half is terminated by the insertion"
   report.expect(!left.isUnterminated, cppID: unterminatedID,
                       message: "left half is terminated by the insertion")
 
-S091 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:778
+S091 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(unterminatedID, "split halves missing after insertion")
 
-S092 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:792
+S092 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "insertion emits source on, generated off, and resumed on"
   report.expect(hasChannel(unterminatedEvents, tick: 220, type: 0x9, key: 68) &&
                       hasChannel(unterminatedEvents, tick: 240, type: 0x8, key: 68) &&
                       hasChannel(unterminatedEvents, tick: 250, type: 0x9, key: 68),
                       cppID: unterminatedID,
                       message: "insertion emits source on, generated off, and resumed on")
 
-S093 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:804
+S093 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the unterminated insertion"
   report.expectEqual(unterminatedBefore, coreTimeBytes(unterminated),
                            cppID: unterminatedID,
                            what: "one undo restores the unterminated insertion")
 
-S094 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:808
+S094 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the unterminated insertion"
   report.expectEqual(unterminatedAfter, coreTimeBytes(unterminated),
                            cppID: unterminatedID,
                            what: "one redo restores the unterminated insertion")
 
-S095 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:657
+S095 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #1
   report.expectEqual(2, clipping.engineTracks.usedTrackCount, cppID: clipID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S096 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:673
+S096 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(clipID, "pre-duplication notes missing")
 
-S097 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:685
+S097 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(clipID, "duplicated notes missing at expected ticks")
 
-S098 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:688
+S098 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "contained copy keeps its duration"
   report.expectEqual(Tick(10), copiedContained.duration, cppID: clipID,
                            what: "contained copy keeps its duration")
 
-S099 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:685
+S099 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(clipID, "duplicated notes missing at expected ticks")
 
-S100 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:690
+S100 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "left-crossing copy clips to the range"
   report.expectEqual(Tick(10), copiedLeft.duration, cppID: clipID,
                            what: "left-crossing copy clips to the range")
 
-S101 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:685
+S101 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(clipID, "duplicated notes missing at expected ticks")
 
-S102 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:692
+S102 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "right-crossing copy clips to the range"
   report.expectEqual(Tick(10), copiedRight.duration, cppID: clipID,
                            what: "right-crossing copy clips to the range")
 
-S103 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:685
+S103 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(clipID, "duplicated notes missing at expected ticks")
 
-S104 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:694
+S104 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "both-crossing copy clips to the range"
   report.expectEqual(Tick(20), copiedBoth.duration, cppID: clipID,
                            what: "both-crossing copy clips to the range")
 
-S105 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:699
+S105 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "copy \(index) receives a fresh identity"
   report.expect(copy != source, cppID: clipID,
                               message: "copy \(index) receives a fresh identity")
 
-S106 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:703
+S106 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "copy \(index) is unique among copies"
   report.expect(copy != other, cppID: clipID,
                               message: "copy \(index) is unique among copies")
 
-S107 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:712
+S107 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the clipping duplication"
   report.expectEqual(clipAfter, coreTimeBytes(clipping), cppID: clipID,
                            what: "one redo restores the clipping duplication")
 
-S108 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:724
+S108 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "unterminated-source duplication commits"
   report.expect(clipping.duplicateTime(TimeRange(startTick: 700, endTick: 720),
                                              scope: TimeScope(tracks: [0])),
                       cppID: clipID, message: "unterminated-source duplication commits")
 
-S109 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:727
+S109 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "duplicated unterminated note ends before later ons"
   report.expect(coreTimeNoteEndsBeforeOnsAt(clipping, track: 0, tick: 720),
                       cppID: clipID,
                       message: "duplicated unterminated note ends before later ons")
 
-S110 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:736
+S110 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "insertion over unterminated source commits"
   report.expect(clipping.insertBlankTime(TimeRange(startTick: 800, endTick: 820),
                                                scope: TimeScope(tracks: [0])),
                       cppID: clipID, message: "insertion over unterminated source commits")
 
-S111 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:739
+S111 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "inserted unterminated note ends before later ons"
   report.expect(coreTimeNoteEndsBeforeOnsAt(clipping, track: 0, tick: 820),
                       cppID: clipID,
                       message: "inserted unterminated note ends before later ons")
 
-S112 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:832
+S112 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #3
   report.expectEqual(2, signature.engineTracks.usedTrackCount, cppID: signatureID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S113 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:839
+S113 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "whole-song signature insertion commits"
   report.expect(signature.insertBlankTime(TimeRange(startTick: seam,
                                                           endTick: seam + bar),
                                                 scope: TimeScope(wholeSong: true)),
                       cppID: signatureID, message: "whole-song signature insertion commits")
 
-S114 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:846
+S114 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "signature stays at the seam"
   report.expect(signatures.contains { $0.tick == seam }, cppID: signatureID,
                       message: "signature stays at the seam")
 
-S115 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:848
+S115 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "signature copy lands one bar later"
   report.expect(signatures.contains { $0.tick == seam + bar }, cppID: signatureID,
                       message: "signature copy lands one bar later")
 
-S116 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:852
+S116 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the signature insertion"
   report.expectEqual(signatureBefore, coreTimeBytes(signature), cppID: signatureID,
                            what: "one undo restores the signature insertion")
 
-S117 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:855
+S117 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the signature insertion"
   report.expectEqual(signatureAfter, coreTimeBytes(signature), cppID: signatureID,
                            what: "one redo restores the signature insertion")
 
-S118 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:866
+S118 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #4
   report.expectEqual(2, orphans.engineTracks.usedTrackCount, cppID: orphanID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S119 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:894
+S119 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "orphan removal commits"
   report.expect(orphans.removeTime(TimeRange(startTick: 100, endTick: 130),
                                          scope: TimeScope(tracks: [0])),
                       cppID: orphanID, message: "orphan removal commits")
 
-S120 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:898
+S120 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "note-on before the range survives"
   report.expect(hasChannel(orphanEvents, tick: 90, type: 0x9, key: 61),
                       cppID: orphanID, message: "note-on before the range survives")
 
-S121 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:902
+S121 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "orphaned note-off inside the range is removed"
   report.expect(!orphanEvents.contains { event in
             guard case let .channel(status, data0, _) = event.payload else { return false }
             return status == 0x80 && data0 == 66
         }, cppID: orphanID, message: "orphaned note-off inside the range is removed")
 
-S122 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:906
+S122 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "orphan note bytes use half-open remove and pinned seam ordering"
   report.expect(!hasChannel(orphanEvents, tick: 110, type: 0x9, key: 62) &&
             hasChannel(orphanEvents, tick: 100, type: 0x8, key: 63) &&
             hasChannel(orphanEvents, tick: 100, type: 0x9, key: 64) &&
@@ -2905,256 +3025,310 @@ S122 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:906
             cppID: "editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
             message: "orphan note bytes use half-open remove and pinned seam ordering")
 
-S123 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:912
+S123 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "every note end at the seam precedes later note-ons"
   report.expect(coreTimeNoteEndsBeforeOnsAt(orphans, track: 0, tick: 100),
                       cppID: orphanID,
                       message: "every note end at the seam precedes later note-ons")
 
-S124 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:918
+S124 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(orphanID, "paired note missing after removal")
 
-S125 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:921
+S125 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "paired note stays terminated"
   report.expect(!paired.isUnterminated, cppID: orphanID,
                       message: "paired note stays terminated")
 
-S126 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:923
+S126 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "paired note keeps its duration"
   report.expectEqual(Tick(10), paired.duration, cppID: orphanID,
                            what: "paired note keeps its duration")
 
-S127 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:927
+S127 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the orphan removal"
   report.expectEqual(orphanBefore, coreTimeBytes(orphans), cppID: orphanID,
                            what: "one undo restores the orphan removal")
 
-S128 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:930
+S128 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the orphan removal"
   report.expectEqual(orphanAfter, coreTimeBytes(orphans), cppID: orphanID,
                            what: "one redo restores the orphan removal")
 
-S129 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:941
+S129 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #5
   report.expectEqual(2, automation.engineTracks.usedTrackCount, cppID: autoID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S130 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:953
+S130 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "lane-scoped duplication commits"
   report.expect(automation.duplicateTime(TimeRange(startTick: seam,
                                                          endTick: seam + 40),
                                                scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
                       cppID: autoID, message: "lane-scoped duplication commits")
 
-S131 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:957
+S131 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "seam copy seeds the effective value"
   report.expectEqual("1040:33", automation.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == seam + 40 }).map(coreTimePointShape),
             cppID: autoID, what: "seam copy seeds the effective value")
 
-S132 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:960
+S132 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "in-range point copies to its shifted tick"
   report.expectEqual("1050:44", automation.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == seam + 50 }).map(coreTimePointShape),
             cppID: autoID, what: "in-range point copies to its shifted tick")
 
-S133 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:963
+S133 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "lane duplication adds one history entry"
   report.expectEqual(seamPosition + 1,
                            try coreEditHistoryCountAtTip(automation, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "lane duplication adds one history entry")
 
-S134 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:969
+S134 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the seam duplication"
   report.expectEqual(seamBefore, coreTimeBytes(automation), cppID: autoID,
                            what: "one undo restores the seam duplication")
 
-S135 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:972
+S135 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the seam duplication"
   report.expectEqual(seamAfter, coreTimeBytes(automation), cppID: autoID,
                            what: "one redo restores the seam duplication")
 
-S136 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:976
+S136 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #6
   report.expectEqual(2, defaults.engineTracks.usedTrackCount, cppID: autoID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S137 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:998
+S137 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "default-seeding duplication commits"
   report.expect(defaults.duplicateTime(TimeRange(startTick: start,
                                                            endTick: start + 20),
                                                  scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: entry.lane)])),
                           cppID: autoID, message: "default-seeding duplication commits")
 
-S138 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1002
+S138 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "destination seam seeds the lane default"
   report.expectEqual("\(start + 20):\(entry.expected)",
                                defaults.lanePoints(track: 0, lane: entry.lane)
                 .first(where: { $0.tick == start + 20 }).map(coreTimePointShape),
                 cppID: autoID, what: "destination seam seeds the lane default")
 
-S139 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1006
+S139 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "default duplication adds one history entry"
   report.expectEqual(casePosition + 1,
                                try coreEditHistoryCountAtTip(defaults, report: report,
                                                              cppID: autoID),
                                cppID: autoID,
                                what: "default duplication adds one history entry")
 
-S140 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1013
+S140 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the default duplication"
   report.expectEqual(caseBefore, coreTimeBytes(defaults), cppID: autoID,
                                what: "one undo restores the default duplication")
 
-S141 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1016
+S141 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the default duplication"
   report.expectEqual(caseAfter, coreTimeBytes(defaults), cppID: autoID,
                                what: "one redo restores the default duplication")
 
-S142 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1027
+S142 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "tempo-scoped duplication commits"
   report.expect(defaults.duplicateTime(TimeRange(startTick: 1500, endTick: 1520),
                                              scope: TimeScope(tempo: true)),
                       cppID: autoID, message: "tempo-scoped duplication commits")
 
-S143 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1030
+S143 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "boundary tempo copies to the destination seam"
   report.expect(defaults.state.tempo.contains(
             TempoPoint(tick: 1520, microsecondsPerQuarterNote: 500_000)),
             cppID: autoID, message: "boundary tempo copies to the destination seam")
 
-S144 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1033
+S144 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "in-range tempo copies to its shifted tick" #1
   report.expect(defaults.state.tempo.contains(
             TempoPoint(tick: 1530, microsecondsPerQuarterNote: 400_000)),
             cppID: autoID, message: "in-range tempo copies to its shifted tick")
 
-S145 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1037
+S145 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "tempo map is non-empty after duplication"
   report.expect(!timeline.tempoMap.isEmpty, cppID: autoID,
                       message: "tempo map is non-empty after duplication")
 
-S146 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1039
+S146 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "tempo map starts at 120 bpm"
   report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute, cppID: autoID,
                            what: "tempo map starts at 120 bpm")
 
-S147 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1041
+S147 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "tempo duplication adds one history entry"
   report.expectEqual(tempoPosition + 1,
                            try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "tempo duplication adds one history entry")
 
-S148 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1048
+S148 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the tempo duplication"
   report.expectEqual(tempoBytesBefore, coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the tempo duplication")
 
-S149 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1050
+S149 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the tempo points"
   report.expectEqual(temposBefore, defaults.state.tempo, cppID: autoID,
                            what: "one undo restores the tempo points")
 
-S150 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1053
+S150 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the tempo duplication"
   report.expectEqual(tempoBytesAfter, coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the tempo duplication")
 
-S151 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1055
+S151 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the tempo points"
   report.expectEqual(temposAfter, defaults.state.tempo, cppID: autoID,
                            what: "one redo restores the tempo points")
 
-S152 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1063
+S152 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "voice-scoped duplication commits"
   report.expect(defaults.duplicateTime(TimeRange(startTick: 1600, endTick: 1620),
                                              scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .voice)])),
                       cppID: autoID, message: "voice-scoped duplication commits")
 
-S153 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1066
+S153 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "voice seam seeds the default program"
   report.expectEqual("1620:1", defaults.lanePoints(track: 0, lane: .voice)
             .first(where: { $0.tick == 1620 }).map(coreTimePointShape),
             cppID: autoID, what: "voice seam seeds the default program")
 
-S154 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1069
+S154 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "voice point copies to its shifted tick"
   report.expectEqual("1630:12", defaults.lanePoints(track: 0, lane: .voice)
             .first(where: { $0.tick == 1630 }).map(coreTimePointShape),
             cppID: autoID, what: "voice point copies to its shifted tick")
 
-S155 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1072
+S155 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "voice duplication adds one history entry"
   report.expectEqual(voicePosition + 1,
                            try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "voice duplication adds one history entry")
 
-S156 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1078
+S156 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the voice duplication"
   report.expectEqual(voiceBefore, coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the voice duplication")
 
-S157 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1081
+S157 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the voice duplication"
   report.expectEqual(voiceAfter, coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the voice duplication")
 
-S158 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1094
+S158 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "downstream lane duplication commits"
   report.expect(defaults.duplicateTime(TimeRange(startTick: downstream,
                                                        endTick: downstream + 20),
                                              scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
                       cppID: autoID, message: "downstream lane duplication commits")
 
-S159 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1098
+S159 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "downstream seam seeds the effective value"
   report.expectEqual("1720:11", defaults.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == downstream + 20 }).map(coreTimePointShape),
             cppID: autoID, what: "downstream seam seeds the effective value")
 
-S160 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1101
+S160 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "downstream point copies to its shifted tick"
   report.expectEqual("1740:99", defaults.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == downstream + 40 }).map(coreTimePointShape),
             cppID: autoID, what: "downstream point copies to its shifted tick")
 
-S161 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1104
+S161 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "downstream duplication adds one history entry"
   report.expectEqual(downstreamPosition + 1,
                            try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID,
                            what: "downstream duplication adds one history entry")
 
-S162 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1111
+S162 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one undo restores the downstream duplication"
   report.expectEqual(downstreamBefore, coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the downstream duplication")
 
-S163 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1114
+S163 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the downstream duplication"
   report.expectEqual(downstreamAfter, coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the downstream duplication")
 
-S164 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1125
+S164 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #7
   report.expectEqual(2, wholeDuplicate.engineTracks.usedTrackCount, cppID: wholeID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S165 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1140
+S165 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "whole-song duplication commits"
   report.expect(wholeDuplicate.duplicateTime(TimeRange(startTick: start,
                                                              endTick: start + 20),
                                                    scope: TimeScope(wholeSong: true)),
                       cppID: wholeID, message: "whole-song duplication commits")
 
-S166 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1144
+S166 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "text meta copies to the duplicated seam"
           report.expect(wholeDuplicate.rawChunks[0].events.contains { event in
               event.tick == start + 35 && event.metaType == 0x01 &&
                   event.blob == Array("global".utf8)
           }, cppID: wholeID, message: "text meta copies to the duplicated seam")
 
-S167 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1148
+S167 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "signature copies to the duplicated seam"
   report.expect(wholeDuplicate.timeSignatures.contains {
             $0.tick == start + 30 && $0.numerator == 3
         }, cppID: wholeID, message: "signature copies to the duplicated seam")
 
-S168 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1151
+S168 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "default tempo copies to the seam"
   report.expect(wholeDuplicate.state.tempo.contains(
             TempoPoint(tick: start + 20, microsecondsPerQuarterNote: 500_000)),
             cppID: wholeID, message: "default tempo copies to the seam")
 
-S169 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1154
+S169 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "in-range tempo copies to its shifted tick" #2
   report.expect(wholeDuplicate.state.tempo.contains(
             TempoPoint(tick: start + 30, microsecondsPerQuarterNote: 333_333)),
             cppID: wholeID, message: "in-range tempo copies to its shifted tick")
 
-S170 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1160
+S170 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(wholeID, "shifted note missing after duplication")
 
-S171 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1164
+S171 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(wholeID, "engine track 0 has no MIDI chunk")
 
-S172 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1167
+S172 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "chunk end tick covers the duplicated note"
   report.expect(wholeDuplicate.rawChunks[wholeChunk].endTick >=
             UInt64(shifted.tick) + UInt64(shifted.duration),
             cppID: wholeID,
             message: "chunk end tick covers the duplicated note")
 
-S173 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift:1177
+S173 | duplicationAndGlobals | src/checks/editcheck/TimeChecks.swift
+Anchor: message "one redo restores the whole-song duplication"
   report.expectEqual(wholeDuplicateAfter, coreTimeBytes(wholeDuplicate),
                            cppID: wholeID,
                            what: "one redo restores the whole-song duplication")
 
-S174 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:595
+S174 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "timeRangeFile fixture loads two editable tracks" #5
   report.expectEqual(2, overflow.engineTracks.usedTrackCount, cppID: overflowID,
                            what: "timeRangeFile fixture loads two editable tracks")
 
-S175 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:598
+S175 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: function
   report.fail(overflowID, "engine track 0 has no MIDI chunk")
 
-S176 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift:615
+S176 | insertionAndBoundaries | src/checks/editcheck/TimeChecks.swift
+Anchor: message "rejected overflow adds no history"
   report.expectEqual(overflowPosition,
                            try coreEditHistoryCountAtTip(overflow, report: report,
                                                          cppID: overflowID),

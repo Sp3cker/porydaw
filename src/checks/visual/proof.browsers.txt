@@ -4,7 +4,6 @@ Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/browsers.cpp
 Original SHA-256: 3f358911eebfb7b37f1327fccbf2449627c1be34ca20e2c6595a0b199d17a59d
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ This file: 18 assertion sites: 8 GAP, 10 RETIRED-REPRESENTATION. Dispositions ta
 
 Verification
 Command: deno task verify --filter visual --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The visual-* harnesses compare against frozen baselines under
 src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
 targets, their runVisual*Check entry points have zero callsites, and they are

@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/audio/tst_clicktransport.cpp
 Original SHA-256: 3e33a180385effc7d7260a24542264c62f53eb3a105b0311eb9ad236d40569bb
 Swift counterpart: src/checks/audio/tst_clicktransport.swift
-Swift SHA-256: e738e6113fe1a372e221a53913d884232ff1f5690d4851c830d32a1296ac3c65
 Deleted in: staged git rm in this lane of src/checks/audio/tst_clicktransport.cpp (with clickrig.*, resonancefixture.*, tst_resonancelaw.*, tst_resonancetiming.*, tst_audiotelemetry.*, tst_trackactivity.*); not committed at HEAD 224cc35f. The file is recoverable from the Reference revision and Original SHA-256 above.
 
 Deletion certificate
@@ -22,13 +21,12 @@ longer exists in the Swift path: the site is retired, not executed, and its
 Mapping line states the no-ingress justification. None of these labels authorizes
 deletion or claims whole-case equivalence. Native passes do not prove the Swift
 replacement.
-Tally: 37 sites: MATCHED 31, RETIRED-REPRESENTATION 6, PARTIAL 0, GAP 0, NATIVE-SETUP 0.
 
 Execution and ownership
-swiftcore suite 3 (pdc_suite_run case 3, src/checks/support/corecheck/CoreCheckSupport.swift:98 -> runAudioControllerChecks at :100) -> checkControllerCuts (src/checks/audio/AudioControllerChecks.swift:9) -> the paired functions in src/checks/audio/tst_clicktransport.swift; shared AudioControllerCheckFixture/audioControllerCheckPeak/audioControllerCheckStep in audio/controllerfixture.swift. Registration: the swift_core_check sources in src/checks/CMakeLists.txt.
+swiftcore suite 3 (pdc_suite_run case 3, src/checks/support/corecheck/CoreCheckSupport.swift -> runAudioControllerChecks at :100) -> checkControllerCuts (src/checks/audio/AudioControllerChecks.swift) -> the paired functions in src/checks/audio/tst_clicktransport.swift; shared AudioControllerCheckFixture/audioControllerCheckPeak/audioControllerCheckStep in audio/controllerfixture.swift. Registration: the swift_core_check sources in src/checks/CMakeLists.txt.
 
 Fixture, sequence and row constraints
-Original DC and square PCM fixtures are present, including three-second steady silence and separate max-amplitude/max-step assertions. The audition duration and post-cut window are exact; timed-preview and reload cases use fresh constant-DC fixtures and original render counts. Swift sustain adds CC7 at tick4800, after all inspected capture windows. The hard-cut detection control drives the production AudioRenderEngine through cutAllVoicesForHardCutControl (src/swift/app/audio/AudioRenderEngine.swift:196-199), the Swift replacement for the original m4a_engine_all_sound_off pair on both engines.
+Original DC and square PCM fixtures are present, including three-second steady silence and separate max-amplitude/max-step assertions. The audition duration and post-cut window are exact; timed-preview and reload cases use fresh constant-DC fixtures and original render counts. Swift sustain adds CC7 at tick4800, after all inspected capture windows. The hard-cut detection control drives the production AudioRenderEngine through cutAllVoicesForHardCutControl (src/swift/app/audio/AudioRenderEngine.swift), the Swift replacement for the original m4a_engine_all_sound_off pair on both engines.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -55,7 +53,7 @@ Original assertion inventory
 
 A001 | ClickTest::startRig | src/checks/audio/tst_clicktransport.cpp:57
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original forced-null device initialization has no ingress in the Swift path. AudioControllerCheckFixture constructs the production AudioRenderEngine directly (src/checks/audio/controllerfixture.swift:17) and its throwing initializer surfaces through runAudioControllerChecks (src/checks/audio/AudioControllerChecks.swift:18); no PORYDAW_AUDIO_BACKEND or AudioEngine::init device-init guard is representable here, and the engine-creation throw is a different mechanism.
+Mapping/reason: Retired, not executed: the original forced-null device initialization has no ingress in the Swift path. AudioControllerCheckFixture constructs the production AudioRenderEngine directly (src/checks/audio/controllerfixture.swift) and its throwing initializer surfaces through runAudioControllerChecks (src/checks/audio/AudioControllerChecks.swift); no PORYDAW_AUDIO_BACKEND or AudioEngine::init device-init guard is representable here, and the engine-creation throw is a different mechanism.
 Original expression:
   QTest::qFail(
               qUtf8Printable(QStringLiteral("forced null audio init failed: %1").arg(rig.error)),
@@ -63,26 +61,26 @@ Original expression:
 
 A002 | ClickTest::startRig | src/checks/audio/tst_clicktransport.cpp:66
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original parks a real audio device so the engine can be driven synchronously. The Swift fixture owns no device at all; it renders the production AudioRenderEngine directly through AudioControllerCheckFixture.render (src/checks/audio/controllerfixture.swift:80), so the device-park guard has no ingress in this path.
+Mapping/reason: Retired, not executed: the original parks a real audio device so the engine can be driven synchronously. The Swift fixture owns no device at all; it renders the production AudioRenderEngine directly through AudioControllerCheckFixture.render (src/checks/audio/controllerfixture.swift), so the device-park guard has no ingress in this path.
 Original expression:
   QTest::qFail("could not stop the audio device for deterministic rendering", __FILE__,
                        __LINE__)
 
 A003 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:77
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original encodes the synthesized sustain song to SMF bytes and guards the empty result. Swift builds an in-memory PlaybackTimeline through AudioControllerCheckFixture.timeline (src/checks/audio/controllerfixture.swift:55-78) with no encode-to-bytes call on the fixture path, so the failed-to-encode guard is not representable.
+Mapping/reason: Retired, not executed: the original encodes the synthesized sustain song to SMF bytes and guards the empty result. Swift builds an in-memory PlaybackTimeline through AudioControllerCheckFixture.timeline (src/checks/audio/controllerfixture.swift) with no encode-to-bytes call on the fixture path, so the failed-to-encode guard is not representable.
 Original expression:
   QTest::qFail("synthesized sustain MIDI failed to encode", __FILE__, __LINE__)
 
 A004 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:83
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original writes the encoded fixture into a QTemporaryFile and guards open/write/flush. Swift keeps the fixture in memory (src/checks/audio/controllerfixture.swift:55-78); no tempfile exists on this path, so the write/flush guard has no ingress.
+Mapping/reason: Retired, not executed: the original writes the encoded fixture into a QTemporaryFile and guards open/write/flush. Swift keeps the fixture in memory (src/checks/audio/controllerfixture.swift); no tempfile exists on this path, so the write/flush guard has no ingress.
 Original expression:
   QTest::qFail("could not write synthesized sustain MIDI", __FILE__, __LINE__)
 
 A005 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:94
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original loads the written file through pd_playback_data_load_file and guards its diagnostic. No Swift check calls pd_playback_data_load_file; the fixture builds the timeline value directly (src/checks/audio/controllerfixture.swift:78), so the loader-error guard has no ingress and loader/ABI coverage is not claimed.
+Mapping/reason: Retired, not executed: the original loads the written file through pd_playback_data_load_file and guards its diagnostic. No Swift check calls pd_playback_data_load_file; the fixture builds the timeline value directly (src/checks/audio/controllerfixture.swift), so the loader-error guard has no ingress and loader/ABI coverage is not claimed.
 Original expression:
   QTest::qFail(qUtf8Printable(QStringLiteral("Swift playback loader failed: %1")
                                           .arg(QString::fromUtf8(diagnostic.data()))),
@@ -90,7 +88,7 @@ Original expression:
 
 A006 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:100
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired, not executed: the original asserts the loader returned a nonnull publication before binding it. The Swift fixture binds a value PlaybackTimeline built in memory (src/checks/audio/controllerfixture.swift:78); there is no loader publication, so the nonnull-publication guard has no ingress.
+Mapping/reason: Retired, not executed: the original asserts the loader returned a nonnull publication before binding it. The Swift fixture binds a value PlaybackTimeline built in memory (src/checks/audio/controllerfixture.swift); there is no loader publication, so the nonnull-publication guard has no ingress.
 Original expression:
   QTest::qFail("Swift playback loader returned no publication", __FILE__, __LINE__)
 
@@ -105,7 +103,7 @@ Original expression:
 
 A008 | ClickTest::verifyTransition | src/checks/audio/tst_clicktransport.cpp:175
 Disposition: MATCHED
-Mapping/reason: S029 executes checkHardCutDetectionControls (src/checks/audio/tst_clicktransport.swift:148-176) on the original constant-100 DC fixture with the original per-scenario rows under cppIDs clickcheck/ClickTest::hardCutControlsClick[pause|stop|play-over-audition]: one-second sustain (half-second audition for play-over-audition), then cutAllVoicesForHardCutControl (src/swift/app/audio/AudioRenderEngine.swift:196-199) applies m4a_engine_all_sound_off to both the main and preview production engines exactly as the original hard-cut pair did, then the same pause/stop/play transport command, the original 3*ramp+2048 (4096 for the audition) render, and the identical detector predicate step > max(0.02*amplitude, 1.5*natural+0.001) over the original [-512,+2560) transition and [-2048,-512) sustain windows. The production control path is executed, not approximated.
+Mapping/reason: S029 executes checkHardCutDetectionControls (src/checks/audio/tst_clicktransport.swift) on the original constant-100 DC fixture with the original per-scenario rows under cppIDs clickcheck/ClickTest::hardCutControlsClick[pause|stop|play-over-audition]: one-second sustain (half-second audition for play-over-audition), then cutAllVoicesForHardCutControl (src/swift/app/audio/AudioRenderEngine.swift) applies m4a_engine_all_sound_off to both the main and preview production engines exactly as the original hard-cut pair did, then the same pause/stop/play transport command, the original 3*ramp+2048 (4096 for the audition) render, and the identical detector predicate step > max(0.02*amplitude, 1.5*natural+0.001) over the original [-512,+2560) transition and [-2048,-512) sustain windows. The production control path is executed, not approximated.
 Original expression:
   QVERIFY2(
               clickDetected,
@@ -324,91 +322,120 @@ Original expression:
 
 Swift predicate index
 
-S001 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:13
+S001 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "callback applies initial playing state at unity gain"
 `applied == .playing && cutGain >= 0.999` after the one-frame startup sweep.
 
-S002 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:17
+S002 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "first note remains unconsumed at unity onset"
 `playheadSamples == 0` at the unity-onset boundary.
 
-S003 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:20
+S003 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "first sequenced DC note sounds above original floor and sustains"
 Onset peak is at least 64/32768 and key60 is sustaining after settle+1024 frames.
 
-S004 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:23
+S004 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "playing remains applied after the onset capture"
 Applied transport remains Playing after the onset capture.
 
-S005 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:26
+S005 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "onset capture leaves no stale transport fade"
 No cut remains active and cut gain remains at least 0.99 after the onset capture.
 
-S006 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:44
+S006 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "audition62 sounds before play"
 The audition snapshot contains an on key62 after the original half-second render.
 
-S007 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:51
+S007 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "fixture sustain \(amplitude) meets original 64-LSB DC or additional sine floor"
 Each smooth row meets the original measurable-signal floor.
 
-S008 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:53
+S008 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "transition must stay below calibrated natural-step click threshold"
 Each smooth row stays below the calibrated transition-step threshold.
 
-S009 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:56
+S009 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "cut must fall audibly silent"
 Pause and stop tails stay at or below 0.01 from two ramps after the transition.
 
-S010 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:58
+S010 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "settled output must remain digitally silent"
 The three-second settled pause tail stays within one output LSB of amplitude.
 
-S011 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:60
+S011 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "three-second settled step stays within one output LSB"
 The three-second settled pause tail stays within one output LSB of same-channel step.
 
-S012 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:64
+S012 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "play must cut the ringing audition"
 No on key62 remains after the original play-over-audition cut window.
 
-S013 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:75
+S013 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "cut immediately drains active timed previews"
 The first timed-preview cut drains the active timed count.
 
-S014 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:77
+S014 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "cut immediately drains queued timed previews"
 The first timed-preview cut advances the timed read cursor to the write cursor.
 
-S015 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:82
+S015 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift
+Anchor: message "old timed off must not cut song; command during cut must start afterwards"
 Keys60 and 61 sustain after the original deferred-command render.
 
-S016 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:108
+S016 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "unload clears interrupted fade"
 Unload clears the interrupted cut.
 
-S017 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:109
+S017 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "unload restores unity gain"
 Unload restores cut gain to one.
 
-S018 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:118
+S018 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "playing applies within one second after reload"
 Playing applies during the preceding one-frame loop bounded by one second.
 
-S019 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:120
+S019 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "reload does not reuse stale cut gain"
 Reloaded startup reaches cut gain at least 0.9.
 
-S020 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:122
+S020 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "reloaded player remains at the first sample"
 Reloaded startup leaves the player at sample zero.
 
-S021 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:125
+S021 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "reloaded DC song starts above the original measurable floor"
 Reloaded constant-DC output reaches the original measurable floor after settle+1024 frames.
 
-S022 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:127
+S022 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift
+Anchor: message "reloaded song sustains the original key"
 Reloaded key60 sustains after the original restart capture.
 
-S023 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:139
+S023 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift
+Anchor: message "startup cut remains in flight"
 The rapid startup retarget keeps a cut in flight.
 
-S024 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:140
+S024 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift
+Anchor: message "startup cut targets latest playing request"
 The in-flight cut targets the newest Playing request.
 
-S025 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:142
+S025 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift
+Anchor: message "startup retarget applies playing"
 Applied transport is Playing after the original retarget render.
 
-S026 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:143
+S026 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift
+Anchor: message "startup retarget completes at unity"
 The retarget completes with no cut and gain at least 0.99.
 
-S027 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:145
+S027 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift
+Anchor: message "startup retarget retains sequenced note"
 Key60 sustains after the retarget completes.
 
-S028 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift:172
+S028 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift
+Anchor: message "DC control meets original64LSB floor"
 `amplitude >= 64 / 32768` for each pause/stop/play-over-audition hard-cut control.
 
-S029 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift:173
+S029 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift
+Anchor: message "detector rejects production hard cut: step=\(step), amplitude=\(amplitude), natural=\(natural)"
 `step > max(0.02 * amplitude, 1.5 * natural + 0.001)` for each pause/stop/play-over-audition hard-cut control.
 
 Reconciled dependency snapshot (SHA-256)

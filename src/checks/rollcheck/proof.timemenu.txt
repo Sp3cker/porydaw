@@ -4,7 +4,6 @@ Reference revision: 90446f5dbbb9f9d9f9000d7819c42c1b8b2c5389
 Original: src/checks/rollcheck/timemenu.cpp
 Original SHA-256: 6d55204de3dc8c173d5bcb80107ae20ee92bb20c9d63f2e9de77d9c89c74416f
 Swift counterpart: src/checks/rollcheck/timemenu.swift
-Swift SHA-256: 0ec19201ff364ba3a694258e725460f4901ffc26b94f2cdfc9ea7781314f36b7
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -1128,7 +1127,7 @@ Original expression:
 
 A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
 Disposition: MATCHED
-Mapping: S001 | src/checks/rollcheck/timemenu.swift:47 — undo following the same six-tick insertion restores pre-insertion song bytes.
+Mapping: S001 | src/checks/rollcheck/timemenu.swift — undo following the same six-tick insertion restores pre-insertion song bytes.
 Source context since previous assertion:
   ;
       doc.undoStack()->undo();
@@ -1293,7 +1292,8 @@ Swift executable assertion index
 This predicate runs in the green swiftcore projectSession suite; it establishes
 only the model undo restoration, not a rendered menu click.
 
-S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift:47
+S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
+Anchor: message "A088: one undo restores the bytes before time insertion"
 Counterpart expression:
   report.expect(coreTimeBytes(document) == before, cppID: id,
                 message: "A088: one undo restores the bytes before time insertion")

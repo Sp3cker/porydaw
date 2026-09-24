@@ -4,13 +4,9 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/selection.cpp
 Original SHA-256: 8b6e0fcc40ed8cc900e586579465c65944ed837fa7c47b473bdd1f698dffe50c
 Swift counterpart: src/checks/rollcheck/selection.swift
-Swift SHA-256: e59a0a8fd5344869bd1b08c3d703a648134d7d1499efed9bf4ae750fece9e0de
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml
-Additional Swift SHA-256: dff414a55b7131b777f5348885f268a6466af266f0e2fdbbf4968834a207bc0e
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
-Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -181,7 +177,7 @@ Original expression:
 
 A003 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:94
 Disposition: PARTIAL
-Mapping/reason: The provisional band is not modelled as the C++ selection ring: the production grid publishes the swept notes as selected while the band is held (S012, src/checks/editorqml/tst_ShellGridInput.qml:388 asserts the preview while held; S010, src/checks/rollqml/tst_SwiftRollSelection.qml:239 asserts the live Selecting status) and every cancel path restores the pre-band selection (S011, src/checks/rollqml/tst_SwiftRollSelection.qml:260 asserts noteSummary unchanged with lastCancelReason 2; S043, src/checks/editorqml/tst_ShellGridInput.qml:447 asserts the ungrab cancel). Unproved: the original observable that the model selection stays empty during the drag — Swift reports the preview as a live selection instead.
+Mapping/reason: The provisional band is not modelled as the C++ selection ring: the production grid publishes the swept notes as selected while the band is held (S012, src/checks/editorqml/tst_ShellGridInput.qml asserts the preview while held; S010, src/checks/rollqml/tst_SwiftRollSelection.qml asserts the live Selecting status) and every cancel path restores the pre-band selection (S011, src/checks/rollqml/tst_SwiftRollSelection.qml asserts noteSummary unchanged with lastCancelReason 2; S043, src/checks/editorqml/tst_ShellGridInput.qml asserts the ungrab cancel). Unproved: the original observable that the model selection stays empty during the drag — Swift reports the preview as a live selection instead.
 Source context since previous assertion:
   ;
           if (!view.selectionModel().noteSelection().empty())
@@ -190,7 +186,7 @@ Original expression:
 
 A004 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:97
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/selection.swift:319-320) sweeps the right-drag band over the seeded pair and asserts the audition callback fired for the covered note's pitch at the document velocity (93).
+Mapping: S001 (src/checks/rollcheck/selection.swift) sweeps the right-drag band over the seeded pair and asserts the audition callback fired for the covered note's pitch at the document velocity (93).
 Source context since previous assertion:
   ;
 
@@ -200,7 +196,7 @@ Original expression:
 
 A005 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:103
 Disposition: MATCHED
-Mapping: S002 (src/checks/rollcheck/selection.swift:322-323) shrinks the band past the covered note and asserts a velocity-0 audition for the same pitch, i.e. the departed note's preview releases early.
+Mapping: S002 (src/checks/rollcheck/selection.swift) shrinks the band past the covered note and asserts a velocity-0 audition for the same pitch, i.e. the departed note's preview releases early.
 Source context since previous assertion:
   ;
           // Retreat to a band covering nothing: the departed notes' previews
@@ -213,7 +209,7 @@ Original expression:
 
 A006 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:110
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/selection.swift:326-327) re-covers the note and asserts at least two positive-velocity auditions for its pitch.
+Mapping: S003 (src/checks/rollcheck/selection.swift) re-covers the note and asserts at least two positive-velocity auditions for its pitch.
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseMove, sweepEnd, Qt::NoButton, Qt::RightButton,
@@ -227,7 +223,7 @@ Original expression:
 
 A007 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:114
 Disposition: MATCHED
-Mapping: S005 (src/checks/rollcheck/selection.swift:330-331) asserts the released band selects every swept note identity; S008 (src/checks/rollcheck/selection.swift:64-65) asserts the same for the band sweep; S042 (src/checks/editorqml/tst_ShellGridInput.qml:371) asserts the real right-drag band commit on the production shell; S044/S045 (src/checks/rollcheck/EditorGridCameraChecks.swift:123, :421) assert band press order and that the band selects exactly the intersecting notes.
+Mapping: S005 (src/checks/rollcheck/selection.swift) asserts the released band selects every swept note identity; S008 (src/checks/rollcheck/selection.swift) asserts the same for the band sweep; S042 (src/checks/editorqml/tst_ShellGridInput.qml) asserts the real right-drag band commit on the production shell; S044/S045 (src/checks/rollcheck/EditorGridCameraChecks.swift, :421) assert band press order and that the band selects exactly the intersecting notes.
 Source context since previous assertion:
   ;
           const std::vector<NoteId> &sel = view.selectionModel().noteSelection();
@@ -238,7 +234,7 @@ Original expression:
 
 A008 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:123
 Disposition: MATCHED
-Mapping: S002 and S004 (src/checks/rollcheck/selection.swift:322, :328) assert the first key is released when the band shrinks past it and the second key is released at the drag end, so every auditioned key of the two-note fixture is released.
+Mapping: S002 and S004 (src/checks/rollcheck/selection.swift, :328) assert the first key is released when the band shrinks past it and the second key is released at the drag end, so every auditioned key of the two-note fixture is released.
 Source context since previous assertion:
   ;
           // Every key that auditioned was eventually released (mid-drag or at
@@ -254,7 +250,7 @@ Original expression:
 
 A009 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:125
 Disposition: PARTIAL
-Mapping/reason: S001/S002 (src/checks/rollcheck/selection.swift:319, :322) assert the band audition starts and releases. Unproved: the audition's sample duration — the Swift onAudition callback carries (track, pitch, velocity) and exposes no duration, so a non-zero-length audition has no Swift observable.
+Mapping/reason: S001/S002 (src/checks/rollcheck/selection.swift, :322) assert the band audition starts and releases. Unproved: the audition's sample duration — the Swift onAudition callback carries (track, pitch, velocity) and exposes no duration, so a non-zero-length audition has no Swift observable.
 Source context since previous assertion:
   ;
           if (!onKeys.empty() && minDur == 0)
@@ -263,7 +259,7 @@ Original expression:
 
 A010 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:127
 Disposition: MATCHED
-Mapping: S006 (src/checks/rollcheck/selection.swift:332-334) asserts the band sequence changes no document revision and leaves the history identity unchanged, i.e. pushed no command; S009 (src/checks/rollcheck/selection.swift:66-68) asserts the same for the band-sweep check.
+Mapping: S006 (src/checks/rollcheck/selection.swift) asserts the band sequence changes no document revision and leaves the history identity unchanged, i.e. pushed no command; S009 (src/checks/rollcheck/selection.swift) asserts the same for the band-sweep check.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != preBandCount)
@@ -272,7 +268,7 @@ Original expression:
 
 A011 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:132
 Disposition: MATCHED
-Mapping: S007 (src/checks/rollcheck/selection.swift:337-338) asserts the post-band serialized document bytes equal the planted bytes; the check's defer (S015, src/checks/rollcheck/selection.swift:262-263) also restores the baseline history identity and bytes.
+Mapping: S007 (src/checks/rollcheck/selection.swift) asserts the post-band serialized document bytes equal the planted bytes; the check's defer (S015, src/checks/rollcheck/selection.swift) also restores the baseline history identity and bytes.
 Source context since previous assertion:
   ;
           view.selectionModel().clearNoteSelection(); // the sections below manage their own
@@ -602,7 +598,7 @@ Original expression:
 
 A030 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:333
 Disposition: MATCHED
-Mapping: S013 (src/checks/rollcheck/selection.swift:495-496) asserts crossing the draw threshold enters the Drawing gesture and S014 (src/checks/rollcheck/selection.swift:501-502) asserts the drag draws the note.
+Mapping: S013 (src/checks/rollcheck/selection.swift) asserts crossing the draw threshold enters the Drawing gesture and S014 (src/checks/rollcheck/selection.swift) asserts the drag draws the note.
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
@@ -618,7 +614,7 @@ Original expression:
 
 A031 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:335
 Disposition: MATCHED
-Mapping: S014 (src/checks/rollcheck/selection.swift:501-502) asserts the drawn note's duration is exactly one snap cell (grid.snapTicks), the Swift form of snapTicksAt(f.tick).
+Mapping: S014 (src/checks/rollcheck/selection.swift) asserts the drawn note's duration is exactly one snap cell (grid.snapTicks), the Swift form of snapTicksAt(f.tick).
 Source context since previous assertion:
   ;
           else if (tiny.duration != view.grid().snapTicksAt(f.tick))
@@ -627,7 +623,7 @@ Original expression:
 
 A032 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:339
 Disposition: MATCHED
-Mapping: S015 (src/checks/rollcheck/selection.swift:262-263; selectionRestore from checkThresholdDrawCell's defer) undoes the draw to the baseline history identity and asserts the restored serialized MIDI bytes equal the pre-draw bytes.
+Mapping: S015 (src/checks/rollcheck/selection.swift; selectionRestore from checkThresholdDrawCell's defer) undoes the draw to the baseline history identity and asserts the restored serialized MIDI bytes equal the pre-draw bytes.
 Source context since previous assertion:
   ;
       }
@@ -677,7 +673,7 @@ Original expression:
 
 A035 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:392
 Disposition: MATCHED
-Mapping: S016 (src/checks/rollcheck/selection.swift:374-375) asserts the Ctrl press on the grouped anchor pins grid.hoverKey to the anchor's pitch.
+Mapping: S016 (src/checks/rollcheck/selection.swift) asserts the Ctrl press on the grouped anchor pins grid.hoverKey to the anchor's pitch.
 Source context since previous assertion:
   ;
       const QByteArray before = doc.smf().write();
@@ -712,7 +708,7 @@ Original expression:
 
 A036 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:397
 Disposition: MATCHED
-Mapping: S017 (src/checks/rollcheck/selection.swift:385-386) drags the modifier gesture 15 px down and asserts the anchor lands at velocity 78 from 93.
+Mapping: S017 (src/checks/rollcheck/selection.swift) drags the modifier gesture 15 px down and asserts the anchor lands at velocity 78 from 93.
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
@@ -724,7 +720,7 @@ Original expression:
 
 A037 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:400
 Disposition: PARTIAL
-Mapping/reason: S019 (src/checks/rollcheck/selection.swift:389-390) asserts a grouped drag preserves the selection and S024 (src/checks/rollcheck/selection.swift:417-418) asserts a chord-held drag on another note re-anchors it to the grabbed note. Unproved: this slot's exact case — a velocity drag on the only selected note — is not executed, so its 'exactly the anchor stays selected' form is asserted only through the grouped and foreign-anchor cases.
+Mapping/reason: S019 (src/checks/rollcheck/selection.swift) asserts a grouped drag preserves the selection and S024 (src/checks/rollcheck/selection.swift) asserts a chord-held drag on another note re-anchors it to the grabbed note. Unproved: this slot's exact case — a velocity drag on the only selected note — is not executed, so its 'exactly the anchor stays selected' form is asserted only through the grouped and foreign-anchor cases.
 Source context since previous assertion:
   ;
           const NoteId bId = bMod.noteId;
@@ -734,7 +730,7 @@ Original expression:
 
 A038 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:402
 Disposition: MATCHED
-Mapping: S020 (src/checks/rollcheck/selection.swift:391-392) asserts one grouped velocity drag commits exactly one history entry (undoCount == preCount + 1).
+Mapping: S020 (src/checks/rollcheck/selection.swift) asserts one grouped velocity drag commits exactly one history entry (undoCount == preCount + 1).
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != preCount + 1)
@@ -743,7 +739,7 @@ Original expression:
 
 A039 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:411
 Disposition: PARTIAL
-Mapping/reason: S029 (src/checks/rollcheck/selection.swift:188-189) asserts the deferred Ctrl release toggles the pressed note out of the selection while the other stays. Unproved: the toggle-to-empty result of this slot, since the Swift fixture toggles one of two selected notes.
+Mapping/reason: S029 (src/checks/rollcheck/selection.swift) asserts the deferred Ctrl release toggles the pressed note out of the selection while the other stays. Unproved: the toggle-to-empty result of this slot, since the Swift fixture toggles one of two selected notes.
 Source context since previous assertion:
   ;
 
@@ -759,7 +755,7 @@ Original expression:
 
 A040 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:421
 Disposition: PARTIAL
-Mapping/reason: S028/S029 (src/checks/rollcheck/selection.swift:185-189) assert the deferred press/release click semantics of the modifier chord. Unproved: the sub-threshold jitter variant itself, since the Swift fixture presses and releases without moving.
+Mapping/reason: S028/S029 (src/checks/rollcheck/selection.swift) assert the deferred press/release click semantics of the modifier chord. Unproved: the sub-threshold jitter variant itself, since the Swift fixture presses and releases without moving.
 Source context since previous assertion:
   ;
           // A vertical jitter under the drag threshold is still that click:
@@ -776,7 +772,7 @@ Original expression:
 
 A041 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:423
 Disposition: MATCHED
-Mapping: S030 (src/checks/rollcheck/selection.swift:190-192) asserts the modifier selection clicks change no document revision and push no history entry.
+Mapping: S030 (src/checks/rollcheck/selection.swift) asserts the modifier selection clicks change no document revision and push no history entry.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
@@ -785,7 +781,7 @@ Original expression:
 
 A042 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:425
 Disposition: MATCHED
-Mapping: S030 (src/checks/rollcheck/selection.swift:190-192) asserts the modifier selection clicks push no history entry.
+Mapping: S030 (src/checks/rollcheck/selection.swift) asserts the modifier selection clicks push no history entry.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != preCount + 1)
@@ -794,7 +790,7 @@ Original expression:
 
 A043 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:440
 Disposition: PARTIAL
-Mapping/reason: S017 (src/checks/rollcheck/selection.swift:385-386) asserts a threshold-crossing modifier drag applies the 1 px = 1 step gesture (15 px lands 93 -> 78). Unproved: the platform startDragDistance crossing value itself and native modifier event delivery.
+Mapping/reason: S017 (src/checks/rollcheck/selection.swift) asserts a threshold-crossing modifier drag applies the 1 px = 1 step gesture (15 px lands 93 -> 78). Unproved: the platform startDragDistance crossing value itself and native modifier event delivery.
 Source context since previous assertion:
   ;
 
@@ -816,7 +812,7 @@ Original expression:
 
 A044 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:442
 Disposition: PARTIAL
-Mapping/reason: S024 (src/checks/rollcheck/selection.swift:417-418) asserts a chord-held drag on another note re-anchors the selection to the grabbed note alone. Unproved: the threshold-crossing variant of this slot is not executed separately.
+Mapping/reason: S024 (src/checks/rollcheck/selection.swift) asserts a chord-held drag on another note re-anchors the selection to the grabbed note alone. Unproved: the threshold-crossing variant of this slot is not executed separately.
 Source context since previous assertion:
   ;
           if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
@@ -825,7 +821,7 @@ Original expression:
 
 A045 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:444
 Disposition: MATCHED
-Mapping: S020 (src/checks/rollcheck/selection.swift:391-392) asserts one grouped velocity drag commits exactly one history entry.
+Mapping: S020 (src/checks/rollcheck/selection.swift) asserts one grouped velocity drag commits exactly one history entry.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != thresholdCount + 1)
@@ -848,7 +844,7 @@ Original expression:
 
 A047 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:462
 Disposition: MATCHED
-Mapping: S024 (src/checks/rollcheck/selection.swift:417-418) asserts the chord-held drag on another note re-anchors the selection to the grabbed note alone (selectedNoteOrder == [grabbed]).
+Mapping: S024 (src/checks/rollcheck/selection.swift) asserts the chord-held drag on another note re-anchors the selection to the grabbed note alone (selectedNoteOrder == [grabbed]).
 Source context since previous assertion:
   ;
           const NoteId aId = aBefore.noteId;
@@ -866,7 +862,7 @@ Original expression:
 
 A048 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:465
 Disposition: MATCHED
-Mapping: S025 (src/checks/rollcheck/selection.swift:419-420) asserts the chord-held drag adjusts the grabbed note to 78.
+Mapping: S025 (src/checks/rollcheck/selection.swift) asserts the chord-held drag adjusts the grabbed note to 78.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAfter) ||
@@ -876,7 +872,7 @@ Original expression:
 
 A049 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:468
 Disposition: PARTIAL
-Mapping/reason: S026 (src/checks/rollcheck/selection.swift:421-422) asserts the prior note keeps velocity 100 after the chord-held drag. Unproved: the full runtime record equality of sameNoteFields (engine/smf track, on/end index, channel), since the Swift predicate observes the MIDI-visible velocity only.
+Mapping/reason: S026 (src/checks/rollcheck/selection.swift) asserts the prior note keeps velocity 100 after the chord-held drag. Unproved: the full runtime record equality of sameNoteFields (engine/smf track, on/end index, channel), since the Swift predicate observes the MIDI-visible velocity only.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfterDrag) ||
@@ -886,7 +882,7 @@ Original expression:
 
 A050 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:470
 Disposition: MATCHED
-Mapping: S027 (src/checks/rollcheck/selection.swift:423-424) asserts the chord-held drag commits exactly one history entry.
+Mapping: S027 (src/checks/rollcheck/selection.swift) asserts the chord-held drag commits exactly one history entry.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != heldCount + 1)
@@ -911,7 +907,7 @@ Original expression:
 
 A052 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:489
 Disposition: MATCHED
-Mapping: S041 (src/checks/rollcheck/selection.swift:372-373) asserts the Ctrl press on the grouped anchor preserves the selection and S019 (src/checks/rollcheck/selection.swift:389-390) asserts the completed grouped drag preserves exactly the seeded selection; S023 (src/checks/rollcheck/selection.swift:410-411) asserts the repeated drag preserves exactly the seeded selection across the repeat drags.
+Mapping: S041 (src/checks/rollcheck/selection.swift) asserts the Ctrl press on the grouped anchor preserves the selection and S019 (src/checks/rollcheck/selection.swift) asserts the completed grouped drag preserves exactly the seeded selection; S023 (src/checks/rollcheck/selection.swift) asserts the repeated drag preserves exactly the seeded selection across the repeat drags.
 Source context since previous assertion:
   ;
           const int groupCount = doc.undoStack()->count();
@@ -928,7 +924,7 @@ Original expression:
 
 A053 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:492
 Disposition: MATCHED
-Mapping: S017 (src/checks/rollcheck/selection.swift:385-386) asserts the grouped anchor lands at 78 from the 93 seed, i.e. the same 15-step delta.
+Mapping: S017 (src/checks/rollcheck/selection.swift) asserts the grouped anchor lands at 78 from the 93 seed, i.e. the same 15-step delta.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAdjusted) ||
@@ -938,7 +934,7 @@ Original expression:
 
 A054 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:495
 Disposition: MATCHED
-Mapping: S018 (src/checks/rollcheck/selection.swift:387-388) asserts the same delta lands the other selected note at 85 from its 100 seed.
+Mapping: S018 (src/checks/rollcheck/selection.swift) asserts the same delta lands the other selected note at 85 from its 100 seed.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAdjusted) ||
@@ -948,7 +944,7 @@ Original expression:
 
 A055 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:497
 Disposition: MATCHED
-Mapping: S020 (src/checks/rollcheck/selection.swift:391-392) asserts the grouped velocity drag commits exactly one history entry.
+Mapping: S020 (src/checks/rollcheck/selection.swift) asserts the grouped velocity drag commits exactly one history entry.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != groupCount + 1)
@@ -957,7 +953,7 @@ Original expression:
 
 A056 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:510
 Disposition: MATCHED
-Mapping: S023 (src/checks/rollcheck/selection.swift:410-411) asserts the repeated grouped drag preserves exactly the seeded selection.
+Mapping: S023 (src/checks/rollcheck/selection.swift) asserts the repeated grouped drag preserves exactly the seeded selection.
 Source context since previous assertion:
   ;
 
@@ -977,7 +973,7 @@ Original expression:
 
 A057 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:513
 Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/selection.swift:407-409) asserts the opposite-direction repeat restores the anchor to 93 and S021 (src/checks/rollcheck/selection.swift:393-396) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
+Mapping/reason: S022 (src/checks/rollcheck/selection.swift) asserts the opposite-direction repeat restores the anchor to 93 and S021 (src/checks/rollcheck/selection.swift) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, a.tick, uint8_t(a.key), &aRepeated) ||
@@ -987,7 +983,7 @@ Original expression:
 
 A058 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:516
 Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/selection.swift:407-409) asserts the opposite-direction repeat restores the other selected note to 100 and S021 (src/checks/rollcheck/selection.swift:393-396) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
+Mapping/reason: S022 (src/checks/rollcheck/selection.swift) asserts the opposite-direction repeat restores the other selected note to 100 and S021 (src/checks/rollcheck/selection.swift) asserts one undo restores both fixture velocities. Unproved: the full runtime record equality of sameNoteFields beyond the MIDI-visible fields.
 Source context since previous assertion:
   ;
           if (!doc.findNote(track, b.tick, uint8_t(b.key), &bRepeated) ||
@@ -997,7 +993,7 @@ Original expression:
 
 A059 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:518
 Disposition: PARTIAL
-Mapping/reason: S049 (src/checks/rollcheck/selection.swift:401-403) asserts the repeat down-drag reaches the same grouped velocities, S022 (src/checks/rollcheck/selection.swift:407-409) asserts the opposite repeat restores both velocities, S023 (src/checks/rollcheck/selection.swift:410-411) asserts the preserved selection, and S021 (src/checks/rollcheck/selection.swift:393-396) asserts history restoration. Unproved: no Swift predicate counts the repeated drag's own history entries (S020 covers the first grouped drag's single entry and S027 the chord-held drag's).
+Mapping/reason: S049 (src/checks/rollcheck/selection.swift) asserts the repeat down-drag reaches the same grouped velocities, S022 (src/checks/rollcheck/selection.swift) asserts the opposite repeat restores both velocities, S023 (src/checks/rollcheck/selection.swift) asserts the preserved selection, and S021 (src/checks/rollcheck/selection.swift) asserts history restoration. Unproved: no Swift predicate counts the repeated drag's own history entries (S020 covers the first grouped drag's single entry and S027 the chord-held drag's).
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != repeatCount + 1)
@@ -1006,7 +1002,7 @@ Original expression:
 
 A060 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:529
 Disposition: MATCHED
-Mapping: S015 (src/checks/rollcheck/selection.swift:262-263; selectionRestore from checkGroupedVelocityDrag's defer) drains the drag history to the baseline identity and asserts the restored serialized MIDI bytes equal the pre-drag bytes.
+Mapping: S015 (src/checks/rollcheck/selection.swift; selectionRestore from checkGroupedVelocityDrag's defer) drains the drag history to the baseline identity and asserts the restored serialized MIDI bytes equal the pre-drag bytes.
 Source context since previous assertion:
   ;
 
@@ -1105,7 +1101,7 @@ Original expression:
 
 A065 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:594
 Disposition: MATCHED
-Mapping: S031 (src/checks/rollcheck/selection.swift:125-126) asserts the body press selects exactly the grabbed note.
+Mapping: S031 (src/checks/rollcheck/selection.swift) asserts the body press selects exactly the grabbed note.
 Source context since previous assertion:
   ;
           const NoteId moveId = probe.noteId;
@@ -1124,7 +1120,7 @@ Original expression:
 
 A066 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:602
 Disposition: MATCHED
-Mapping: S032 (src/checks/rollcheck/selection.swift:129-131) asserts the move preview leaves the history identity and the note's tick unchanged before release.
+Mapping: S032 (src/checks/rollcheck/selection.swift) asserts the move preview leaves the history identity and the note's tick unchanged before release.
 Source context since previous assertion:
   ;
           // Drag exactly two snap cells right: the move preview snaps the
@@ -1139,7 +1135,7 @@ Original expression:
 
 A067 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:608
 Disposition: MATCHED
-Mapping: S033 (src/checks/rollcheck/selection.swift:133-136) asserts the release commits the same NoteID at the target tick with the moved pitch and the original duration.
+Mapping: S033 (src/checks/rollcheck/selection.swift) asserts the release commits the same NoteID at the target tick with the moved pitch and the original duration.
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
@@ -1152,7 +1148,7 @@ Original expression:
 
 A068 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:611
 Disposition: MATCHED
-Mapping: S034 (src/checks/rollcheck/selection.swift:137-139) asserts no note remains at the original cell.
+Mapping: S034 (src/checks/rollcheck/selection.swift) asserts no note remains at the original cell.
 Source context since previous assertion:
   ;
           DocNote stranded;
@@ -1162,7 +1158,7 @@ Original expression:
 
 A069 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:613
 Disposition: MATCHED
-Mapping: S035 (src/checks/rollcheck/selection.swift:140-141) asserts the release leaves exactly the moved note selected.
+Mapping: S035 (src/checks/rollcheck/selection.swift) asserts the release leaves exactly the moved note selected.
 Source context since previous assertion:
   ;
           if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})
@@ -1171,7 +1167,7 @@ Original expression:
 
 A070 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:615
 Disposition: PARTIAL
-Mapping/reason: S036 (src/checks/rollcheck/selection.swift:142-143) asserts the move release records a new history identity, i.e. one undoable edit. Unproved: the command-count delta of undoBase + 2 — a changed history identity corroborates a commit but is not history depth.
+Mapping/reason: S036 (src/checks/rollcheck/selection.swift) asserts the move release records a new history identity, i.e. one undoable edit. Unproved: the command-count delta of undoBase + 2 — a changed history identity corroborates a commit but is not history depth.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->index() != undoBase + 2)
@@ -1180,7 +1176,7 @@ Original expression:
 
 A071 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:623
 Disposition: MATCHED
-Mapping: S037 (src/checks/rollcheck/selection.swift:146-148) sends the standard Right nudge and asserts the same NoteID moves one snap cell without being reselected.
+Mapping: S037 (src/checks/rollcheck/selection.swift) sends the standard Right nudge and asserts the same NoteID moves one snap cell without being reselected.
 Source context since previous assertion:
   ;
           // Without reselecting, the standard arrow must move the same
@@ -1195,7 +1191,7 @@ Original expression:
 
 A072 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:625
 Disposition: MATCHED
-Mapping: S038 (src/checks/rollcheck/selection.swift:149-150) asserts the Right nudge retains the moved note as the selection.
+Mapping: S038 (src/checks/rollcheck/selection.swift) asserts the Right nudge retains the moved note as the selection.
 Source context since previous assertion:
   ;
           if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})
@@ -1204,7 +1200,7 @@ Original expression:
 
 A073 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:627
 Disposition: PARTIAL
-Mapping/reason: S039 (src/checks/rollcheck/selection.swift:151-152) asserts the Right nudge records a new history identity. Unproved: the command-count delta of undoBase + 3 — a changed history identity corroborates a commit but is not history depth.
+Mapping/reason: S039 (src/checks/rollcheck/selection.swift) asserts the Right nudge records a new history identity. Unproved: the command-count delta of undoBase + 3 — a changed history identity corroborates a commit but is not history depth.
 Source context since previous assertion:
   ;
           if (doc.undoStack()->index() != undoBase + 3)
@@ -1213,7 +1209,7 @@ Original expression:
 
 A074 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:637
 Disposition: PARTIAL
-Mapping/reason: S040 (src/checks/rollcheck/selection.swift:158-163) asserts the undo drain restores the original NoteID at its original tick, pitch and duration. Unproved: the full serialized-MIDI byte equality of this site (the Swift predicate asserts note identity and position, not the encoded document bytes).
+Mapping/reason: S040 (src/checks/rollcheck/selection.swift) asserts the undo drain restores the original NoteID at its original tick, pitch and duration. Unproved: the full serialized-MIDI byte equality of this site (the Swift predicate asserts note identity and position, not the encoded document bytes).
 Source context since previous assertion:
   ;
           while (doc.undoStack()->index() > undoBase && doc.undoStack()->canUndo())
@@ -1242,214 +1238,254 @@ verify:qml-roll --verbose). S012, S042 and S043 are shell-lane Qt Quick Test pre
 presence alone does not close an A entry: each mapping requires corresponding execution and
 equivalent setup.
 
-S001 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:319
+S001 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "covering a note starts its band audition at the document velocity"
 Counterpart expression:
 report.expect(auditions.contains { $0.pitch == p0 && $0.velocity == 93 }, cppID: id,
               message: "covering a note starts its band audition at the document velocity")
 
-S002 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:322
+S002 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "shrinking the band past a note releases its audition immediately"
 Counterpart expression:
 report.expect(auditions.contains { $0.pitch == p0 && $0.velocity == 0 }, cppID: id,
               message: "shrinking the band past a note releases its audition immediately")
 
-S003 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:326
+S003 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "re-covering a note re-auditions it"
 Counterpart expression:
 report.expect(auditions.filter { $0.pitch == p0 && $0.velocity > 0 }.count >= 2, cppID: id,
               message: "re-covering a note re-auditions it")
 
-S004 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:328
+S004 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "the drag end releases every auditioned key"
 Counterpart expression:
 report.expect(auditions.contains { $0.pitch == p1 && $0.velocity == 0 }, cppID: id,
               message: "the drag end releases every auditioned key")
 
-S005 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:330
+S005 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "band release selects every swept note identity"
 Counterpart expression:
 report.expect(session.selectedNotes.isSuperset(of: Set(seed.ids)), cppID: id,
               message: "band release selects every swept note identity")
 
-S006 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:332
+S006 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "band audition changes no document revision or undo entry"
 Counterpart expression:
 report.expect(session.document.revision == revision
     && session.document.history.currentIdentity == history, cppID: id,
     message: "band audition changes no document revision or undo entry")
 
-S007 | swiftcore/PianoRoll::selectionBandSweep (audition) | src/checks/rollcheck/selection.swift:337
+S007 | checkSelectionBandAudition | src/checks/rollcheck/selection.swift
+Anchor: message "band audition leaves the planted MIDI bytes untouched"
 Counterpart expression:
 report.expect(after.bytes == planted.bytes, cppID: id,
               message: "band audition leaves the planted MIDI bytes untouched")
 
-S008 | swiftcore/PianoRoll::selectionBandSweep | src/checks/rollcheck/selection.swift:64
+S008 | checkSelectionBandSweep | src/checks/rollcheck/selection.swift
+Anchor: message "band release selects both swept note identities"
 Counterpart expression:
 report.expect(session.selectedNotes.isSuperset(of: Set(added)), cppID: id,
               message: "band release selects both swept note identities")
 
-S009 | swiftcore/PianoRoll::selectionBandSweep | src/checks/rollcheck/selection.swift:66
+S009 | checkSelectionBandSweep | src/checks/rollcheck/selection.swift
+Anchor: message "selection sweep changes no document or undo command"
 Counterpart expression:
 report.expect(session.document.revision == revision
     && session.document.history.currentIdentity == history, cppID: id,
     message: "selection sweep changes no document or undo command")
 
-S010 | test_bandSelectsSweptNotes | src/checks/rollqml/tst_SwiftRollSelection.qml:239
+S010 | test_bandSelectsSweptNotes | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "Selecting"
 Real right-button band on the production overlay: while the band is held the held notes publish
 g.statusText containing "Selecting"; after mouseRelease the swept note publishes selected in the
 grid note summary. (Band preview is a live selection, not the C++ provisional ring.)
 
-S011 | test_bandCancelRestoresSelection | src/checks/rollqml/tst_SwiftRollSelection.qml:260
+S011 | test_bandCancelRestoresSelection | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: function
 Real right band plus the production cancel path: after cancelInput() and release the note summary
 string equals the pre-band summary and g.lastCancelReason === 2, i.e. the band selection is restored
 without a document edit.
 
-S012 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml:388
+S012 | test_escapeCancel band | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
 Held right band previews its selection; Escape restores grid.noteSummary and leaves lastCancelReason
 untouched (no document edit).
 
-S013 | swiftcore/PianoRoll::selectionMinimumDrawDistance | src/checks/rollcheck/selection.swift:495
+S013 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "crossing the draw threshold enters the draw gesture"
 Counterpart expression:
 report.expect(grid.statusText.contains("Drawing"), cppID: id,
               message: "crossing the draw threshold enters the draw gesture")
 
-S014 | swiftcore/PianoRoll::selectionMinimumDrawDistance | src/checks/rollcheck/selection.swift:501
+S014 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "a threshold drag draws one snap cell"
 Counterpart expression:
 report.expect(drawn.count == 1 && drawn.first.map { Int($0.duration) == snap } == true,
               cppID: id, message: "a threshold drag draws one snap cell")
 
-S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift:262
+S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift
+Anchor: function
 Counterpart expression:
 report.expect(document.history.currentIdentity == baseline.identity
     && restored.bytes == baseline.bytes, cppID: id, message: message)
 (message: "threshold draws unwind to the pre-seed MIDI bytes and history", "velocity drags unwind
 to the pre-seed MIDI bytes and history", "band audition unwinds to the pre-seed MIDI bytes and history")
 
-S016 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:374
+S016 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the modifier press pins the hover mark to the anchor row"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { grid.hoverKey == Int($0.pitch) } == true,
               cppID: id, message: "the modifier press pins the hover mark to the anchor row")
 
-S017 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:385
+S017 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "a 15px modifier drag lands the anchor at 78 from 93"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
               message: "a 15px modifier drag lands the anchor at 78 from 93")
 
-S018 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:387
+S018 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the grouped drag applies the same delta to the other selected note"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
               message: "the grouped drag applies the same delta to the other selected note")
 
-S019 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:389
+S019 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "a grouped velocity drag preserves the selected notes"
 Counterpart expression:
 report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
               message: "a grouped velocity drag preserves the selected notes")
 
-S020 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:391
+S020 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "one grouped velocity drag commits one undo entry"
 Counterpart expression:
 report.expect(session.document.history.undoCount == preCount + 1, cppID: id,
               message: "one grouped velocity drag commits one undo entry")
 
-S021 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:393
+S021 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "undo restores both fixture velocities at once"
 Counterpart expression:
 report.expect(session.document.history.undoDocument()
     && session.document.history.currentIdentity == plantedIdentity
     && (try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
     message: "undo restores both fixture velocities at once")
 
-S022 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:407
+S022 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "repeating the grouped drag the other way restores both velocities"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93
     && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
     message: "repeating the grouped drag the other way restores both velocities")
 
-S023 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:410
+S023 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the repeated grouped drag preserves the selected notes"
 Counterpart expression:
 report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
               message: "the repeated grouped drag preserves the selected notes")
 
-S024 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:417
+S024 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "a chord-held drag on another note re-anchors the selection to the grabbed note"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == [seed.ids[0]], cppID: id,
               message: "a chord-held drag on another note re-anchors the selection to the grabbed note")
 
-S025 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:419
+S025 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the chord-held drag adjusts the grabbed note"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
               message: "the chord-held drag adjusts the grabbed note")
 
-S026 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:421
+S026 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the chord-held drag leaves the prior note untouched"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 100, cppID: id,
               message: "the chord-held drag leaves the prior note untouched")
 
-S027 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:423
+S027 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the chord-held drag commits one undo entry"
 Counterpart expression:
 report.expect(session.document.history.undoCount == chordCount + 1, cppID: id,
               message: "the chord-held drag commits one undo entry")
 
-S028 | swiftcore/PianoRoll::selectionModifierVelocity (deferred) | src/checks/rollcheck/selection.swift:185
+S028 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl press defers removal of an already-selected note"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == ids, cppID: id,
               message: "Ctrl press defers removal of an already-selected note")
 
-S029 | swiftcore/PianoRoll::selectionModifierVelocity (deferred) | src/checks/rollcheck/selection.swift:188
+S029 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl release toggles the pressed note without changing the other"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == [ids[1]], cppID: id,
               message: "Ctrl release toggles the pressed note without changing the other")
 
-S030 | swiftcore/PianoRoll::selectionModifierVelocity (deferred) | src/checks/rollcheck/selection.swift:190
+S030 | checkDeferredModifierSelection | src/checks/rollcheck/selection.swift
+Anchor: message "modifier selection clicks push no document edit"
 Counterpart expression:
 report.expect(session.document.revision == revision
     && session.document.history.currentIdentity == history, cppID: id,
     message: "modifier selection clicks push no document edit")
 
-S031 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:125
+S031 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "body press selects exactly the grabbed note"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == [noteID], cppID: id,
               message: "body press selects exactly the grabbed note")
 
-S032 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:129
+S032 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "move preview does not commit before release"
 Counterpart expression:
 report.expect(session.document.history.currentIdentity == previewHistory
     && session.document.note(noteID)?.tick == Tick(tick), cppID: id,
     message: "move preview does not commit before release")
 
-S033 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:133
+S033 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "move release keeps the same NoteID at the target"
 Counterpart expression:
 report.expect(session.document.note(noteID).map {
     $0.tick == Tick(tick + 2 * snap) && Int($0.pitch) == pitch
         && $0.duration == Tick(duration)
 } == true, cppID: id, message: "move release keeps the same NoteID at the target")
 
-S034 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:137
+S034 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "move release vacates the original cell"
 Counterpart expression:
 report.expect(!session.document.notes(in: roll.trackIndex).contains {
     $0.tick == Tick(tick) && Int($0.pitch) == pitch
 }, cppID: id, message: "move release vacates the original cell")
 
-S035 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:140
+S035 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "move release retains the moved note as the selection"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == [noteID], cppID: id,
               message: "move release retains the moved note as the selection")
 
-S036 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:142
+S036 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "move release commits one undoable edit"
 Counterpart expression:
 report.expect(session.document.history.currentIdentity != previewHistory, cppID: id,
               message: "move release commits one undoable edit")
 
-S037 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:146
+S037 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "right nudge moves the same NoteID without reselecting"
 Counterpart expression:
 report.expect(session.document.note(noteID).map {
     $0.tick == Tick(tick + 3 * snap) && Int($0.pitch) == pitch
 } == true, cppID: id, message: "right nudge moves the same NoteID without reselecting")
 
-S038 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:149
+S038 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "right nudge retains the moved note as the selection"
 Counterpart expression:
 report.expect(session.selectedNoteOrder == [noteID], cppID: id,
               message: "right nudge retains the moved note as the selection")
 
-S039 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:151
+S039 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "right nudge commits an undoable edit"
 Counterpart expression:
 report.expect(session.document.history.currentIdentity != movedIdentity, cppID: id,
               message: "right nudge commits an undoable edit")
 
-S040 | swiftcore/PianoRoll::selectionNonScaleMove | src/checks/rollcheck/selection.swift:158
+S040 | checkSelectionNonScaleMove | src/checks/rollcheck/selection.swift
+Anchor: message "undo restores the original note identity and position"
 Counterpart expression:
 report.expect(session.document.history.currentIdentity == addedIdentity
     && session.document.note(noteID).map {
@@ -1458,47 +1494,56 @@ report.expect(session.document.history.currentIdentity == addedIdentity
     } == true, cppID: id,
     message: "undo restores the original note identity and position")
 
-S041 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:372
+S041 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl press on a grouped anchor preserves the selection"
 Counterpart expression:
 report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
               message: "Ctrl press on a grouped anchor preserves the selection")
 
-S042 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml:371
+S042 | test_rightDragCommit | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
 First fully bandable note starts unselected; the real right-button drag band commits it as selected
 through the production begin/update/endRightPointer path.
 
-S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml:447
+S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
 Real right press/move plus the production inputCancelled(1) slot restores grid.noteSummary with
 lastCancelReason 1 (QML cannot synthesize QEvent::UngrabMouse; same slot as onCanceled).
 
-S044 | swiftcore/EditorGridCamera::orderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:123
+S044 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "band keeps press order before newly covered notes"
 Counterpart expression:
 report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
     && session.selectedNotes.contains(c),
     cppID: id, message: "band keeps press order before newly covered notes")
 
-S045 | swiftcore/EditorGridCamera::projection | src/checks/rollcheck/EditorGridCameraChecks.swift:421
+S045 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "right-drag band selects exactly the visible intersecting notes"
 Counterpart expression:
 report.expect(
     session.selectedNotes == visibleIDs,
     cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
 
-S046 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:378
+S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the drag previews 78 before release"
 Counterpart expression:
 report.expect(grid.previewVelocity(seed.ids[0]) == 78, cppID: id,
               message: "the drag previews 78 before release")
 
-S047 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:380
+S047 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the velocity drag publishes its preview status"
 Counterpart expression:
 report.expect(grid.statusText.contains("Changing velocity"), cppID: id,
               message: "the velocity drag publishes its preview status")
 
-S048 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:382
+S048 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the velocity preview commits nothing before release"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93, cppID: id,
               message: "the velocity preview commits nothing before release")
 
-S049 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:401
+S049 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "dragging down again reaches the same grouped velocities"
 Counterpart expression:
 report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78
     && session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,

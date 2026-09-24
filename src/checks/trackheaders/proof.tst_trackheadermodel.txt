@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/tst_trackheadermodel.cpp
 Original SHA-256: 98669ae2b0e26428f41ccffaba0ce80ff390253a2b8bd57ebf9abef5493d9640
 Swift counterpart: src/checks/trackheaders/tst_trackheadermodel.swift
-Swift SHA-256: d57d529c7eb738c913a5cf3eaf915c5f2c152945954dc2fbf0fad560fac97354
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ GAP identifies an original predicate without a replacement assertion.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
@@ -725,232 +724,289 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:11
+S001 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "add row left activity is dark"
   report.expectEqual(0, headers.rows[headers.rows.count - 1].activityLeftHeight,
                          cppID: trackHeadersUnattachedID, what: "add row left activity is dark")
 
-S002 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:13
+S002 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "add row right activity is dark"
   report.expectEqual(0, headers.rows[headers.rows.count - 1].activityRightHeight,
                          cppID: trackHeadersUnattachedID, what: "add row right activity is dark")
 
-S003 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:15
+S003 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "unconfigured viewport has zero height"
   report.expectEqual(0.0, headers.viewportHeight, cppID: trackHeadersUnattachedID,
                          what: "unconfigured viewport has zero height")
 
-S004 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:17
+S004 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "unconfigured viewport has no scroll range"
   report.expectEqual(0.0, headers.maximumScrollY, cppID: trackHeadersUnattachedID,
                          what: "unconfigured viewport has no scroll range")
 
-S005 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:19
+S005 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "unconfigured model has two track rows and the add-track row"
   report.expectEqual(3, headers.rows.count, cppID: trackHeadersUnattachedID,
                          what: "unconfigured model has two track rows and the add-track row")
 
-S006 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:21
+S006 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "track rows exist before viewport attachment"
   report.expectEqual([0, 1], fixture.trackRows.map(\.track), cppID: trackHeadersUnattachedID,
                          what: "track rows exist before viewport attachment")
 
-S007 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:24
+S007 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "track \(row.track): unattached left activity height"
   report.expectEqual(0.0, row.activityLeftHeight, cppID: trackHeadersUnattachedID,
                              what: "track \(row.track): unattached left activity height")
 
-S008 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:26
+S008 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "track \(row.track): unattached right activity height"
   report.expectEqual(0.0, row.activityRightHeight, cppID: trackHeadersUnattachedID,
                              what: "track \(row.track): unattached right activity height")
 
-S009 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:47
+S009 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: function
   report.fail(trackHeadersReorderID, "\(probe.label): cannot create third track")
 
-S010 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:51
+S010 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "duplicate adds exactly one track"
   report.expectEqual(3, document.engineTracks.usedTrackCount,
                              cppID: trackHeadersReorderID, what: "duplicate adds exactly one track")
 
-S011 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:53
+S011 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): channels distinguish all three track identities"
   report.expectEqual(3, Set(original).count, cppID: trackHeadersReorderID,
                              what: "\(probe.label): channels distinguish all three track identities")
 
-S012 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:63
+S012 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): committed track order"
   report.expectEqual(probe.order.map { original[$0] }, fixture.channelOrder,
                              cppID: trackHeadersReorderID, what: "\(probe.label): committed track order")
 
-S013 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:65
+S013 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): mute follows the moved identity"
   report.expectEqual(Set([probe.mutedAfter]), fixture.session.mutedTracks,
                              cppID: trackHeadersReorderID, what: "\(probe.label): mute follows the moved identity")
 
-S014 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:67
+S014 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): visible mute follows the track"
   report.expectEqual([probe.mutedAfter],
                              fixture.trackRows.filter(\.muteChecked).map(\.track),
                              cppID: trackHeadersReorderID, what: "\(probe.label): visible mute follows the track")
 
-S015 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:70
+S015 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): one revision only for a real move"
   report.expectEqual(revision + (probe.changes ? 1 : 0), document.revision,
                              cppID: trackHeadersReorderID, what: "\(probe.label): one revision only for a real move")
 
-S016 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:73
+S016 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): no history entry"
   report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersReorderID,
                                  what: "\(probe.label): no history entry")
 
-S017 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:75
+S017 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): undo reachability unchanged"
   report.expectEqual(couldUndo, document.history.canUndo, cppID: trackHeadersReorderID,
                                  what: "\(probe.label): undo reachability unchanged")
 
-S018 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:77
+S018 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo reachability unchanged"
   report.expectEqual(couldRedo, document.history.canRedo, cppID: trackHeadersReorderID,
                                  what: "\(probe.label): redo reachability unchanged")
 
-S019 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:79
+S019 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "no-op move leaves duplicate as the next undo"
   report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
                             message: "no-op move leaves duplicate as the next undo")
 
-S020 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:81
+S020 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "undo duplicate restores original track count" #1
   report.expectEqual(2, document.engineTracks.usedTrackCount,
                                  cppID: trackHeadersReorderID, what: "undo duplicate restores original track count")
 
-S021 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:86
+S021 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): move enters document history"
   report.expect(moved != baseline, cppID: trackHeadersReorderID,
                         message: "\(probe.label): move enters document history")
 
-S022 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:88
+S022 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): undo succeeds"
   report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
                         message: "\(probe.label): undo succeeds")
 
-S023 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:90
+S023 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): one undo returns to duplicated baseline"
   report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersReorderID,
                              what: "\(probe.label): one undo returns to duplicated baseline")
 
-S024 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:92
+S024 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): undo restores order"
   report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersReorderID,
                              what: "\(probe.label): undo restores order")
 
-S025 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:94
+S025 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): undo restores mute identity"
   report.expectEqual(Set([probe.muted]), fixture.session.mutedTracks, cppID: trackHeadersReorderID,
                              what: "\(probe.label): undo restores mute identity")
 
-S026 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:96
+S026 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): undo restores visible mute"
   report.expectEqual([probe.muted], fixture.trackRows.filter(\.muteChecked).map(\.track),
                              cppID: trackHeadersReorderID, what: "\(probe.label): undo restores visible mute")
 
-S027 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:98
+S027 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo succeeds"
   report.expect(document.history.redoDocument(), cppID: trackHeadersReorderID,
                         message: "\(probe.label): redo succeeds")
 
-S028 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:100
+S028 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo restores the move history entry"
   report.expectEqual(moved, document.history.currentIdentity, cppID: trackHeadersReorderID,
                              what: "\(probe.label): redo restores the move history entry")
 
-S029 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:102
+S029 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo restores order"
   report.expectEqual(probe.order.map { original[$0] }, fixture.channelOrder,
                              cppID: trackHeadersReorderID, what: "\(probe.label): redo restores order")
 
-S030 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:104
+S030 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo restores mute identity"
   report.expectEqual(Set([probe.mutedAfter]), fixture.session.mutedTracks,
                              cppID: trackHeadersReorderID, what: "\(probe.label): redo restores mute identity")
 
-S031 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:106
+S031 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "\(probe.label): redo restores visible mute"
   report.expectEqual([probe.mutedAfter],
                              fixture.trackRows.filter(\.muteChecked).map(\.track),
                              cppID: trackHeadersReorderID, what: "\(probe.label): redo restores visible mute")
 
-S032 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:109
+S032 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "return to duplicated baseline"
   report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
                         message: "return to duplicated baseline")
 
-S033 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:111
+S033 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "undo duplicate"
   report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
                         message: "undo duplicate")
 
-S034 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:113
+S034 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "undo duplicate restores original track count" #2
   report.expectEqual(2, document.engineTracks.usedTrackCount,
                              cppID: trackHeadersReorderID, what: "undo duplicate restores original track count")
 
-S035 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift:128
+S035 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "unchanged document refresh emits zero row-model resets"
   report.expectEqual(resets, fixture.headers.rowRebuildCount, cppID: trackHeadersUnchangedID,
                          what: "unchanged document refresh emits zero row-model resets")
 
-S036 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift:130
+S036 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "unchanged refresh preserves document track order"
   report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersUnchangedID,
                          what: "unchanged refresh preserves document track order")
 
-S037 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:149
+S037 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "delete rebuilds rows exactly once"
   report.expectEqual(resets + 1, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
                          what: "delete rebuilds rows exactly once")
 
-S038 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:152
+S038 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "delete removes exactly the last track"
   report.expectEqual(Array(original.prefix(1)), fixture.channelOrder, cppID: trackHeadersStructuralID,
                          what: "delete removes exactly the last track")
 
-S039 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:154
+S039 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "undo restores deleted track"
   report.expect(document.history.undoDocument(), cppID: trackHeadersStructuralID,
                     message: "undo restores deleted track")
 
-S040 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:156
+S040 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "restore returns to original history identity"
   report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersStructuralID,
                          what: "restore returns to original history identity")
 
-S041 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:158
+S041 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "restore rebuilds rows exactly once"
   report.expectEqual(resets + 2, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
                          what: "restore rebuilds rows exactly once")
 
-S042 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:161
+S042 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "restore recovers original track order"
   report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersStructuralID,
                          what: "restore recovers original track order")
 
-S043 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:165
+S043 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "rename opens on a live row"
   report.expectEqual(0, headers.renamingTrack, cppID: trackHeadersStructuralID,
                          what: "rename opens on a live row")
 
-S044 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:170
+S044 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "structural change during rename rebuilds rows exactly once"
   report.expectEqual(resets + 3, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
                          what: "structural change during rename rebuilds rows exactly once")
 
-S045 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:172
+S045 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "structural change cancels an open rename"
   report.expectEqual(-1, headers.renamingTrack, cppID: trackHeadersStructuralID,
                          what: "structural change cancels an open rename")
 
-S046 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:174
+S046 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "structural cancellation does not commit the draft"
   report.expectEqual("Lead", document.trackName(0), cppID: trackHeadersStructuralID,
                          what: "structural cancellation does not commit the draft")
 
-S047 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:176
+S047 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "only deletion commits during rename cancellation"
   report.expectEqual(revision + 1, document.revision, cppID: trackHeadersStructuralID,
                          what: "only deletion commits during rename cancellation")
 
-S048 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:180
+S048 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "late rename completion cannot commit cancelled text"
   report.expectEqual("Lead", document.trackName(0), cppID: trackHeadersStructuralID,
                          what: "late rename completion cannot commit cancelled text")
 
-S049 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:182
+S049 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "single undo after cancellation restores the deleted track"
   report.expect(document.history.undoDocument(), cppID: trackHeadersStructuralID,
                     message: "single undo after cancellation restores the deleted track")
 
-S050 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:184
+S050 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift
+Anchor: message "cancelled rename leaves no extra history entry"
   report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersStructuralID,
                          what: "cancelled rename leaves no extra history entry")
 
-S051 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:82
+S051 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts press"
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts press")
 
-S052 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:84
+S052 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts drag"
   report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
 
-S053 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:86
+S053 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts release"
   report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts release")
 
-S054 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:91
+S054 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): rows follow engine track order"
   report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
                              what: "\(phase): rows follow engine track order")
 
-S055 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:94
+S055 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): rows display ordered numbered track names"
   report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
                              what: "\(phase): rows display ordered numbered track names")
 
-S056 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:96
+S056 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): one row per track plus add-track row"
   report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
                              what: "\(phase): one row per track plus add-track row")
 
-S057 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:99
+S057 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): add-track row remains last"
   report.expectEqual([names.count], addRows, cppID: cppID,
                              what: "\(phase): add-track row remains last")
 

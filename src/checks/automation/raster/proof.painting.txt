@@ -5,15 +5,13 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/raster/painting.cpp
 Original SHA-256: 4ef6ea6953fe9b60e0ed3654a0645dd5ce99f7f1f1ea9a869c9e9cca59b4365a
 Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
-Additional Swift SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-25 of 44 sites in this file are GAP and 19 are RETIRED-REPRESENTATION (no ingress). The 25 GAP sites are curve/node/ring pixel-presence observations (layerHasColorIn lineProbe/nodeProbe, framebufferHasColorNear, layerHasSelectionRing, framebufferHasSelectionRing) with no executing QML pixel predicate covering the captured raster pixels, plus the render-sequence capture guards, the selection-revision and retained-selection observations, the painting configuration and the selection-layer structure in the same render sequence, none of which has an executing converted-lane predicate; the Swift drawer asserts model state only. curvesNodesAndSelectedRingsRender and halfOpenTrackSelectionRendersOnlyIncludedNodes captured rendered raster viewports of curve lines, node diamond pixels and selection rings. That harness no longer exists: src/checks/automation/raster/painting.cpp was deleted in 31ea635f, no CMake target builds the raster harness, and checkcatalog.cpp registers no automation lane, so nothing executes these pixel observations; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving consumer-visible behavior is asserted at model level in src/checks/automation/presentation/painting.swift (called from src/checks/automation/AutomationPageChecks.swift:351-352) and in the converted QML drawer lane src/checks/editorqml/tst_EditorDrawer.qml; neither inspects framebuffer pixels.
+25 of 44 sites in this file are GAP and 19 are RETIRED-REPRESENTATION (no ingress). The 25 GAP sites are curve/node/ring pixel-presence observations (layerHasColorIn lineProbe/nodeProbe, framebufferHasColorNear, layerHasSelectionRing, framebufferHasSelectionRing) with no executing QML pixel predicate covering the captured raster pixels, plus the render-sequence capture guards, the selection-revision and retained-selection observations, the painting configuration and the selection-layer structure in the same render sequence, none of which has an executing converted-lane predicate; the Swift drawer asserts model state only. curvesNodesAndSelectedRingsRender and halfOpenTrackSelectionRendersOnlyIncludedNodes captured rendered raster viewports of curve lines, node diamond pixels and selection rings. That harness no longer exists: src/checks/automation/raster/painting.cpp was deleted in 31ea635f, no CMake target builds the raster harness, and checkcatalog.cpp registers no automation lane, so nothing executes these pixel observations; the legacy widget drawer it drove (src/ui/editordrawer/*) is in no target and the automation QSG paint path it captured was removed in c17d966f. The surviving consumer-visible behavior is asserted at model level in src/checks/automation/presentation/painting.swift (called from src/checks/automation/AutomationPageChecks.swift) and in the converted QML drawer lane src/checks/editorqml/tst_EditorDrawer.qml; neither inspects framebuffer pixels.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -30,7 +28,7 @@ Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 src/checks/automation/raster/*.cpp appear in no CMake target and checkcatalog.cpp registers no automation lane: that is the no-ingress proof carried in every mapping line below.
-Converted-lane evidence: the controller-recorded deno task verify --filter swiftcore --verbose PASS (all harnesses in 10.26s) runs the surviving drawer predicates in src/checks/automation/presentation/painting.swift (called at src/checks/automation/AutomationPageChecks.swift:351-352, dispatched through the projectSession slot of tst_swiftcore.cpp); the retired raster pixels themselves stay unexecuted.
+Converted-lane evidence: the controller-recorded deno task verify --filter swiftcore --verbose PASS (all harnesses in 10.26s) runs the surviving drawer predicates in src/checks/automation/presentation/painting.swift (called at src/checks/automation/AutomationPageChecks.swift, dispatched through the projectSession slot of tst_swiftcore.cpp); the retired raster pixels themselves stay unexecuted.
 
 Execution ownership
 AutomationRasterTest in raster/painting.cpp captured raster framebuffers to inspect rendered curve geometry and node pixels. That harness was deleted in 31ea635f (raster/painting.cpp, raster/interaction.cpp, raster/rasterfixture.* and tst_automationraster.h), so no current target or lane builds it. In the converted Swift suite, presentation/painting.swift exercises scale labels and row stack composition at the presenter level, and src/checks/editorqml/tst_EditorDrawer.qml drives the converted QML drawer; neither inspects raster pixels.
@@ -899,153 +897,187 @@ Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:15
+S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "a centered parameter emits maximum, minimum and neutral labels"
   report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum, .neutral],
                          pan.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
                          what: "a centered parameter emits maximum, minimum and neutral labels")
 
-S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:18
+S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the scale labels use the parameter's own formatting"
   report.expectEqual(["c_v+63", "c_v-64", "c_v+0"], pan.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
                          what: "the scale labels use the parameter's own formatting")
 
-S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:20
+S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the neutral label names the neutral value"
   report.expectEqual(64, pan.scaleLabels[2].value, cppID: drawerAutomationLabelsID,
                          what: "the neutral label names the neutral value")
 
-S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:22
+S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "maximum, neutral and minimum sit at their curve-true heights"
   report.expect(pan.scaleLabels[0].y < pan.scaleLabels[2].y
                         && pan.scaleLabels[2].y < pan.scaleLabels[1].y,
                     cppID: drawerAutomationLabelsID,
                     message: "maximum, neutral and minimum sit at their curve-true heights")
 
-S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:28
+S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "a parameter without a neutral emits only its extremes"
   report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
                          volume.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
                          what: "a parameter without a neutral emits only its extremes")
 
-S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:31
+S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "Volume's scale labels are its raw values"
   report.expectEqual(["127", "0"], volume.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
                          what: "Volume's scale labels are its raw values")
 
-S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:33
+S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "Tempo's scale labels are its BPM bounds with no neutral"
   report.expectEqual(["255", "20"], fixture.projection(.tempo).scaleLabels.map(\.text),
                          cppID: drawerAutomationLabelsID,
                          what: "Tempo's scale labels are its BPM bounds with no neutral")
 
-S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:36
+S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "Bend's scale labels take the bend format path"
   report.expectEqual(["+8191", "-8192", "0"], fixture.projection(fixture.bendLane)
           .scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
                          what: "Bend's scale labels take the bend format path")
 
-S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the row stack carries one row per catalog parameter"
   report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
                          what: "the row stack carries one row per catalog parameter")
 
-S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the Tempo row leads the stack"
   report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
                          what: "the Tempo row leads the stack")
 
-S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:47
+S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "a row counts the lane's written events"
   report.expectEqual(2, stack.row(for: fixture.volumeLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
                          what: "a row counts the lane's written events")
 
-S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:49
+S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "a lane the document never wrote counts no event"
   report.expectEqual(0, stack.row(for: fixture.modulationLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
                          what: "a lane the document never wrote counts no event")
 
-S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:51
+S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "a ready stack shows every row"
   report.expectEqual(AutomationCatalog.count, stack.visibleRowCount, cppID: drawerAutomationLabelsID,
                          what: "a ready stack shows every row")
 
-S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:53
+S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the lane count sums the written events, Tempo included"
   report.expectEqual(4, stack.laneCount, cppID: drawerAutomationLabelsID,
                          what: "the lane count sums the written events, Tempo included")
 
-S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:55
+S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the selector's counts follow the catalog order, Tempo first"
   report.expectEqual([1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stack.eventCounts(track: 0),
                          cppID: drawerAutomationLabelsID,
                          what: "the selector's counts follow the catalog order, Tempo first")
 
-S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:61
+S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "without a track only the Tempo row is visible"
   report.expectEqual(1, hidden.visibleRowCount, cppID: drawerAutomationLabelsID,
                          what: "without a track only the Tempo row is visible")
 
-S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:63
+S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "without a track the selector counts only Tempo"
   report.expectEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hidden.eventCounts(track: 0),
                          cppID: drawerAutomationLabelsID,
                          what: "without a track the selector counts only Tempo")
 
-S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:80
+S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "an active selection publishes its tick range"
   report.expectEqual(range, stack.activeTickRange, cppID: drawerAutomationRowsID,
                          what: "an active selection publishes its tick range")
 
-S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:83
+S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a covered lane with events inside the range carries both indicators"
   report.expect(panRow?.coversNodes == true && panRow?.coversLane == true
                         && panRow?.selectionHasEvents == true,
                     cppID: drawerAutomationRowsID,
                     message: "a covered lane with events inside the range carries both indicators")
 
-S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:88
+S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "an uncovered lane carries no scope indicator"
   report.expect(volumeRow?.coversNodes == false && volumeRow?.selectionHasEvents == false,
                     cppID: drawerAutomationRowsID, message: "an uncovered lane carries no scope indicator")
 
-S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:90
+S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "the selected parameters are the covered lanes with events"
   report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
                          what: "the selected parameters are the covered lanes with events")
 
-S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:99
+S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "scope coverage alone never marks a row selected"
   report.expect(empty.row(for: fixture.panLane)?.coversNodes == true
                         && empty.row(for: fixture.panLane)?.selectionHasEvents == false,
                     cppID: drawerAutomationRowsID, message: "scope coverage alone never marks a row selected")
 
-S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:102
+S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a covered but empty range selects no parameter"
   report.expectEqual([AutomationParameter](), empty.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
                          what: "a covered but empty range selects no parameter")
 
-S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:108
+S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a track-scoped selection covers the selected track's lanes"
   report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID,
                     message: "a track-scoped selection covers the selected track's lanes")
 
-S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:110
+S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a track-scoped selection leaves another track's lanes alone"
   report.expect(!trackScoped.covers(.controlChange(track: 1, controller: TimeDefaults.ccPan),
                                         usedTracks: [0, 1]),
                     cppID: drawerAutomationRowsID,
                     message: "a track-scoped selection leaves another track's lanes alone")
 
-S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:114
+S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "Tempo is covered when the whole used set is selected"
   report.expect(trackScoped.coversTempo(usedTracks: [0]), cppID: drawerAutomationRowsID,
                     message: "Tempo is covered when the whole used set is selected")
 
-S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:116
+S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "Tempo is uncovered when part of the used set is selected"
   report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID,
                     message: "Tempo is uncovered when part of the used set is selected")
 
-S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:118
+S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a zero-width range is no selection"
   report.expect(!AutomationTimeSelection(range: TimeRange(startTick: 20, endTick: 20),
                                              scope: .lanes).isActive,
                     cppID: drawerAutomationRowsID, message: "a zero-width range is no selection")
 
-S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:126
+S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "the page publishes the selected inactive parameters"
   report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID,
                          what: "the page publishes the selected inactive parameters")
 
-S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:128
+S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "the active parameter is not the selected one"
   report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID,
                          what: "the active parameter is not the selected one")
 
-S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:131
+S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "a covered lane with events pins as a ghost"
   report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
                     message: "a covered lane with events pins as a ghost")
 
-S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:133
+S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "the ghost label names the curve and its event count"
   report.expectEqual(["Pan (PAN) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                          what: "the ghost label names the curve and its event count")
 
-S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:135
+S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "the pin toggles off again"
   report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
                     message: "the pin toggles off again")
 
-S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:137
+S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
+Anchor: message "unpinning drops the ghost label"
   report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                          what: "unpinning drops the ghost label")
 

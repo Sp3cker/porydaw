@@ -5,7 +5,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/audio/tst_audiotelemetry.cpp
 Original SHA-256: be59b9fc427b087715c7ff78ff2cfccf7c60639dafb2c883a912f38d3461f735
 Swift counterpart: src/checks/audio/tst_audiotelemetry.swift
-Swift SHA-256: 951b2a4e544cf71f7c759c95b3b3130480b8f7eeb62ca6b56c149c9ff38aff31
 Verification: lane integration run recorded by the controller, not re-run for this ledger: deno task verify --verbose — verify: 6/6 ok (11.75s); run_checks PASS (all harnesses in 11.75s), covering production-startup, audiocheck-backend, vgbankcheck, exportcheck-loop, exportcheck-tail and swiftcore.
 Result: swiftcore PASS; SwiftCoreTest::playback runs PDC_SUITE_PLAYBACK, which calls runAudioControllerChecks and executes every predicate below green. No live native audiocheck run and no differential comparison exist or are claimed; the deleted harness neither builds nor executes.
 
@@ -29,7 +28,7 @@ only by the retained native path. None of these labels authorizes deletion or
 claims whole-case equivalence. Native passes do not prove the Swift replacement.
 
 Execution and ownership
-Registered run path: swiftcore check -> src/checks/support/corecheck/tst_swiftcore.cpp:36 SwiftCoreTest::playback -> pdc_suite_run(PDC_SUITE_PLAYBACK) at tst_swiftcore.cpp:38 -> src/checks/support/corecheck/CoreCheckSupport.swift:98 case 3 -> runAudioControllerChecks (src/checks/audio/AudioControllerChecks.swift:7) -> checkControllerControls (:24) -> checkAudioVolumeClamps (src/checks/audio/tst_audiotelemetry.swift:4) -> checkAudioActivityTelemetry (src/checks/audio/tst_audiotelemetry.swift:17). Every Swift predicate mapped below carries the original audiocheck/AudioTelemetryTest cppID and reports through tst_swiftcore.cpp reportSwiftCheck, which fails the QtTest run on any failed predicate.
+Registered run path: swiftcore check -> src/checks/support/corecheck/tst_swiftcore.cpp:36 SwiftCoreTest::playback -> pdc_suite_run(PDC_SUITE_PLAYBACK) at tst_swiftcore.cpp:38 -> src/checks/support/corecheck/CoreCheckSupport.swift case 3 -> runAudioControllerChecks (src/checks/audio/AudioControllerChecks.swift) -> checkControllerControls (:24) -> checkAudioVolumeClamps (src/checks/audio/tst_audiotelemetry.swift) -> checkAudioActivityTelemetry (src/checks/audio/tst_audiotelemetry.swift). Every Swift predicate mapped below carries the original audiocheck/AudioTelemetryTest cppID and reports through tst_swiftcore.cpp reportSwiftCheck, which fails the QtTest run on any failed predicate.
 checkAudioVolumeClamps receives the same renderer from checkControllerControls; it leaves volume at 100 before subsequent rendering, preserving existing order.
 
 Fixture, sequence and row constraints

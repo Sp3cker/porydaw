@@ -4,15 +4,10 @@ Reference revision: 4ae6619dda9405bf0a3352e4171d9da54ef04f1f
 Original: src/checks/rollcheck/pencil_velocity.cpp
 Original SHA-256: c054a6feb791c8e18ac192d8450bf84066d19c6ef237298098df4244219dd9de
 Swift counterpart: src/checks/rollcheck/selection.swift
-Swift SHA-256: e59a0a8fd5344869bd1b08c3d703a648134d7d1499efed9bf4ae750fece9e0de
 Additional Swift counterpart: src/checks/rollcheck/pencil.swift
-Additional Swift SHA-256: 9fdd7a587866d35457c75e107100cc7bac92e9d405986b3b31d565ef44eacaa1
 Additional Swift counterpart: src/checks/rollcheck/interlock.swift
-Additional Swift SHA-256: d37ba279712c6fec477b9d5d407aa378be67cedf26683b0b3dc8d23617ccc93c
 Additional Swift counterpart: src/checks/rollcheck/resize.swift
-Additional Swift SHA-256: ce9b1ec1127a17782a74aecae30ac054a96e635a436601597eeac591473eb424
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
-Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -169,7 +164,7 @@ QVERIFY2(doc.findNote(check.track(), b.tick, uint8_t(b.key), &noteB),
 
 A004 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:69
 Disposition: GAP
-Mapping/reason: Feature not yet ported: the click-latched velocity (73) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift:161).
+Mapping/reason: Feature not yet ported: the click-latched velocity (73) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift).
 Source context since previous assertion:
 ;
 
@@ -478,7 +473,7 @@ QVERIFY(seed.has_value())
 
 A027 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:205
 Disposition: MATCHED
-Mapping: S006 (src/checks/rollcheck/selection.swift:374-375) asserts the modifier press pins the hover mark to the anchor (grabbed) note's row.
+Mapping: S006 (src/checks/rollcheck/selection.swift) asserts the modifier press pins the hover mark to the anchor (grabbed) note's row.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -498,7 +493,7 @@ QCOMPARE(check.roll().property("hoverKey").toInt(), seed->b.key)
 
 A028 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:208
 Disposition: PARTIAL
-Mapping/reason: PARTIAL — S007 (selection.swift:378-379) asserts the drag stages preview 78 before release, S008 (selection.swift:380-381) asserts the "Changing velocity" status, and S009 (selection.swift:382-383) asserts the document velocity is still 93 (no pre-release commit). Unproved: the original revision-unchanged and undoCount-unchanged conjuncts have no Swift predicate, and the held/preview values differ (73/93 native vs 93-seed/78-preview Swift).
+Mapping/reason: PARTIAL — S007 (selection.swift) asserts the drag stages preview 78 before release, S008 (selection.swift) asserts the "Changing velocity" status, and S009 (selection.swift) asserts the document velocity is still 93 (no pre-release commit). Unproved: the original revision-unchanged and undoCount-unchanged conjuncts have no Swift predicate, and the held/preview values differ (73/93 native vs 93-seed/78-preview Swift).
 Source context since previous assertion:
 ;
     const auto preview = view.previewVelocity(seed->noteB.noteId);
@@ -512,7 +507,7 @@ QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &held) 
 
 A029 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:215
 Disposition: PARTIAL
-Mapping/reason: S010 (selection.swift:385-386) asserts the released drag lands the anchor at 78, S011 (selection.swift:387-388) applies the same delta to the grouped note, S012 (selection.swift:389-390) preserves the selection and S013 (selection.swift:391-392) asserts exactly one new undo entry (undoCount == preCount + 1). Unproved: the exact revision +1 and the exact undo index +1 that this original expression also pins; the Swift predicate proves the count delta and the committed value.
+Mapping/reason: S010 (selection.swift) asserts the released drag lands the anchor at 78, S011 (selection.swift) applies the same delta to the grouped note, S012 (selection.swift) preserves the selection and S013 (selection.swift) asserts exactly one new undo entry (undoCount == preCount + 1). Unproved: the exact revision +1 and the exact undo index +1 that this original expression also pins; the Swift predicate proves the count delta and the committed value.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center - QPoint(0, 20),
@@ -550,7 +545,7 @@ QVERIFY2(doc.findNote(check.track(), c.tick, uint8_t(c.key), &noteC),
 
 A032 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:226
 Disposition: GAP
-Mapping/reason: Feature not yet ported: the drag-latched draw velocity (93) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift:161).
+Mapping/reason: Feature not yet ported: the drag-latched draw velocity (93) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift).
 Source context since previous assertion:
 ;
 
@@ -559,7 +554,7 @@ QCOMPARE(noteC.velocity, 93)
 
 A033 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:229
 Disposition: PARTIAL
-Mapping/reason: S014 (selection.swift:393-398) asserts one undo restores both fixture velocities at once and S015 (selection.swift:262-263, selectionRestore) asserts the drags unwind to the pre-seed MIDI bytes and history identity. Unproved: the drag-latch draw that this site's comparison also unwinds; the latch is not ported.
+Mapping/reason: S014 (selection.swift) asserts one undo restores both fixture velocities at once and S015 (selection.swift, selectionRestore) asserts the drags unwind to the pre-seed MIDI bytes and history identity. Unproved: the drag-latch draw that this site's comparison also unwinds; the latch is not ported.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -570,7 +565,7 @@ QCOMPARE(doc.smf().write(), before)
 
 A034 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:236
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/interlock.swift:46-47) asserts the two-note A/B velocity fixture seeded as exactly two notes, the Swift counterpart of makeVelocitySeed.
+Mapping: S001 (src/checks/rollcheck/interlock.swift) asserts the two-note A/B velocity fixture seeded as exactly two notes, the Swift counterpart of makeVelocitySeed.
 Source context since previous assertion:
 ;
 }
@@ -626,7 +621,7 @@ QVERIFY2(checks::events::primeMouseMove(*window, roll, pressPosition),
 
 A038 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:256
 Disposition: MATCHED
-Mapping: S002 (src/checks/rollcheck/interlock.swift:175-176) asserts the Ctrl-left drag stages a velocity preview, and S004 (interlock.swift:185-186) asserts the MIDI bytes, undo index and undo count are unchanged while it is staged. The Swift abort stimulus is the right press/release pair rather than QEvent::UngrabMouse.
+Mapping: S002 (src/checks/rollcheck/interlock.swift) asserts the Ctrl-left drag stages a velocity preview, and S004 (interlock.swift) asserts the MIDI bytes, undo index and undo count are unchanged while it is staged. The Swift abort stimulus is the right press/release pair rather than QEvent::UngrabMouse.
 Source context since previous assertion:
 ;
     QTest::mousePress(window, Qt::LeftButton, Qt::ControlModifier, pressPosition);
@@ -639,7 +634,7 @@ QVERIFY2(view.previewVelocity(seed->noteB.noteId).has_value() && doc.revision() 
 
 A039 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:262
 Disposition: PARTIAL
-Mapping/reason: S003 (interlock.swift:180-181) asserts the staged preview is aborted and S004 (interlock.swift:185-186) asserts no bytes/index/count change; S028 (src/checks/editorqml/tst_ShellGridInput.qml:447-467) runs the production inputCancelled(1) ungrab slot and asserts noteSummary restoration with reason 1. Unproved: a QEvent::UngrabMouse delivered to a live velocity drag (QML cannot synthesize UngrabMouse; the shell lane exercises the band, not the velocity drag).
+Mapping/reason: S003 (interlock.swift) asserts the staged preview is aborted and S004 (interlock.swift) asserts no bytes/index/count change; S028 (src/checks/editorqml/tst_ShellGridInput.qml) runs the production inputCancelled(1) ungrab slot and asserts noteSummary restoration with reason 1. Unproved: a QEvent::UngrabMouse delivered to a live velocity drag (QML cannot synthesize UngrabMouse; the shell lane exercises the band, not the velocity drag).
 Source context since previous assertion:
 ;
     roll.ungrabMouse();
@@ -654,7 +649,7 @@ QVERIFY2(cancelledOnUngrab && !view.previewVelocity(seed->noteB.noteId) &&
 
 A040 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:266
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/interlock.swift:185-186) asserts the aborted velocity drag preserves the MIDI bytes, undo index and undo count for the slot.
+Mapping: S004 (src/checks/rollcheck/interlock.swift) asserts the aborted velocity drag preserves the MIDI bytes, undo index and undo count for the slot.
 Source context since previous assertion:
 ;
 
@@ -692,7 +687,7 @@ QVERIFY2(c.key >= 0, "no free grid cell for the double-click delete")
 
 A043 | PianoRollTest::velocityDoubleClickDelete | src/checks/rollcheck/pencil_velocity.cpp:286
 Disposition: MATCHED
-Mapping: S019 (src/checks/rollcheck/pencil.swift:244-245) asserts the double press deletes the note under the pointer (session.document.note(id) == nil).
+Mapping: S019 (src/checks/rollcheck/pencil.swift) asserts the double press deletes the note under the pointer (session.document.note(id) == nil).
 Source context since previous assertion:
 ;
     drawNote(roll, c.center);
@@ -708,7 +703,7 @@ QVERIFY2(!doc.findNote(check.track(), c.tick, uint8_t(c.key), &deleted),
 
 A044 | PianoRollTest::velocityDoubleClickDelete | src/checks/rollcheck/pencil_velocity.cpp:290
 Disposition: MATCHED
-Mapping: S016 (src/checks/rollcheck/pencil.swift:99-102, pencilRestore) drains the double-click sequence and asserts the restored serialized MIDI bytes equal the pre-draw bytes and the history identity is restored.
+Mapping: S016 (src/checks/rollcheck/pencil.swift, pencilRestore) drains the double-click sequence and asserts the restored serialized MIDI bytes equal the pre-draw bytes and the history identity is restored.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -741,7 +736,7 @@ QVERIFY2(cell.key >= 0, "no free grid cell for the Quick lifecycle scenarios")
 
 A046 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:307
 Disposition: MATCHED
-Mapping: S017 (src/checks/rollcheck/pencil.swift:160) asserts the pointer draw creates a note at the selected cell — the lifecycle-draw observation of this site.
+Mapping: S017 (src/checks/rollcheck/pencil.swift) asserts the pointer draw creates a note at the selected cell — the lifecycle-draw observation of this site.
 Source context since previous assertion:
 ;
     drawNote(rollInput, cell.center);
@@ -753,7 +748,7 @@ QVERIFY2(doc.findNote(track, cell.tick, uint8_t(cell.key), &note),
 
 A047 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:318
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native host-input obligation: pressing the roll through the Quick window must grant the roll input focus. The shell lane forces focus (tst_ShellGridInput.qml:406/421) rather than asserting the press-grants-focus chain, so no executing predicate covers it.
+Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native host-input obligation: pressing the roll through the Quick window must grant the roll input focus. The shell lane forces focus (tst_ShellGridInput.qml/421) rather than asserting the press-grants-focus chain, so no executing predicate covers it.
 Source context since previous assertion:
 ;
     view.selectionModel().setNoteSelection({note.noteId});
@@ -772,7 +767,7 @@ QVERIFY2(focused,
 
 A048 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:320
 Disposition: MATCHED
-Mapping: S027 (src/checks/editorqml/tst_ShellGridInput.qml:416-420) presses a note with a real left click on the production shell and asserts the note becomes selected (noteById(target.id).selected).
+Mapping: S027 (src/checks/editorqml/tst_ShellGridInput.qml) presses a note with a real left click on the production shell and asserts the note becomes selected (noteById(target.id).selected).
 Source context since previous assertion:
 ;
 
@@ -781,7 +776,7 @@ QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{note.noteId}
 
 A049 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:347
 Disposition: MATCHED
-Mapping: S021 (src/checks/rollcheck/pencil.swift:265-270) asserts the pointerUngrabReason cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
+Mapping: S021 (src/checks/rollcheck/pencil.swift) asserts the pointerUngrabReason cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
 Source context since previous assertion:
 ;
 
@@ -817,7 +812,7 @@ QVERIFY2(cancellationLeavesNoMutation([&] { rollInput.ungrabMouse(); }),
 
 A050 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:349
 Disposition: MATCHED
-Mapping: S021 (src/checks/rollcheck/pencil.swift:265-270) asserts the windowDeactivated cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
+Mapping: S021 (src/checks/rollcheck/pencil.swift) asserts the windowDeactivated cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
 Source context since previous assertion:
 ;
 
@@ -833,7 +828,7 @@ QVERIFY2(cancellationLeavesNoMutation([&] {
 
 A051 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:357
 Disposition: MATCHED
-Mapping: S021 (src/checks/rollcheck/pencil.swift:265-270) asserts the focusLost cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
+Mapping: S021 (src/checks/rollcheck/pencil.swift) asserts the focusLost cancellation clears the staged draw preview, leaves no interaction active, records the reason and changes no document revision.
 Source context since previous assertion:
 ;
 
@@ -846,7 +841,7 @@ QVERIFY2(cancellationLeavesNoMutation([&] {
 
 A052 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:369
 Disposition: PARTIAL
-Mapping/reason: PARTIAL — S024 (src/checks/rollcheck/resize.swift:373-374) asserts the note's right edge grip publishes cursorKind 3, S025 (resize.swift:376-377) the left edge grip, and S026 (resize.swift:379-380) asserts the note body publishes cursorKind 0 (arrow). Unproved: the host QCursor pixmap/shape chain (non-null pixmap, ArrowCursor shape) has no Swift predicate; cursorKind zones are an analogous model, not the same observation.
+Mapping/reason: PARTIAL — S024 (src/checks/rollcheck/resize.swift) asserts the note's right edge grip publishes cursorKind 3, S025 (resize.swift) the left edge grip, and S026 (resize.swift) asserts the note body publishes cursorKind 0 (arrow). Unproved: the host QCursor pixmap/shape chain (non-null pixmap, ArrowCursor shape) has no Swift predicate; cursorKind zones are an analogous model, not the same observation.
 Source context since previous assertion:
 ;
     const qreal edgeX =
@@ -863,7 +858,7 @@ QVERIFY2(edgeCursor && rollInput.cursor().shape() == Qt::ArrowCursor,
 
 A053 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:375
 Disposition: MATCHED
-Mapping: S021 (src/checks/rollcheck/pencil.swift:265-270) asserts each lifecycle cancellation changes no document revision, and S016 (pencil.swift:99-102, pencilRestore) restores the pre-draw MIDI bytes and history position for the slot.
+Mapping: S021 (src/checks/rollcheck/pencil.swift) asserts each lifecycle cancellation changes no document revision, and S016 (pencil.swift, pencilRestore) restores the pre-draw MIDI bytes and history position for the slot.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(rollInput, QEvent::Leave, QPointF(1, cell.center.y()), Qt::NoButton,
@@ -885,116 +880,144 @@ the shell-grid-input lane (tst_ShellGridInput.qml). deno task verify --filter sw
 --verbose PASS 1/14 ok and deno task verify:shell --verbose PASS 11/11 (both
 controller-recorded).
 
-S001 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:46
+S001 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
+Anchor: message "A001 velocity fixture seeds notes A and B"
   report.expect(seeded?.count == 2, cppID: id,
                 message: "A001 velocity fixture seeds notes A and B")
 
-S002 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:175
+S002 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
+Anchor: function
   report.expect(grid.previewVelocity(seeded[1]) != nil, cppID: id,
                 message: attempt == 0 ? "A014 Ctrl velocity drag stages a preview" :
                     "A016 later Ctrl velocity drag stages a preview")
 
-S003 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:180
+S003 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
+Anchor: function
   report.expect(grid.previewVelocity(seeded[1]) == nil, cppID: id,
                 message: attempt == 0 ? "A015 right release aborts velocity preview" :
                     "A017 second right release aborts velocity preview")
 
-S004 | swiftcore/PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.swift:185
+S004 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
+Anchor: message "A018 velocity aborts preserve MIDI bytes and undo history"
   report.expect(unchanged(before), cppID: id,
                 message: "A018 velocity aborts preserve MIDI bytes and undo history")
 
-S005 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:359
+S005 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: function
   report.fail(id, "could not seed the velocity-drag note pair")
 
-S006 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:374
+S006 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the modifier press pins the hover mark to the anchor row"
   report.expect(session.document.note(seed.ids[0]).map { grid.hoverKey == Int($0.pitch) } == true,
                 cppID: id, message: "the modifier press pins the hover mark to the anchor row")
 
-S007 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:378
+S007 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the drag previews 78 before release"
   report.expect(grid.previewVelocity(seed.ids[0]) == 78, cppID: id,
                 message: "the drag previews 78 before release")
 
-S008 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:380
+S008 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the velocity drag publishes its preview status"
   report.expect(grid.statusText.contains("Changing velocity"), cppID: id,
                 message: "the velocity drag publishes its preview status")
 
-S009 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:382
+S009 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the velocity preview commits nothing before release"
   report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93, cppID: id,
                 message: "the velocity preview commits nothing before release")
 
-S010 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:385
+S010 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "a 15px modifier drag lands the anchor at 78 from 93"
   report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
                 message: "a 15px modifier drag lands the anchor at 78 from 93")
 
-S011 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:387
+S011 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "the grouped drag applies the same delta to the other selected note"
   report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
                 message: "the grouped drag applies the same delta to the other selected note")
 
-S012 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:389
+S012 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "a grouped velocity drag preserves the selected notes"
   report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
                 message: "a grouped velocity drag preserves the selected notes")
 
-S013 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:391
+S013 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "one grouped velocity drag commits one undo entry"
   report.expect(session.document.history.undoCount == preCount + 1, cppID: id,
                 message: "one grouped velocity drag commits one undo entry")
 
-S014 | swiftcore/PianoRoll::selectionModifierVelocity | src/checks/rollcheck/selection.swift:393
+S014 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "undo restores both fixture velocities at once"
   report.expect(session.document.history.undoDocument()
       && session.document.history.currentIdentity == plantedIdentity
       && (try? session.document.captureSave().bytes) == plantedBytes, cppID: id,
       message: "undo restores both fixture velocities at once")
 
-S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift:262
+S015 | selectionRestore helper (shared by selection.swift checks) | src/checks/rollcheck/selection.swift
+Anchor: function
   report.expect(document.history.currentIdentity == baseline.identity
       && restored.bytes == baseline.bytes, cppID: id, message: message)
 
-S016 | pencilRestore helper (shared by pencil.swift checks) | src/checks/rollcheck/pencil.swift:99
+S016 | pencilRestore helper (shared by pencil.swift checks) | src/checks/rollcheck/pencil.swift
+Anchor: message "undo restores the original SMF bytes and history position"
   report.expect(document.history.currentIdentity == baseline.identity
                     && restored.bytes == baseline.bytes,
                 cppID: id, message: "undo restores the original SMF bytes and history position")
 
-S017 | swiftcore/PianoRoll::pencilPlacement | src/checks/rollcheck/pencil.swift:160
+S017 | checkPencilPlacement | src/checks/rollcheck/pencil.swift
+Anchor: message "pointer draw creates a note at the selected cell"
   report.expect(note != nil, cppID: id, message: "pointer draw creates a note at the selected cell")
 
-S018 | swiftcore/PianoRoll::velocityDoubleClickDelete | src/checks/rollcheck/pencil.swift:242
+S018 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: message "a free cell accepts the note to delete"
   report.expect(drawn != nil, cppID: id, message: "a free cell accepts the note to delete")
 
-S019 | swiftcore/PianoRoll::velocityDoubleClickDelete | src/checks/rollcheck/pencil.swift:244
+S019 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: message "double press deletes the note under the pointer"
   report.expect(drawn.map { session.document.note($0.id) == nil } == true,
                 cppID: id, message: "double press deletes the note under the pointer")
 
-S020 | swiftcore/PianoRoll::quickLifecycle | src/checks/rollcheck/pencil.swift:255
+S020 | checkPointerDrawCancellation | src/checks/rollcheck/pencil.swift
+Anchor: function
   report.fail(id, "no free grid cell for the pointer lifecycle")
 
-S021 | swiftcore/PianoRoll::quickLifecycle | src/checks/rollcheck/pencil.swift:265
+S021 | checkPointerDrawCancellation | src/checks/rollcheck/pencil.swift
+Anchor: message "\(reason) discards the staged draw without a document write"
   report.expect(preview && grid.scene.pianoDrawPreviewFill.count == 0
                     && !grid.interactionActive && grid.lastCancelReason == reason.rawValue
                     && session.document.revision == revision,
                 cppID: id,
                 message: "\(reason) discards the staged draw without a document write")
 
-S022 | swiftcore/PianoRoll::velocityDoubleClickDelete | src/checks/rollcheck/pencil.swift:220
+S022 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: function
   report.fail(id, "could not seed the first velocity fixture note")
 
-S023 | swiftcore/PianoRoll::velocityDoubleClickDelete | src/checks/rollcheck/pencil.swift:230
+S023 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: function
   report.fail(id, "could not seed the second velocity note or locate a free delete cell")
 
-S024 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:373
+S024 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the right edge grip publishes the horizontal resize cursor"
   report.expect(grid.cursorKind == 3, cppID: id,
                 message: "the right edge grip publishes the horizontal resize cursor")
 
-S025 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:376
+S025 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the left edge grip publishes the horizontal resize cursor"
   report.expect(grid.cursorKind == 3, cppID: id,
                 message: "the left edge grip publishes the horizontal resize cursor")
 
-S026 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:379
+S026 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the note body publishes the arrow cursor"
   report.expect(grid.cursorKind == 0, cppID: id,
                 message: "the note body publishes the arrow cursor")
 
-S027 | test_escapeCancel idle click | src/checks/editorqml/tst_ShellGridInput.qml:417
+S027 | test_escapeCancel idle click | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "idle click selects the note"
   A real left click on the production roll selects the note (noteById(target.id).selected);
   the same slot later forces roll focus and asserts roll.activeFocus.
 
-S028 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml:447
+S028 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
   Real right press/move plus the production grid.inputCancelled(1) slot restores
 grid.noteSummary with lastCancelReason 1 (QML cannot synthesize QEvent::UngrabMouse).

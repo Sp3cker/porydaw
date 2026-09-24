@@ -4,7 +4,6 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/onboardcheck/registration.cpp
 Original SHA-256: e58930fa08408a1f4beb425fb8ce1ed0ef6f5a4ffce2b392161f7c9d2ac6e651
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -28,7 +27,7 @@ newSongRegistration_data expands normal, aligned, heal-songs-h, heal-charmap, an
 
 Verification
 Command: deno task verify --filter onboardcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
 Swift sources inspected (SHA-256)

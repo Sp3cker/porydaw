@@ -4,7 +4,6 @@ Reference revision: c1f165eb1aa49af49c72a3e4f15cf6d9f23b6735
 Original: src/checks/voicegroupsave/savecore.cpp
 Original SHA-256: 4500ba70725cc3bc1572c54206dbac778fd0d9020dad00a1e4fcbe23f5dccd87
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The "voicegroup-save" filter selects the retained native harness; it provides
 no Swift parity evidence.
 

@@ -4,7 +4,6 @@ Reference revision: 322bcd4051669f4dfa432b0e68f57bd56577b31d
 Original: src/checks/retained/tst_nativeboundaries.cpp
 Original SHA-256: 4e8c069ea08e4750c60976b10c20eeabf95988ef2c11e27dc8f5dd7734ca88d5
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 97dc7fea819cb7c4a97a0dac819244ee570e993f Checkpoint T7 acceptance fixes and coverage boundaries
 
 Status and evidence
@@ -12,7 +11,7 @@ The C++ file above was deleted; this inventory audits its parent-revision conten
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
 Execution ownership

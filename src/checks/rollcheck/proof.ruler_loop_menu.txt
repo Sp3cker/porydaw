@@ -4,7 +4,6 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/ruler_loop_menu.cpp
 Original SHA-256: 01fd47f273c20f209a8baa5fee8003f95ea9a66865c75bf7426cab2189ac22f6
 Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
-Swift SHA-256: 30bd4ebf214dcc5a8daed5483fa5974e661a445130039f41845b24ada48266ac
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -189,7 +188,7 @@ QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
 
 A004 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:134
 Disposition: MATCHED
-Mapping: S001 | src/checks/rollcheck/ruler_loop_menu.swift:47 — after clearing both fixture markers, playback timeline has no start or end marker.
+Mapping: S001 | src/checks/rollcheck/ruler_loop_menu.swift — after clearing both fixture markers, playback timeline has no start or end marker.
 Source context since previous assertion:
 ;
     // Start from a known empty loop state regardless of song-seeded markers.
@@ -251,7 +250,7 @@ QVERIFY2(startMenu.session && !startMenu.session->isOpen(),
 
 A009 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:153
 Disposition: MATCHED
-Mapping: S002 | src/checks/rollcheck/ruler_loop_menu.swift:52 — setting the start at the seeded note edge yields the exact timeline loop-start tick.
+Mapping: S002 | src/checks/rollcheck/ruler_loop_menu.swift — setting the start at the seeded note edge yields the exact timeline loop-start tick.
 Source context since previous assertion:
 ;
 
@@ -311,7 +310,7 @@ QVERIFY2(quick_popup::clickMenuRow(*endMenu.session, setEndRow),
 
 A015 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:166
 Disposition: MATCHED
-Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift:57 — the second marker lands one six-tick cell after the start in the playback timeline.
+Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift — the second marker lands one six-tick cell after the start in the playback timeline.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -331,7 +330,7 @@ QCOMPARE(doc.undoStack()->index(), undo + 2)
 
 A017 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:170
 Disposition: MATCHED
-Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift:57 — two placed markers change song bytes compared with the empty-marker baseline.
+Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift — two placed markers change song bytes compared with the empty-marker baseline.
 Source context since previous assertion:
 ;
     const QByteArray afterSets = doc.smf().write();
@@ -386,7 +385,7 @@ QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
 
 A022 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:184
 Disposition: MATCHED
-Mapping: S004 | src/checks/rollcheck/ruler_loop_menu.swift:65 — sequential start/end removal clears both timeline loop markers.
+Mapping: S004 | src/checks/rollcheck/ruler_loop_menu.swift — sequential start/end removal clears both timeline loop markers.
 Source context since previous assertion:
 ;
 
@@ -407,7 +406,7 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
 
 A024 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:190
 Disposition: MATCHED
-Mapping: S005 | src/checks/rollcheck/ruler_loop_menu.swift:71 — first undo restores only the removed end marker while start remains absent.
+Mapping: S005 | src/checks/rollcheck/ruler_loop_menu.swift — first undo restores only the removed end marker while start remains absent.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -419,7 +418,7 @@ QTRY_VERIFY2(check.timeline().loopEndTick == endTick &&
 
 A025 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:194
 Disposition: MATCHED
-Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift:76 — second undo restores start while retaining the restored end marker.
+Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift — second undo restores start while retaining the restored end marker.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -431,7 +430,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == startTick &&
 
 A026 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:197
 Disposition: MATCHED
-Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift:76 — second removal undo restores bytes from after both markers were set.
+Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift — second removal undo restores bytes from after both markers were set.
 Source context since previous assertion:
 ;
 
@@ -483,7 +482,7 @@ QVERIFY2(quick_popup::clickMenuRow(*selectionMenu.session, loopSelectionRow),
 
 A030 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:218
 Disposition: MATCHED
-Mapping: S007 | src/checks/rollcheck/ruler_loop_menu.swift:84 — setting both markers to the six-tick selection bounds brackets that interval.
+Mapping: S007 | src/checks/rollcheck/ruler_loop_menu.swift — setting both markers to the six-tick selection bounds brackets that interval.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -505,7 +504,7 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
 
 A032 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:224
 Disposition: MATCHED
-Mapping: S008 | src/checks/rollcheck/ruler_loop_menu.swift:88 — undoing the selection end restores the old end while retaining the selection start.
+Mapping: S008 | src/checks/rollcheck/ruler_loop_menu.swift — undoing the selection end restores the old end while retaining the selection start.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -517,7 +516,7 @@ QTRY_VERIFY2(check.timeline().loopStartTick == selectionStart &&
 
 A033 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:228
 Disposition: MATCHED
-Mapping: S009 | src/checks/rollcheck/ruler_loop_menu.swift:91 — undoing the selection start restores the manually set marker song bytes.
+Mapping: S009 | src/checks/rollcheck/ruler_loop_menu.swift — undoing the selection start restores the manually set marker song bytes.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -568,7 +567,7 @@ QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
 
 A037 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:250
 Disposition: MATCHED
-Mapping: S010 | src/checks/rollcheck/ruler_loop_menu.swift:102 — the playback timeline contains an explicit 5/4 signature at the seeded chip tick.
+Mapping: S010 | src/checks/rollcheck/ruler_loop_menu.swift — the playback timeline contains an explicit 5/4 signature at the seeded chip tick.
 Source context since previous assertion:
 ;
     doc.setLoopTick(false, -1);
@@ -724,7 +723,7 @@ QVERIFY2(opened.session && !opened.session->isOpen(),
 
 A050 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:298
 Disposition: MATCHED
-Mapping: S011 | src/checks/rollcheck/ruler_loop_menu.swift:107 — removal deletes the explicit signature at the exact fixture chip tick from the rebuilt timeline.
+Mapping: S011 | src/checks/rollcheck/ruler_loop_menu.swift — removal deletes the explicit signature at the exact fixture chip tick from the rebuilt timeline.
 Source context since previous assertion:
 ;
 
@@ -1393,7 +1392,7 @@ QVERIFY2(opened.session && !opened.session->isOpen(),
 
 A104 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:535
 Disposition: PARTIAL
-Mapping/reason: S012 | src/checks/rollcheck/ruler_loop_menu.swift:136 shifts the seed note to the interval end with changed song bytes and a new history identity. Unproved: the exact undo-index +1 conjunct (no executing history-depth predicate); the menu-row click delivery itself is unported.
+Mapping/reason: S012 | src/checks/rollcheck/ruler_loop_menu.swift shifts the seed note to the interval end with changed song bytes and a new history identity. Unproved: the exact undo-index +1 conjunct (no executing history-depth predicate); the menu-row click delivery itself is unported.
 Source context since previous assertion:
 ;
 
@@ -1437,7 +1436,7 @@ QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
 
 A108 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:547
 Disposition: MATCHED
-Mapping: S012 | src/checks/rollcheck/ruler_loop_menu.swift:136 — inserting one six-tick interval changes song bytes while shifting the seed note.
+Mapping: S012 | src/checks/rollcheck/ruler_loop_menu.swift — inserting one six-tick interval changes song bytes while shifting the seed note.
 Source context since previous assertion:
 ;
 
@@ -1447,7 +1446,7 @@ QVERIFY2(doc.smf().write() != before,
 
 A109 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:550
 Disposition: MATCHED
-Mapping: S013 | src/checks/rollcheck/ruler_loop_menu.swift:141 — after insertion, undo restores pre-insertion song bytes.
+Mapping: S013 | src/checks/rollcheck/ruler_loop_menu.swift — after insertion, undo restores pre-insertion song bytes.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -1507,75 +1506,88 @@ Swift executable assertion index
 These predicates run in the green swiftcore projectSession suite; they establish
 only model observations, not rendered ruler menu activation.
 
-S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:47
+S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A004: both markers begin absent"
 Counterpart expression:
   report.expect(timeline.loopStartTick == TimeDefaults.noTick &&
                 timeline.loopEndTick == TimeDefaults.noTick,
                 cppID: id, message: "A004: both markers begin absent")
 
-S002 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:52
+S002 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A009: setting loop start moves its marker to the cell edge"
 Counterpart expression:
   report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick == startTick,
                 cppID: id, message: "A009: setting loop start moves its marker to the cell edge")
 
-S003 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:57
+S003 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A015/A017: the end marker is one snap cell later and changes the song"
 Counterpart expression:
   report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopEndTick == endTick &&
                 document.history.currentIdentity != afterStart && afterSets != before,
                 cppID: id, message: "A015/A017: the end marker is one snap cell later and changes the song")
 
-S004 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:65
+S004 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A022: removal clears both markers"
 Counterpart expression:
   report.expect(afterRemoval.loopStartTick == TimeDefaults.noTick &&
                 afterRemoval.loopEndTick == TimeDefaults.noTick,
                 cppID: id, message: "A022: removal clears both markers")
 
-S005 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:71
+S005 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A024: first undo restores only the end marker"
 Counterpart expression:
   report.expect(firstUndo.loopStartTick == TimeDefaults.noTick && firstUndo.loopEndTick == endTick,
                 cppID: id, message: "A024: first undo restores only the end marker")
 
-S006 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:76
+S006 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A025/A026: second undo restores both markers and song bytes"
 Counterpart expression:
   report.expect(secondUndo.loopStartTick == startTick && secondUndo.loopEndTick == endTick &&
                 coreTimeBytes(document) == afterSets,
                 cppID: id, message: "A025/A026: second undo restores both markers and song bytes")
 
-S007 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:84
+S007 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A030: the selection bounds become the loop markers"
 Counterpart expression:
   report.expect(selected.loopStartTick == selectionStart && selected.loopEndTick == startTick,
                 cppID: id, message: "A030: the selection bounds become the loop markers")
 
-S008 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:88
+S008 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A032: first selection undo restores only the old end"
 Counterpart expression:
   report.expect(selectionUndo.loopStartTick == selectionStart && selectionUndo.loopEndTick == endTick,
                 cppID: id, message: "A032: first selection undo restores only the old end")
 
-S009 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:91
+S009 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A033: second selection undo restores the manual markers"
 Counterpart expression:
   report.expect(coreTimeBytes(document) == afterSets, cppID: id,
                 message: "A033: second selection undo restores the manual markers")
 
-S010 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift:102
+S010 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A037: the explicit 5/4 signature exists at the snap cell"
 Counterpart expression:
   report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
       .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
                 message: "A037: the explicit 5/4 signature exists at the snap cell")
 
-S011 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift:107
+S011 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A050: removing the chip deletes the exact event"
 Counterpart expression:
   report.expect(!PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
       .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
                 message: "A050: removing the chip deletes the exact event")
 
-S012 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift:136
+S012 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A104/A108: the note shifts by exactly one span and the song bytes change"
 Counterpart expression:
   report.expect(document.notes(in: 0).contains {
       $0.tick == insertEnd && $0.pitch == note.pitch && $0.velocity == note.velocity
   } && document.history.currentIdentity != identity && coreTimeBytes(document) != before,
   cppID: id, message: "A108: the note shifts by exactly one span and the song bytes change (the shifted-note conjunct also grounds A104 PARTIAL)")
 
-S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift:141
+S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A109: one undo restores the song before ruler insertion"
 Counterpart expression:
   report.expect(coreTimeBytes(document) == before, cppID: id,
                 message: "A109: one undo restores the song before ruler insertion")

@@ -4,9 +4,7 @@ Reference revision: 0d03b1612987993f5972da3d0df8661d26bbd395
 Original: src/checks/trackheaders/tst_trackheaders.cpp
 Original SHA-256: 497123213188be4872ba55d4aaeb4987b9b5b3fb9e44d332f526958cf5c45a64
 Swift counterpart: src/checks/trackheaders/headerfixture.swift
-Swift SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 Additional Swift counterpart: src/checks/trackheaders/headerinputfixture.swift
-Additional Swift SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -22,7 +20,7 @@ GAP identifies an original predicate without a replacement assertion.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
@@ -104,57 +102,71 @@ int runTrackHeaderQuickCheck(const QString &projectRoot, const QString &songLabe
 
 Swift assertion predicates
 
-S001 | drag | src/checks/trackheaders/headerfixture.swift:82
+S001 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts press"
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts press")
 
-S002 | drag | src/checks/trackheaders/headerfixture.swift:84
+S002 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts drag"
   report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
 
-S003 | drag | src/checks/trackheaders/headerfixture.swift:86
+S003 | drag | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(label): header accepts release"
   report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
                     cppID: trackHeadersReorderID, message: "\(label): header accepts release")
 
-S004 | expectRows | src/checks/trackheaders/headerfixture.swift:91
+S004 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): rows follow engine track order"
   report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
                          what: "\(phase): rows follow engine track order")
 
-S005 | expectRows | src/checks/trackheaders/headerfixture.swift:94
+S005 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): rows display ordered numbered track names"
   report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
                          what: "\(phase): rows display ordered numbered track names")
 
-S006 | expectRows | src/checks/trackheaders/headerfixture.swift:96
+S006 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): one row per track plus add-track row"
   report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
                          what: "\(phase): one row per track plus add-track row")
 
-S007 | expectRows | src/checks/trackheaders/headerfixture.swift:99
+S007 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): add-track row remains last"
   report.expectEqual([names.count], addRows, cppID: cppID,
                          what: "\(phase): add-track row remains last")
 
-S008 | click | src/checks/trackheaders/headerinputfixture.swift:28
+S008 | click | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "\(probe) row \(row) accepts press"
   report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
                     cppID: cppID, message: "\(probe) row \(row) accepts press")
 
-S009 | click | src/checks/trackheaders/headerinputfixture.swift:30
+S009 | click | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "\(probe) row \(row) accepts release"
   report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
                     cppID: cppID, message: "\(probe) row \(row) accepts release")
 
-S010 | openMenu | src/checks/trackheaders/headerinputfixture.swift:36
+S010 | openMenu | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "right press is handled"
   report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
                     cppID: cppID, message: "right press is handled")
 
-S011 | openMenu | src/checks/trackheaders/headerinputfixture.swift:38
+S011 | openMenu | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "right press opens header menu"
   report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
 
-S012 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift:64
+S012 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "\(phase): song unchanged"
   report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
 
-S013 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift:65
+S013 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "\(phase): no document write"
   report.expectEqual(revision, document.revision, cppID: cppID,
                          what: "\(phase): no document write")
 
-S014 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift:67
+S014 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
+Anchor: message "\(phase): history unchanged"
   report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
                          what: "\(phase): history unchanged")
 

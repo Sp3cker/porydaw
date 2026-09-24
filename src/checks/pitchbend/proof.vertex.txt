@@ -4,7 +4,6 @@ Reference revision: 0b4c9ea649baa7174e53be880163d45b4d951d8d
 Original: src/checks/pitchbend/vertex.cpp
 Original SHA-256: 0c15f629a9660b47328da806c6119e18e54e4d3b8778f1d773651296c5aa027e
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -30,7 +29,7 @@ resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution ownership
 No Swift entry point executes these checks, and no native one either: the T7A
@@ -483,4 +482,3 @@ Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
 
-Tally: 38 sites: MATCHED 0, PARTIAL 0, GAP 38, NATIVE 0.

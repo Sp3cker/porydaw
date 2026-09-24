@@ -5,13 +5,9 @@ Deleted in: 91cab247f7600b41c92b14114ad0352e3a002df0 Refine check suite boundari
 Original: src/checks/rollcheck/header_reconciliation.cpp
 Original SHA-256: 70afce2bc8c968ac2e07bda2381e175882152793f4e4c6748a6cb2760a84d566
 Swift counterpart: src/checks/rollcheck/presentation.swift
-Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
 Additional Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Additional Swift SHA-256: 822b24d3f99f7b60759761cfcb74e90059532a8a1d1c7628303a018ef4131068
 Additional Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
-Additional Swift SHA-256: ebe356d8c74ca537123e4f07f1f5a085c0cb6c60a2cbc69db30e998fb0ed6230
 Additional Swift counterpart: src/checks/trackheaders/headerfixture.swift
-Additional Swift SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -156,7 +152,7 @@ Original expression:
 
 A003 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:77
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/presentation.swift:219-221) asserts the shared fixture's presenter rows are exactly [0, 1, add] with the trailing add-track row last, the ordered-records and last-add-row precondition this guard checks; S012 (src/checks/trackheaders/headerfixture.swift:81) corroborates the add-track row staying last in the ordered row oracle.
+Mapping: S001 (src/checks/rollcheck/presentation.swift) asserts the shared fixture's presenter rows are exactly [0, 1, add] with the trailing add-track row last, the ordered-records and last-add-row precondition this guard checks; S012 (src/checks/trackheaders/headerfixture.swift) corroborates the add-track row staying last in the ordered row oracle.
 Source context since previous assertion:
       }
       if (!fixture.hasOrderedRecords())
@@ -165,7 +161,7 @@ Original expression:
 
 A004 | headerReconciliationUnchanged | src/checks/rollcheck/header_reconciliation.cpp:88
 Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/rollcheck/presentation.swift:224-227) asserts an unchanged refresh rebuilds no rows and preserves the same presenter row objects in order. Unproved: the native setSong/modelReset signal count and the full recordsMatchTimeline reconciliation of titles and roles against the rebuilt timeline.
+Mapping/reason: S002 (src/checks/rollcheck/presentation.swift) asserts an unchanged refresh rebuilds no rows and preserves the same presenter row objects in order. Unproved: the native setSong/modelReset signal count and the full recordsMatchTimeline reconciliation of titles and roles against the rebuilt timeline.
 Source context since previous assertion:
 
       const std::optional<int> addBefore = addTrackRow(*fixture.headers);
@@ -208,7 +204,7 @@ Original expression:
 
 A007 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:105
 Disposition: PARTIAL
-Mapping/reason: The ordered-records and last-add-row precondition is asserted for the shared fixture under the unchanged cppID by S001 (src/checks/rollcheck/presentation.swift:219-221), with S012 (src/checks/trackheaders/headerfixture.swift:81) for the trailing add row. Unproved: a structural-cppID guard predicate; the structural slot's own row precondition is not separately asserted.
+Mapping/reason: The ordered-records and last-add-row precondition is asserted for the shared fixture under the unchanged cppID by S001 (src/checks/rollcheck/presentation.swift), with S012 (src/checks/trackheaders/headerfixture.swift) for the trailing add row. Unproved: a structural-cppID guard predicate; the structural slot's own row precondition is not separately asserted.
 Source context since previous assertion:
       }
       if (!fixture.hasOrderedRecords())
@@ -217,7 +213,7 @@ Original expression:
 
 A008 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:114
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/presentation.swift:230-231) asserts deleting the last used track leaves exactly one used engine track whose first slot carries a MIDI chunk.
+Mapping: S003 (src/checks/rollcheck/presentation.swift) asserts deleting the last used track leaves exactly one used engine track whose first slot carries a MIDI chunk.
 Source context since previous assertion:
 
       ModelChanges changes;
@@ -232,7 +228,7 @@ Original expression:
 
 A009 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:122
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/presentation.swift:233-235) asserts the structural deletion rebuilds ordered records exactly once (rowRebuildCount == resets + 1, rows [0, add], deleted last-track row absent); it does not claim native setSong/modelReset delivery.
+Mapping: S004 (src/checks/rollcheck/presentation.swift) asserts the structural deletion rebuilds ordered records exactly once (rowRebuildCount == resets + 1, rows [0, add], deleted last-track row absent); it does not claim native setSong/modelReset delivery.
 Source context since previous assertion:
       }
 
@@ -246,7 +242,7 @@ Original expression:
 
 A010 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:135
 Disposition: MATCHED
-Mapping: S005 (src/checks/rollcheck/presentation.swift:239-241) asserts one further presenter rebuild restores the last used track and the trailing add row in order after the undo; it does not claim native setSong/modelReset delivery.
+Mapping: S005 (src/checks/rollcheck/presentation.swift) asserts one further presenter rebuild restores the last used track and the trailing add row in order after the undo; it does not claim native setSong/modelReset delivery.
 Source context since previous assertion:
       }
 
@@ -265,7 +261,7 @@ Original expression:
 
 A011 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:141
 Disposition: MATCHED
-Mapping: S006 (src/checks/rollcheck/presentation.swift:244-245) asserts the rename editor opens with renamingTrack == 0 on the retained first record; S009 (src/checks/trackheaders/trackheadermutations.swift:16) corroborates that rename targets the clicked track.
+Mapping: S006 (src/checks/rollcheck/presentation.swift) asserts the rename editor opens with renamingTrack == 0 on the retained first record; S009 (src/checks/trackheaders/trackheadermutations.swift) corroborates that rename targets the clicked track.
 Source context since previous assertion:
       }
       // An open rename state does not survive a structural song replacement:
@@ -277,7 +273,7 @@ Original expression:
 
 A012 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:148
 Disposition: MATCHED
-Mapping: S007 (src/checks/rollcheck/presentation.swift:250-251) asserts the structural replacement cancels the open rename (renamingTrack == -1) and advances the row rebuild count exactly once; S010 (src/checks/trackheaders/trackheadermutations.swift:19) corroborates that a cancel closes the editor.
+Mapping: S007 (src/checks/rollcheck/presentation.swift) asserts the structural replacement cancels the open rename (renamingTrack == -1) and advances the row rebuild count exactly once; S010 (src/checks/trackheaders/trackheadermutations.swift) corroborates that a cancel closes the editor.
 Source context since previous assertion:
 
       fixture.headers->setRenameDraft(QStringLiteral("zzz"));
@@ -290,7 +286,7 @@ Original expression:
 
 A013 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:150
 Disposition: MATCHED
-Mapping: S008 (src/checks/rollcheck/presentation.swift:253-254) asserts the cancelled draft cannot commit across the replacement (the first track name is not "zzz"); S011 (src/checks/trackheaders/trackheadermenu.swift:94) corroborates that a cancelled editor cannot reopen or commit.
+Mapping: S008 (src/checks/rollcheck/presentation.swift) asserts the cancelled draft cannot commit across the replacement (the first track name is not "zzz"); S011 (src/checks/trackheaders/trackheadermenu.swift) corroborates that a cancelled editor cannot reopen or commit.
 Source context since previous assertion:
       if (fixture.document.trackName(fixture.firstUsed) == QStringLiteral("zzz"))
 Original expression:
@@ -304,67 +300,79 @@ S001..S012 are exact predicates already executed by the swiftcore suite (present
 in the projectSession suite; the trackheaders predicates in runTrackHeadersChecks).
 Their presence alone does not close any A entry.
 
-S001 | swiftcore/PianoRollTest::headerReconciliationUnchanged | src/checks/rollcheck/presentation.swift:219
+S001 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "ordered tracks have one trailing add-track record"
 Counterpart expression:
 report.expect(initialRows.map(\.track) == [0, 1, -1]
               && initialRows.last?.isAddTrack == true, cppID: unchangedID,
               message: "ordered tracks have one trailing add-track record")
 
-S002 | swiftcore/PianoRollTest::headerReconciliationUnchanged | src/checks/rollcheck/presentation.swift:224
+S002 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "unchanged refresh preserves ordered header records and identities"
 Counterpart expression:
 report.expect(headers.rowRebuildCount == resets && headers.rows.count == initialRows.count
               && (0..<headers.rows.count).allSatisfy { headers.rows[$0] === initialRows[$0] },
               cppID: unchangedID,
               message: "unchanged refresh preserves ordered header records and identities")
 
-S003 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:230
+S003 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "replacement drops the last used track, keeping the first"
 Counterpart expression:
 report.expect(document.engineTracks.usedTrackCount == 1
               && document.engineTracks.tracks[0].midiChunk != nil, cppID: structuralID,
               message: "replacement drops the last used track, keeping the first")
 
-S004 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:233
+S004 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "structural deletion rebuilds ordered records exactly once"
 Counterpart expression:
 report.expect(headers.rowRebuildCount == resets + 1 && headers.rows.count == 2
               && headers.rows[0].track == 0 && headers.rows[1].isAddTrack,
               cppID: structuralID,
               message: "structural deletion rebuilds ordered records exactly once")
 
-S005 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:239
+S005 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "undo restores the last record and trailing add row in one reset"
 Counterpart expression:
 report.expect(headers.rowRebuildCount == resets + 2 && headers.rows.count == 3
               && headers.rows[1].track == lastUsed && headers.rows[2].isAddTrack,
               cppID: structuralID,
               message: "undo restores the last record and trailing add row in one reset")
 
-S006 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:244
+S006 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "rename opens on the retained first record"
 Counterpart expression:
 report.expectEqual(0, headers.renamingTrack, cppID: structuralID,
                    what: "rename opens on the retained first record")
 
-S007 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:250
+S007 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "replacement cancels the open header rename"
 Counterpart expression:
 report.expect(headers.renamingTrack == -1 && headers.rowRebuildCount == resets + 3,
               cppID: structuralID, message: "replacement cancels the open header rename")
 
-S008 | swiftcore/PianoRollTest::headerReconciliationStructural | src/checks/rollcheck/presentation.swift:253
+S008 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift
+Anchor: message "cancelled draft cannot commit across the replacement"
 Counterpart expression:
 report.expect(document.trackName(0) != "zzz", cppID: structuralID,
               message: "cancelled draft cannot commit across the replacement")
 
-S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:68
+S009 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift
+Anchor: message "rename targets clicked track"
 Counterpart expression:
       report.expectEqual(0, h.renamingTrack, cppID: id, what: "rename targets clicked track")
 
-S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:71
+S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift
+Anchor: message "cancel closes editor"
 Counterpart expression:
       report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancel closes editor")
 
-S011 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:131
+S011 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift
+Anchor: message "cancelled editor cannot reopen or commit"
 Counterpart expression:
       report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
-S012 | expectRows | src/checks/trackheaders/headerfixture.swift:99
+S012 | expectRows | src/checks/trackheaders/headerfixture.swift
+Anchor: message "\(phase): add-track row remains last"
 Counterpart expression:
           report.expectEqual([names.count], addRows, cppID: cppID,
                              what: "\(phase): add-track row remains last")

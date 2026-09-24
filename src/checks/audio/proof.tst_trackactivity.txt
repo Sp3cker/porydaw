@@ -4,9 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/audio/tst_trackactivity.cpp
 Original SHA-256: edbde7297cc2f3e7d0dbdaa813141f1ec2a0624e9266476ac1ab0828e80cfa51
 Swift counterpart: src/checks/audio/tst_trackactivity.swift
-Swift SHA-256: 5d6e3d7a57a12628ad024258d5bfdd6077af440d6db656dee5780f096c85246d
 Additional Swift counterpart: src/swift/app/headers/TrackActivity.swift
-Additional Swift SHA-256: 2c936629b8d19c1171d7fdeeef854b71153b2b2eb50c6cac48da3adcf515a682
 Deleted in: feature/gaps-audio-scale staged git rm — check, header and native implementation removed; deletion not yet committed, original recoverable from the Reference revision and Original SHA-256 above
 
 Deletion certificate
@@ -69,10 +67,10 @@ and no native result is claimed.
 Registered run path
 swiftcore suite 10 (PDC_SUITE_PROJECT_SESSION,
 src/checks/support/corecheck/core_check.h:19) -> tst_swiftcore.cpp:73 pdc_suite_run ->
-pdcSuiteRun (src/checks/support/corecheck/CoreCheckSupport.swift:88, case 10 at :137)
--> runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:10, invoked at :74)
--> runTrackHeadersChecks (src/checks/trackheaders/TrackHeadersChecks.swift:6-8) ->
-runTrackActivityChecks (src/checks/audio/tst_trackactivity.swift:4), compiled into
+pdcSuiteRun (src/checks/support/corecheck/CoreCheckSupport.swift, case 10 at :137)
+-> runProjectSessionSuite (src/checks/workspace/SessionChecks.swift, invoked at :74)
+-> runTrackHeadersChecks (src/checks/trackheaders/TrackHeadersChecks.swift) ->
+runTrackActivityChecks (src/checks/audio/tst_trackactivity.swift), compiled into
 swift_core_check (src/checks/CMakeLists.txt:68).
 
 Execution ownership
@@ -509,105 +507,133 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:10
+S001 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "new track is dark"
   report.expect(dark(activity.intensity(track: track)), cppID: fresh, message: "new track is dark")
 
-S002 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:12
+S002 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "negative track is dark"
   report.expect(dark(activity.intensity(track: -1)), cppID: fresh, message: "negative track is dark")
 
-S003 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:13
+S003 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "high track is dark"
   report.expect(dark(activity.intensity(track: 16)), cppID: fresh, message: "high track is dark")
 
-S004 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:20
+S004 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "playing requires another tick"
   report.expect(activity.advance(levels, elapsedSeconds: 0.017, playing: true),
                         cppID: id, message: "playing requires another tick")
 
-S005 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:26
+S005 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "left attacks without snapping"
   report.expect(approaches(first.left, left), cppID: id, message: "left attacks without snapping")
 
-S006 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:27
+S006 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "right attacks without snapping"
   report.expect(approaches(first.right, right), cppID: id, message: "right attacks without snapping")
 
-S007 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:28
+S007 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "stereo sides retain independent targets"
   report.expect(left > right ? first.left > first.right : first.right > first.left,
                         cppID: id, message: "stereo sides retain independent targets")
 
-S008 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:31
+S008 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "other tracks remain dark"
   report.expect(dark(activity.intensity(track: track)), cppID: id, message: "other tracks remain dark")
 
-S009 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:42
+S009 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "release remains visibly gradual"
   report.expect(current.left > previous.left * 0.5 && current.right > previous.right * 0.5,
                     cppID: release, message: "release remains visibly gradual")
 
-S010 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:48
+S010 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "both sides decay monotonically"
   report.expect(current.left <= previous.left && current.right <= previous.right,
                         cppID: release, message: "both sides decay monotonically")
 
-S011 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:52
+S011 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "release settles at zero"
   report.expect(dark(activity.intensity(track: 3)), cppID: release, message: "release settles at zero")
 
-S012 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:59
+S012 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "visible floor removes imperceptible tail"
   report.expect(dark(activity.intensity(track: 3)), cppID: "TrackActivityTest::imperceptibleTailSnapsToZero",
                     message: "visible floor removes imperceptible tail")
 
-S013 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:72
+S013 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "new peak retriggers independently"
   report.expect(retriggered.left > decayed.left && retriggered.right > decayed.right,
                     cppID: retrigger, message: "new peak retriggers independently")
 
-S014 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:74
+S014 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "retrigger retains attack inertia"
   report.expect(retriggered.left < 224 / Float(255) && retriggered.right < 64 / Float(255),
                     cppID: retrigger, message: "retrigger retains attack inertia")
 
-S015 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:82
+S015 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "reset clears every light"
   report.expect((0..<16).allSatisfy { dark(activity.intensity(track: $0)) },
                     cppID: "TrackActivityTest::resetClearsEveryLight", message: "reset clears every light")
 
-S016 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:90
+S016 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "paused fill requires another tick"
   report.expect(activity.advance(zero, elapsedSeconds: 0.015, playing: false), cppID: paused,
                     message: "paused fill requires another tick")
 
-S017 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:93
+S017 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "paused fill gently approaches full brightness"
   report.expect(filling.left > beforePause.left && filling.right > beforePause.right,
                     cppID: paused, message: "paused fill gently approaches full brightness")
 
-S018 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:95
+S018 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "settled paused fill stops ticks"
   report.expect(!activity.advance(zero, elapsedSeconds: 10, playing: false), cppID: paused,
                     message: "settled paused fill stops ticks")
 
-S019 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:99
+S019 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "all sides settle at full brightness"
   report.expect(settled.left == 1 && settled.right == 1, cppID: paused,
                         message: "all sides settle at full brightness")
 
-S020 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:102
+S020 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "settled pause remains settled"
   report.expect(!activity.advance(zero, elapsedSeconds: 0, playing: false), cppID: paused,
                     message: "settled pause remains settled")
 
-S021 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:108
+S021 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "resume requires ticks"
   report.expect(activity.advance(zero, elapsedSeconds: 0.075, playing: true), cppID: resume,
                     message: "resume requires ticks")
 
-S022 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:111
+S022 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "resume descends through 75ms fast window"
   report.expect(abs(resumed.left - exp(-0.075 / Float(0.015))) <= 0.0001, cppID: resume,
                     message: "resume descends through 75ms fast window")
 
-S023 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:115
+S023 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "release returns to 250ms"
   report.expect(abs(ordinary.left - resumed.left * exp(-0.015 / Float(0.250))) <= 0.0001,
                     cppID: resume, message: "release returns to 250ms")
 
-S024 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:117
+S024 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "ordinary release does not retain fast descent"
   report.expect(ordinary.left > resumed.left * exp(-0.015 / Float(0.015)), cppID: resume,
                     message: "ordinary release does not retain fast descent")
 
-S025 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:126
+S025 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "rapid pause restarts descent"
   report.expect(activity.intensity(track: 3).left < beforeRapidResume.left * exp(-0.015 / Float(0.250)),
                     cppID: "TrackActivityTest::rapidPauseRearmsFastDescent", message: "rapid pause restarts descent")
 
-S026 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:133
+S026 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "negative elapsed still requires ticks"
   report.expect(activity.advance(levels, elapsedSeconds: -1, playing: true), cppID: elapsed,
                     message: "negative elapsed still requires ticks")
 
-S027 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:135
+S027 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "negative elapsed does not move"
   report.expect(dark(activity.intensity(track: 3)), cppID: elapsed, message: "negative elapsed does not move")
 
-S028 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:137
+S028 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift
+Anchor: message "zero elapsed does not move"
   report.expect(dark(activity.intensity(track: 3)), cppID: elapsed, message: "zero elapsed does not move")

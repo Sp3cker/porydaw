@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/onboardcheck/action.cpp
 Original SHA-256: fd4ade0d9a60e73aeec99865631d42849d1ac83257b78311c9ae6e7bf29c24e7
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -28,7 +27,7 @@ deleteAction_data expands fallback=false (delete-open-song) and fallback=true (f
 
 Verification
 Command: deno task verify --filter onboardcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
 
 Swift sources inspected (SHA-256)

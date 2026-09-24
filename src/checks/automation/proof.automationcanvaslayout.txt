@@ -4,15 +4,10 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationcanvaslayout.cpp
 Original SHA-256: 2a327b9ee3f719debb52dc61340e898ef31f3026e1e1ed02591876673fd7218c
 Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 Additional Swift counterpart: src/checks/automation/automationmenus.swift
-Swift SHA-256: b0622b17786addbd505a92a9bc98f88f56ac079a6a6c4cdf1afdaac58060dd9d
 Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -40,8 +35,8 @@ and supplied the banner; the ledger agent did not run it. That snapshot is the o
 above. The legacy automation C++ harness is retired, so this file is an
 assertion-obligation inventory, never current execution evidence for the C++ original.
 Converted-window command: deno task verify:qml --verbose.
-drawerAutomationViewStatePreservation (automationcanvaslayout.swift:132) is registered by
-runAutomationPageChecks at AutomationPageChecks.swift:390 and executes under cppID
+drawerAutomationViewStatePreservation (automationcanvaslayout.swift) is registered by
+runAutomationPageChecks at AutomationPageChecks.swift and executes under cppID
 automation/AutomationEditingTest::viewStateSwitchPreservesAutomationState (its
 detach/attach block) and cppID
 automation/AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState (its
@@ -843,209 +838,250 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:14
+S001 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the requested automation height never falls under the minimum"
 Swift expression:
   report.expect(policy.preferredBodyHeight(200, metrics) >= metrics.minimumBody, cppID: drawerAutomationLayoutID,
                     message: "the requested automation height never falls under the minimum")
 
-S002 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:16
+S002 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the requested automation height keeps the piano-roll reserve"
 Swift expression:
   report.expect(policy.preferredBodyHeight(1000, metrics)
                         <= metrics.maximumDefaultBodyHeight(hostHeight: 1000),
                     cppID: drawerAutomationLayoutID,
                     message: "the requested automation height keeps the piano-roll reserve")
 
-S003 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:20
+S003 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the requested height is a fifth of the host inside those bounds"
 Swift expression:
   report.expectEqual(200, policy.preferredBodyHeight(1000, metrics), cppID: drawerAutomationLayoutID,
                          what: "the requested height is a fifth of the host inside those bounds")
 
-S004 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:22
+S004 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "automation declares no page maximum"
 Swift expression:
   report.expect(policy.maximumBodyHeight == nil, cppID: drawerAutomationLayoutID,
                     message: "automation declares no page maximum")
 
-S005 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:26
+S005 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the hit radius is the font-relative production value"
 Swift expression:
   report.expectEqual(8.0, fixture.page.geometry.pointHitRadius, cppID: drawerAutomationLayoutID,
                          what: "the hit radius is the font-relative production value")
 
-S006 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:28
+S006 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the neutral snap radius is the font-relative production value"
 Swift expression:
   report.expectEqual(9.0, fixture.page.geometry.neutralSnapRadius, cppID: drawerAutomationLayoutID,
                          what: "the neutral snap radius is the font-relative production value")
 
-S007 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:30
+S007 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the drag activation distance is the font-relative value"
 Swift expression:
   report.expectEqual(5.0, fixture.page.geometry.nodeDragActivationDistance, cppID: drawerAutomationLayoutID,
                          what: "the drag activation distance is the font-relative value")
 
-S008 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:32
+S008 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the value axis is padded by the marker's painted extent"
 Swift expression:
   report.expectEqual(5.0, fixture.page.geometry.valuePlotPadding, cppID: drawerAutomationLayoutID,
                          what: "the value axis is padded by the marker's painted extent")
 
-S009 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:39
+S009 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a press inside the hit radius takes the node"
 Swift expression:
   report.expect(lane.hitTest(x: node.x + 4, y: node.y + 4,
                                  radius: fixture.page.geometry.pointHitRadius) != nil,
                     cppID: drawerAutomationLayoutID, message: "a press inside the hit radius takes the node")
 
-S010 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:42
+S010 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a press beyond the hit radius takes no node"
 Swift expression:
   report.expect(lane.hitTest(x: node.x + 9, y: node.y + 9,
                                  radius: fixture.page.geometry.pointHitRadius) == nil,
                     cppID: drawerAutomationLayoutID, message: "a press beyond the hit radius takes no node")
 
-S011 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:45
+S011 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the nearest node wins the hit"
 Swift expression:
   report.expectEqual(node.tick, lane.hitTest(x: node.x + 1, y: node.y,
                                                  radius: fixture.page.geometry.pointHitRadius)?.tick
                              ?? 0,
                          cppID: drawerAutomationLayoutID, what: "the nearest node wins the hit")
 
-S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:61
+S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a cell is half-open and inside the song"
 Swift expression:
   report.expect(cell.tickBegin < cell.tickEnd && cell.tickEnd <= fixture.songEndTick,
                     cppID: drawerAutomationLayoutID, message: "a cell is half-open and inside the song")
 
-S013 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:63
+S013 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a cell contains its own begin"
 Swift expression:
   report.expect(cell.contains(Double(cell.tickBegin)), cppID: drawerAutomationLayoutID,
                     message: "a cell contains its own begin")
 
-S014 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:65
+S014 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a cell excludes its own end"
 Swift expression:
   report.expect(!cell.contains(Double(cell.tickEnd)), cppID: drawerAutomationLayoutID,
                     message: "a cell excludes its own end")
 
-S015 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:68
+S015 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the song's end belongs to the cell that ends there"
 Swift expression:
   report.expectEqual(fixture.songEndTick, endCell.tickEnd, cppID: drawerAutomationLayoutID,
                          what: "the song's end belongs to the cell that ends there")
 
-S016 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:71
+S016 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a forward walk starts at the origin's own cell"
 Swift expression:
   report.expect(forward.count >= 2 && forward.first?.contains(0) == true, cppID: drawerAutomationLayoutID,
                     message: "a forward walk starts at the origin's own cell")
 
-S017 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:73
+S017 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a forward walk ends at the pointer's cell"
 Swift expression:
   report.expectEqual(projection.cell(atRawTick: 30).tickBegin, forward.last?.tickBegin ?? 0,
                          cppID: drawerAutomationLayoutID, what: "a forward walk ends at the pointer's cell")
 
-S018 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:76
+S018 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a backward walk starts at the pointer's own cell"
 Swift expression:
   report.expectEqual(forward.last?.tickBegin, backward.first?.tickBegin, cppID: drawerAutomationLayoutID,
                          what: "a backward walk starts at the pointer's own cell")
 
-S019 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:79
+S019 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a degenerate walk reports its own cell once"
 Swift expression:
   report.expectEqual(1, degenerate.count, cppID: drawerAutomationLayoutID,
                          what: "a degenerate walk reports its own cell once")
 
-S020 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:81
+S020 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a degenerate walk stays in the pointer's cell"
 Swift expression:
   report.expectEqual(projection.cell(atRawTick: 0).tickBegin, degenerate[0].tickBegin,
                          cppID: drawerAutomationLayoutID, what: "a degenerate walk stays in the pointer's cell")
 
-S021 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:95
+S021 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a middle press starts the pan"
 Swift expression:
   report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
                     cppID: id, message: "a middle press starts the pan")
 
-S022 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:97
+S022 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the page publishes the live pan"
 Swift expression:
   report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
 
-S023 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:98
+S023 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the pan publishes the closed hand"
 Swift expression:
   report.expectEqual(AutomationCursorKind.closedHand.rawValue, page.cursorKind, cppID: id,
                      what: "the pan publishes the closed hand")
 
-S024 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:100
+S024 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "starting a pan mutates nothing"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                      what: "starting a pan mutates nothing")
 
-S025 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:102
+S025 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "starting a pan parks no cursor"
 Swift expression:
   report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
                      what: "starting a pan parks no cursor")
 
-S026 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:105
+S026 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the pan scrolls the shared camera by the travel"
 Swift expression:
   report.expectEqual(scrollBefore + 48, fixture.session.camera.snapshot.scrollX, cppID: id,
                      what: "the pan scrolls the shared camera by the travel")
 
-S027 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:107
+S027 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "panning mutates nothing"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                      what: "panning mutates nothing")
 
-S028 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:110
+S028 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "releasing ends the pan"
 Swift expression:
   report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
 
-S029 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:111
+S029 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the released pan leaves document and history untouched"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                      what: "the released pan leaves document and history untouched")
 
-S030 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:113
+S030 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the released pan leaves the cursor where it was"
 Swift expression:
   report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
                      what: "the released pan leaves the cursor where it was")
 
-S031 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:117
+S031 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: function
 Swift expression:
   _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
 
-S032 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:118
+S032 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a second pan starts"
 Swift expression:
   report.expect(page.isPanning, cppID: switchID, message: "a second pan starts")
 
-S033 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:120
+S033 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "switching parameters ends the pan"
 Swift expression:
   report.expect(!page.isPanning, cppID: switchID,
                 message: "switching parameters ends the pan")
 
-S034 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:122
+S034 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the switch rebuilds the active parameter"
 Swift expression:
   report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: switchID,
                      what: "the switch rebuilds the active parameter")
 
-S035 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:124
+S035 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "switching mid-pan writes nothing"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: switchID,
                      what: "switching mid-pan writes nothing")
 
-S036 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:127
+S036 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "releasing after the switch commits nothing"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: switchID,
                      what: "releasing after the switch commits nothing")
 
-S037 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+S037 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the row stack carries one row per catalog parameter"
 Swift expression:
   report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
                          what: "the row stack carries one row per catalog parameter")
 
-S038 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+S038 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the Tempo row leads the stack"
 Swift expression:
   report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
                          what: "the Tempo row leads the stack")
 
-S039 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:69
+S039 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift
+Anchor: message "the selected range rescales the lane to 64"
 Swift expression:
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                      what: "the selected range rescales the lane to 64")
 
-S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:91
+S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the press parks the edit cursor at the snapped tick"
 Swift expression:
   report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
                      what: "the press parks the edit cursor at the snapped tick")
 
-S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:261
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
 Swift expression:
   report.expect(
       after.pixelsPerBeat > before.pixelsPerBeat
@@ -1053,47 +1089,56 @@ Swift expression:
           && counters.camera == publications + 1,
       cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
-S042 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:141
+S042 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the lane takes the 0-64 range"
 Swift expression:
   report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                     cppID: id, message: "the lane takes the 0-64 range")
 
-S043 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:147
+S043 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the active parameter survives a page switch"
 Swift expression:
   report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
                      what: "the active parameter survives a page switch")
 
-S044 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:149
+S044 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the lane range survives a page switch"
 Swift expression:
   report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
                      what: "the lane range survives a page switch")
 
-S045 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:151
+S045 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a page switch writes nothing"
 Swift expression:
   report.expectEqual(before, fixture.snapshot, cppID: id,
                      what: "a page switch writes nothing")
 
-S046 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:153
+S046 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a page switch moves no cursor"
 Swift expression:
   report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
                      what: "a page switch moves no cursor")
 
-S047 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:155
+S047 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the untouched stream survives a page switch"
 Swift expression:
   report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: id,
                      what: "the untouched stream survives a page switch")
 
-S048 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:166
+S048 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a section resize writes nothing"
 Swift expression:
   report.expectEqual(resizeBefore, fixture.snapshot, cppID: resizeID,
                      what: "a section resize writes nothing")
 
-S049 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:168
+S049 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a section resize moves no cursor"
 Swift expression:
   report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: resizeID,
                      what: "a section resize moves no cursor")
 
-S050 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:170
+S050 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a section resize leaves the streams alone"
 Swift expression:
   report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: resizeID,
                      what: "a section resize leaves the streams alone")

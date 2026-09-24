@@ -3,8 +3,7 @@ Assertion correspondence: host/tst_hostintegration.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostintegration.cpp
 Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
-Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift:191 call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
-Swift SHA-256: aa19a567b5814cabcc2f47eb8d613cd1ac19e34efeef5461d02dd0d8fcc26dd0 (VelocityClickSelectionChecks.swift); cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e (VelocityPageChecks.swift); 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3 (tst_ShellWindow.qml)
+Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift (drawerVelocityPrimaryTrackSwitchCancels :267-312; drawerVelocityLifecycleCancellation :315-383 plus bank route :384-461); src/checks/velocity/VelocityPageChecks.swift call-list entry; src/checks/editorqml/tst_ShellWindow.qml test_kVelocityGestureTermination plus data (:976-1083)
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -24,7 +23,6 @@ Fixture, sequence and row constraints
 A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 7, GAP 89, NATIVE 0, RETIRED-REPRESENTATION 89.
 
 Original assertion inventory and source sequence
 
@@ -1393,7 +1391,7 @@ Original expression:
 
 A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared by ungrabMouse(); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress at QQuick delivery level (the presenter level pointer-ungrabbed cancel is asserted separately at A114 through A118 via VelocityClickSelectionChecks.swift:354-355,368-382; no mouseGrabberItem symbol under src/swift, src/ui or src/checks; never claims QML event-delivery coverage).
+Mapping/reason: Retired host representation: old QQuickWindow mouse-grabber delivery cleared by ungrabMouse(); uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress at QQuick delivery level (the presenter level pointer-ungrabbed cancel is asserted separately at A114 through A118 via VelocityClickSelectionChecks.swift,368-382; no mouseGrabberItem symbol under src/swift, src/ui or src/checks; never claims QML event-delivery coverage).
 Source context since previous assertion:
   ;
           const bool clearsSelection = route == QStringLiteral("track-replace") ||
@@ -1441,7 +1439,7 @@ Original expression:
 
 A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: gesture teardown asserted at presenter level for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift:368-370), for primary-track switch (ibid.:301), for bank edit through DocumentWorkspace (ibid.:447-449), and through the production shell for page-switch, drawer-hide, focus-loss, tab-switch, last-tab-close, song-reload and escape (tst_ShellWindow.qml:1052,1075 interactionActive false; Swift interactionActive is the analogue of the retired userGestureActive accessor); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent (no voicegroup-switch cancel plumbing, owned by another branch).
+Mapping/reason: Partial velocity-termination correspondence: gesture teardown asserted at presenter level for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift), for primary-track switch (ibid.:301), for bank edit through DocumentWorkspace (ibid.:447-449), and through the production shell for page-switch, drawer-hide, focus-loss, tab-switch, last-tab-close, song-reload and escape (tst_ShellWindow.qml,1075 interactionActive false; Swift interactionActive is the analogue of the retired userGestureActive accessor); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent (no voicegroup-switch cancel plumbing, owned by another branch).
 Source context since previous assertion:
   ;
           } else if (route == QStringLiteral("quick-deactivate")) {
@@ -1456,7 +1454,7 @@ Original expression:
 
 A115 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:518
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: song bytes unchanged by the cancelled drag asserted via coreTimeBytes for the seven presenter routes (VelocityClickSelectionChecks.swift:378-380), via document snapshot for primary-track switch (ibid.:304,307), via revision plus MIDI bytes plus note velocity for bank edit (ibid.:456-460; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via noteSummary for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml:1055,1079); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
+Mapping/reason: Partial velocity-termination correspondence: song bytes unchanged by the cancelled drag asserted via coreTimeBytes for the seven presenter routes (VelocityClickSelectionChecks.swift), via document snapshot for primary-track switch (ibid.:304,307), via revision plus MIDI bytes plus note velocity for bank edit (ibid.:456-460; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via noteSummary for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml,1079); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
           QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, dragWindow);
@@ -1467,7 +1465,7 @@ Original expression:
 
 A116 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:519
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: revision unchanged by the cancelled drag asserted via document snapshot for the seven presenter routes (VelocityClickSelectionChecks.swift:378-380), for primary-track switch (ibid.:304,307), and for bank edit (ibid.:456-458; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via appliedRevisionText for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml:1056-1057,1080-1081); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
+Mapping/reason: Partial velocity-termination correspondence: revision unchanged by the cancelled drag asserted via document snapshot for the seven presenter routes (VelocityClickSelectionChecks.swift), for primary-track switch (ibid.:304,307), and for bank edit (ibid.:456-458; bank history legitimately advances on applyBankEdit per ibid.:443-446, so the predicate covers song revision, MIDI bytes and note velocity only), and via appliedRevisionText for shell routes including tab-switch, last-tab-close and song-reload (tst_ShellWindow.qml,1080-1081); unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
 
@@ -1476,7 +1474,7 @@ Original expression:
 
 A117 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:520
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: history depth unchanged asserted via undoCount for the seven presenter routes (VelocityClickSelectionChecks.swift:379) and corroborated for primary-track switch by snapshot reachability (ibid.:304 canUndo/canRedo); shell routes assert revision text only and the bank route asserts revision, bytes and velocity only, so undo-depth for bank, tab-switch, last-tab-close and song-reload executions is unproved; unproved condition also includes song-null, song-replacement, voice-replace and voice-null executions (no Swift equivalent).
+Mapping/reason: Partial velocity-termination correspondence: history depth unchanged asserted via undoCount for the seven presenter routes (VelocityClickSelectionChecks.swift) and corroborated for primary-track switch by snapshot reachability (ibid.:304 canUndo/canRedo); shell routes assert revision text only and the bank route asserts revision, bytes and velocity only, so undo-depth for bank, tab-switch, last-tab-close and song-reload executions is unproved; unproved condition also includes song-null, song-replacement, voice-replace and voice-null executions (no Swift equivalent).
 Source context since previous assertion:
   ;
 
@@ -1485,7 +1483,7 @@ Original expression:
 
 A118 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:521
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: preview cleared asserted via frozenPreview.isEmpty for the seven presenter routes (VelocityClickSelectionChecks.swift:368-370), primary-track switch (ibid.:302) and bank edit (ibid.:447-449); shell routes assert gesture teardown via interactionActive false (tst_ShellWindow.qml:1052,1075) without a frozenPreview-emptiness predicate; unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
+Mapping/reason: Partial velocity-termination correspondence: preview cleared asserted via frozenPreview.isEmpty for the seven presenter routes (VelocityClickSelectionChecks.swift), primary-track switch (ibid.:302) and bank edit (ibid.:447-449); shell routes assert gesture teardown via interactionActive false (tst_ShellWindow.qml,1075) without a frozenPreview-emptiness predicate; unproved condition: song-null and song-replacement single-view teardown plus voice-replace and voice-null executions have no Swift equivalent.
 Source context since previous assertion:
   ;
 
@@ -1494,7 +1492,7 @@ Original expression:
 
 A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: the track-replace execution is matched by the primary-track-switch cancel clearing the selection (VelocityClickSelectionChecks.swift:303 selectedNoteOrder.isEmpty); unproved condition: song-null and song-replacement executions (legacy single reused view retired; the Swift tab model preserves outgoing selection across tab-switch, close and reload per tst_ShellWindow.qml:1054,1078 selectedCount 1); never MATCHED.
+Mapping/reason: Partial velocity-termination correspondence: the track-replace execution is matched by the primary-track-switch cancel clearing the selection (VelocityClickSelectionChecks.swift selectedNoteOrder.isEmpty); unproved condition: song-null and song-replacement executions (legacy single reused view retired; the Swift tab model preserves outgoing selection across tab-switch, close and reload per tst_ShellWindow.qml,1078 selectedCount 1); never MATCHED.
 Source context since previous assertion:
   ;
           if (clearsSelection)
@@ -1504,7 +1502,7 @@ Original expression:
 
 A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
 Disposition: PARTIAL
-Mapping/reason: Partial velocity-termination correspondence: selection preserved for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift:371-373), for bank edit (ibid.:450-452), and for shell routes (tst_ShellWindow.qml:1054,1078 selectedCount 1); unproved condition: voice-replace and voice-null executions (no voicegroup-switch cancel plumbing, owned by another branch).
+Mapping/reason: Partial velocity-termination correspondence: selection preserved for page-switch, drawer-hide, pointer-ungrabbed, focus-loss, window-deactivated, hidden and escape (VelocityClickSelectionChecks.swift), for bank edit (ibid.:450-452), and for shell routes (tst_ShellWindow.qml,1078 selectedCount 1); unproved condition: voice-replace and voice-null executions (no voicegroup-switch cancel plumbing, owned by another branch).
 Source context since previous assertion:
   ;
           else

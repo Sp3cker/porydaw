@@ -4,7 +4,6 @@ Reference revision: fceecd888e29c0a39c3a98d17e47d3d734b1de06
 Original: src/checks/voicegroup/voicegrouploadfixture.cpp
 Original SHA-256: 4068d1e751f9b925b44870640da17295833659968b9ea8cb2e90a931afb93b5b
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -19,7 +18,7 @@ original predicate without a replacement assertion. This is a shared C++ fixture
 
 Verification
 Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No test entry point runs this file directly. verifyRichSubgroupNames is invoked by VoicegroupLoaderTest::exactTargetParityWarmReuseAndSampleSets on direct, contextual, and warm banks; sameBank/sameSampleSet back QVERIFY equality predicates in the loader, serial/batch, and failure-healing cases; stageBatchVoicegroup/stageAliasedVoicegroup/openContext/BatchAdapter set up those cases. This file is not on the vgbankcheck lane. No Swift entry point executes any paired check.

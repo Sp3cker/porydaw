@@ -4,9 +4,7 @@ Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
 Original: src/checks/swiftrollgated/drawerparity.cpp
 Original SHA-256: 0699e32c19617c3dd1d0ef0033b3cbbbc0c194b84e29fe5bdaf14a35dda74519
 Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
-Swift SHA-256: 4e8a64ed35f57faa8ff7578ec1e4c4e325f19f74bcb4b481f47dbd8e77ca32e2
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -736,34 +734,42 @@ Original expression:
 QCOMPARE(scene.grid->property("noteSummary").toString(), notes)
 Swift assertion predicates
 
-S031 | shell-drawer-parity entry | src/checks/editorqml/ShellQmlTests.swift:50
+S031 | entries | src/checks/editorqml/ShellQmlTests.swift
+Anchor: function
 Counterpart expression:
   stages mus_route101 with the _fixture_rich voicegroup and runs tst_ShellDrawerParity.qml against the production ShellWindow
 
-S032 | openDrawerShell | src/checks/editorqml/tst_ShellDrawerParity.qml:91
+S032 | openDrawerShell | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   opens mus_route101 with velocity, automation and voice sections visible and awaits both drawer plots
 
-S033 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml:255
+S033 | checkAutomationParameter | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   pointer activation of one parameter tab, insertion-hover paint without writes, repeat stability and node-ring paint with settled grabs
 
-S034 | dragVoiceTransaction | src/checks/editorqml/tst_ShellDrawerParity.qml:350
+S034 | dragVoiceTransaction | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   voice-marker hover profile, press without paint, drag preview with horizontal cursor, then release-to-commit with undo or Escape-to-cancel
 
-S035 | clickFirstGridNote | src/checks/editorqml/tst_ShellDrawerParity.qml:227
+S035 | clickFirstGridNote | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   selects a real visible grid note with a real click as the routing negative control
 
-S036 | test_dGripKeyboardIsolation | src/checks/editorqml/tst_ShellDrawerParity.qml:445
+S036 | test_dGripKeyboardIsolation | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   Tab traversal from the automation plot to its grip, Up and Down resize, horizontal arrows ignored, song untouched
 
-S037 | settled grabImage helpers | src/checks/editorqml/tst_ShellDrawerParity.qml:196
+S037 | grabRegionStable | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   regionOf maps controls through window coordinates with clamping; changedPixels reads grabbed frames; grabRegionStable and grabUntilDifferent settle mid-repaint frames
 
-S038 | gridPointFor | src/checks/editorqml/tst_ShellDrawerParity.qml:217
+S038 | gridPointFor | src/checks/editorqml/tst_ShellDrawerParity.qml
+Anchor: function
 Counterpart expression:
   maps tick and pitch to roll-input coordinates for the clickable-note search

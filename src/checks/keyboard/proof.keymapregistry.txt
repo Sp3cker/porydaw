@@ -4,7 +4,6 @@ Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
 Original: src/checks/keyboard/keymapregistry.cpp
 Original SHA-256: 2f58e54dca9f1fa9ae9edd47eff3fea35bf2faddff5656412ec77469b828e749
 Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
-Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -28,7 +27,7 @@ Command: `deno task verify:shell --filter shellwindow --verbose`
 Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok
 (10 skipped); run_checks PASS. That run executes all 46 required-sink
 predicates through `ShellWindow::test_aKeymapNativeSettingsSeeds` with real
-QtCore.Settings seeds (src/checks/editorqml/tst_ShellWindow.qml:169-183).
+QtCore.Settings seeds (src/checks/editorqml/tst_ShellWindow.qml).
 
 Execution and ownership
 `runKeymapCheck` (src/checks/keyboard/keymapregistry.cpp:110) owns the
@@ -66,7 +65,7 @@ Original assertion inventory and source sequence
 
 A001 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:24
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:36-39` compares the shipped single Qt Up stroke and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` compares the shipped single Qt Up stroke and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
 #include "checks/keyboard/tst_keymapcheck.h"
 
@@ -96,7 +95,7 @@ QCOMPARE(registry.sequences(QStringLiteral("roll.transpose_up")),
 
 A002 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:26
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:40-45` rejects Ctrl+Alt+U for transpose-up and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` rejects Ctrl+Alt+U for transpose-up and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -105,7 +104,7 @@ QVERIFY(!matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_U),
 
 A003 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:28
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:46-50` accepts unmodified Up for transpose-up and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts unmodified Up for transpose-up and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -113,7 +112,7 @@ QVERIFY(matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_Up), Qt::NoModi
 
 A004 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:30
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:51-54` compares the shipped single Qt Space stroke and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` compares the shipped single Qt Space stroke and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -122,7 +121,7 @@ QCOMPARE(registry.sequences(QStringLiteral("transport.play_pause")),
 
 A005 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:32
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:55-59` accepts unmodified Space for play-pause and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts unmodified Space for play-pause and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -130,7 +129,7 @@ QVERIFY(matches(QStringLiteral("transport.play_pause"), int(Qt::Key_Space), Qt::
 
 A006 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:34
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:60-63` rejects Shift as the velocity-drag hold chord and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` rejects Shift as the velocity-drag hold chord and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -138,7 +137,7 @@ QVERIFY(!registry.matchesModifier(Qt::ShiftModifier, dragId));
 
 A007 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:35
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:64-67` accepts Control as the velocity-drag hold chord and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts Control as the velocity-drag hold chord and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -146,7 +145,7 @@ QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
 
 A008 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:36
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:68-71` accepts Control as the detent-unlock hold chord and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts Control as the detent-unlock hold chord and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -154,7 +153,7 @@ QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
 
 A009 | KeymapCheckTest::defaultMatching | src/checks/keyboard/keymapregistry.cpp:94
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicates at `KeybindingRegistryChecks.swift:111-136` preserve all sixteen original rows (row table :111-130, sink loop :131-136); additive delivery-scope predicates S001-S015 (`KeybindingRegistryChecks.swift:74-93`) and exact Insert/Delete-Time + Pencil-B sequence predicates S016-S018 (`KeybindingRegistryChecks.swift:94-108`) lock the bindings the shell lane exercises. All 46 predicates passed both controller gates.
+Mapping/reason: Current required-sink predicates at `KeybindingRegistryChecks.swift` preserve all sixteen original rows (row table :111-130, sink loop :131-136); additive delivery-scope predicates S001-S015 (`KeybindingRegistryChecks.swift`) and exact Insert/Delete-Time + Pencil-B sequence predicates S016-S018 (`KeybindingRegistryChecks.swift`) lock the bindings the shell lane exercises. All 46 predicates passed both controller gates.
 Source context since previous assertion:
 }
 
@@ -217,7 +216,7 @@ QCOMPARE(matches(id, key, modifiers), expected);
 
 A010 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:103
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:139-142` accepts Control for detent-unlock and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts Control for detent-unlock and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
 }
 
@@ -231,7 +230,7 @@ QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
 
 A011 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:105
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:143-146` accepts Control for velocity drag and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts Control for velocity drag and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -239,7 +238,7 @@ QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
 
 A012 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:106
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:147-152` accepts Control plus Keypad for velocity drag and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` accepts Control plus Keypad for velocity drag and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -247,7 +246,7 @@ QVERIFY(registry.matchesModifier(Qt::ControlModifier | Qt::KeypadModifier, dragI
 
 A013 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:107
 Disposition: MATCHED
-Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift:153-158` rejects Control plus Shift for velocity drag and emits the native slot identity; both current controller gates passed.
+Mapping/reason: Current required-sink predicate at `KeybindingRegistryChecks.swift` rejects Control plus Shift for velocity drag and emits the native slot identity; both current controller gates passed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -261,47 +260,65 @@ A010-A013 covered modifier chords. The shell assertion sink and swiftcore
 CheckReport adapter both preserved native identity. All 13 dispositions are
 MATCHED. S001-S018 below quote the additive predicates; the pre-existing
 predicates are quoted in their A-site Mapping lines.
-S001 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:75
+S001 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("edit.insert_time", .window),
   // scopeRows table (:74-90); the sink loop (:91-93) asserts
   // registry.scope(row.id) == row.expected with the deliveryScopes identity.
-S002 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:76
+S002 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("edit.delete_time", .window),
-S003 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:77
+S003 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("transport.play_pause", .window),
-S004 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:78
+S004 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.copy", .window),
-S005 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:79
+S005 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.solo_tracks", .window),
-S006 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:80
+S006 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.cut", .editorRouted),
-S007 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:81
+S007 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.duplicate_time", .editorRouted),
-S008 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:82
+S008 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.split", .editorRouted),
-S009 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:83
+S009 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.join", .editorRouted),
-S010 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:84
+S010 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.paste", .editorRouted),
-S011 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:85
+S011 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.select_all", .editorRouted),
-S012 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:86
+S012 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("roll.delete", .editorRouted),
-S013 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:87
+S013 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("automation.pencil_mode", .editorRouted),
-S014 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:88
+S014 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("eventlist.move_up", .editorRouted),
-S015 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:89
+S015 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   ("eventlist.move_down", .editorRouted),
-S016 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:95
+S016 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   registry.sequences("edit.insert_time").map(\.strokes) ==
       [[QtKeyCode.i.rawValue | QtKeyboardModifier.control.rawValue |
           QtKeyboardModifier.shift.rawValue]],
   // "Insert Time keeps Ctrl+Shift+I" (:94-99).
-S017 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:101
+S017 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   registry.sequences("edit.delete_time").isEmpty,
   // "Delete Time remains unbound" (:100-103).
-S018 | deliveryScopes | src/checks/keyboard/KeybindingRegistryChecks.swift:105
+S018 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
   registry.sequences("automation.pencil_mode").map(\.strokes) ==
       [[QtKeyCode.b.rawValue]],
   // "Pencil Mode keeps unmodified B" (:104-108).

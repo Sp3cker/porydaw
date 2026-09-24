@@ -4,7 +4,6 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_scale.cpp
 Original SHA-256: 20f44068baca7354d92aabd7096f44f33dfcaa09ade047aebefa98695b36feb8
 Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
-Swift SHA-256: 68d30462170a47f1ad1587abc1a57676ce37889ea5f9c3f5a927b909882d6aee
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -28,7 +27,7 @@ Command: deno task verify --filter editor-layout-16 --verbose
 Command: deno task verify --filter editor-layout-18 --verbose
 Result: swiftcore PASS on the current worktree with the Swift counterpart below
 (20.87s, 1/24 harness selected, 23 skipped); the native editor-layout lanes
-still execute until Main deletes them; source hashes pin the tree inspected here.
+still execute until Main deletes them.
 
 Execution and ownership
 Native ownership only. runThemeLayoutScaleCheck (defined in
@@ -36,8 +35,8 @@ src/checks/themelayout/themelayoutcheck.cpp) launches the editor-layout-12/16/18
 lanes with base font sizes 12, 16, and 18; ThemeLayoutScaleTest::init-style
 setup is the lane runner pinning the application font pixel size before
 ui::initializeApplication. Swift execution: runTypographyLayoutChecks
-(src/checks/themelayout/TypographyLayoutChecks.swift:34) via
-runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:16) into the
+(src/checks/themelayout/TypographyLayoutChecks.swift) via
+runProjectSessionSuite (src/checks/workspace/SessionChecks.swift) into the
 projectSession slot (swiftcore suite 10 via pdcSuiteRun); the counterpart is
 compiled in src/checks/CMakeLists.txt :: swift_core_check. Suite
 declarations live in src/checks/themelayout/tst_themelayout.h; no shared Swift
@@ -55,7 +54,7 @@ qMax(1, ...) with a 0.0 short-circuit; the scale-operation switch returns
 immediately after each branch assertion. Swift rows: the same 8 fontPx
 multipliers, 3 fontPxF multipliers, 8 space multipliers and the single-pixel
 case execute as pinned literal tables at bases 12, 16 and 18
-(TypographyLayoutChecks.swift:15-48).
+(TypographyLayoutChecks.swift).
 Original setup, branch guards, and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -146,7 +145,7 @@ Disposition: GAP
 Mapping/reason: feature not yet ported: process-scoped layout::initialize
 rejection of size 0; Swift has an owned-but-different degenerate-base fallback
 to the seed 13.0 instead, pinned by proof.tst_themelayout_font.txt S004/S005
-(TypographyLayoutChecks.swift:105-110).
+(TypographyLayoutChecks.swift).
 Source context since previous assertion:
   ;
 Original expression:
@@ -280,34 +279,39 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:46
+S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "fontPx pins clamped row \(row) at base \(Int(base))"
 Swift expression:
   report.expectEqual(
           typographyLayoutFontPxExpected[lane][row], fontPx(base, multiplier),
           cppID: typographyLayoutScaleID,
           what: "fontPx pins clamped row \(row) at base \(Int(base))")
 
-S002 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:52
+S002 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "space token \(token) pins its multiplier row at base \(Int(base))"
 Swift expression:
   report.expectEqual(
           typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier),
           cppID: typographyLayoutScaleID,
           what: "space token \(token) pins its multiplier row at base \(Int(base))")
 
-S003 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:59
+S003 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "fontPxF keeps the unclamped product at base \(Int(base))"
 Swift expression:
   report.expect(
           abs(actual - base * multiplier) < 1e-9, cppID: typographyLayoutScaleID,
           message: "fontPxF keeps the unclamped product at base \(Int(base))")
 
-S004 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:65
+S004 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "drawer metrics keep the unit hairline at base \(Int(base))"
 Swift expression:
   report.expectEqual(
           1, EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
           cppID: typographyLayoutScaleID,
           what: "drawer metrics keep the unit hairline at base \(Int(base))")
 
-S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:69
+S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "grid metrics keep the unit device pixel at base \(Int(base))"
 Swift expression:
   report.expectEqual(
           1.0, GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0).pixel,

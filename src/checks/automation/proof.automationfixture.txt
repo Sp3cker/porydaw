@@ -5,15 +5,10 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationfixture.cpp
 Original SHA-256: 1d6668d96212debf3f3930429fbeae4733c422c9b15de920f4ae1a59f693ec7d
 Swift counterpart: src/checks/automation/tst_automationediting.swift
-Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
-Swift SHA-256: 59ed28893d4f4d827013c8446a6a1f93da109c6ac14c864502abaef0a491ae1b
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -41,8 +36,8 @@ Their sources are reference inventories only, never current execution evidence.
 The quiescence predicate (cppID automation/AutomationEditingTest::cleanup, indexed as
 S022) and the synchronous-cancel predicate it pairs with (S021) execute in
 drawerAutomationKeyboardIngress and drawerAutomationCancellationAndNoOps
-(automationcanvasediting.swift:300 and :12), registered by runAutomationPageChecks at
-AutomationPageChecks.swift:365 and :363.
+(automationcanvasediting.swift and :12), registered by runAutomationPageChecks at
+AutomationPageChecks.swift and :363.
 
 Execution ownership
 AutomationEditingTest::init and cleanup bracketed historical automation editing checks. In the converted Swift suite, drawerAutomationAutomationFixture in src/checks/automation/AutomationPageChecks.swift provides shared setup, while src/checks/automation/tst_automationediting.swift exercises document history and undo/redo operations.
@@ -794,91 +789,113 @@ Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:14
+S001 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the prompt opens"
   report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationHistoryID,
                     message: "the prompt opens")
 
-S002 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:16
+S002 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the prompt commits"
   report.expect(fixture.page.acceptPrompt(displayedValue: 20), cppID: drawerAutomationHistoryID,
                     message: "the prompt commits")
 
-S003 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:18
+S003 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the committed lane holds the new value"
   report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                          what: "the committed lane holds the new value")
 
-S004 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:20
+S004 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the transaction is on the undo stack"
   report.expect(fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
                     message: "the transaction is on the undo stack")
 
-S005 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:22
+S005 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the transaction undoes"
   report.expect(fixture.undo(), cppID: drawerAutomationHistoryID, message: "the transaction undoes")
 
-S006 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:23
+S006 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "undo restores the curve from the document"
   report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                          what: "undo restores the curve from the document")
 
-S007 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:25
+S007 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the transaction recorded exactly one history entry"
   report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
                     message: "the transaction recorded exactly one history entry")
 
-S008 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:27
+S008 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the page rebuilds the restored curve"
   report.expectEqual(["0:64", "24:64", "120:40"],
                          fixture.page.projection?.points.map { "\($0.tick):\($0.value)" } ?? [],
                          cppID: drawerAutomationHistoryID, what: "the page rebuilds the restored curve")
 
-S009 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:30
+S009 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the undone transaction is redoable"
   report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
                     message: "the undone transaction is redoable")
 
-S010 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:35
+S010 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: function
   report.fail(drawerAutomationHistoryID, "redo failed: \(error)")
 
-S011 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:38
+S011 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "redo restores the committed lane"
   report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                          what: "redo restores the committed lane")
 
-S012 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:40
+S012 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "one undo and one redo stand on the same single entry"
   report.expect(fixture.document.history.canUndo && !fixture.document.history.canRedo,
                     cppID: drawerAutomationHistoryID,
                     message: "one undo and one redo stand on the same single entry")
 
-S013 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:43
+S013 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "a commit, an undo and a redo each publish one revision"
   report.expectEqual(before.revision + 3, fixture.document.revision, cppID: drawerAutomationHistoryID,
                          what: "a commit, an undo and a redo each publish one revision")
 
-S014 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:53
+S014 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "two transactions leave both writes"
   report.expectEqual(["24:74", "48:54"], two.values(two.panLane), cppID: drawerAutomationHistoryID,
                          what: "two transactions leave both writes")
 
-S015 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:55
+S015 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the first undo removes only the second transaction"
   report.expect(two.undo() && two.values(two.panLane) == ["24:74"], cppID: drawerAutomationHistoryID,
                     message: "the first undo removes only the second transaction")
 
-S016 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:57
+S016 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "the second undo removes the first transaction"
   report.expect(two.undo() && two.values(two.panLane) == ["24:64"], cppID: drawerAutomationHistoryID,
                     message: "the second undo removes the first transaction")
 
-S017 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift:59
+S017 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "a third undo finds nothing and reports nothing"
   report.expect(!two.undo(), cppID: drawerAutomationHistoryID,
                     message: "a third undo finds nothing and reports nothing")
 
-S018 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:122
+S018 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the switch rebuilds the active parameter"
   report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: switchID,
                      what: "the switch rebuilds the active parameter")
 
-S019 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+S019 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the row stack carries one row per catalog parameter"
   report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
                          what: "the row stack carries one row per catalog parameter")
 
-S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:54
+S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "one undo restores the deleted node"
   report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationCancelID,
                          what: "one undo restores the deleted node")
 
-S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:25
+S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "cancelling ends the gesture synchronously"
   report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
                   message: "cancelling ends the gesture synchronously")
 
-S022 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift:661
+S022 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "quiescing an idle page writes nothing"
   report.expectEqual(quietBefore, quiet.snapshot, cppID: quietID,
                        what: "quiescing an idle page writes nothing")
 

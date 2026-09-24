@@ -5,7 +5,6 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/raster/rasterfixture.cpp
 Original SHA-256: 52e6a18d00d296d5503b65a57784055df40dba8bbb307f7d0ce544dcc330a60f
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -21,7 +20,7 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.

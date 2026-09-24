@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/velocity.cpp
 Original SHA-256: 04258c2fe60a26ad1d11f8457296b0150ed1890a4d3bf09626f8775af7fff1cc
 Swift counterpart: src/checks/drawerpresentation/velocity.swift
-Swift SHA-256: 4f9a048e25b546e945d57892906bb06122bd45b24adc8a078756d2d5f54245ce
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
@@ -1125,326 +1124,390 @@ src/checks/editorqml/tst_EditorDrawer.qml. S108 is the later-added noise row pre
 drawerVelocityPsgIntrinsicRows. Their presence alone does not close any A entry.
 Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:17
+S001 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unresolved voice uses the continuous 1-127 ruler"
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, continuous.mode.rawValue,
                          cppID: drawerVelocityAxisID,
                          what: "an unresolved voice uses the continuous 1-127 ruler")
 
-S002 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:20
+S002 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the mid density band publishes 9 ticks and 5 labels"
 Swift expression:
   report.expect(continuous.labels.count == 5 && continuous.ticks.count == 9, cppID: drawerVelocityAxisID,
                     message: "the mid density band publishes 9 ticks and 5 labels")
 
-S003 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:22
+S003 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the density band's labels descend from 127 to 1"
 Swift expression:
   report.expect(continuous.labels.map(\.velocity) == [127, 96, 64, 32, 1], cppID: drawerVelocityAxisID,
                     message: "the density band's labels descend from 127 to 1")
 
-S004 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:24
+S004 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the density band's ticks step by sixteen"
 Swift expression:
   report.expect(continuous.ticks.map(\.velocity) == [127, 112, 96, 80, 64, 48, 32, 16, 1],
                     cppID: drawerVelocityAxisID, message: "the density band's ticks step by sixteen")
 
-S005 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:26
+S005 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "one marker per distinct displayed value"
 Swift expression:
   report.expectEqual(2, continuous.markers.count, cppID: drawerVelocityAxisID,
                          what: "one marker per distinct displayed value")
 
-S006 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:28
+S006 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the lowest displayed value names the first marker"
 Swift expression:
   report.expectEqual(64, continuous.markers[0].velocity, cppID: drawerVelocityAxisID,
                          what: "the lowest displayed value names the first marker")
 
-S007 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:30
+S007 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the highest displayed value names the second marker"
 Swift expression:
   report.expectEqual(100, continuous.markers[1].velocity, cppID: drawerVelocityAxisID,
                          what: "the highest displayed value names the second marker")
 
-S008 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:32
+S008 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a lower velocity draws lower on the ruler"
 Swift expression:
   report.expect(continuous.markers[0].y > continuous.markers[1].y, cppID: drawerVelocityAxisID,
                     message: "a lower velocity draws lower on the ruler")
 
-S009 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:36
+S009 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "equal displayed values collapse to one marker"
 Swift expression:
   report.expectEqual(1, single.markers.count, cppID: drawerVelocityAxisID,
                          what: "equal displayed values collapse to one marker")
 
-S010 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:38
+S010 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the ruler's top is velocity 127"
 Swift expression:
   report.expectEqual(127, continuous.yToVelocity(continuous.top), cppID: drawerVelocityAxisID,
                          what: "the ruler's top is velocity 127")
 
-S011 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:40
+S011 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the ruler's bottom is velocity 1"
 Swift expression:
   report.expectEqual(1, continuous.yToVelocity(continuous.bottom), cppID: drawerVelocityAxisID,
                          what: "the ruler's bottom is velocity 1")
 
-S012 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:42
+S012 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a pointer above the ruler clamps to the maximum velocity"
 Swift expression:
   report.expectEqual(127, continuous.yToVelocity(-500), cppID: drawerVelocityAxisID,
                          what: "a pointer above the ruler clamps to the maximum velocity")
 
-S013 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:48
+S013 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a 40px body uses the first density band"
 Swift expression:
   report.expect(dense.ticks.count == 5 && dense.labels.count == 3, cppID: drawerVelocityAxisID,
                     message: "a 40px body uses the first density band")
 
-S014 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:50
+S014 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the first band labels 127/64/1 only"
 Swift expression:
   report.expect(dense.labels.map(\.velocity) == [127, 64, 1], cppID: drawerVelocityAxisID,
                     message: "the first band labels 127/64/1 only")
 
-S015 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:52
+S015 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the first band omits the mid values"
 Swift expression:
   report.expect(dense.hasLabel(64) && !dense.hasLabel(96), cppID: drawerVelocityAxisID,
                     message: "the first band omits the mid values")
 
-S016 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:57
+S016 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a 400px body reaches the finest band's tick and label caps"
 Swift expression:
   report.expect(finest.ticks.count == 32 && finest.labels.count == 17, cppID: drawerVelocityAxisID,
                     message: "a 400px body reaches the finest band's tick and label caps")
 
-S017 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:61
+S017 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a ruler press inside a label row takes its value"
 Swift expression:
   report.expectEqual(64, continuous.rulerVelocityAt(y: labelY, labelHeight: 14), cppID: drawerVelocityAxisID,
                          what: "a ruler press inside a label row takes its value")
 
-S018 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:64
+S018 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a ruler press between rows reports no value"
 Swift expression:
   report.expectEqual(-1, continuous.rulerVelocityAt(y: betweenRows, labelHeight: 2),
                          cppID: drawerVelocityAxisID, what: "a ruler press between rows reports no value")
 
-S019 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:66
+S019 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the ruler owns x = 0"
 Swift expression:
   report.expect(continuous.inRuler(x: 0, rulerWidth: 56), cppID: drawerVelocityAxisID,
                     message: "the ruler owns x = 0")
 
-S020 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:68
+S020 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the ruler ends at the gutter width"
 Swift expression:
   report.expect(!continuous.inRuler(x: 56, rulerWidth: 56), cppID: drawerVelocityAxisID,
                     message: "the ruler ends at the gutter width")
 
-S021 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift:70
+S021 | drawerVelocityValueAxisLadder | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the continuous ruler's description is the plain domain"
 Swift expression:
   report.expectEqual("Velocity", continuous.accessibleDescription, cppID: drawerVelocityAxisID,
                          what: "the continuous ruler's description is the plain domain")
 
-S022 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:86
+S022 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a PSG voice uses the intrinsic level ruler"
 Swift expression:
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, square.mode.rawValue, cppID: drawerVelocityPsgID,
                          what: "a PSG voice uses the intrinsic level ruler")
 
-S023 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:88
+S023 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "Square 1 publishes sixteen volume levels"
 Swift expression:
   report.expectEqual(16, square.graduations.count, cppID: drawerVelocityPsgID,
                          what: "Square 1 publishes sixteen volume levels")
 
-S024 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:91
+S024 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "Programmable Wave publishes five volume levels"
 Swift expression:
   report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
                          what: "Programmable Wave publishes five volume levels")
 
-S025 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:96
+S025 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a graduation names its own level"
 Swift expression:
   report.expectEqual("Vol 10", square.graduations[9].text, cppID: drawerVelocityPsgID,
                          what: "a graduation names its own level")
 
-S026 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:98
+S026 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "level 9's representative velocity is 76"
 Swift expression:
   report.expectEqual(76, square.graduations[9].velocity, cppID: drawerVelocityPsgID,
                          what: "level 9's representative velocity is 76")
 
-S027 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:100
+S027 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the displayed value marks its own graduation active"
 Swift expression:
   report.expect(square.graduations[9].active, cppID: drawerVelocityPsgID,
                     message: "the displayed value marks its own graduation active")
 
-S028 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:102
+S028 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an audible level is not the silent level"
 Swift expression:
   report.expect(square.graduations[9].audible, cppID: drawerVelocityPsgID,
                     message: "an audible level is not the silent level")
 
-S029 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:104
+S029 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "level 0 is the silent level"
 Swift expression:
   report.expect(!square.graduations[0].audible, cppID: drawerVelocityPsgID,
                     message: "level 0 is the silent level")
 
-S030 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:106
+S030 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "lower levels draw lower"
 Swift expression:
   report.expect(square.levelToY(0) > square.levelToY(15), cppID: drawerVelocityPsgID,
                     message: "lower levels draw lower")
 
-S031 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:108
+S031 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a level center maps back to its own level"
 Swift expression:
   report.expectEqual(9, square.yToLevel(square.levelToY(9)), cppID: drawerVelocityPsgID,
                          what: "a level center maps back to its own level")
 
-S032 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:111
+S032 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a level boundary sits between the two row centers"
 Swift expression:
   report.expect(boundary < square.levelToY(8) && boundary > square.levelToY(9), cppID: drawerVelocityPsgID,
                     message: "a level boundary sits between the two row centers")
 
-S033 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:113
+S033 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an intrinsic ruler press takes the level's value"
 Swift expression:
   report.expectEqual(76, square.rulerVelocityAt(y: square.levelToY(9), labelHeight: 14),
                          cppID: drawerVelocityPsgID, what: "an intrinsic ruler press takes the level's value")
 
-S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:115
+S034 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the accessible description names the voice"
 Swift expression:
   report.expect(square.accessibleDescription.contains("Square 1"), cppID: drawerVelocityPsgID,
                     message: "the accessible description names the voice")
 
-S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:135
+S035 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "macro \(macro) names \(expected)"
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: macro) == expected, cppID: drawerVelocityContextID,
                         message: "macro \(macro) names \(expected)")
 
-S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:138
+S036 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a keysplit macro names no exact top-level map"
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplit) == nil,
                     cppID: drawerVelocityContextID, message: "a keysplit macro names no exact top-level map")
 
-S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:140
+S037 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a drumkit macro names no exact top-level map"
 Swift expression:
   report.expect(VelocityContextPolicy.voiceKind(macro: BankVoiceMacro.keysplitAll) == nil,
                     cppID: drawerVelocityContextID, message: "a drumkit macro names no exact top-level map")
 
-S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:148
+S038 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the last voice change at or before the tick wins"
 Swift expression:
   report.expectEqual(5, early.slot, cppID: drawerVelocityContextID,
                          what: "the last voice change at or before the tick wins")
 
-S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:150
+S039 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the section ends at the next voice change"
 Swift expression:
   report.expectEqual(Tick(96), early.endTick ?? 0, cppID: drawerVelocityContextID,
                          what: "the section ends at the next voice change")
 
-S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:153
+S040 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the later change takes over"
 Swift expression:
   report.expectEqual(2, late.slot, cppID: drawerVelocityContextID, what: "the later change takes over")
 
-S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:154
+S041 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a context with no later change runs to the song's end"
 Swift expression:
   report.expect(late.endTick == nil, cppID: drawerVelocityContextID,
                     message: "a context with no later change runs to the song's end")
 
-S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:157
+S042 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unchanged program is the track's first program"
 Swift expression:
   report.expectEqual(7, opening.slot, cppID: drawerVelocityContextID,
                          what: "an unchanged program is the track's first program")
 
-S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:170
+S043 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an editable square-1 slot resolves exactly"
 Swift expression:
   report.expectEqual(VelocityContextStatus.resolved.rawValue, square.status.rawValue,
                          cppID: drawerVelocityContextID, what: "an editable square-1 slot resolves exactly")
 
-S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:172
+S044 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the resolved map is the slot's top-level voice"
 Swift expression:
   report.expect(square.map == VelocityMap(voiceKind: .square1), cppID: drawerVelocityContextID,
                     message: "the resolved map is the slot's top-level voice")
 
-S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:174
+S045 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the context keeps its section boundary"
 Swift expression:
   report.expectEqual(Tick(96), square.endTick ?? 0, cppID: drawerVelocityContextID,
                          what: "the context keeps its section boundary")
 
-S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:179
+S046 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a resolved context is editable"
 Swift expression:
   report.expect(square.editable, cppID: drawerVelocityContextID, message: "a resolved context is editable")
 
-S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:178
+S047 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a slot that publishes no parsed voice is unresolved"
 Swift expression:
   report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, readOnly.status.rawValue,
                          cppID: drawerVelocityContextID,
                          what: "a slot that publishes no parsed voice is unresolved")
 
-S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:181
+S048 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unresolved voice publishes a diagnostic and refuses editing"
 Swift expression:
   report.expect(!readOnly.editable && !readOnly.diagnostic.isEmpty, cppID: drawerVelocityContextID,
                     message: "an unresolved voice publishes a diagnostic and refuses editing")
 
-S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:184
+S049 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a program outside the bank is unresolved"
 Swift expression:
   report.expectEqual(VelocityContextStatus.unresolvedVoice.rawValue, missing.status.rawValue,
                          cppID: drawerVelocityContextID, what: "a program outside the bank is unresolved")
 
-S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:188
+S050 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the staged bank publishes at least one parsed voice"
 Swift expression:
   report.expect(firstEditable >= 0, cppID: drawerVelocityContextID,
                     message: "the staged bank publishes at least one parsed voice")
 
-S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:192
+S051 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the staged bank's first parsed slot resolves exactly"
 Swift expression:
   report.expectEqual(VelocityContextStatus.resolved.rawValue, real.status.rawValue, cppID: drawerVelocityContextID,
                          what: "the staged bank's first parsed slot resolves exactly")
 
-S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift:194
+S052 | drawerVelocityVoiceContextResolution | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the resolved slot is the editable line kind"
 Swift expression:
   report.expectEqual(BankSlotKind.editable, session.bankSlots[firstEditable].kind, cppID: drawerVelocityContextID,
                          what: "the resolved slot is the editable line kind")
 
-S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:210
+S053 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "a split without a note key remains keyless"
 Swift expression:
   report.expect(keyless.map == VelocityMap(voiceKind: .keyless) && !keyless.editable,
                     cppID: drawerVelocityKeysplitID, message: "a split without a note key remains keyless")
 
-S054 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:213
+S054 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "invalid child facts never borrow another key"
 Swift expression:
   report.expect(invalid.map == VelocityMap(voiceKind: .invalid) && !invalid.editable,
                     cppID: drawerVelocityKeysplitID, message: "invalid child facts never borrow another key")
 
-S055 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:217
+S055 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "key \(key) resolves its own child map"
 Swift expression:
   report.expect(context.editable && context.map == VelocityMap(voiceKind: kind),
                         cppID: drawerVelocityKeysplitID, message: "key \(key) resolves its own child map")
 
-S056 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:220
+S056 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "out-of-domain keys do not resolve"
 Swift expression:
   report.expect(split.subvoiceMacro(forKey: -1) == nil
                         && split.subvoiceMacro(forKey: 128) == nil,
                     cppID: drawerVelocityKeysplitID, message: "out-of-domain keys do not resolve")
 
-S057 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:239
+S057 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "compatible per-key PSG notes retain detents"
 Swift expression:
   report.expect(page.detentsAvailable && !page.contextUnsupported
                         && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
                     cppID: drawerVelocityKeysplitID, message: "compatible per-key PSG notes retain detents")
 
-S058 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:244
+S058 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "mixed PSG maps remain editable and continuous"
 Swift expression:
   report.expect(!page.detentsAvailable && !page.contextUnsupported
                         && page.axisMode == VelocityAxisModel.Mode.continuous.rawValue,
                     cppID: drawerVelocityKeysplitID, message: "mixed PSG maps remain editable and continuous")
 
-S059 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:252
+S059 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "mixed selection places each handle using its own level boundaries"
 Swift expression:
   report.expect(handle?.y == noteAxis.levelToY(map.level(of: Int(note.velocity))!),
                         cppID: drawerVelocityKeysplitID,
                         message: "mixed selection places each handle using its own level boundaries")
 
-S060 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:258
+S060 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "hover resolves the hovered note key"
 Swift expression:
   report.expect(page.axisModel.map == VelocityMap(voiceKind: .wave),
                         cppID: drawerVelocityKeysplitID, message: "hover resolves the hovered note key")
 
-S061 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:263
+S061 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "mixed per-key selection opens its prompt"
 Swift expression:
   report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityKeysplitID,
                     message: "mixed per-key selection opens its prompt")
 
-S062 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:266
+S062 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "per-key prompt drafts never mutate history"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == before, cppID: drawerVelocityKeysplitID,
                     message: "per-key prompt drafts never mutate history")
 
-S063 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:268
+S063 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "per-key prompt accepts one captured transaction"
 Swift expression:
   report.expect(page.acceptPrompt(), cppID: drawerVelocityKeysplitID,
                     message: "per-key prompt accepts one captured transaction")
 
-S064 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:271
+S064 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "acceptance changes only captured notes once"
 Swift expression:
   report.expect(document.note(notes[0].id)?.velocity == 127
                         && document.note(notes[1].id)?.velocity == 127
@@ -1452,181 +1515,216 @@ Swift expression:
                         && accepted.revision == before.revision + 1,
                     cppID: drawerVelocityKeysplitID, message: "acceptance changes only captured notes once")
 
-S065 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:276
+S065 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "repeated acceptance cannot duplicate a transaction"
 Swift expression:
   report.expect(!page.acceptPrompt() && drawerVelocityDocumentSnapshot(document) == accepted,
                     cppID: drawerVelocityKeysplitID, message: "repeated acceptance cannot duplicate a transaction")
 
-S066 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:279
+S066 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "one undo restores both captured values"
 Swift expression:
   report.expect(document.note(notes[0].id)?.velocity == notes[0].velocity
                         && document.note(notes[1].id)?.velocity == notes[1].velocity,
                     cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
 
-S067 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:290
+S067 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the invalid bank context advertises that velocity editing is unavailable"
 Swift expression:
   report.expect(page.contextUnsupported, cppID: drawerVelocityKeysplitID,
                     message: "the invalid bank context advertises that velocity editing is unavailable")
 
-S068 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:295
+S068 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unsupported paint press never suspends follow or owns Escape"
 Swift expression:
   report.expect(!page.interactionActive, cppID: drawerVelocityKeysplitID,
                     message: "an unsupported paint press never suspends follow or owns Escape")
 
-S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift:299
+S069 | drawerVelocityKeysplitPerNoteMapping | src/checks/drawerpresentation/velocity.swift
+Anchor: message "dragging an unsupported velocity context cannot change notes or history"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == invalidBefore, cppID: drawerVelocityKeysplitID,
                     message: "dragging an unsupported velocity context cannot change notes or history")
 
-S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:320
+S070 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "camera refresh moves the handle without changing its value axis"
 Swift expression:
   report.expect(moved.x == expectedX && moved.x != oldX && moved.y == oldY
                         && moved.value == oldValue,
                     cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
 
-S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:324
+S071 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the QML model receives the moved handle"
 Swift expression:
   report.expect(row.x == expectedX, cppID: drawerVelocityProjectionID,
                     message: "the QML model receives the moved handle")
 
-S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:327
+S072 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "hit testing follows the camera-refreshed handle"
 Swift expression:
   report.expect(page.hoveredNoteText == "\(note.id.rawValue)", cppID: drawerVelocityProjectionID,
                     message: "hit testing follows the camera-refreshed handle")
 
-S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:333
+S073 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "document edits invalidate cached note values"
 Swift expression:
   report.expect(fixture.handle(note)?.value == 127, cppID: drawerVelocityProjectionID,
                     message: "document edits invalidate cached note values")
 
-S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift:337
+S074 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "undo invalidates cached note values again"
 Swift expression:
   report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
                     message: "undo invalidates cached note values again")
 
-S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:395
+S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the presented context tick is the rounded playhead tick"
 Swift expression:
   report.expectEqual(Tick(16), page.presentedContextTick, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context tick is the rounded playhead tick")
 
-S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:397
+S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the presented context slot is the bank slot at that tick"
 Swift expression:
   report.expectEqual(0, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context slot is the bank slot at that tick")
 
-S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:399
+S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "playhead movement preserves the displayed note count"
 Swift expression:
   report.expectEqual(handleCount, fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                          what: "playhead movement preserves the displayed note count")
 
-S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:404
+S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the new section resolves the slot of its own tick"
 Swift expression:
   report.expectEqual(2, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the new section resolves the slot of its own tick")
 
-S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:418
+S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the stopped velocity context consumes the published edit cursor"
 Swift expression:
   report.expectEqual(2, page.context.slot, cppID: drawerVelocityDiagnosticsID,
                          what: "the stopped velocity context consumes the published edit cursor")
 
-S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:420
+S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "cursor-only publication changes no document or history state"
 Swift expression:
   report.expectEqual(cursorDocument, drawerVelocityDocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
                          what: "cursor-only publication changes no document or history state")
 
-S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:425
+S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the selected handle publishes its own count"
 Swift expression:
   report.expectEqual(1, page.selectedCount, cppID: drawerVelocityProjectionID,
                          what: "the selected handle publishes its own count")
 
-S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:430
+S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the hovered handle publishes its displayed value as the readout"
 Swift expression:
   report.expectEqual(fixture.handle(fixture.notes[0])?.label ?? "", page.readoutText,
                          cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its displayed value as the readout")
 
-S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:433
+S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the hovered handle publishes its own identity"
 Swift expression:
   report.expectEqual("\(fixture.notes[0].id.rawValue)", page.hoveredNoteText, cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its own identity")
 
-S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:436
+S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift
+Anchor: message "hover leaving every handle hides the readout"
 Swift expression:
   report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
                     message: "hover leaving every handle hides the readout")
 
-S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:350
+S085 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the selected note starts with a parsed, editable opening voice"
 Swift expression:
   report.expect(!page.contextUnsupported && page.contextSlot == 0,
                     cppID: drawerVelocityProjectionID,
                     message: "the selected note starts with a parsed, editable opening voice")
 
-S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:356
+S086 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unresolved program change invalidates the selected velocity context"
 Swift expression:
   report.expect(page.contextUnsupported && page.contextSlot == 127,
                     cppID: drawerVelocityProjectionID,
                     message: "an unresolved program change invalidates the selected velocity context")
 
-S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:359
+S087 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unresolved selected voice cannot open the velocity prompt"
 Swift expression:
   report.expect(!page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
                     message: "an unresolved selected voice cannot open the velocity prompt")
 
-S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:362
+S088 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "an unresolved selected voice cannot start a velocity drag"
 Swift expression:
   report.expect(!page.interactionActive, cppID: drawerVelocityProjectionID,
                     message: "an unresolved selected voice cannot start a velocity drag")
 
-S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:372
+S089 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "undo restores the parsed context rather than retaining the unresolved projection"
 Swift expression:
   report.expect(!page.contextUnsupported && page.contextSlot == 0,
                     cppID: drawerVelocityProjectionID,
                     message: "undo restores the parsed context rather than retaining the unresolved projection")
 
-S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:375
+S090 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the restored voice makes the selected velocity prompt available again"
 Swift expression:
   report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityProjectionID,
                     message: "the restored voice makes the selected velocity prompt available again")
 
-S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:379
+S091 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift
+Anchor: message "the restored voice makes the selected velocity drag available again"
 Swift expression:
   report.expect(page.interactionActive, cppID: drawerVelocityProjectionID,
                     message: "the restored voice makes the selected velocity drag available again")
 
-S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2605
+S092 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the page composed its ruler and plot"
 QML expression:
   verify(ruler && plot, "the page composed its ruler and plot")
 
-S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2606
+S093 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the ruler is the shared gutter column"
 QML expression:
   fuzzyCompare(ruler.width, testCase.surface.timelineSplitX, 0.01,
                "the ruler is the shared gutter column")
 
-S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2608
+S094 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the plot starts at the shared origin"
 QML expression:
   fuzzyCompare(plot.x, ruler.width, 0.01, "the plot starts at the shared origin")
 
-S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2609
+S095 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the plot spans the body beside the ruler"
 QML expression:
   fuzzyCompare(plot.width, page.width - ruler.width, 0.01,
                "the plot spans the body beside the ruler")
 
-S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2611
+S096 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the plot spans the body height"
 QML expression:
   fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
-S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2614
+S097 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "every note of the primary track published a node"
 QML expression:
   compare(nodes.length, testCase.gridNotes().length,
           "every note of the primary track published a node")
 
-S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2616
+S098 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the ruler rendered its value ladder"
 QML expression:
   verify(testCase.collectByName(ruler, "velocityTick", []).length
              + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
          "the ruler rendered its value ladder")
 
-S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2620
+S099 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the drawer composed its original detent control"
 QML expression:
   verify(detent, "the drawer composed its original detent control")
   compare(detent.Accessible.role, Accessible.CheckBox, "the original detent control is a checkbox")
@@ -1634,7 +1732,8 @@ QML expression:
   compare(detent.Accessible.checked, testCase.velocityModel().detentsEnabled,
           "the detent control shows the page's own preference")
 
-S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:2627
+S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the drawer control toggles the velocity preference"
 QML expression:
   mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
   compare(testCase.velocityModel().detentsEnabled, !enabledBefore,
@@ -1642,44 +1741,52 @@ QML expression:
   mouseClick(detent, detent.width / 2, detent.height / 2, Qt.LeftButton)
   compare(testCase.velocityModel().detentsEnabled, enabledBefore)
 
-S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2664
+S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the grid published its notes"
 QML expression:
   compare(notes.length > 0, true, "the grid published its notes")
 
-S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2679
+S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a live drag reports an active interaction to the container"
 QML expression:
   compare(testCase.velocityModel().interactionActive, true,
           "a live drag reports an active interaction to the container")
 
-S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml:2682
+S103 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the released drag committed one velocity change"
 QML expression:
   tryVerify(function() {
       return testCase.noteVelocity(targetId) !== before
   }, 1000, "the released drag committed one velocity change")
 
-S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml:2850
+S104 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the section hid"
 QML expression:
   tryVerify(function() { return !testCase.section(testCase.velocityKind).visible }, 1000,
             "the section hid")
   compare(model.interactionActive, false, "hiding the section cancelled the gesture")
 
-S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml:2856
+S105 | test_productionVelocityCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the section is visible again"
 QML expression:
   tryVerify(function() { return testCase.section(testCase.velocityKind).visible }, 1000,
             "the section is visible again")
 
-S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml:2893
+S106 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message ")" #1
 QML expression:
   tryVerify(function() {
       return bootstrap.velocityPlayheadPresentations() === presented + updates
   }, 2000, "every published presentation reached the page's diagnostics")
 
-S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml:2900
+S107 | test_productionVelocityPlayheadPerformance | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "128 shared-playhead presentations rebuilt no velocity content"
 QML expression:
   compare(bootstrap.velocityContentBuilds(), builds,
           "128 shared-playhead presentations rebuilt no velocity content")
 
-S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:94
+S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
+Anchor: message "Noise publishes sixteen volume levels"
 Swift expression:
   report.expectEqual(16, noise.graduations.count, cppID: drawerVelocityPsgID,
                          what: "Noise publishes sixteen volume levels")

@@ -4,7 +4,6 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/selectioncheck_tracks.cpp
 Original SHA-256: c0fa3450cb285e33ceb356561d3055af065b6fc341901fea52f96135ae14f7dd
 Swift counterpart: src/checks/editcheck/SelectionChecks.swift
-Swift SHA-256: 778da8c451451063174068f222938592213cc116b252e1c77c4c62eb668c78e6
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -17,7 +16,7 @@ executed predicates cover the primary-track transitions, the toggle/plain/range
 scope gestures, the note handoff, the out-of-range guard, the remap
 primary/scope/note/coalesced-publication values and the deleted-primary
 fallback primary/scope values, and are indexed as S001-S025
-below. No production change in this reconciliation: src/swift/app/DocumentSession.swift handleDocumentChange keeps the reference-revision fallback (min(priorPrimary, usedTrackCount - 1); scope = remapped scope plus fallback primary), matching EditorSelectionModel::applyRemap at the reference revision. It is verified by the untagged deleted-primary predicates at SelectionChecks.swift:197-203 and the A093-A094 fallback predicates S024-S025 at SelectionChecks.swift:209-212.
+below. No production change in this reconciliation: src/swift/app/DocumentSession.swift handleDocumentChange keeps the reference-revision fallback (min(priorPrimary, usedTrackCount - 1); scope = remapped scope plus fallback primary), matching EditorSelectionModel::applyRemap at the reference revision. It is verified by the untagged deleted-primary predicates at SelectionChecks.swift and the A093-A094 fallback predicates S024-S025 at SelectionChecks.swift.
 The PARTIAL sites map
 to predicates that execute without the native active-time-selection precondition
 (the Swift DocumentSession holds no time-selection state), and that condition is stated per site. The remaining
@@ -49,7 +48,6 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of any converted check.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 11, PARTIAL 14, GAP 80, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -72,10 +70,10 @@ or re-run any suite.
 
 Execution ownership
 The executing entry point is clipboardTrackSelectionChecks, called from
-runClipboardSelectionChecks (src/checks/editcheck/SelectionChecks.swift:6) and
+runClipboardSelectionChecks (src/checks/editcheck/SelectionChecks.swift) and
 invoked from runProjectSessionSuite
-(src/checks/workspace/SessionChecks.swift:74) through pdcSuiteRun case 10
-(src/checks/support/corecheck/CoreCheckSupport.swift:137-141); the counterpart
+(src/checks/workspace/SessionChecks.swift) through pdcSuiteRun case 10
+(src/checks/support/corecheck/CoreCheckSupport.swift); the counterpart
 is compiled into swift_core_check at src/checks/CMakeLists.txt:109.
 The legacy original is the C++ SelectionCheckTest methods
 trackScopeGesturesPreserveOrClearAtTheRightBoundary,
@@ -856,7 +854,7 @@ Original expression:
 
 A080 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:234
 Disposition: PARTIAL
-Mapping/reason: Related predicate S020 (SelectionChecks.swift:182-183) executes the primary-follows-remap value: after the structural track moves the primary is 4. The fixture drives document.moveTrack calls rather than an engineTrackMap remap, and no predicate observes the native kPrimaryTrack notification mask; the one coalesced document-plus-selection publication is S023. Family anchor for A084-A105 except A093-A094 (previous/trackTime payloads, lane-list remap with duplicate collapse and deleted-lane drops), which stay GAP; A093-A094 execute the deleted-primary fallback primary/scope values as PARTIAL (S024-S025). Unproved: exact PrimaryTrack transition mask.
+Mapping/reason: Related predicate S020 (SelectionChecks.swift) executes the primary-follows-remap value: after the structural track moves the primary is 4. The fixture drives document.moveTrack calls rather than an engineTrackMap remap, and no predicate observes the native kPrimaryTrack notification mask; the one coalesced document-plus-selection publication is S023. Family anchor for A084-A105 except A093-A094 (previous/trackTime payloads, lane-list remap with duplicate collapse and deleted-lane drops), which stay GAP; A093-A094 execute the deleted-primary fallback primary/scope values as PARTIAL (S024-S025). Unproved: exact PrimaryTrack transition mask.
 Source context since previous assertion:
   ;
   }
@@ -881,7 +879,7 @@ Original expression:
 
 A081 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:235
 Disposition: PARTIAL
-Mapping/reason: Related predicate S021 (SelectionChecks.swift:184-185) executes the scope-follows-remap value: the scope is exactly {2, 4}. Same fixture and mask conditions as A080: structural moveTrack calls, no native kTrackScope notification-mask observation (one coalesced publication is S023). Unproved: exact TrackScope transition mask.
+Mapping/reason: Related predicate S021 (SelectionChecks.swift) executes the scope-follows-remap value: the scope is exactly {2, 4}. Same fixture and mask conditions as A080: structural moveTrack calls, no native kTrackScope notification-mask observation (one coalesced publication is S023). Unproved: exact TrackScope transition mask.
 Source context since previous assertion:
   ;
 Original expression:
@@ -889,7 +887,7 @@ Original expression:
 
 A082 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:236
 Disposition: PARTIAL
-Mapping/reason: Related predicate S022 (SelectionChecks.swift:186-187) executes the note-identity value: the selected note order is still [note] after the structural track moves. Same fixture and mask conditions as A080; the predicate observes identity survival, not the native notification mask. Unproved: exact PrimaryTrack|TrackScope transition mask.
+Mapping/reason: Related predicate S022 (SelectionChecks.swift) executes the note-identity value: the selected note order is still [note] after the structural track moves. Same fixture and mask conditions as A080; the predicate observes identity survival, not the native notification mask. Unproved: exact PrimaryTrack|TrackScope transition mask.
 Source context since previous assertion:
   ;
 Original expression:
@@ -897,7 +895,7 @@ Original expression:
 
 A083 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:237
 Disposition: PARTIAL
-Mapping/reason: Related predicate S023 (SelectionChecks.swift:188-190) executes one coalesced change containing both .document and .selection. It is not the original mask: the original asserts exactly kPrimaryTrack|kTrackScope on the native NotificationLog transition, which no Swift predicate observes. Unproved: exact PrimaryTrack|TrackScope mask.
+Mapping/reason: Related predicate S023 (SelectionChecks.swift) executes one coalesced change containing both .document and .selection. It is not the original mask: the original asserts exactly kPrimaryTrack|kTrackScope on the native NotificationLog transition, which no Swift predicate observes. Unproved: exact PrimaryTrack|TrackScope mask.
 Source context since previous assertion:
   ;
 Original expression:
@@ -992,7 +990,7 @@ Original expression:
 
 A093 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:278
 Disposition: PARTIAL
-Mapping/reason: Related predicate S024 (SelectionChecks.swift:209-210) executes the deleted-primary fallback value: deleting every track above the fallback clamps the primary to track zero. The fixture drives sequential document.deleteTrack(4, 3, 2) then document.deleteTrack(1) calls driving 5 tracks to 1, reaching the same end values as the native single applyRemap({0, -1, -1}) via the min(priorPrimary, count - 1) fallback, rather than an engineTrackMap remap; the native fixture carried an active 20..30 time selection that DocumentSession cannot model, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact PrimaryTrack|TrackScope|TimeSelection transition mask and the previous/trackTime payloads.
+Mapping/reason: Related predicate S024 (SelectionChecks.swift) executes the deleted-primary fallback value: deleting every track above the fallback clamps the primary to track zero. The fixture drives sequential document.deleteTrack(4, 3, 2) then document.deleteTrack(1) calls driving 5 tracks to 1, reaching the same end values as the native single applyRemap({0, -1, -1}) via the min(priorPrimary, count - 1) fallback, rather than an engineTrackMap remap; the native fixture carried an active 20..30 time selection that DocumentSession cannot model, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact PrimaryTrack|TrackScope|TimeSelection transition mask and the previous/trackTime payloads.
 Source context since previous assertion:
       TrackRemap deletedRemap;
       deletedRemap.engineTrackMap = {0, -1, -1};
@@ -1012,7 +1010,7 @@ Original expression:
 
 A094 | SelectionCheckTest::remapPreservesMeaningfulSelection | src/checks/clipboard/selectioncheck_tracks.cpp:279
 Disposition: PARTIAL
-Mapping/reason: Related predicate S025 (SelectionChecks.swift:211-212) executes the deleted-primary scope value: deleting every track above the fallback leaves the scope on track zero. Same fixture and mask conditions as A093: sequential structural deleteTrack calls rather than an engineTrackMap remap, the native active 20..30 time selection has no Swift counterpart, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact TrackScope transition mask and the previous/trackTime payloads.
+Mapping/reason: Related predicate S025 (SelectionChecks.swift) executes the deleted-primary scope value: deleting every track above the fallback leaves the scope on track zero. Same fixture and mask conditions as A093: sequential structural deleteTrack calls rather than an engineTrackMap remap, the native active 20..30 time selection has no Swift counterpart, and no predicate observes the native kPrimaryTrack|kTrackScope|kTimeSelection mask (A096) or the previous/trackTime payloads (A097-A100). Unproved: exact TrackScope transition mask and the previous/trackTime payloads.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1132,161 +1130,184 @@ unproved condition of the PARTIAL sites.
 cppID values in that function: gestures = clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary;
 bounds = clipboard/SelectionCheckTest::outOfRangeTrackMasksAreIgnored.
 
-S001 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:109-110
+S001 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A001 primary track transition chooses track one"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A001
 Swift expression:
   report.expectEqual(1, session.selectedTrack, cppID: gestures,
                      what: "A001 primary track transition chooses track one")
 
-S002 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:111-112
+S002 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A001 primary track transition chooses track one"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A002
 Swift expression:
   report.expectEqual(Set([1]), session.selectedTracks, cppID: gestures,
                      what: "A002 primary transition selects its track scope")
 
-S003 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:113-114
+S003 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A002 primary transition selects its track scope"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A003
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A003 one primary transition publication")
 
-S004 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:117-118
+S004 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A004 toggle adds the secondary track"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A004
 Swift expression:
   report.expectEqual(Set([1, 3]), session.selectedTracks, cppID: gestures,
                      what: "A004 toggle adds the secondary track")
 
-S005 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:119-120
+S005 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A004 toggle adds the secondary track"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A005
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A005 toggle publishes once")
 
-S006 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:123-124
+S006 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A006 removing primary hands off to the surviving track"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A006 (PARTIAL; the unproved condition is the native active time selection)
 Swift expression:
   report.expectEqual(3, session.selectedTrack, cppID: gestures,
                      what: "A006 removing primary hands off to the surviving track")
 
-S007 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:125-126
+S007 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A006 removing primary hands off to the surviving track"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A007 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
                      what: "A007 removing primary preserves surviving scope")
 
-S008 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:127-128
+S008 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A007 removing primary preserves surviving scope"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A009 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A009 primary handoff publishes atomically")
 
-S009 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:132-133
+S009 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A016 plain gesture keeps its primary"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A016 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual(3, session.selectedTrack, cppID: gestures,
                      what: "A016 plain gesture keeps its primary")
 
-S010 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:134-135
+S010 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A016 plain gesture keeps its primary"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A017 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
                      what: "A017 plain gesture collapses multi-track scope")
 
-S011 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:136-137
+S011 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A017 plain gesture collapses multi-track scope"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A019 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A019 collapsed scope publishes once")
 
-S012 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:140-141
+S012 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A022 range expands inclusively from primary to target"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A022 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual(Set([3, 4, 5]), session.selectedTracks, cppID: gestures,
                      what: "A022 range expands inclusively from primary to target")
 
-S013 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:142-143
+S013 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A022 range expands inclusively from primary to target"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A023 (PARTIAL; see A006)
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A023 range publishes once")
 
-S014 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:156-157
+S014 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A026 note handoff chooses the surviving primary"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A026
 Swift expression:
   report.expectEqual(3, session.selectedTrack, cppID: gestures,
                      what: "A026 note handoff chooses the surviving primary")
 
-S015 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:158-159
+S015 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A026 note handoff chooses the surviving primary"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A027
 Swift expression:
   report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
                      what: "A027 note handoff keeps surviving scope")
 
-S016 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:160-161
+S016 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A027 note handoff keeps surviving scope"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A028
 Swift expression:
   report.expect(session.selectedNotes.isEmpty, cppID: gestures,
                 message: "A028 changing the selected note's primary clears it")
 
-S017 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:162-163
+S017 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A028 changing the selected note's primary clears it"
 cppID: clipboard/SelectionCheckTest::trackScopeGesturesPreserveOrClearAtTheRightBoundary
 Covers: A029
 Swift expression:
   report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
                      what: "A029 note and track transition publish together")
 
-S018 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:167-168
+S018 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A060 out-of-range track cannot join the scope"
 cppID: clipboard/SelectionCheckTest::outOfRangeTrackMasksAreIgnored
 Covers: A060
 Swift expression:
   report.expectEqual(Set([3]), session.selectedTracks, cppID: bounds,
                      what: "A060 out-of-range track cannot join the scope")
 
-S019 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:169-170
+S019 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A060 out-of-range track cannot join the scope"
 cppID: clipboard/SelectionCheckTest::outOfRangeTrackMasksAreIgnored
 Covers: A061
 Swift expression:
   report.expect(changes.isEmpty, cppID: bounds,
                 message: "A061 ignored out-of-range action publishes nothing")
 
-S020 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:182-183
+S020 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A080 primary follows track 1 to track 4"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A080
 Swift expression:
   report.expectEqual(4, session.selectedTrack, cppID: remapID,
                      what: "A080 primary follows track 1 to track 4")
 
-S021 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:184-185
+S021 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A080 primary follows track 1 to track 4"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A081
 Swift expression:
   report.expectEqual(Set([2, 4]), session.selectedTracks, cppID: remapID,
                      what: "A081 scope follows tracks 0 and 1 to tracks 2 and 4")
 
-S022 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:186-187
+S022 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A081 scope follows tracks 0 and 1 to tracks 2 and 4"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A082
 Swift expression:
   report.expectEqual([note], session.selectedNoteOrder, cppID: remapID,
                      what: "A082 selected note identity survives structural track moves")
 
-S023 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:188-190
+S023 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A082 selected note identity survives structural track moves"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A083
 Swift expression:
@@ -1294,14 +1315,16 @@ Swift expression:
                 && changes[0].contains(.selection), cppID: remapID,
                 message: "A083 remap and selected scope publish one coalesced change")
 
-S024 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:209-210
+S024 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A093 deleting every track above the fallback clamps the primary to track zero"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A093
 Swift expression:
   report.expectEqual(0, session.selectedTrack, cppID: remapID,
                      what: "A093 deleting every track above the fallback clamps the primary to track zero")
 
-S025 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift:211-212
+S025 | clipboardTrackSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A093 deleting every track above the fallback clamps the primary to track zero"
 cppID: clipboard/SelectionCheckTest::remapPreservesMeaningfulSelection
 Covers: A094
 Swift expression:

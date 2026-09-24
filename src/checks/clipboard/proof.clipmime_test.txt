@@ -4,7 +4,6 @@ Reference revision: 02752345fa3a1dbaf11ee6f1cd3ad5da475f0e06
 Original: src/checks/clipboard/clipmime_test.cpp
 Original SHA-256: 0d0a02515571b1c3969d261705702d72977b45dbd8fdfaa7113405f0336a9482
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -22,7 +21,6 @@ state) a model-level Swift check cannot establish; the Swift messages
 themselves reserve native MIME transport and failure routing as host
 assertions.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 13, PARTIAL 0, GAP 4, NATIVE 0.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -32,7 +30,7 @@ Command: deno task verify:shell --filter shell-clipboard --verbose
 Result: PASS (1/11 ok; run_checks PASS including the invalid-MIME paste guard;
 reported by the implementer 2026-09-24, not rerun by this ledger pass).
 The A017 decodeFailed site is not routed by any Swift predicate; the shell lane
-guard at src/checks/editorqml/tst_ShellClipboard.qml:371-380 asserts the
+guard at src/checks/editorqml/tst_ShellClipboard.qml asserts the
 consumer-visible consequence (invalid custom MIME cannot change notes, cursor or
 dirty state) and is recorded beside that site without converting it.
 
@@ -66,7 +64,7 @@ Original assertion inventory and source sequence
 
 A001 | ClipMimeTest::rescaleFamilies | src/checks/clipboard/clipmime_test.cpp:207
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1730), S005 (:1766), S006 (:1786) and S007 (:1806) pin the identical four family inputs and outputs (up, down-with-coalescing, identity, saturation).
+Mapping/reason: S004 (TimeChecks.swift), S005 (:1766), S006 (:1786) and S007 (:1806) pin the identical four family inputs and outputs (up, down-with-coalescing, identity, saturation).
 Source context since previous assertion:
   #include "checks/clipcheck_support.h"
 
@@ -279,7 +277,7 @@ Original expression:
 
 A002 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:223
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift:1820) asserts decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip) for both codec families, which requires decode to succeed.
+Mapping/reason: S008 (TimeChecks.swift) asserts decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip) for both codec families, which requires decode to succeed.
 Source context since previous assertion:
   ;
       }
@@ -302,7 +300,7 @@ Original expression:
 
 A003 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:224
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift:1820) compares against DecodedPorydawClip(ticksPerBeat: 24, ...).
+Mapping/reason: S008 (TimeChecks.swift) compares against DecodedPorydawClip(ticksPerBeat: 24, ...).
 Source context since previous assertion:
   ;
 Original expression:
@@ -310,7 +308,7 @@ Original expression:
 
 A004 | ClipMimeTest::codecRoundTrips | src/checks/clipboard/clipmime_test.cpp:225
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift:1820) compares the decoded clip against the identical input payload.
+Mapping/reason: S008 (TimeChecks.swift) compares the decoded clip against the identical input payload.
 Source context since previous assertion:
   ;
 Original expression:
@@ -335,7 +333,7 @@ Original expression:
 
 A006 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:237
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts routedCore decodes to the exact payload, which requires a decoded value.
+Mapping/reason: S001 (TimeChecks.swift) asserts routedCore decodes to the exact payload, which requires a decoded value.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> raw = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -343,7 +341,7 @@ Original expression:
 
 A007 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:238
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts routedCore?.ticksPerBeat == 24.
+Mapping/reason: S001 (TimeChecks.swift) asserts routedCore?.ticksPerBeat == 24.
 Source context since previous assertion:
   ;
 Original expression:
@@ -351,7 +349,7 @@ Original expression:
 
 A008 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:239
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts routedCore?.clip == routedClip with the identical span-24 single-note payload.
+Mapping/reason: S001 (TimeChecks.swift) asserts routedCore?.clip == routedClip with the identical span-24 single-note payload.
 Source context since previous assertion:
   ;
 Original expression:
@@ -359,7 +357,7 @@ Original expression:
 
 A009 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:242
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts the routedScaled conjuncts, which require the 48-TPB conversion to succeed.
+Mapping/reason: S001 (TimeChecks.swift) asserts the routedScaled conjuncts, which require the 48-TPB conversion to succeed.
 Source context since previous assertion:
 
   const std::optional<Clip> converted = songview::readClipboard(48);
@@ -368,7 +366,7 @@ Original expression:
 
 A010 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:243
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts routedScaled?.span == 48.
+Mapping/reason: S001 (TimeChecks.swift) asserts routedScaled?.span == 48.
 Source context since previous assertion:
   ;
 Original expression:
@@ -376,7 +374,7 @@ Original expression:
 
 A011 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:244
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts routedScaled?.tracks.count == 1.
+Mapping/reason: S001 (TimeChecks.swift) asserts routedScaled?.tracks.count == 1.
 Source context since previous assertion:
   ;
 Original expression:
@@ -384,7 +382,7 @@ Original expression:
 
 A012 | ClipMimeTest::clipboardRoutesClipMime | src/checks/clipboard/clipmime_test.cpp:245
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1690) asserts the rescaled first-note duration == 24 (12 at 24 TPB doubled to 48 TPB).
+Mapping/reason: S001 (TimeChecks.swift) asserts the rescaled first-note duration == 24 (12 at 24 TPB doubled to 48 TPB).
 Source context since previous assertion:
   ;
 Original expression:
@@ -416,7 +414,7 @@ Original expression:
 
 A015 | ClipMimeTest::malformedPayloads | src/checks/clipboard/clipmime_test.cpp:280
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1704) rejects the same fourteen baseline kinds through the Swift malformedClipboardPayload helper.
+Mapping/reason: S002 (TimeChecks.swift) rejects the same fourteen baseline kinds through the Swift malformedClipboardPayload helper.
 Source context since previous assertion:
   ;
       }
@@ -448,7 +446,7 @@ Original expression:
 
 A016 | ClipMimeTest::malformedCustomMimeReportsDecodeFailure | src/checks/clipboard/clipmime_test.cpp:290
 Disposition: MATCHED
-Mapping/reason: S003 (TimeChecks.swift:1708) asserts the production decoder rejects the exact "not json at all" custom-MIME bytes.
+Mapping/reason: S003 (TimeChecks.swift) asserts the production decoder rejects the exact "not json at all" custom-MIME bytes.
 Source context since previous assertion:
   ;
       }
@@ -465,7 +463,7 @@ Original expression:
 
 A017 | ClipMimeTest::malformedCustomMimeReportsDecodeFailure | src/checks/clipboard/clipmime_test.cpp:291
 Disposition: GAP
-Mapping/reason: No Swift predicate routes the native decodeFailed flag; S003 (TimeChecks.swift:1708) asserts only that the production decoder rejects the same bytes. The shell lane (tst_ShellClipboard.qml:371-380) asserts that invalid custom MIME cannot change pasted notes, the edit cursor or the dirty state, but it reads no decodeFailed out-parameter, so this site remains GAP.
+Mapping/reason: No Swift predicate routes the native decodeFailed flag; S003 (TimeChecks.swift) asserts only that the production decoder rejects the same bytes. The shell lane (tst_ShellClipboard.qml) asserts that invalid custom MIME cannot change pasted notes, the edit cursor or the dirty state, but it reads no decodeFailed out-parameter, so this site remains GAP.
 Source context since previous assertion:
   ;
 Original expression:
@@ -492,7 +490,8 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1697
+S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion"
   report.expect(routedCore?.ticksPerBeat == 24 && routedCore?.clip == routedClip
           && routedScaled?.span == 48
           && routedScaled?.tracks.count == 1
@@ -500,31 +499,36 @@ S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1697
           cppID: "clipmimecheck/ClipMimeTest::clipboardRoutesClipMime",
           message: "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion")
 
-S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1711
+S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the exact malformed baseline payload is rejected"
   report.expect(ClipboardCodec.decode(malformedClipboardPayload(kind)) == nil,
                         cppID: "clipmimecheck/ClipMimeTest::malformedPayloads[\(kind)]",
                         message: "the exact malformed baseline payload is rejected")
 
-S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1715
+S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion"
   report.expect(ClipboardCodec.decode(Data("not json at all".utf8)) == nil,
                     cppID: "clipmimecheck/ClipMimeTest::malformedCustomMimeReportsDecodeFailure",
                     message: "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion")
 
-S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1737
+S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "exact up-scaled clip"
   report.expectEqual(
           upExpected,
           ClipboardCodec.rescale(upInput, sourceTicksPerBeat: 24, destinationTicksPerBeat: 48),
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[up_24_to_48]",
           what: "exact up-scaled clip")
 
-S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1773
+S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "half-up down-scaled clip with stable last-wins collisions"
   report.expectEqual(
           downExpected,
           ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
           what: "half-up down-scaled clip with stable last-wins collisions")
 
-S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1793
+S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "same-TPB clip including duplicate ordering"
   report.expectEqual(
           identityInput,
           ClipboardCodec.rescale(identityInput, sourceTicksPerBeat: 24,
@@ -532,7 +536,8 @@ S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1793
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[same_tpb_is_exact_identity]",
           what: "same-TPB clip including duplicate ordering")
 
-S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1813
+S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+Anchor: message "saturated clip without wrapping"
   report.expectEqual(
           saturationExpected,
           ClipboardCodec.rescale(saturationInput, sourceTicksPerBeat: 1,
@@ -540,7 +545,8 @@ S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1813
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[saturates_without_wrap]",
           what: "saturated clip without wrapping")
 
-S008 | roundTrip | src/checks/editcheck/TimeChecks.swift:1827
+S008 | roundTrip | src/checks/editcheck/TimeChecks.swift
+Anchor: message "codec round-trip preserves payload"
   report.expect(decoded == DecodedPorydawClip(ticksPerBeat: ticksPerBeat, clip: clip),
                     cppID: cppID, message: "codec round-trip preserves payload")
 

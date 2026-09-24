@@ -4,7 +4,6 @@ Reference revision: d3ad6b2c592a76b37eb0c70ca6ae2ddf0d41b63c
 Original: src/checks/swiftqtml/tst_swiftqtml.cpp
 Original SHA-256: 3020c73db174adcb25b50fc03bd3877688724ea364fc82969e96f739944bcc35
 Swift counterpart: src/checks/swiftqtml/BridgeProbeCheck.swift
-Swift SHA-256: 1cab018b47609153dff1b9bd4743b9bd87d85251ff18fbb34f85bc8e85c53cd4
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -23,7 +22,7 @@ deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftqtml --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 SwiftQtMlTest mounts BridgeProbe.qml in a QQuickView, invokes root and

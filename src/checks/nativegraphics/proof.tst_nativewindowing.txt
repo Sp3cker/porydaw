@@ -4,7 +4,6 @@ Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
 Original: src/checks/nativegraphics/tst_nativewindowing.cpp
 Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d5745
 Swift counterpart: src/checks/trackheaders/headerfixture.swift; src/checks/trackheaders/trackheadermenu.swift; src/checks/trackheaders/headerinputfixture.swift
-Swift SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa; 903a0e21c0585cc53b8fe921a9a07cf23421a062382a85654dfbff78f3dd3057; 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence

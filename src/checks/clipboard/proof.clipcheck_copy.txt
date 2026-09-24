@@ -4,9 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/clipboard/clipcheck_copy.cpp
 Original SHA-256: f2da92c80fb6c53a5606010f5d862dd700bdd3c06382588fef27f6164723fa3c
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 42370dd398741e3f138df3474efd1635c299a050c3893322abda537b0edbe933
 Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
-Additional Swift SHA-256: 46f3edd6dff05f10da2e18d038266b4918b07575120845212bb135a0afb9b89f
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -31,7 +29,6 @@ clipboard command; they are recorded beside the affected site as supplementary
 evidence and never counted as that site's replacement predicate, so no native
 key-delivery, selection, cursor or clipboard round-trip site is reclassified by
 them.
-Tally: MATCHED 49, PARTIAL 8, GAP 23, NATIVE 0, RETIRED-REPRESENTATION 19.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
@@ -117,7 +114,7 @@ Original expression:
 
 A002 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:36
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress — clipboardDocument() builds the identical one-track layout in memory via non-throwing MidiFile chunk construction (TimeChecks.swift:1603-1608). The resulting layout is pinned by MATCHED S001 (source payload, intact track 0 and track-1 paste) and the voice-seed lanes in S003/S004/S012; no production track-creation predicate was added to the clipboard suite.
+Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress — clipboardDocument() builds the identical one-track layout in memory via non-throwing MidiFile chunk construction (TimeChecks.swift). The resulting layout is pinned by MATCHED S001 (source payload, intact track 0 and track-1 paste) and the voice-seed lanes in S003/S004/S012; no production track-creation predicate was added to the clipboard suite.
 Source context since previous assertion:
   ;
 Original expression:
@@ -125,7 +122,7 @@ Original expression:
 
 A003 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:40
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement (separate shell lane): tst_ShellClipboard.qml:210-239 delivers a real Copy key sequence and reads the native clipboard bytes back.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement (separate shell lane): tst_ShellClipboard.qml delivers a real Copy key sequence and reads the native clipboard bytes back.
 Source context since previous assertion:
   source->document().addNotes(0, {{24, 60, 24, 100}, {36, 64, 12, 80}});
   source->view().selectionModel().setNoteSelection(noteIds(source->document(), 0));
@@ -135,7 +132,7 @@ Original expression:
 
 A004 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:42
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1225) asserts crossDecoded equals DecodedPorydawClip(ticksPerBeat: 24, clip: crossExpected), which requires a decoded value.
+Mapping/reason: S001 (TimeChecks.swift) asserts crossDecoded equals DecodedPorydawClip(ticksPerBeat: 24, clip: crossExpected), which requires a decoded value.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> copied = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -143,7 +140,7 @@ Original expression:
 
 A005 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:43
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1225) carries ticksPerBeat 24 in the compared DecodedPorydawClip.
+Mapping/reason: S001 (TimeChecks.swift) carries ticksPerBeat 24 in the compared DecodedPorydawClip.
 Source context since previous assertion:
   ;
 Original expression:
@@ -151,7 +148,7 @@ Original expression:
 
 A006 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:46
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1225) compares the decoded clip against crossExpected, the identical zero-span two-note payload with velocities 100/80.
+Mapping/reason: S001 (TimeChecks.swift) compares the decoded clip against crossExpected, the identical zero-span two-note payload with velocities 100/80.
 Source context since previous assertion:
   songview::Clip expected;
   expected.tracks = {{0, {{0, 60, 24, 100}, {12, 64, 12, 80}}}};
@@ -169,7 +166,7 @@ Original expression:
 
 A008 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:50
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress — clipboardDocument(trackCount: 2) builds the identical two-track layout in memory via non-throwing MidiFile chunk construction (TimeChecks.swift:1603-1608). The resulting layout is pinned by MATCHED S001 (intact track 0 ["0:70:24:90"] and the track-1 paste); see A002.
+Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 has no Swift ingress — clipboardDocument(trackCount: 2) builds the identical two-track layout in memory via non-throwing MidiFile chunk construction (TimeChecks.swift). The resulting layout is pinned by MATCHED S001 (intact track 0 ["0:70:24:90"] and the track-1 paste); see A002.
 Source context since previous assertion:
   ;
 Original expression:
@@ -185,7 +182,7 @@ Original expression:
 
 A010 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:58
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml:256-299 pastes with a real Paste key sequence.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite calls ClipboardSemantics directly. Shell supplement: tst_ShellClipboard.qml pastes with a real Paste key sequence.
 Source context since previous assertion:
   target->document().addNotes(0, {{0, 70, 24, 90}});
   target->view().selectTrack(1);
@@ -198,7 +195,7 @@ Original expression:
 
 A011 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:59
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1225) asserts the identical pasted layout ["48:60:24:100", "60:64:12:80"] on track 1 via clipboardNoteShape.
+Mapping/reason: S001 (TimeChecks.swift) asserts the identical pasted layout ["48:60:24:100", "60:64:12:80"] on track 1 via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -207,7 +204,7 @@ Original expression:
 
 A012 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:61
 Disposition: MATCHED
-Mapping/reason: S001 (TimeChecks.swift:1225) asserts the untouched source track ["0:70:24:90"] on track 0 via clipboardNoteShape.
+Mapping/reason: S001 (TimeChecks.swift) asserts the untouched source track ["0:70:24:90"] on track 0 via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -215,7 +212,7 @@ Original expression:
 
 A013 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:62
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, insertedNoteIDs.count == 2); unproved: the native view selection model receives the two pasted notes on the native fixture. Shell supplement: tst_ShellClipboard.qml:177 selects two notes with real pointer input, :259-268 re-selects the two pasted notes of the span-0 paste, and :317-362 exercises the cross-track paste (:317 copied bytes survive the switch; :321-333 retargets both selected notes with pitch/duration/velocity; :337-339 source notes intact; :343-362 Undo/Redo); shell fixtures are non-identical to the native tick-72 fixture, so this stays PARTIAL.
+Mapping/reason: Related predicate S001 (TimeChecks.swift, insertedNoteIDs.count == 2); unproved: the native view selection model receives the two pasted notes on the native fixture. Shell supplement: tst_ShellClipboard.qml selects two notes with real pointer input, :259-268 re-selects the two pasted notes of the span-0 paste, and :317-362 exercises the cross-track paste (:317 copied bytes survive the switch; :321-333 retargets both selected notes with pitch/duration/velocity; :337-339 source notes intact; :343-362 Undo/Redo); shell fixtures are non-identical to the native tick-72 fixture, so this stays PARTIAL.
 Source context since previous assertion:
   ;
 Original expression:
@@ -223,7 +220,7 @@ Original expression:
 
 A014 | ClipCheckTest::crossViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:63
 Disposition: PARTIAL
-Mapping/reason: Related predicate S001 (TimeChecks.swift:1225, nextCursor == 72); unproved: the native view editCursorTick advances to 72 on the native fixture. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the span-0 paste end, :321-333 advances the destination cursor cross-track (destinationCursor + copiedEnd), and :343-362 restores it through Undo/Redo; shell fixtures are non-identical (native tick 72 vs shell cursors), so this stays PARTIAL.
+Mapping/reason: Related predicate S001 (TimeChecks.swift, nextCursor == 72); unproved: the native view editCursorTick advances to 72 on the native fixture. Shell supplement: tst_ShellClipboard.qml commits the real grid edit cursor to the span-0 paste end, :321-333 advances the destination cursor cross-track (destinationCursor + copiedEnd), and :343-362 restores it through Undo/Redo; shell fixtures are non-identical (native tick 72 vs shell cursors), so this stays PARTIAL.
 Source context since previous assertion:
   ;
 Original expression:
@@ -253,7 +250,7 @@ Original expression:
 
 A017 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:75
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 delivers the real Copy key sequence.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml delivers the real Copy key sequence.
 Source context since previous assertion:
   rig->document().addNotes(0, {{24, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -263,7 +260,7 @@ Original expression:
 
 A018 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:77
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1251) asserts sameDecoded equals DecodedPorydawClip(ticksPerBeat: 24, clip: sameExpected), which requires a decoded value.
+Mapping/reason: S002 (TimeChecks.swift) asserts sameDecoded equals DecodedPorydawClip(ticksPerBeat: 24, clip: sameExpected), which requires a decoded value.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> copied = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -271,7 +268,7 @@ Original expression:
 
 A019 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:78
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1251) carries ticksPerBeat 24 in the compared DecodedPorydawClip.
+Mapping/reason: S002 (TimeChecks.swift) carries ticksPerBeat 24 in the compared DecodedPorydawClip.
 Source context since previous assertion:
   ;
 Original expression:
@@ -279,7 +276,7 @@ Original expression:
 
 A020 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:79
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1251) compares against sameExpected, the identical zero-span single-note payload (default span 0).
+Mapping/reason: S002 (TimeChecks.swift) compares against sameExpected, the identical zero-span single-note payload (default span 0).
 Source context since previous assertion:
   ;
 Original expression:
@@ -287,7 +284,7 @@ Original expression:
 
 A021 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:82
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1251) compares the decoded clip against sameExpected, the identical expected payload.
+Mapping/reason: S002 (TimeChecks.swift) compares the decoded clip against sameExpected, the identical expected payload.
 Source context since previous assertion:
   songview::Clip expected;
   expected.tracks = {{0, {{0, 60, 24, 100}}}};
@@ -296,7 +293,7 @@ Original expression:
 
 A022 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:86
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml:256-299 delivers the real Paste key sequence.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; see A010. Shell supplement: tst_ShellClipboard.qml delivers the real Paste key sequence.
 Source context since previous assertion:
 
   rig->view().selectionModel().clearNoteSelection();
@@ -306,7 +303,7 @@ Original expression:
 
 A023 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:87
 Disposition: MATCHED
-Mapping/reason: S002 (TimeChecks.swift:1251) asserts the identical document layout ["24:60:24:100", "48:60:24:100"] via clipboardNoteShape.
+Mapping/reason: S002 (TimeChecks.swift) asserts the identical document layout ["24:60:24:100", "48:60:24:100"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -315,7 +312,7 @@ Original expression:
 
 A024 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:89
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model receives the one pasted note. Shell supplement: tst_ShellClipboard.qml:259-268 re-selects the two pasted notes of its two-note paste.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, insertedNoteIDs.count == 1); unproved: the native view selection model receives the one pasted note. Shell supplement: tst_ShellClipboard.qml re-selects the two pasted notes of its two-note paste.
 Source context since previous assertion:
   ;
 Original expression:
@@ -323,7 +320,7 @@ Original expression:
 
 A025 | ClipCheckTest::sameViewNoteCopyPaste | src/checks/clipboard/clipcheck_copy.cpp:90
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick advances to 72. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the paste end.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, nextCursor == 72); unproved: the native view editCursorTick advances to 72. Shell supplement: tst_ShellClipboard.qml commits the real grid edit cursor to the paste end.
 Source context since previous assertion:
   ;
 Original expression:
@@ -353,7 +350,7 @@ Original expression:
 
 A028 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:101
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 delivers the real Copy key sequence.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml delivers the real Copy key sequence.
 Source context since previous assertion:
   rig->document().addNotes(0, {{24, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -362,7 +359,7 @@ Original expression:
 
 A029 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:102
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, same-view payload round trip); unproved in the Swift core lane: the roll-key copy writes a live system-clipboard clip. Shell supplement: tst_ShellClipboard.qml:212-239 reads the native clipboard bytes back after a real Copy key.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, same-view payload round trip); unproved in the Swift core lane: the roll-key copy writes a live system-clipboard clip. Shell supplement: tst_ShellClipboard.qml reads the native clipboard bytes back after a real Copy key.
 Source context since previous assertion:
   ;
 Original expression:
@@ -370,7 +367,7 @@ Original expression:
 
 A030 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:106
 Disposition: GAP
-Mapping/reason: No Swift predicate routes a paste through the song-view key path; the Swift suite pastes via ClipboardSemantics directly. The single production paste path (EditorCommandRouter.perform to automation.consumeSelectionCommand(.paste); route() hardcodes .timeline origin and the event list has no paste path) is exercised by real Paste keys at tst_ShellClipboard.qml:256-299 (span-0), :416-437 (replacement surface) and :635-702 (range clip); the retired dual-widget delivery itself has no ingress, so this stays GAP.
+Mapping/reason: No Swift predicate routes a paste through the song-view key path; the Swift suite pastes via ClipboardSemantics directly. The single production paste path (EditorCommandRouter.perform to automation.consumeSelectionCommand(.paste); route() hardcodes .timeline origin and the event list has no paste path) is exercised by real Paste keys at tst_ShellClipboard.qml (span-0), :416-437 (replacement surface) and :635-702 (range clip); the retired dual-widget delivery itself has no ingress, so this stays GAP.
 Source context since previous assertion:
 
   rig->view().selectionModel().clearNoteSelection();
@@ -380,7 +377,7 @@ Original expression:
 
 A031 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:107
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, identical ["24:60:24:100", "48:60:24:100"] outcome); unproved: the outcome arrives via the view-key delivery path. Shell supplement: tst_ShellClipboard.qml:256-299 publishes the pasted notes through a real Paste key sequence.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, identical ["24:60:24:100", "48:60:24:100"] outcome); unproved: the outcome arrives via the view-key delivery path. Shell supplement: tst_ShellClipboard.qml publishes the pasted notes through a real Paste key sequence.
 Source context since previous assertion:
   ;
 Original expression:
@@ -389,7 +386,7 @@ Original expression:
 
 A032 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:109
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, insertedNoteIDs.count == 1); unproved: the native view selection model and the view-key path. Shell supplement: tst_ShellClipboard.qml:259-268 re-selects the two pasted notes of its two-note paste.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, insertedNoteIDs.count == 1); unproved: the native view selection model and the view-key path. Shell supplement: tst_ShellClipboard.qml re-selects the two pasted notes of its two-note paste.
 Source context since previous assertion:
   ;
 Original expression:
@@ -397,7 +394,7 @@ Original expression:
 
 A033 | ClipCheckTest::songViewEditKeyPaste | src/checks/clipboard/clipcheck_copy.cpp:110
 Disposition: PARTIAL
-Mapping/reason: Related predicate S002 (TimeChecks.swift:1251, nextCursor == 72); unproved: the native view editCursorTick and the view-key path. Shell supplement: tst_ShellClipboard.qml:259-268 commits the real grid edit cursor to the paste end.
+Mapping/reason: Related predicate S002 (TimeChecks.swift, nextCursor == 72); unproved: the native view editCursorTick and the view-key path. Shell supplement: tst_ShellClipboard.qml commits the real grid edit cursor to the paste end.
 Source context since previous assertion:
   ;
 Original expression:
@@ -427,7 +424,7 @@ Original expression:
 
 A036 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:123
 Disposition: GAP
-Mapping/reason: No Swift predicate observes the native selection model; timeRangeClipboardCopyAndExpansion passes TimeRange/TimeScope values directly. Architectural divergence: Swift AutomationPage.selection is @QtIgnored (AutomationPage.swift:93) and applyTimeSelection (AutomationPage.swift:537-544) preserves note selection by design, while native setTimeSelection clears note selection when the time selection is active (editorselectionmodel.cpp:94-101). The time-selection storage sites here and at A037-A041/A051-A055/A086 record that divergence; they are not evidence the copy semantics are absent. GAP retained: the selection surface is owned by the selection slice; no selection-surface production change was made in this lane.
+Mapping/reason: No Swift predicate observes the native selection model; timeRangeClipboardCopyAndExpansion passes TimeRange/TimeScope values directly. Architectural divergence: Swift AutomationPage.selection is @QtIgnored (AutomationPage.swift) and applyTimeSelection (AutomationPage.swift) preserves note selection by design, while native setTimeSelection clears note selection when the time selection is active (editorselectionmodel.cpp:94-101). The time-selection storage sites here and at A037-A041/A051-A055/A086 record that divergence; they are not evidence the copy semantics are absent. GAP retained: the selection surface is owned by the selection slice; no selection-surface production change was made in this lane.
 Source context since previous assertion:
   rig->document().addNotes(0, {{0, 60, 24, 100}});
   rig->view().selectionModel().setNoteSelection(noteIds(rig->document(), 0));
@@ -478,7 +475,7 @@ Original expression:
 
 A042 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:130
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 exercises the real Copy key on a note selection, not this time range.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml exercises the real Copy key on a note selection, not this time range.
 Source context since previous assertion:
   ;
 Original expression:
@@ -486,7 +483,7 @@ Original expression:
 
 A043 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:132
 Disposition: MATCHED
-Mapping/reason: S003 (TimeChecks.swift:1315) expectEqual requires singleClip to equal singleExpected, which requires extraction to succeed.
+Mapping/reason: S003 (TimeChecks.swift) expectEqual requires singleClip to equal singleExpected, which requires extraction to succeed.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> copied = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -494,7 +491,7 @@ Original expression:
 
 A044 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:133
 Disposition: MATCHED
-Mapping/reason: S009 (TimeChecks.swift:1321) asserts the encode/decode envelope DecodedPorydawClip(ticksPerBeat: 24, clip: singleExpected), which carries the 24-TPB MIME ticksPerBeat together with the full clip payload.
+Mapping/reason: S009 (TimeChecks.swift) asserts the encode/decode envelope DecodedPorydawClip(ticksPerBeat: 24, clip: singleExpected), which carries the 24-TPB MIME ticksPerBeat together with the full clip payload.
 Source context since previous assertion:
   ;
 Original expression:
@@ -502,7 +499,7 @@ Original expression:
 
 A045 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:134
 Disposition: MATCHED
-Mapping/reason: S003 (TimeChecks.swift:1315) singleExpected carries span 96.
+Mapping/reason: S003 (TimeChecks.swift) singleExpected carries span 96.
 Source context since previous assertion:
   ;
 Original expression:
@@ -510,7 +507,7 @@ Original expression:
 
 A046 | ClipCheckTest::timeSelectionCopy | src/checks/clipboard/clipcheck_copy.cpp:141
 Disposition: MATCHED
-Mapping/reason: S003 (TimeChecks.swift:1315) compares singleClip against the identical span-96 payload including the initial voice seed lane.
+Mapping/reason: S003 (TimeChecks.swift) compares singleClip against the identical span-96 payload including the initial voice seed lane.
 Source context since previous assertion:
   songview::Clip expected;
   expected.span = 96;
@@ -537,7 +534,7 @@ Original expression:
 
 A048 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:149
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 (first of three) has no Swift ingress — clipboardDocument(trackCount: 3) builds the identical three-track layout in memory (TimeChecks.swift:1603-1608). The resulting layout is pinned by MATCHED S004 (three-track clip with modulation and voice lanes); see A002.
+Mapping/reason: No-ingress fixture setup: the fallible C++ guard addTrack(0)->0 (first of three) has no Swift ingress — clipboardDocument(trackCount: 3) builds the identical three-track layout in memory (TimeChecks.swift). The resulting layout is pinned by MATCHED S004 (three-track clip with modulation and voice lanes); see A002.
 Source context since previous assertion:
   ;
 Original expression:
@@ -608,7 +605,7 @@ Original expression:
 
 A056 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:166
 Disposition: GAP
-Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml:210-239 exercises the real Copy key on a note selection, not this scoped time range.
+Mapping/reason: Synthetic roll-key injection has no Swift predicate; see A003. Shell supplement: tst_ShellClipboard.qml exercises the real Copy key on a note selection, not this scoped time range.
 Source context since previous assertion:
   ;
 Original expression:
@@ -616,7 +613,7 @@ Original expression:
 
 A057 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:168
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts clip == expected, the extracted three-track payload, which requires extraction to succeed.
+Mapping/reason: S004 (TimeChecks.swift) asserts clip == expected, the extracted three-track payload, which requires extraction to succeed.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> copied = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -624,7 +621,7 @@ Original expression:
 
 A058 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:169
 Disposition: MATCHED
-Mapping/reason: S010 (TimeChecks.swift:1372) asserts the encode/decode envelope DecodedPorydawClip(ticksPerBeat: 24, clip: expected), which carries the 24-TPB MIME ticksPerBeat together with all tracks and lanes.
+Mapping/reason: S010 (TimeChecks.swift) asserts the encode/decode envelope DecodedPorydawClip(ticksPerBeat: 24, clip: expected), which carries the 24-TPB MIME ticksPerBeat together with all tracks and lanes.
 Source context since previous assertion:
   ;
 Original expression:
@@ -632,7 +629,7 @@ Original expression:
 
 A059 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:183
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) compares clip against expected, the identical three-track payload with modulation and voice lanes.
+Mapping/reason: S004 (TimeChecks.swift) compares clip against expected, the identical three-track payload with modulation and voice lanes.
 Source context since previous assertion:
   songview::Clip expected;
   expected.span = 96;
@@ -668,7 +665,7 @@ Original expression:
 
 A062 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:190
 Disposition: MATCHED
-Mapping/reason: S011 (TimeChecks.swift:1377) expectEqual(1, target.engineTracks.usedTrackCount) asserts the destination engine-track count before the expanding paste.
+Mapping/reason: S011 (TimeChecks.swift) expectEqual(1, target.engineTracks.usedTrackCount) asserts the destination engine-track count before the expanding paste.
 Source context since previous assertion:
   target->view().commitEditCursor(0);
   const int undoBeforePaste = target->document().undoStack()->count();
@@ -677,7 +674,7 @@ Original expression:
 
 A063 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:192
 Disposition: GAP
-Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite pastes via ClipboardSemantics directly (track count MATCHED at A064/S004). Shell supplement: tst_ShellClipboard.qml:635-702 stages a 2-track span-96 clip with its outer track beyond the probed song width and delivers a real Paste key sequence (:678-683 merges the home track and advances by span; :686-692 the outer track becomes reachable with its pasted note; :694-702 Undo retracts the expansion). The staged payload is not the 3-track voice-seeded fixture, so this stays GAP.
+Mapping/reason: Synthetic roll-key paste injection has no Swift predicate; the Swift suite pastes via ClipboardSemantics directly (track count MATCHED at A064/S004). Shell supplement: tst_ShellClipboard.qml stages a 2-track span-96 clip with its outer track beyond the probed song width and delivers a real Paste key sequence (:678-683 merges the home track and advances by span; :686-692 the outer track becomes reachable with its pasted note; :694-702 Undo retracts the expansion). The staged payload is not the 3-track voice-seeded fixture, so this stays GAP.
 Source context since previous assertion:
   ;
 Original expression:
@@ -685,7 +682,7 @@ Original expression:
 
 A064 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:193
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts target.engineTracks.usedTrackCount == 3 after the paste.
+Mapping/reason: S004 (TimeChecks.swift) asserts target.engineTracks.usedTrackCount == 3 after the paste.
 Source context since previous assertion:
   ;
 Original expression:
@@ -693,7 +690,7 @@ Original expression:
 
 A065 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:194
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts notes(in: 0) == ["12:60:12:90"] via clipboardNoteShape.
+Mapping/reason: S004 (TimeChecks.swift) asserts notes(in: 0) == ["12:60:12:90"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -701,7 +698,7 @@ Original expression:
 
 A066 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:195
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts notes(in: 1) == ["24:64:24:100"] via clipboardNoteShape.
+Mapping/reason: S004 (TimeChecks.swift) asserts notes(in: 1) == ["24:64:24:100"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -709,7 +706,7 @@ Original expression:
 
 A067 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:196
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts notes(in: 2) == ["36:68:36:110"] via clipboardNoteShape.
+Mapping/reason: S004 (TimeChecks.swift) asserts notes(in: 2) == ["36:68:36:110"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -717,7 +714,7 @@ Original expression:
 
 A068 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:197
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts controller-1 lane points ["18:11"] on track 0.
+Mapping/reason: S004 (TimeChecks.swift) asserts controller-1 lane points ["18:11"] on track 0.
 Source context since previous assertion:
   ;
 Original expression:
@@ -725,7 +722,7 @@ Original expression:
 
 A069 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:198
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts controller-1 lane points ["30:22"] on track 1.
+Mapping/reason: S004 (TimeChecks.swift) asserts controller-1 lane points ["30:22"] on track 1.
 Source context since previous assertion:
   ;
 Original expression:
@@ -733,7 +730,7 @@ Original expression:
 
 A070 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:199
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts controller-1 lane points ["42:33"] on track 2.
+Mapping/reason: S004 (TimeChecks.swift) asserts controller-1 lane points ["42:33"] on track 2.
 Source context since previous assertion:
   ;
 Original expression:
@@ -741,7 +738,7 @@ Original expression:
 
 A071 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:200
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts voice lane points ["0:0"] on track 0.
+Mapping/reason: S004 (TimeChecks.swift) asserts voice lane points ["0:0"] on track 0.
 Source context since previous assertion:
   ;
 Original expression:
@@ -749,7 +746,7 @@ Original expression:
 
 A072 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:201
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts voice lane points ["0:0"] on track 1.
+Mapping/reason: S004 (TimeChecks.swift) asserts voice lane points ["0:0"] on track 1.
 Source context since previous assertion:
   ;
 Original expression:
@@ -757,7 +754,7 @@ Original expression:
 
 A073 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:202
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) asserts voice lane points ["0:0"] on track 2.
+Mapping/reason: S004 (TimeChecks.swift) asserts voice lane points ["0:0"] on track 2.
 Source context since previous assertion:
   ;
 Original expression:
@@ -765,7 +762,7 @@ Original expression:
 
 A074 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:203
 Disposition: MATCHED
-Mapping/reason: S006 (TimeChecks.swift:1394) asserts the track-expanding paste adds exactly one Swift history entry.
+Mapping/reason: S006 (TimeChecks.swift) asserts the track-expanding paste adds exactly one Swift history entry.
 Source context since previous assertion:
   ;
 Original expression:
@@ -773,7 +770,7 @@ Original expression:
 
 A075 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:206
 Disposition: MATCHED
-Mapping/reason: S004 (TimeChecks.swift:1402) oneUndo asserts usedTrackCount == 1 after the undo.
+Mapping/reason: S004 (TimeChecks.swift) oneUndo asserts usedTrackCount == 1 after the undo.
 Source context since previous assertion:
 
   target->document().undoStack()->undo();
@@ -782,7 +779,7 @@ Original expression:
 
 A076 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:207
 Disposition: MATCHED
-Mapping/reason: S012 (TimeChecks.swift:1397-1401) asserts, after clipboardUndoEntryDelta has walked the history back to the baseline, that track 0 holds no notes.
+Mapping/reason: S012 (TimeChecks.swift) asserts, after clipboardUndoEntryDelta has walked the history back to the baseline, that track 0 holds no notes.
 Source context since previous assertion:
   ;
 Original expression:
@@ -790,7 +787,7 @@ Original expression:
 
 A077 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:208
 Disposition: MATCHED
-Mapping/reason: S012 (TimeChecks.swift:1397-1401) asserts, after the undo walk, that the controller-1 modulation lane of track 0 is empty.
+Mapping/reason: S012 (TimeChecks.swift) asserts, after the undo walk, that the controller-1 modulation lane of track 0 is empty.
 Source context since previous assertion:
   ;
 Original expression:
@@ -798,7 +795,7 @@ Original expression:
 
 A078 | ClipCheckTest::scopedRangeCopyPasteCreatesTracks | src/checks/clipboard/clipcheck_copy.cpp:209
 Disposition: MATCHED
-Mapping/reason: S012 (TimeChecks.swift:1397-1401) asserts, after the undo walk, that the track 0 voice lane is the original {{0, 0}} seed.
+Mapping/reason: S012 (TimeChecks.swift) asserts, after the undo walk, that the track 0 voice lane is the original {{0, 0}} seed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -828,7 +825,7 @@ Original expression:
 
 A081 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:225
 Disposition: GAP
-Mapping/reason: Native key delivery (Delete) has no Swift predicate; the Swift suite deletes via ClipboardSemantics directly (outcomes MATCHED S005). Shell supplement: tst_ShellClipboard.qml:528-587 selects two notes with real pointer input and delivers a real Delete key (:574-581 removes both selected notes; :582-587 Undo restores them) through EditorCommandRouter to NoteCommands. The shell fixture is a note selection, not the time-range Delete, so this stays GAP.
+Mapping/reason: Native key delivery (Delete) has no Swift predicate; the Swift suite deletes via ClipboardSemantics directly (outcomes MATCHED S005). Shell supplement: tst_ShellClipboard.qml selects two notes with real pointer input and delivers a real Delete key (:574-581 removes both selected notes; :582-587 Undo restores them) through EditorCommandRouter to NoteCommands. The shell fixture is a note selection, not the time-range Delete, so this stays GAP.
 Source context since previous assertion:
   rig->document().addNotes(0, {{24, 60, 24, 100}, {96, 64, 24, 80}});
   rig->document().addLanePoint(0, DOC_CC_VOICE, 24, 3);
@@ -842,7 +839,7 @@ Original expression:
 
 A082 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:226
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterDelete asserts notes(in: 0) == ["96:64:24:80"] via clipboardNoteShape.
+Mapping/reason: S005 (TimeChecks.swift) afterDelete asserts notes(in: 0) == ["96:64:24:80"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -850,7 +847,7 @@ Original expression:
 
 A083 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:227
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterDelete asserts voice lane points ["96:5"].
+Mapping/reason: S005 (TimeChecks.swift) afterDelete asserts voice lane points ["96:5"].
 Source context since previous assertion:
   ;
 Original expression:
@@ -858,7 +855,7 @@ Original expression:
 
 A084 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:228
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterDelete explicitly asserts surviving tempo ["96:400000"].
+Mapping/reason: S005 (TimeChecks.swift) afterDelete explicitly asserts surviving tempo ["96:400000"].
 Source context since previous assertion:
   ;
 Original expression:
@@ -866,7 +863,7 @@ Original expression:
 
 A085 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:229
 Disposition: MATCHED
-Mapping/reason: S007 (TimeChecks.swift:1544) asserts range delete adds exactly one Swift history entry.
+Mapping/reason: S007 (TimeChecks.swift) asserts range delete adds exactly one Swift history entry.
 Source context since previous assertion:
   ;
 Original expression:
@@ -882,7 +879,7 @@ Original expression:
 
 A087 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:233
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) restoredAfterDelete asserts notes ["24:60:24:100", "96:64:24:80"] via clipboardNoteShape.
+Mapping/reason: S005 (TimeChecks.swift) restoredAfterDelete asserts notes ["24:60:24:100", "96:64:24:80"] via clipboardNoteShape.
 Source context since previous assertion:
 
   rig->document().undoStack()->undo();
@@ -892,7 +889,7 @@ Original expression:
 
 A088 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:237
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) restoredAfterDelete asserts voice lane points ["0:0", "24:3", "96:5"].
+Mapping/reason: S005 (TimeChecks.swift) restoredAfterDelete asserts voice lane points ["0:0", "24:3", "96:5"].
 Source context since previous assertion:
   // RangeEdit restores the document's normalized boundary point at the
   // range start; this is observable undo behavior, not fixture setup.
@@ -902,7 +899,7 @@ Original expression:
 
 A089 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:239
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) restoredAfterDelete asserts tempo ["24:600000", "96:400000"].
+Mapping/reason: S005 (TimeChecks.swift) restoredAfterDelete asserts tempo ["24:600000", "96:400000"].
 Source context since previous assertion:
   ;
 Original expression:
@@ -910,7 +907,7 @@ Original expression:
 
 A090 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:242
 Disposition: GAP
-Mapping/reason: Native key delivery (Ctrl+X cut) has no Swift predicate; the Swift suite cuts via extract-then-delete calls directly (payload and outcomes MATCHED S005). Shell supplement: tst_ShellClipboard.qml:589-632 re-selects two notes with real pointer input and delivers a real Cut key (:597-608 removes both notes and publishes a decodable span-0 2-note clip, :609-614; :615-618 Undo restores; :619-632 staged-cursor Paste reinserts) through EditorCommandRouter to NoteCommands. The shell fixture is a note selection, not the time-range cut, so this stays GAP.
+Mapping/reason: Native key delivery (Ctrl+X cut) has no Swift predicate; the Swift suite cuts via extract-then-delete calls directly (payload and outcomes MATCHED S005). Shell supplement: tst_ShellClipboard.qml re-selects two notes with real pointer input and delivers a real Cut key (:597-608 removes both notes and publishes a decodable span-0 2-note clip, :609-614; :615-618 Undo restores; :619-632 staged-cursor Paste reinserts) through EditorCommandRouter to NoteCommands. The shell fixture is a note selection, not the time-range cut, so this stays GAP.
 Source context since previous assertion:
 
   const int undoIndexBeforeCut = rig->document().undoStack()->index();
@@ -919,7 +916,7 @@ Original expression:
 
 A091 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:244
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) asserts cut == expectedCut, which requires a cut value.
+Mapping/reason: S005 (TimeChecks.swift) asserts cut == expectedCut, which requires a cut value.
 Source context since previous assertion:
   const std::optional<songview::DecodedClip> cut = clipcheck_support::checkClipboardClip();
 Original expression:
@@ -927,7 +924,7 @@ Original expression:
 
 A092 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:245
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) expectedCut carries span 48.
+Mapping/reason: S005 (TimeChecks.swift) expectedCut carries span 48.
 Source context since previous assertion:
   ;
 Original expression:
@@ -935,7 +932,7 @@ Original expression:
 
 A093 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:246
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterCut asserts notes(in: 0) == ["96:64:24:80"] via clipboardNoteShape.
+Mapping/reason: S005 (TimeChecks.swift) afterCut asserts notes(in: 0) == ["96:64:24:80"] via clipboardNoteShape.
 Source context since previous assertion:
   ;
 Original expression:
@@ -943,7 +940,7 @@ Original expression:
 
 A094 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:247
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterCut asserts voice lane points ["96:5"].
+Mapping/reason: S005 (TimeChecks.swift) afterCut asserts voice lane points ["96:5"].
 Source context since previous assertion:
   ;
 Original expression:
@@ -951,7 +948,7 @@ Original expression:
 
 A095 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:248
 Disposition: MATCHED
-Mapping/reason: S005 (TimeChecks.swift:1586) afterCut explicitly asserts surviving tempo ["96:400000"].
+Mapping/reason: S005 (TimeChecks.swift) afterCut explicitly asserts surviving tempo ["96:400000"].
 Source context since previous assertion:
   ;
 Original expression:
@@ -959,7 +956,7 @@ Original expression:
 
 A096 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:249
 Disposition: MATCHED
-Mapping/reason: S008 (TimeChecks.swift:1574) asserts range cut adds exactly one Swift history entry.
+Mapping/reason: S008 (TimeChecks.swift) asserts range cut adds exactly one Swift history entry.
 Source context since previous assertion:
   ;
 Original expression:
@@ -967,7 +964,7 @@ Original expression:
 
 A097 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:252
 Disposition: MATCHED
-Mapping/reason: S013 (TimeChecks.swift:1583) asserts restoredAfterCut (TimeChecks.swift:1577-1582): notes ["24:60:24:100", "96:64:24:80"] after the cut undo.
+Mapping/reason: S013 (TimeChecks.swift) asserts restoredAfterCut (TimeChecks.swift): notes ["24:60:24:100", "96:64:24:80"] after the cut undo.
 Source context since previous assertion:
 
   rig->document().undoStack()->undo();
@@ -977,7 +974,7 @@ Original expression:
 
 A098 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:254
 Disposition: MATCHED
-Mapping/reason: S013 (TimeChecks.swift:1583) asserts restoredAfterCut (TimeChecks.swift:1577-1582): voice lane ["0:0", "24:3", "96:5"] after the cut undo.
+Mapping/reason: S013 (TimeChecks.swift) asserts restoredAfterCut (TimeChecks.swift): voice lane ["0:0", "24:3", "96:5"] after the cut undo.
 Source context since previous assertion:
   ;
 Original expression:
@@ -986,7 +983,7 @@ Original expression:
 
 A099 | ClipCheckTest::rangeDeleteCutAndUndo | src/checks/clipboard/clipcheck_copy.cpp:256
 Disposition: MATCHED
-Mapping/reason: S013 (TimeChecks.swift:1583) asserts restoredAfterCut (TimeChecks.swift:1577-1582): tempo ["24:600000", "96:400000"] after the cut undo.
+Mapping/reason: S013 (TimeChecks.swift) asserts restoredAfterCut (TimeChecks.swift): tempo ["24:600000", "96:400000"] after the cut undo.
 Source context since previous assertion:
   ;
 Original expression:
@@ -999,7 +996,8 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1225
+S001 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+Anchor: message "exact zero-span 24-TPQN payload retargets across documents without changing the source track"
   report.expect(crossDecoded == DecodedPorydawClip(
           ticksPerBeat: 24, clip: crossExpected) &&
           crossTarget.notes(in: 0).map(clipboardNoteShape) == ["0:70:24:90"] &&
@@ -1008,7 +1006,8 @@ S001 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1225
           cppID: "clipcheck/ClipCheckTest::crossViewNoteCopyPaste",
           message: "exact zero-span 24-TPQN payload retargets across documents without changing the source track")
 
-S002 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1251
+S002 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+Anchor: message "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note"
   report.expect(sameDecoded == DecodedPorydawClip(
           ticksPerBeat: 24, clip: sameExpected) &&
           sameDocument.notes(in: 0).map(clipboardNoteShape) == ["24:60:24:100", "48:60:24:100"] &&
@@ -1016,55 +1015,65 @@ S002 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift:1251
           cppID: "clipcheck/ClipCheckTest::sameViewNoteCopyPaste",
           message: "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note")
 
-S003 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1315
+S003 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track-scoped range clip including the initial voice seed"
   report.expectEqual(singleExpected, singleClip,
           cppID: "clipcheck/ClipCheckTest::timeSelectionCopy",
           what: "track-scoped range clip including the initial voice seed")
 
-S004 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1402
+S004 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically"
   report.expect(clip == expected && expanded && result?.nextCursor == 96 && oneUndo,
           cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
           message: "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically")
 
-S005 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1586
+S005 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+Anchor: message "delete and extract-then-delete cut preserve the exact payload and each restore in one undo"
   report.expect(deleted && afterDelete && deleteUndo && restoredAfterDelete &&
           cut == expectedCut && cutDeleted && afterCut && cutUndo,
           cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
           message: "delete and extract-then-delete cut preserve the exact payload and each restore in one undo")
 
-S006 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1394
+S006 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "track-expanding paste adds exactly one history entry"
   report.expectEqual(1, pasteHistoryDelta,
           cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
           what: "track-expanding paste adds exactly one history entry")
 
-S007 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1544
+S007 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+Anchor: message "range delete adds exactly one history entry"
   report.expectEqual(1, deleteHistoryDelta,
           cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
           what: "range delete adds exactly one history entry")
 
-S008 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1574
+S008 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+Anchor: message "range cut adds exactly one history entry"
   report.expectEqual(1, cutHistoryDelta,
           cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
           what: "range cut adds exactly one history entry")
 
-S009 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1321
+S009 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the copied time range retains its 24-TPB MIME envelope and full payload"
   report.expect(singleEnvelope == DecodedPorydawClip(ticksPerBeat: 24, clip: singleExpected),
                 cppID: "clipcheck/ClipCheckTest::timeSelectionCopy",
                 message: "the copied time range retains its 24-TPB MIME envelope and full payload")
   singleEnvelope is ClipboardCodec.encode(singleClip, ticksPerBeat: single.state.file.division)
   then ClipboardCodec.decode.
 
-S010 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1372
+S010 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the scoped clip retains its 24-TPB MIME envelope and all tracks and lanes"
   report.expect(scopedEnvelope == DecodedPorydawClip(ticksPerBeat: 24, clip: expected),
                 cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
                 message: "the scoped clip retains its 24-TPB MIME envelope and all tracks and lanes")
 
-S011 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1377
+S011 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "the destination has one engine track before expansion"
   report.expectEqual(1, target.engineTracks.usedTrackCount,
                      cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
                      what: "the destination has one engine track before expansion")
 
-S012 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift:1397
+S012 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+Anchor: message "undo restores the empty notes and modulation lane and the original voice seed"
   report.expect(target.notes(in: 0).isEmpty &&
                 target.lanePoints(track: 0, lane: .controller(1)).isEmpty &&
                 target.lanePoints(track: 0, lane: .voice).map(coreTimePointShape) == ["0:0"],
@@ -1073,7 +1082,8 @@ S012 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swif
   The predicate runs after clipboardUndoEntryDelta(target, restoring: before) has walked
   the history back to the pre-paste baseline.
 
-S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1583
+S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+Anchor: message "cut undo explicitly restores both notes, the voice lane and both tempo points"
   report.expect(restoredAfterCut,
                 cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
                 message: "cut undo explicitly restores both notes, the voice lane and both tempo points")
@@ -1081,7 +1091,8 @@ S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift:1583
   ["24:60:24:100", "96:64:24:80"] via clipboardNoteShape, voice lane ==
   ["0:0", "24:3", "96:5"] and tempo == ["24:600000", "96:400000"].
 
-S014 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml:210
+S014 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: function
   real keySequence(StandardKey.Copy) at :210 with the native clipboard bytes read back
   through GridInputClipProbe at :211-215; copied payload schema at :217-225;
   payloadContains(source) at :236 and payloadContains(secondSource) at :237;

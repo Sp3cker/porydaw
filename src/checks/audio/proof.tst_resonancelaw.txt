@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/audio/tst_resonancelaw.cpp
 Original SHA-256: 8cd681576b00626d3b93c4606feb8ff03da0f4aff9d1df5903d7833468a6f4f5
 Swift counterpart: src/checks/audio/tst_resonancelaw.swift
-Swift SHA-256: b05654d1714191620beeda4612926d78a723669cb4fa55a5b5f901665dc7c8d3
 Deleted in: this lane (gaps-audio-scale). The C++ file is removed from the
 working tree (deletion staged) against HEAD
 224cc35f05a448847311efcd216e03d899f51e2b; this lane makes no commit. The
@@ -41,7 +40,7 @@ not claim whole-case equivalence, and the MATCHED rows are source correspondence
 plus Swift execution, not a live C++/Swift differential sweep.
 
 Execution and ownership
-resonanceLawChecks (src/checks/audio/tst_resonancelaw.swift:4) is called by runResonanceSuppressionChecks (src/checks/playback/ResonanceSuppressionChecks.swift:6), which the swiftcore suite dispatches as case 3 (src/checks/support/corecheck/CoreCheckSupport.swift:102). Shared signal generation, measurement and rendering live in audio/resonancefixture.swift. Additional Swift-only reset/chunking checks remain in resonanceTransitionChecks in playback/ResonanceSuppressionChecks.swift.
+resonanceLawChecks (src/checks/audio/tst_resonancelaw.swift) is called by runResonanceSuppressionChecks (src/checks/playback/ResonanceSuppressionChecks.swift), which the swiftcore suite dispatches as case 3 (src/checks/support/corecheck/CoreCheckSupport.swift). Shared signal generation, measurement and rendering live in audio/resonancefixture.swift. Additional Swift-only reset/chunking checks remain in resonanceTransitionChecks in playback/ResonanceSuppressionChecks.swift.
 
 Fixture, sequence and row constraints
 Default 48 kHz stereo, 512-frame processing chunks and 2047-frame latency. Keep each original case's signal seed, frequency, level, onset, duration, analysis window and curve settings; the paired Swift do/loop blocks carry these inputs. Embedded-tone loop expands loud=-15 dB and modest=-25 dB into distinct case names. Stereo assertion expands over every output frame. Guard-bin assertion has two original predicates combined in Swift, plus an additional Nyquist predicate.

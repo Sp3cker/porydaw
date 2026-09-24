@@ -5,7 +5,6 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationrouting.cpp
 Original SHA-256: 009c91dba2f96807276b0077fe5421c37ac60bc636a9c0e29f3ded03d7cf427c
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
@@ -473,7 +472,7 @@ Original expression:
 
 A035 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:130
 Disposition: MATCHED
-Mapping/reason: S039 and S040 - src/checks/automation/automationcanvasediting.swift:366,367 :: drawerAutomationBandEscape arms a right-button band on the pan lane (S038), delivers Escape through the page handleEscape() (S039 claims the live band), and asserts !page.bandVisible (S040) with S041 pinning the untouched document. !bandVisible is the Swift form of the retired band preview no longer containing the lane, the same observable as A027/S018.
+Mapping/reason: S039 and S040 - src/checks/automation/automationcanvasediting.swift,367 :: drawerAutomationBandEscape arms a right-button band on the pan lane (S038), delivers Escape through the page handleEscape() (S039 claims the live band), and asserts !page.bandVisible (S040) with S041 pinning the untouched document. !bandVisible is the Swift form of the retired band preview no longer containing the lane, the same observable as A027/S018.
 Source context since previous assertion:
 
 
@@ -486,7 +485,7 @@ Original expression:
 
 A036 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:131
 Disposition: MATCHED
-Mapping/reason: S042 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:368) asserts no pan owns the band scenario after the Escape drops the band, the same !isPanning observable the original reads.
+Mapping/reason: S042 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift) asserts no pan owns the band scenario after the Escape drops the band, the same !isPanning observable the original reads.
 Swift counterpart expression:
   report.expect(!band.page.isPanning, cppID: bandID,
                   message: "no pan owns the band scenario")
@@ -498,7 +497,7 @@ Original expression:
 
 A037 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:132
 Disposition: MATCHED
-Mapping/reason: S043 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift:370) asserts no gesture owns the band scenario after the Escape drops the band. The Swift predicate reads page.hasGesture (the drawer page owns interactions in the converted architecture) where the original read the SongView userGestureActive flag: the flag owner changed, the observable - no live gesture remains - is the same.
+Mapping/reason: S043 - src/checks/automation/automationcanvasediting.swift :: drawerAutomationBandEscape (automationcanvasediting.swift) asserts no gesture owns the band scenario after the Escape drops the band. The Swift predicate reads page.hasGesture (the drawer page owns interactions in the converted architecture) where the original read the SongView userGestureActive flag: the flag owner changed, the observable - no live gesture remains - is the same.
 Swift counterpart expression:
   report.expect(!band.page.hasGesture, cppID: bandID,
                   message: "no gesture owns the band scenario")
@@ -1201,32 +1200,38 @@ Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:12
+S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "no Qt bit arms no policy"
   report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
                          what: "no Qt bit arms no policy")
 
-S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:14
+S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's shift bit arms the ramp and axis-lock policy"
   report.expectEqual(AutomationModifiers(shift: true),
                          AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's shift bit arms the ramp and axis-lock policy")
 
-S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:17
+S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's control bit arms the value snap"
   report.expectEqual(AutomationModifiers(snapValue: true),
                          AutomationQtModifier.automation(AutomationQtModifier.control),
                          cppID: drawerAutomationModifierMappingID,
                          what: "Qt's control bit arms the value snap")
 
-S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:21
+S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's alt bit arms the fine lattice"
   report.expectEqual(AutomationModifiers(fine: true),
                          AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's alt bit arms the fine lattice")
 
-S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:24
+S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's meta bit arms nothing"
   report.expectEqual(AutomationModifiers(),
                          AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's meta bit arms nothing")
 
-S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:27
+S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the three policy bits compose through the same mapping"
   report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
                          AutomationQtModifier.automation(AutomationQtModifier.shift
                                                          | AutomationQtModifier.control
@@ -1234,31 +1239,37 @@ S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactio
                          cppID: drawerAutomationModifierMappingID,
                          what: "the three policy bits compose through the same mapping")
 
-S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:39
+S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the Qt bits that policy composes to map back to it"
   report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
                              cppID: drawerAutomationModifierMappingID,
                              what: "the Qt bits that policy composes to map back to it")
 
-S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:52
+S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the neutral radius covers more than one value step"
   report.expect(threshold > 1, cppID: drawerAutomationModifierMappingID,
                     message: "the neutral radius covers more than one value step")
 
-S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:56
+S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the pointer route took the drag without a Qt modifier bit"
   report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
                     cppID: drawerAutomationModifierMappingID,
                     message: "the pointer route took the drag without a Qt modifier bit")
 
-S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:59
+S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "a drag without the Qt control bit keeps the dragged value"
   report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
                          what: "a drag without the Qt control bit keeps the dragged value")
 
-S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:64
+S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the pointer route took the drag carrying the Qt control bit"
   report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
                                  modifiers: AutomationQtModifier.control),
                     cppID: drawerAutomationModifierMappingID,
                     message: "the pointer route took the drag carrying the Qt control bit")
 
-S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:68
+S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the Qt control bit a QML event carries lands the drag on the neutral"
   report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                          what: "the Qt control bit a QML event carries lands the drag on the neutral")
 
@@ -1269,123 +1280,154 @@ src/checks/automation/AutomationPageChecks.swift:402
 
 Cross-lane predicates cited by the mappings above (final source anchors)
 
-S013 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:95
+S013 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a middle press starts the pan"
   report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
                   cppID: id, message: "a middle press starts the pan")
 
-S014 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:97
+S014 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the page publishes the live pan"
   report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
 
-S015 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:100
+S015 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "starting a pan mutates nothing"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "starting a pan mutates nothing")
 
-S016 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:102
+S016 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "starting a pan parks no cursor"
   report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
                        what: "starting a pan parks no cursor")
 
-S017 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift:110
+S017 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "releasing ends the pan"
   report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
 
-S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:61
+S018 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "a pending band preserves selection below the Manhattan threshold"
   report.expect(!page.bandVisible && page.selection?.range == TimeRange(
         startTick: 0, endTick: fixture.songEndTick), cppID: id,
                   message: "a pending band preserves selection below the Manhattan threshold")
 
-S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:65
+S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "diagonal travel activates at Manhattan ten before Euclidean ten"
   report.expect(page.bandVisible, cppID: id,
                   message: "diagonal travel activates at Manhattan ten before Euclidean ten")
 
-S020 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:632
+S020 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the stroke writes its point and restores the lane's held value"
   report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
                        cppID: drawerAutomationPointRangeID,
                        what: "the stroke writes its point and restores the lane's held value")
 
-S021 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:672
+S021 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the pencil press starts a stroke"
   report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
                   message: "the pencil press starts a stroke")
 
-S022 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:674
+S022 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the page publishes the painting gesture"
   report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
                   message: "the page publishes the painting gesture")
 
-S023 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:676
+S023 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the pencil release commits"
   report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: drawerAutomationPointRangeID,
                   message: "the pencil release commits")
 
-S024 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:678
+S024 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "one pencil press and release is one revision"
   report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
                        what: "one pencil press and release is one revision")
 
-S025 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:680
+S025 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the released stroke writes the value under the pointer"
   report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
                   cppID: drawerAutomationPointRangeID,
                   message: "the released stroke writes the value under the pointer")
 
-S026 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:683
+S026 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the stroke is undoable"
   report.expect(committed.undo(), cppID: drawerAutomationPointRangeID, message: "the stroke is undoable")
 
-S027 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:684
+S027 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "one undo restores the pre-stroke lane"
   report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
                        what: "one undo restores the pre-stroke lane")
 
-S028 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:686
+S028 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the released stroke recorded exactly one history entry"
   report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
                   message: "the released stroke recorded exactly one history entry")
 
-S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:80
+S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a press on an empty lane starts a sweep"
   report.expect(empty.page.pointerPress(x: pressX, y: 60, surface: 1, button: 1), cppID: drawerAutomationCancelID,
                   message: "a press on an empty lane starts a sweep")
 
-S030 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:82
+S030 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a press that never travelled commits nothing"
   report.expect(!empty.page.pointerRelease(x: pressX, y: 60, button: 1), cppID: drawerAutomationCancelID,
                   message: "a press that never travelled commits nothing")
 
-S031 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:84
+S031 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the parked press leaves the document alone"
   report.expectEqual(emptyBefore, empty.snapshot, cppID: drawerAutomationCancelID,
                        what: "the parked press leaves the document alone")
 
-S032 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:91
+S032 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the press parks the edit cursor at the snapped tick"
   report.expectEqual(snapped, empty.session.editCursor, cppID: drawerAutomationCancelID,
                        what: "the press parks the edit cursor at the snapped tick")
 
-S033 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:19
+S033 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
+Anchor: message "a parameter switch is accepted"
   report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
                   message: "a parameter switch is accepted")
 
-S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:33
+S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift
+Anchor: message "the active lane publishes its written-event count"
   report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
                        what: "the active lane publishes its written-event count")
 
-S035 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift:201
+S035 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "banding writes nothing"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "banding writes nothing")
 
-S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:69
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "activated zero-width band clears selection"
   report.expect(page.selection == nil, cppID: id,
                   message: "activated zero-width band clears selection")
 
-S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:637
+S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "an empty lane's first stroke is a change"
   report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
                   message: "an empty lane's first stroke is a change")
 
-S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:673
+S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the right drag arms the band"
   report.expect(band.page.bandVisible, cppID: bandID, message: "the right drag arms the band")
 
-S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:675
+S039 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "Escape claims the live band"
   report.expect(band.page.handleEscape(), cppID: bandID, message: "Escape claims the live band")
 
-S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:676
+S040 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "Escape drops the band"
   report.expect(!band.page.bandVisible, cppID: bandID, message: "Escape drops the band")
 
-S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:681
+S041 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "dropping the band writes nothing"
   report.expectEqual(bandBefore, band.snapshot, cppID: bandID,
                     what: "dropping the band writes nothing")
 
-S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:677
+S042 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "no pan owns the band scenario"
   report.expect(!band.page.isPanning, cppID: bandID,
                   message: "no pan owns the band scenario")
 
-S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift:679
+S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
+Anchor: message "no gesture owns the band scenario"
   report.expect(!band.page.hasGesture, cppID: bandID,
                   message: "no gesture owns the band scenario")

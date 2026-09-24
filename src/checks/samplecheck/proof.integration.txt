@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/integration.cpp
 Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdat
 
 Verification
 Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry points execute these checks. Retained native execution owns this suite:

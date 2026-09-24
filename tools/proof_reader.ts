@@ -1,4 +1,12 @@
 // Read-only index over checked-in proof.*.txt files. The proofs remain authoritative.
+import {
+  functionName,
+  literalPattern,
+  parseAnchorLine,
+  parsePredicateHeader,
+  resolveAnchor,
+} from "./proof_anchor.ts";
+import type { Anchor, PredicateHeader } from "./proof_anchor.ts";
 const CHECKS = "src/checks";
 const HELP = `usage: deno task proof <command> [options]
   list [--area <path>] [--status <label>] [--no-swift]
@@ -6,14 +14,27 @@ const HELP = `usage: deno task proof <command> [options]
   show <source-or-proof-path> [A###|S###|Original N|header] [--status <label>] [--full]
       Show a bounded index, one entry (long source context abbreviated), or safety metadata.
       --full prints all source context for a single entry.
+      Showing an S entry also prints its live resolved source location.
   sites <source-or-proof-path> [--status <label>] [--offset <number>]
   sites --area <path> [--status <label>] [--offset <number>]
       Page through site IDs, dispositions, mapping reasons, and original expressions.
   search <literal> [--area <path>] [--status <label>] [--no-swift]
       Search C++ sites, Swift predicates, and proof preambles. With --status,
       search only C++ sites of that disposition.
-  check
-      Check the proof text structure; NOT source freshness, parity, or execution.
+  check [--executed [dir]]
+      Check proof structure and resolve every anchor against its source file.
+      With --executed, also classify each anchor against the JSON evidence in
+      dir (default build/proof-evidence) written by the verify lanes.
+
+An S entry names its predicate without a line number and carries one Anchor: line:
+  S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+  Anchor: message "the requested automation height never falls under the minimum"
+  Anchor: message "shared literal" #2
+      Selects the nth occurrence of a repeated message literal in the function.
+  Anchor: function
+      Only the enclosing function is anchored.
+  Anchor: deleted
+      The cited file no longer exists; the entry is historical.
 
 To preview or apply an exact edit to one proof entry: deno task proof:edit --help
 
@@ -25,7 +46,8 @@ Examples:
   deno task proof sites clipboard/clipcheck_merge.cpp --status PARTIAL
   deno task proof sites --area automation/domain --status PARTIAL --offset 20
   deno task proof show automation/automationmenus.cpp header
-  deno task proof search "report.expect" --area clipboard`;
+  deno task proof search "report.expect" --area clipboard
+  deno task proof check --executed`;
 
 interface Entry {
   id: string;
@@ -40,6 +62,11 @@ interface Site extends Entry {
   status: string;
 }
 
+interface Predicate extends Entry {
+  header: PredicateHeader | undefined;
+  anchor: Anchor | undefined;
+}
+
 interface Proof {
   path: string;
   original: string;
@@ -48,7 +75,7 @@ interface Proof {
   swift: string[];
   preamble: string[];
   sites: Site[];
-  predicates: Entry[];
+  predicates: Predicate[];
   errors: string[];
 }
 
@@ -67,11 +94,10 @@ const DISPOSITIONS: Record<string, true> = {
 const siteHeader = /^(A\d+\s*\|\s*.+|Original\s+\d+)\s*$/;
 const predicateHeader = /^(S\d+)\s*\|\s*.+$/;
 const trailer =
-  /^(?:Swift assertion predicates|Remaining original source|Shared helpers|Remaining source|Swift predicates|Tally)\s*(?:\(|:|$)/;
+  /^(?:Swift assertion predicates|Remaining original source|Shared helpers|Remaining source|Swift predicates)\s*(?:\(|:|$)/;
 const safetyLine =
   /^(?:Deleted in:|Note:|Scope:|Covered native implementation:|Verification:|Command:|Result:|Execution boundary:|Original C\+\+ file |(?:No|Zero) assertion sites[.:]|The deleted .+ contains zero assertion sites:)/i;
 const zeroSiteDeclaration = /^(?:No|Zero) assertion sites(?:[.:]|$)/i;
-const tallyToken = /\b([A-Z][A-Z-]*) (\d+)\b/g;
 
 function field(text: string, label: string): string | undefined {
   return text.match(new RegExp(`^${label}:\\s*(.+)$`, "m"))?.[1];
@@ -197,21 +223,12 @@ function parseProof(path: string, text: string): Proof {
       `${actualDispositions} dispositions for ${siteLines.length} site headers`,
     );
   }
-  const tallies = lines.filter((line) => line.startsWith("Tally:"));
-  if (tallies.length > 1) proof.errors.push("duplicate Tally lines");
-  for (const tally of tallies) {
-    const listed = [...tally.matchAll(tallyToken)];
-    const actual = dispositionCounts(proof.sites);
-    const labels = new Set(listed.map((match) => match[1]));
-    if (
-      !listed.length || labels.size !== listed.length ||
-      listed.some((match) =>
-        !Object.hasOwn(DISPOSITIONS, match[1]) ||
-        Number(match[2]) !== (actual.get(match[1]) ?? 0)
-      ) ||
-      listed.reduce((sum, match) => sum + Number(match[2]), 0) !==
-        proof.sites.length
-    ) proof.errors.push("Tally counts do not match site dispositions");
+  for (let i = 0; i < lines.length; ++i) {
+    if (lines[i].startsWith("Tally:")) {
+      proof.errors.push(`obsolete Tally: line at line ${i + 1}`);
+    } else if (/^(?:Additional )?Swift SHA-256:/.test(lines[i])) {
+      proof.errors.push(`obsolete Swift SHA-256 line at line ${i + 1}`);
+    }
   }
   for (let index = 0; index < predicateLines.length; ++index) {
     const start = predicateLines[index];
@@ -220,12 +237,41 @@ function parseProof(path: string, text: string): Proof {
     const id = label.match(/^S\d+/)![0];
     if (seen.has(id)) proof.errors.push(`duplicate ${id} at line ${start + 1}`);
     seen.add(id);
+    const block = lines.slice(start, end);
+    const header = parsePredicateHeader(label);
+    let anchor: Anchor | undefined;
+    if (!header) {
+      proof.errors.push(
+        `${id} at line ${start + 1}: invalid predicate header`,
+      );
+    } else if (/:\d+$/.test(header.path)) {
+      proof.errors.push(
+        `${id} at line ${start + 1}: old line-numbered predicate header`,
+      );
+    }
+    const anchors = block.filter((line) => line.startsWith("Anchor:"));
+    if (anchors.length !== 1) {
+      proof.errors.push(
+        `${id} at line ${
+          start + 1
+        }: expected one Anchor: line, found ${anchors.length}`,
+      );
+    } else {
+      const parsed = parseAnchorLine(anchors[0]);
+      if (!parsed) {
+        proof.errors.push(
+          `${id} at line ${start + 1}: invalid Anchor: line`,
+        );
+      } else anchor = parsed;
+    }
     proof.predicates.push({
       id,
       label,
       line: start + 1,
       endIndex: end,
-      text: lines.slice(start, end).join("\n").trimEnd(),
+      text: block.join("\n").trimEnd(),
+      header,
+      anchor,
     });
   }
   return proof;
@@ -268,6 +314,7 @@ interface Options {
   noSwift: boolean;
   full: boolean;
   offset?: number;
+  executed?: string;
 }
 
 function options(args: string[]): Options {
@@ -276,7 +323,13 @@ function options(args: string[]): Options {
     const arg = args[i];
     if (arg === "--no-swift") parsed.noSwift = true;
     else if (arg === "--full") parsed.full = true;
-    else if (arg === "--offset") {
+    else if (arg === "--executed") {
+      const value = args[i + 1];
+      if (value !== undefined && !value.startsWith("--")) {
+        parsed.executed = value;
+        ++i;
+      } else parsed.executed = "build/proof-evidence";
+    } else if (arg === "--offset") {
       const value = args[++i];
       if (
         value === undefined || !/^(?:0|[1-9]\d*)$/.test(value) ||
@@ -340,29 +393,25 @@ function counts(sites: readonly Site[]): string {
   );
 }
 
-function reconcileTally(line: string, sites: readonly Site[]): string {
-  const tally = dispositionCounts(sites);
-  const listed = [...line.matchAll(tallyToken)];
-  if (!listed.length) throw new Error("Tally has no disposition counts");
-  const labels = new Set(listed.map((match) => match[1]));
-  let updated = line.replace(
-    tallyToken,
-    (_match, status: string) => `${status} ${tally.get(status) ?? 0}`,
-  );
-  const missing = [...tally.keys()].filter((status) => !labels.has(status))
-    .sort();
-  if (missing.length) {
-    const last = [...updated.matchAll(tallyToken)].at(-1)!;
-    const end = last.index! + last[0].length;
-    const separator = line.includes(" / ") ? " / " : ", ";
-    updated = updated.slice(0, end) +
-      separator +
-      missing.map((status) => `${status} ${tally.get(status)}`).join(
-        separator,
-      ) +
-      updated.slice(end);
+function citedPredicateIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(/S(\d+)-S(\d+)/g)) {
+    const low = Number(match[1]);
+    const high = Number(match[2]);
+    const width = Math.max(match[1].length, match[2].length);
+    for (let n = Math.min(low, high); n <= Math.max(low, high); ++n) {
+      ids.add(`S${String(n).padStart(width, "0")}`);
+    }
   }
-  return updated;
+  for (const match of text.matchAll(/S\d+/g)) ids.add(match[0]);
+  return [...ids];
+}
+
+function mappingIds(site: Site): string[] {
+  const mapping = site.text.split("\n").filter((line) =>
+    /^(?:Mapping|Mapping\/reason):/.test(line)
+  ).join("\n");
+  return citedPredicateIds(mapping);
 }
 
 function resolveProof(proofs: Proof[], requested: string): Proof {
@@ -401,15 +450,114 @@ async function loadProof(requested: string): Promise<Proof> {
   return resolveProof(await loadProofs(), requested);
 }
 
-export {
-  counts,
-  loadProof,
-  loadProofs,
-  parseProof,
-  reconcileTally,
-  resolveProof,
-};
-export type { Entry, Proof, Site };
+async function readSource(
+  cache: Map<string, string | undefined>,
+  path: string,
+): Promise<string | undefined> {
+  if (!cache.has(path)) {
+    try {
+      cache.set(path, await Deno.readTextFile(path));
+    } catch {
+      cache.set(path, undefined);
+    }
+  }
+  return cache.get(path);
+}
+
+interface EvidencePass {
+  cppId: string;
+  row: string;
+}
+
+interface EvidenceFile {
+  passes: EvidencePass[];
+  functions: string[];
+}
+
+async function loadEvidence(dir: string): Promise<EvidenceFile[]> {
+  const paths: string[] = [];
+  try {
+    for await (const entry of Deno.readDir(dir)) {
+      if (entry.isFile && entry.name.endsWith(".json")) {
+        paths.push(`${dir}/${entry.name}`);
+      }
+    }
+  } catch {
+    throw new Error(
+      `no proof evidence in ${dir}; run the verify lanes first`,
+    );
+  }
+  if (!paths.length) {
+    throw new Error(
+      `no proof evidence in ${dir}; run the verify lanes first`,
+    );
+  }
+  paths.sort();
+  const files: EvidenceFile[] = [];
+  for (const path of paths) {
+    const data = JSON.parse(await Deno.readTextFile(path)) as {
+      passes?: { cppId?: unknown; row?: unknown }[];
+      functions?: unknown[];
+    };
+    files.push({
+      passes: (data.passes ?? []).filter((pass) =>
+        typeof pass.cppId === "string" && typeof pass.row === "string"
+      ) as EvidencePass[],
+      functions: (data.functions ?? []).filter((name) =>
+        typeof name === "string"
+      ) as string[],
+    });
+  }
+  return files;
+}
+
+type AnchorVerdict = "executed" | "not executed" | "unverifiable";
+
+function classifyPredicates(
+  proofs: readonly Proof[],
+  evidence: readonly EvidenceFile[],
+): Map<string, AnchorVerdict> {
+  const rows = evidence.flatMap((file) => file.passes.map((pass) => pass.row));
+  const functions = new Set(
+    evidence.flatMap((file) => file.functions).map((name) =>
+      name.split("::").at(-1)!
+    ),
+  );
+  const verdicts = new Map<string, AnchorVerdict>();
+  for (const proof of proofs) {
+    for (const predicate of proof.predicates) {
+      const header = predicate.header;
+      const anchor = predicate.anchor;
+      if (!header || !anchor || anchor.kind === "deleted") continue;
+      const key = `${proof.path} ${predicate.id}`;
+      if (header.path.endsWith(".qml")) {
+        const name = functionName(header.functionField);
+        verdicts.set(
+          key,
+          !name.startsWith("test_")
+            ? "unverifiable"
+            : functions.has(name)
+            ? "executed"
+            : "not executed",
+        );
+      } else if (anchor.kind === "message") {
+        const pattern = new RegExp(
+          literalPattern(anchor.literal).source.replace(/\$$/, ""),
+        );
+        verdicts.set(
+          key,
+          rows.some((row) => pattern.test(row)) ? "executed" : "not executed",
+        );
+      } else {
+        verdicts.set(key, "unverifiable");
+      }
+    }
+  }
+  return verdicts;
+}
+
+export { counts, loadProof, loadProofs, parseProof, resolveProof };
+export type { Entry, Predicate, Proof, Site };
 
 function printSafety(proof: Proof, full = false): void {
   const lines = proof.preamble.flatMap((text, index) =>
@@ -439,13 +587,13 @@ function printSafety(proof: Proof, full = false): void {
   }
 }
 
-function show(
+async function show(
   proofs: Proof[],
   requested: string,
   entryId?: string,
   status?: string,
   full = false,
-): void {
+): Promise<void> {
   const proof = resolveProof(proofs, requested);
   const sites = status
     ? proof.sites.filter((site) => site.status === status)
@@ -533,6 +681,31 @@ function show(
         previous = to;
       }
     } else console.log(`\n${proof.path}:${entry.line}\n${entry.text}`);
+    const predicate = proof.predicates.find((item) => item.id === entry.id);
+    if (predicate) {
+      if (!predicate.header || !predicate.anchor) {
+        console.log("resolution failed: entry has structure errors");
+      } else if (predicate.anchor.kind === "deleted") {
+        console.log(
+          `historical entry; ${predicate.header.path} no longer exists`,
+        );
+      } else {
+        let source: string | undefined;
+        try {
+          source = await Deno.readTextFile(predicate.header.path);
+        } catch {
+          source = undefined;
+        }
+        const resolution = resolveAnchor(
+          source,
+          predicate.header.functionField,
+          predicate.anchor,
+        );
+        if (resolution.ok) {
+          console.log(`resolved: ${predicate.header.path}:${resolution.line}`);
+        } else console.log(`resolution failed: ${resolution.reason}`);
+      }
+    }
     return;
   }
   if (status) {
@@ -719,7 +892,10 @@ async function main(args: string[]): Promise<void> {
   if (!["list", "show", "sites", "search", "check"].includes(command)) {
     throw new Error(`unknown command ${command}`);
   }
-  const { positionals, area, status, noSwift, full, offset } = options(rest);
+  const { positionals, area, status, noSwift, full, offset, executed } =
+    options(
+      rest,
+    );
   let invalid = false;
   switch (command) {
     case "check":
@@ -727,20 +903,22 @@ async function main(args: string[]): Promise<void> {
         offset !== undefined);
       break;
     case "list":
-      invalid = !!(positionals.length || full || offset !== undefined);
+      invalid = !!(positionals.length || full || offset !== undefined ||
+        executed !== undefined);
       break;
     case "show":
       invalid = positionals.length < 1 || positionals.length > 2 ||
-        !!area || noSwift || offset !== undefined ||
+        !!area || noSwift || offset !== undefined || executed !== undefined ||
         (full && positionals.length !== 2);
       break;
     case "sites":
       invalid = positionals.length > 1 ||
         (positionals.length === 1) === (area !== undefined) ||
-        noSwift || full;
+        noSwift || full || executed !== undefined;
       break;
     case "search":
-      invalid = positionals.length !== 1 || full || offset !== undefined;
+      invalid = positionals.length !== 1 || full || offset !== undefined ||
+        executed !== undefined;
       break;
   }
   if (invalid) {
@@ -756,18 +934,105 @@ async function main(args: string[]): Promise<void> {
     const errors = proofs.flatMap((proof) =>
       proof.errors.map((error) => `${proof.path}: ${error}`)
     );
+    const cache = new Map<string, string | undefined>();
+    let anchors = 0;
+    let deleted = 0;
+    for (const proof of proofs) {
+      const byId = new Map(proof.predicates.map((predicate) => [
+        predicate.id,
+        predicate,
+      ]));
+      for (const predicate of proof.predicates) {
+        if (!predicate.header || !predicate.anchor) continue;
+        if (predicate.anchor.kind === "deleted") {
+          ++deleted;
+          continue;
+        }
+        const source = await readSource(cache, predicate.header.path);
+        const resolution = resolveAnchor(
+          source,
+          predicate.header.functionField,
+          predicate.anchor,
+        );
+        if (resolution.ok) ++anchors;
+        else errors.push(`${proof.path} ${predicate.id}: ${resolution.reason}`);
+      }
+      for (const site of proof.sites) {
+        if (site.status !== "MATCHED" && site.status !== "PARTIAL") continue;
+        for (const cited of mappingIds(site)) {
+          if (byId.get(cited)?.anchor?.kind === "deleted") {
+            errors.push(
+              `${proof.path} ${site.id}: cites deleted predicate ${cited}`,
+            );
+          }
+        }
+      }
+    }
     if (errors.length) {
       throw new Error(
-        `${errors.join("\n")}\n${errors.length} proof structure error(s)`,
+        `${errors.join("\n")}\n${errors.length} proof check error(s)`,
       );
     }
+    const sites = proofs.reduce((sum, proof) => sum + proof.sites.length, 0);
     console.log(
-      `${proofs.length} proof files; ${
-        proofs.reduce((sum, proof) => sum + proof.sites.length, 0)
-      } indexed C++ sites; metadata, entries, and present tallies OK (not source freshness, execution, or parity)`,
+      `${proofs.length} proof files; ${sites} indexed C++ sites; ${anchors} anchors resolved (${deleted} historical)`,
     );
+    if (executed !== undefined) {
+      const evidence = await loadEvidence(executed);
+      const verdicts = classifyPredicates(proofs, evidence);
+      let ran = 0;
+      let missing = 0;
+      let unverifiable = 0;
+      for (const verdict of verdicts.values()) {
+        if (verdict === "executed") ++ran;
+        else if (verdict === "not executed") ++missing;
+        else ++unverifiable;
+      }
+      console.log(
+        `execution evidence from ${executed}: executed ${ran}; not executed ${missing}; unverifiable ${unverifiable}`,
+      );
+      for (const proof of proofs) {
+        for (const predicate of proof.predicates) {
+          const key = `${proof.path} ${predicate.id}`;
+          if (verdicts.get(key) === "not executed") {
+            console.log(`${key}: not executed`);
+          }
+        }
+      }
+      const uncovered: string[] = [];
+      for (const proof of proofs) {
+        for (const site of proof.sites) {
+          if (site.status !== "MATCHED") continue;
+          const cited = mappingIds(site).filter((id) =>
+            verdicts.has(`${proof.path} ${id}`)
+          );
+          if (
+            cited.length &&
+            cited.every((id) =>
+              verdicts.get(`${proof.path} ${id}`) !== "executed"
+            ) &&
+            cited.some((id) =>
+              verdicts.get(`${proof.path} ${id}`) === "not executed"
+            )
+          ) {
+            uncovered.push(
+              `${proof.path} ${site.id}: no executed predicate among ${
+                cited.join(", ")
+              }`,
+            );
+          }
+        }
+      }
+      if (uncovered.length) {
+        throw new Error(
+          `${
+            uncovered.join("\n")
+          }\n${uncovered.length} MATCHED site(s) without executed predicates`,
+        );
+      }
+    }
   } else if (command === "show") {
-    show(proofs, positionals[0], positionals[1], status, full);
+    await show(proofs, positionals[0], positionals[1], status, full);
   } else if (command === "sites") {
     sites(proofs, positionals[0], area, status, offset);
   } else if (command === "list") {

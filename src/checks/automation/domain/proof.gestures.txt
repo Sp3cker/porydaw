@@ -5,7 +5,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/domain/gestures.cpp
 Original SHA-256: edb8678ec7f2c28b8ad7bac746f6b858670708add290c079be186657d069e380
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 
 Covered native implementation: src/ui/editordrawer/nodelane/nodelane.{h,cpp} :: NodeLane/NodeLaneEdit; src/ui/editordrawer/nodelane/gesture.h :: PointDragGesture/SweepGesture; src/ui/editordrawer/nodelane/pencilgesture.h :: AutomationPencilGesture.
 Native engine status: Legacy C++ engine sources remain on disk but are not compiled into current CMake targets; no active native bridge or live native run is claimed. The engine reachability audit is recorded separately by Task 7.
@@ -14,7 +13,7 @@ Retirement: 67 original assertion sites, 66 MATCHED and 1 RETIRED-REPRESENTATION
 
 Fixture and execution: Five original slots cover sweep stepping and ramp finish, trailing held-value restoration, Pan neutral snap, node drag and phantom outcomes, and point-range/pencil replacements. Inline Swift fixtures exercise a 24-tick division lattice, point and held-span replacements, a production empty Modulation lane with engine-default lead-in 0, and a past-last-point lane with a real held value 20. The source-pinned inventory below preserves the original loops, fixture values, and assertion order.
 History caveat: Swift exercises document undo/redo through public history APIs and asserts restored observable state; no test-only history accessors or C++ undo-stack index correspondence is claimed.
-Registered run path: src/checks/automation/AutomationPageChecks.swift:361-365 :: runAutomationPageChecks → runProjectSessionSuite → projectSession (swiftcore suite 10 via pdcSuiteRun); gesture core seams also run in eventEdits (suite 6). The Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
+Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks → runProjectSessionSuite → projectSession (swiftcore suite 10 via pdcSuiteRun); gesture core seams also run in eventEdits (suite 6). The Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
 Verification evidence
 2026-09-22 focused Swift runs on the source hashes above:
 deno task verify --filter swiftcore --qt timeEdits eventEdits: exit 0;
@@ -489,7 +488,7 @@ Original expression:
 
 A048 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:221
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift:623-631 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID; the empty-lane AutomationPencilTransaction guard reports failure and returns if start fails (same accepted guard pattern as A053). Start success does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
+Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID; the empty-lane AutomationPencilTransaction guard reports failure and returns if start fails (same accepted guard pattern as A053). Start success does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
 Swift counterpart expression:
   report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
 Original expression:
@@ -497,7 +496,7 @@ Original expression:
 
 A049 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:223
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift:637-638 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts !stroke.completion().unchanged on the production empty-lane pencil. Whether completion changed does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
+Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts !stroke.completion().unchanged on the production empty-lane pencil. Whether completion changed does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
 Swift counterpart expression:
   report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
                 message: "an empty lane's first stroke is a change")
@@ -506,7 +505,7 @@ Original expression:
 
 A050 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:224
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift:632-634 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing exactly two ordered points. Point count does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
+Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing exactly two ordered points. Point count does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
 Swift counterpart expression:
   report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
                      cppID: drawerAutomationPointRangeID,
@@ -516,7 +515,7 @@ Original expression:
 
 A051 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:225
 Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift:632-634 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing that its first point is 24:80. That first point does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
+Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing that its first point is 24:80. That first point does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
 Swift counterpart expression:
   report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
                      cppID: drawerAutomationPointRangeID,
@@ -526,7 +525,7 @@ Original expression:
 
 A052 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:226
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No public Swift ingress exists for the arbitrary NodePoint{0,20} lead-in injected by C++ AutomationPencilGesture::start at gestures.cpp:219-220 into an empty lane: AutomationPencilTransaction.init?(facts:firstSample:firstCell:clockTicks:) (AutomationDrawingTransactions.swift:196-204) takes no lead-in argument; AutomationFrozenFacts.freeze(includingLeadIn:) (AutomationTransactions.swift:182-190) reads snapshot.leadInValue, derived from metadata.defaultValue (AutomationLaneProjection.swift:162-165). Inventing empty-lane metadata with defaultValue 20 is synthetic-only and prohibited (spec §2.1). The surviving 48:20 held-span completion behavior is asserted via production AutomationPencilTransaction.completion() -> AutomationLaneReplacement.heldSpan (AutomationDrawingTransactions.swift:395-399) by gestures.swift:652-654 on a real past-last lane, and gestures.swift:540-547 asserts the held-span freeze [24:80,48:20] directly under drawerAutomationPointRangeID. This site's injected empty-lane representation, not its held-span behavior, is retired.
+Mapping/reason: No public Swift ingress exists for the arbitrary NodePoint{0,20} lead-in injected by C++ AutomationPencilGesture::start at gestures.cpp:219-220 into an empty lane: AutomationPencilTransaction.init?(facts:firstSample:firstCell:clockTicks:) (AutomationDrawingTransactions.swift) takes no lead-in argument; AutomationFrozenFacts.freeze(includingLeadIn:) (AutomationTransactions.swift) reads snapshot.leadInValue, derived from metadata.defaultValue (AutomationLaneProjection.swift). Inventing empty-lane metadata with defaultValue 20 is synthetic-only and prohibited (spec §2.1). The surviving 48:20 held-span completion behavior is asserted via production AutomationPencilTransaction.completion() -> AutomationLaneReplacement.heldSpan (AutomationDrawingTransactions.swift) by gestures.swift on a real past-last lane, and gestures.swift asserts the held-span freeze [24:80,48:20] directly under drawerAutomationPointRangeID. This site's injected empty-lane representation, not its held-span behavior, is retired.
 Swift counterpart expression:
   report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
                      cppID: drawerAutomationPointRangeID,

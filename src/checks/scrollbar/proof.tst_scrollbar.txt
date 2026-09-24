@@ -4,7 +4,6 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/scrollbar/tst_scrollbar.cpp
 Original SHA-256: a495eb31b9a1b64dc3dc31835b626fcba510dc1f0e12ce2de6577966b2c1deb0
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -12,7 +11,7 @@ The C++ file above was deleted; this inventory audits its parent-revision conten
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
 Execution ownership

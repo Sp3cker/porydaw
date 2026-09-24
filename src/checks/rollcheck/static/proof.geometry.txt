@@ -4,13 +4,9 @@ Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/static/geometry.cpp
 Original SHA-256: 9c3dcb0a9fdbab901eaeac2d1271951e0d6c7b648564b15a53175d989e465979
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/static/geometry.swift
-Additional Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollcheck/time_signature_prompt.swift
-Additional Swift SHA-256: 9d3f191f01c4cf2be84411e15545eaa20743af72c7ad98566c11f014b9b97aa2
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -31,8 +27,8 @@ sites, and twenty-eight NATIVE sites. S062-S066
 match five EditorCamera model sites. The fallback lead-pad/home numerics and the
 bind-preserves-geometry sites stay PARTIAL against related executed predicates:
 S045/S005 for the fallback camera, S062/S064 for the default zoom,
-EditorGridCameraChecks.swift:275-282 for the published grid time marks,
-time_signature_prompt.swift:54-57 for GridSegment fields, and S066 for bind
+EditorGridCameraChecks.swift for the published grid time marks,
+time_signature_prompt.swift for GridSegment fields, and S066 for bind
 content geometry. Three sites stay GAP because no executed predicate observes
 them: the maximum-tick ceiling traversal (A018, A019) and the 3/4-bound ruler
 height transition (A048). TimeAxis is public and a check constructs one, but the
@@ -199,7 +195,7 @@ Original expression:
 
 A002 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:121
 Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) observes the same fallback-camera lead-pad home over the 1280/1000/1500 width rows under synthetic EditorCamera limits, with S005 (:33-34) covering the pre-roll floor. Unproved: the native BareView fallback camera reports a positive leadPadPx with no song bound.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) observes the same fallback-camera lead-pad home over the 1280/1000/1500 width rows under synthetic EditorCamera limits, with S005 (:33-34) covering the pre-roll floor. Unproved: the native BareView fallback camera reports a positive leadPadPx with no song bound.
 Source context since previous assertion:
   ;
       fixture.view.quickView()->quickWindow()->resize(QSize(width, 800));
@@ -210,7 +206,7 @@ Original expression:
 
 A003 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:122
 Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) asserts contentX(tick: 0) equals the lead pad under synthetic limits, and S002 (:26-27) the tick/content round-trip. Unproved: the native fallback camera tick-zero content position sits within 0.5px of its lead pad.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) asserts contentX(tick: 0) equals the lead pad under synthetic limits, and S002 (:26-27) the tick/content round-trip. Unproved: the native fallback camera tick-zero content position sits within 0.5px of its lead pad.
 Source context since previous assertion:
   ;
 Original expression:
@@ -219,7 +215,7 @@ Original expression:
 
 A004 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:124
 Disposition: PARTIAL
-Mapping/reason: Related predicate S062 (src/checks/rollcheck/static/geometry.swift:30-31) observes the default beat zoom retained across a 24-TPB bind and S064 (:46-47) across a 48-TPB bind under EditorCamera.Limits defaults. Unproved condition: the unbound native BareView default pxPerBeat equals the default ViewState zoom.
+Mapping/reason: Related predicate S062 (src/checks/rollcheck/static/geometry.swift) observes the default beat zoom retained across a 24-TPB bind and S064 (:46-47) across a 48-TPB bind under EditorCamera.Limits defaults. Unproved condition: the unbound native BareView default pxPerBeat equals the default ViewState zoom.
 Source context since previous assertion:
   ;
 Original expression:
@@ -269,7 +265,7 @@ Original expression:
 
 A009 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:155
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks stay inside one culling window and cover the visible plot (suite 10). Unproved condition: the unsignatured grid publishes exactly 16 lines over 0..96 ticks.
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks stay inside one culling window and cover the visible plot (suite 10). Unproved condition: the unsignatured grid publishes exactly 16 lines over 0..96 ticks.
 Source context since previous assertion:
   ;
   }
@@ -293,7 +289,7 @@ Original expression:
 
 A010 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:158
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: each fallback line sits at index * kTicksPerBeat (24).
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: each fallback line sits at index * kTicksPerBeat (24).
 Source context since previous assertion:
   ;
       for (int index = 0; index < 16; ++index) {
@@ -303,7 +299,7 @@ Original expression:
 
 A011 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:159
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: every fourth fallback line is a bar line.
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: every fourth fallback line is a bar line.
 Source context since previous assertion:
   ;
 Original expression:
@@ -311,7 +307,7 @@ Original expression:
 
 A012 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:160
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: fallback bar numbers are index / 4 + 1.
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: fallback bar numbers are index / 4 + 1.
 Source context since previous assertion:
   ;
 Original expression:
@@ -319,7 +315,7 @@ Original expression:
 
 A013 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:161
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: fallback beat numbers are index % 4 + 1.
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift asserts the published grid time marks positions (suite 10). Unproved condition: fallback beat numbers are index % 4 + 1.
 Source context since previous assertion:
   ;
 Original expression:
@@ -327,7 +323,7 @@ Original expression:
 
 A014 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:164
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the unsignatured fallback segment at tick 0 starts at 0.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the unsignatured fallback segment at tick 0 starts at 0.
 Source context since previous assertion:
   ;
       }
@@ -337,7 +333,7 @@ Original expression:
 
 A015 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:165
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the unsignatured fallback segment next is the kNoTick sentinel.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the unsignatured fallback segment next is the kNoTick sentinel.
 Source context since previous assertion:
   ;
 Original expression:
@@ -345,7 +341,7 @@ Original expression:
 
 A016 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:166
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatTicks is 24.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatTicks is 24.
 Source context since previous assertion:
   ;
 Original expression:
@@ -353,7 +349,7 @@ Original expression:
 
 A017 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:167
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatsPerBar is 4.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatsPerBar is 4.
 Source context since previous assertion:
   ;
 Original expression:
@@ -361,7 +357,7 @@ Original expression:
 
 A018 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:177
 Disposition: GAP
-Mapping/reason: GAP; no executing predicate walks grid lines at the tick ceiling. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift:275-282) culls generated marks inside one viewport and never approaches CoreTimeDefaults kMaxTick, so the ceiling traversal stays unproved.
+Mapping/reason: GAP; no executing predicate walks grid lines at the tick ceiling. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift) culls generated marks inside one viewport and never approaches CoreTimeDefaults kMaxTick, so the ceiling traversal stays unproved.
 Source context since previous assertion:
   ;
   }
@@ -378,7 +374,7 @@ Original expression:
 
 A019 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:178
 Disposition: GAP
-Mapping/reason: GAP; no executing predicate excludes a wrapped ceiling beat. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift:275-282) never approaches CoreTimeDefaults kMaxTick, so the wrap exclusion stays unproved.
+Mapping/reason: GAP; no executing predicate excludes a wrapped ceiling beat. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift) never approaches CoreTimeDefaults kMaxTick, so the wrap exclusion stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -547,7 +543,7 @@ Original expression:
 
 A032 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:270
 Disposition: MATCHED
-Mapping/reason: Executed S062 (src/checks/rollcheck/static/geometry.swift:30-31) observes EditorCamera retaining its initial default beat zoom after binding a 24-TPB timeline; projectSession green in the Verification run.
+Mapping/reason: Executed S062 (src/checks/rollcheck/static/geometry.swift) observes EditorCamera retaining its initial default beat zoom after binding a 24-TPB timeline; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -592,7 +588,7 @@ Original expression:
 
 A035 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:280
 Disposition: MATCHED
-Mapping/reason: Executed S063 (src/checks/rollcheck/static/geometry.swift:33-35) compares six EditorCamera bar content positions (bar * 4 * 24) before and after 24-TPB binding within 1e-9; projectSession green in the Verification run.
+Mapping/reason: Executed S063 (src/checks/rollcheck/static/geometry.swift) compares six EditorCamera bar content positions (bar * 4 * 24) before and after 24-TPB binding within 1e-9; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
 Original expression:
@@ -618,7 +614,7 @@ Original expression:
 
 A037 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:312
 Disposition: MATCHED
-Mapping/reason: Executed S064 (src/checks/rollcheck/static/geometry.swift:46-47) observes EditorCamera retaining its initial default beat zoom after binding a 48-TPB timeline; projectSession green in the Verification run.
+Mapping/reason: Executed S064 (src/checks/rollcheck/static/geometry.swift) observes EditorCamera retaining its initial default beat zoom after binding a 48-TPB timeline; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -655,7 +651,7 @@ Original expression:
 
 A039 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:318
 Disposition: MATCHED
-Mapping/reason: Executed S065 (src/checks/rollcheck/static/geometry.swift:49-51) compares three EditorCamera display columns (beat * 48, origin 0, dpr 1) across the 24-to-48 TPB binding within one pixel; projectSession green in the Verification run.
+Mapping/reason: Executed S065 (src/checks/rollcheck/static/geometry.swift) compares three EditorCamera display columns (beat * 48, origin 0, dpr 1) across the 24-to-48 TPB binding within one pixel; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       for (int beat = 1; beat <= 3; ++beat) {
@@ -690,7 +686,7 @@ Original expression:
 
 A042 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:331
 Disposition: MATCHED
-Mapping/reason: Executed S066 (src/checks/rollcheck/static/geometry.swift:54-55) compares eight EditorCamera beat content positions (beat * 48) across the 24-to-48 TPB binding within 1e-6; projectSession green in the Verification run.
+Mapping/reason: Executed S066 (src/checks/rollcheck/static/geometry.swift) compares eight EditorCamera beat content positions (beat * 48) across the 24-to-48 TPB binding within 1e-6; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       }
@@ -717,7 +713,7 @@ Original expression:
 
 A044 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:359
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the 3/4-bound view segment at tick 0 starts at 0.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the 3/4-bound view segment at tick 0 starts at 0.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -742,7 +738,7 @@ Original expression:
 
 A045 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:360
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the 3/4-bound segment next is the kNoTick sentinel.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the 3/4-bound segment next is the kNoTick sentinel.
 Source context since previous assertion:
   ;
 Original expression:
@@ -750,7 +746,7 @@ Original expression:
 
 A046 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:361
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatTicks is 24.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatTicks is 24.
 Source context since previous assertion:
   ;
 Original expression:
@@ -758,7 +754,7 @@ Original expression:
 
 A047 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:362
 Disposition: PARTIAL
-Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatsPerBar is 3.
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatsPerBar is 3.
 Source context since previous assertion:
   ;
 Original expression:
@@ -766,7 +762,7 @@ Original expression:
 
 A048 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:363
 Disposition: GAP
-Mapping/reason: GAP; the mounted cases consume gridModel.rulerHeight only as a layout input (src/checks/rollqml/tst_SwiftRollPlots.qml:182-184) and none compares the bound view's ruler height across a 3/4 bind, so the transition stays unproved.
+Mapping/reason: GAP; the mounted cases consume gridModel.rulerHeight only as a layout input (src/checks/rollqml/tst_SwiftRollPlots.qml) and none compares the bound view's ruler height across a 3/4 bind, so the transition stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -774,7 +770,7 @@ Original expression:
 
 A049 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:364
 Disposition: PARTIAL
-Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) asserts a positive lead pad under synthetic limits, and S015 (:93-94) the unbound home. Unproved: the 3/4-bound native view reports a positive leadPadPx.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift) asserts a positive lead pad under synthetic limits, and S015 (:93-94) the unbound home. Unproved: the 3/4-bound native view reports a positive leadPadPx.
 Source context since previous assertion:
   ;
 Original expression:
@@ -782,7 +778,7 @@ Original expression:
 
 A050 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:366
 Disposition: PARTIAL
-Mapping/reason: Related predicate S066 (src/checks/rollcheck/static/geometry.swift:54-55) asserts beat content positions preserved across a 48-TPB bind. Unproved condition: the 3/4 signature bind preserves the view's beat content positions within 1e-6.
+Mapping/reason: Related predicate S066 (src/checks/rollcheck/static/geometry.swift) asserts beat content positions preserved across a 48-TPB bind. Unproved condition: the 3/4 signature bind preserves the view's beat content positions within 1e-6.
 Source context since previous assertion:
   ;
       for (int beat = 1; beat <= 8; ++beat)
@@ -841,92 +837,110 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "caller-resolved minimum viewport produces observable camera bounds"
   report.expect(gridCameraNear(compact.snapshot.viewportWidth, 50) &&
                     gridCameraNear(compact.snapshot.minHScroll, -48) &&
                     gridCameraNear(compact.snapshot.maxHScroll, 0),
                     cppID: cameraTransformID,
                     message: "caller-resolved minimum viewport produces observable camera bounds")
 
-S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "tick/content transforms round-trip with a fractional offset"
   report.expect(gridCameraNear(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
                     message: "tick/content transforms round-trip with a fractional offset")
 
-S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "horizontal restoration preserves fractional offsets"
   report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
                     message: "horizontal restoration preserves fractional offsets")
 
-S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "display projection snaps to a physical pixel"
   report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
                     cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
 
-S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "horizontal scrolling clamps to production pre-roll"
   report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
                     cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
 
-S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "bound timeline end reaches the plot origin"
   report.expect(gridCameraNear(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
                     message: "bound timeline end reaches the plot origin")
 
-S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "bound viewport shrink reclamps the changed pre-roll floor"
   report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, -48),
                     cppID: cameraTransformID,
                     message: "bound viewport shrink reclamps the changed pre-roll floor")
 
-S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "bound viewport updates preserve a legal fractional offset"
   report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
                     cppID: cameraTransformID,
                     message: "bound viewport updates preserve a legal fractional offset")
 
-S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
+S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "interactive time zoom preserves its tick anchor"
   report.expect(zoom.zoomChanged && zoom.scrollChanged &&
                     gridCameraNear(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
                     message: "interactive time zoom preserves its tick anchor")
 
-S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "time zoom reaches its bound when the pointer anchor is unreachable"
   report.expect(gridCameraNear(clampedTimeZoom.snapshot.scrollX, 64) &&
                     !gridCameraNear(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
                     cppID: cameraZoomID,
                     message: "time zoom reaches its bound when the pointer anchor is unreachable")
 
-S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "unanchored restoration keeps valid fractional camera state"
   report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, 48) &&
                     gridCameraNear(camera.snapshot.keyHeight, 16) && gridCameraNear(camera.snapshot.scrollX, 10.5) &&
                     gridCameraNear(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
                     message: "unanchored restoration keeps valid fractional camera state")
 
-S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "restoration sanitizes non-finite transient view-state values independently"
   report.expect(gridCameraNear(sanitized.snapshot.pixelsPerBeat, 32) &&
                     gridCameraNear(sanitized.snapshot.keyHeight, 12) &&
                     gridCameraNear(sanitized.snapshot.scrollX, 0) && gridCameraNear(sanitized.snapshot.scrollY, 0),
                     cppID: cameraZoomID,
                     message: "restoration sanitizes non-finite transient view-state values independently")
 
-S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "content shrink reclamps the horizontal offset"
   report.expect(gridCameraNear(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
                     message: "content shrink reclamps the horizontal offset")
 
-S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "viewport growth reclamps vertical content"
   report.expect(gridCameraNear(camera.snapshot.viewportWidth, 800) && gridCameraNear(camera.snapshot.scrollY, 0),
                     cppID: cameraTransformID,
                     message: "viewport growth reclamps vertical content")
 
-S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "an unbound timeline homes to its lead pad"
   report.expect(gridCameraNear(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
                     message: "an unbound timeline homes to its lead pad")
 
-S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "unbound viewport updates follow the resolved home"
   report.expect(gridCameraNear(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
                     message: "unbound viewport updates follow the resolved home")
 
-S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
+S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "chromatic pitch mapping remains bijective across the full MIDI range"
   report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
           chromatic.row(forPitch: pitch) == 127 - pitch &&
               chromatic.visiblePitch(at: 127 - pitch) == pitch
       }, cppID: cameraPitchID,
       message: "chromatic pitch mapping remains bijective across the full MIDI range")
 
-S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
+S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "pitch rows and nearest lookup preserve production ordering"
   report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
                     folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
                     folded.nearestVisiblePitch(to: 62) == 60 &&
@@ -936,12 +950,14 @@ S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
                     cppID: cameraPitchID,
                     message: "pitch rows and nearest lookup preserve production ordering")
 
-S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
+S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "DPR-snapped row and pitch inverses agree"
   report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
                     folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
                     cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
 
-S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "fractional DPR snapping defines the inverse row boundary"
   report.expect(gridCameraNear(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
                          10) &&
                     folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
@@ -949,139 +965,165 @@ S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
                     cppID: cameraPitchID,
                     message: "fractional DPR snapping defines the inverse row boundary")
 
-S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "pitch projection shrink reclamps the vertical offset"
   report.expect(gridCameraNear(projectedContent.snapshot.scrollY, 15),
                     cppID: cameraPitchID,
                     message: "pitch projection shrink reclamps the vertical offset")
 
-S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "vertical bounds derive from projected row height"
   report.expect(gridCameraNear(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
                     message: "vertical bounds derive from projected row height")
 
-S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "pitch zoom preserves its row anchor when bounds permit"
   report.expect(gridCameraNear(anchoredRow, resultingRow), cppID: cameraZoomID,
                     message: "pitch zoom preserves its row anchor when bounds permit")
 
-S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "pitch zoom reaches its bound when the row anchor is unreachable"
   report.expect(gridCameraNear(clampedPitchZoom.snapshot.scrollY, 0) &&
                     gridCameraNear(clampedPitchZoom.snapshot.maxVScroll, 0) &&
                     !gridCameraNear(rowAfterBoundedZoom, rowBeforeBoundedZoom),
                     cppID: cameraZoomID,
                     message: "pitch zoom reaches its bound when the row anchor is unreachable")
 
-S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
+S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "key reveal scrolls only enough to show its row"
   report.expect(pitchCamera.ensureKeyVisible(60) && gridCameraNear(pitchCamera.snapshot.scrollY, 15),
                     cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
 
-S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
+S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "hidden pitches do not move the camera"
   report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
                     message: "hidden pitches do not move the camera")
 
-S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
+S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "tick reveal uses the production one-third anchor"
   report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
                     gridCameraNear(reveal.snapshot.scrollX, 573.3333333333),
                     cppID: cameraTransformID,
                     message: "tick reveal uses the production one-third anchor")
 
-S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
+S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "a fitting range on the physical right boundary stays visible"
   report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
                                                preferEnd: false, dpr: 1) &&
                     gridCameraNear(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
                     message: "a fitting range on the physical right boundary stays visible")
 
-S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
+S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "wide range reveal prefers its requested leading edge"
   report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
                                               preferEnd: false, dpr: 1) &&
                     gridCameraNear(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
                     message: "wide range reveal prefers its requested leading edge")
 
-S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
+S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "wide range reveal honors the requested trailing edge"
   report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
                                               preferEnd: true, dpr: 1) &&
                     gridCameraNear(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
                     message: "wide range reveal honors the requested trailing edge")
 
-S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:261
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "phase \(phase.rawValue) performs one anchored time zoom publication"
   report.expect(
               after.pixelsPerBeat > before.pixelsPerBeat
                   && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
                   && counters.camera == publications + 1,
               cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
-S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:274
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "momentum suppresses time zoom without publishing"
   report.expect(
           session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
           cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
 
-S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:289
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "pixel deltas receive five-times angle weighting"
   report.expect(
           gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
               && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
                       angleZoom * pow(1.0015, 120), tolerance: 1e-7),
           cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
 
-S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:294
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "effective angle and pixel zooms each publish once"
   report.expect(
           counters.camera == 2,
           cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
 
-S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:304
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "Shift wheel pans by negative selected delta exactly once"
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
 
-S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:319
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "Shift pan clamps at minimum and repeated clamped pan is silent"
   report.expect(
           gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
               && minimumPublications == 1 && counters.camera == minimumPublications,
           cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
 
-S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:336
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "Shift pan clamps at maximum and repeated clamped pan is silent"
   report.expect(
           gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
               && maximumPublications == 1 && counters.camera == maximumPublications,
           cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
 
-S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:347
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "horizontal-only momentum still pans exactly once"
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
 
-S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:359
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "Ctrl wheel performs one row-anchored pitch zoom publication"
   report.expect(
           pitchAfter.keyHeight > pitchBefore.keyHeight
               && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
               && counters.camera == 1,
           cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
 
-S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:370
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "momentum suppresses pitch zoom without publishing"
   report.expect(
           session.camera.snapshot == pitchMomentum && counters.camera == 0,
           cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
 
-S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:380
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
+Anchor: message "gutter wheel scrolls by negative half-delta exactly once"
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
 
-S062 | checkDefaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.swift:30
+S062 | checkDefaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A032 binding 4/4 preserves the default beat zoom"
   report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
                   cppID: id, message: "A032 binding 4/4 preserves the default beat zoom")
 
-S063 | checkDefaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.swift:33
+S063 | checkDefaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A035 bar \(bar) keeps unbound content geometry"
   report.expect(gridCameraNear(camera.contentX(tick: Double(bar * 4 * 24)),
                                      original[bar], tolerance: 1e-9),
                       cppID: id, message: "A035 bar \(bar) keeps unbound content geometry")
 
-S064 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift:46
+S064 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A037 binding 48 TPB retains the default beat zoom"
   report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
                   cppID: id, message: "A037 binding 48 TPB retains the default beat zoom")
 
-S065 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift:49
+S065 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A039 beat \(beat) retains its display column"
   report.expect(abs(camera.displayX(tick: Double(beat * 48), origin: 0, dpr: 1)
                           - originalColumns[beat - 1]) <= 1,
                       cppID: id, message: "A039 beat \(beat) retains its display column")
 
-S066 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift:54
+S066 | checkTicksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A042 beat \(beat) retains its content coordinate"
   report.expect(abs(camera.contentX(tick: Double(beat * 48)) - original[beat - 1]) <= 1e-6,
                       cppID: id, message: "A042 beat \(beat) retains its content coordinate")

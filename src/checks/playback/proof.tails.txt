@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/tails.cpp
 Original SHA-256: d92f2060355d91e8020b072d89a8ad9256fc7b7f46d9b33060232113bdfbb8d8
 Swift counterpart: src/checks/playback/tails.swift
-Swift SHA-256: 5a5ae7ade507f622bfd0609a2c63f7de6dee8d2532867ad7530c84f077055cff
 
 Purpose and status
 Each numbered entry records one original assertion/failure site, not one test
@@ -61,112 +60,112 @@ Original assertion inventory
 
 A001 | TransportTest::playFromStoppedCutsAuditionTail | src/checks/playback/tails.cpp:14
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot playFromStoppedCutsAuditionTail builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift:11-19) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift:162-166), which has no null, error or empty-bytes branch, and tails.swift:15-16 binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
+Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot playFromStoppedCutsAuditionTail builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift), which has no null, error or empty-bytes branch, and tails.swift binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
 Original expression:
   QVERIFY2(timeline, "synthesized song built wrong")
 
 A002 | TransportTest::playFromStoppedCutsAuditionTail | src/checks/playback/tails.cpp:20
 Disposition: MATCHED
-Mapping/reason: S004/S005/S006, slot 0, cppID transportcheck/TransportTest::playFromStoppedCutsAuditionTail: a fresh AudioControllerCheckFixture(square: true, silent: true) with release 254 on all 128 voices and the original two-track silent timeline reproduces the ringing tail with a velocity-127 key60 preview of the original 0.15 s duration (rig.rate*15/100); S004 (tails.swift:33) requires a live PCM channel after a 512-frame render, rig.rate*4/10 frames replace the original 400 ms note-off ring and S005 (tails.swift:37) requires a live on+releasing PCM channel, then play() from stop, rig.rate*2 frames and S006 (tails.swift:47) assert activePcmChannels == 0. Same cppID and end state; the two-second wall-clock wait is exact frames, and no device-thread callback is claimed.
+Mapping/reason: S004/S005/S006, slot 0, cppID transportcheck/TransportTest::playFromStoppedCutsAuditionTail: a fresh AudioControllerCheckFixture(square: true, silent: true) with release 254 on all 128 voices and the original two-track silent timeline reproduces the ringing tail with a velocity-127 key60 preview of the original 0.15 s duration (rig.rate*15/100); S004 (tails.swift) requires a live PCM channel after a 512-frame render, rig.rate*4/10 frames replace the original 400 ms note-off ring and S005 (tails.swift) requires a live on+releasing PCM channel, then play() from stop, rig.rate*2 frames and S006 (tails.swift) assert activePcmChannels == 0. Same cppID and end state; the two-second wall-clock wait is exact frames, and no device-thread callback is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() == 0; }, 2000),
                "audition tail persisted after playback started from stop")
 
 A003 | TransportTest::pauseSilencesPlayingPreview | src/checks/playback/tails.cpp:29
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot pauseSilencesPlayingPreview builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift:11-19) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift:162-166), which has no null, error or empty-bytes branch, and tails.swift:15-16 binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
+Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot pauseSilencesPlayingPreview builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift), which has no null, error or empty-bytes branch, and tails.swift binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
 Original expression:
   QVERIFY2(timeline, "synthesized song built wrong")
 
 A004 | TransportTest::pauseSilencesPlayingPreview | src/checks/playback/tails.cpp:32
 Disposition: MATCHED
-Mapping/reason: S003, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift:22) asserts playheadSamples > 0, the original playback-start precondition. Same cppID; synchronous rendering only and no asynchronous device callback is claimed.
+Mapping/reason: S003, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift) asserts playheadSamples > 0, the original playback-start precondition. Same cppID; synchronous rendering only and no asynchronous device callback is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
                "playback did not start for the pause check")
 
 A005 | TransportTest::pauseSilencesPlayingPreview | src/checks/playback/tails.cpp:36
 Disposition: MATCHED
-Mapping/reason: S004, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: previewNoteTimed(track 0, key 60, velocity 127, rig.rate*60) matches the original 60-second timed preview during playback, and S004 (tails.swift:33) asserts activePcmChannels >= 1 after a 512-frame render. Same cppID and observation.
+Mapping/reason: S004, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: previewNoteTimed(track 0, key 60, velocity 127, rig.rate*60) matches the original 60-second timed preview during playback, and S004 (tails.swift) asserts activePcmChannels >= 1 after a 512-frame render. Same cppID and observation.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() >= 1; }, 2000),
                "timed preview during playback never sounded")
 
 A006 | TransportTest::pauseSilencesPlayingPreview | src/checks/playback/tails.cpp:39
 Disposition: MATCHED
-Mapping/reason: S006, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: pause() then rig.rate*2 rendered frames and S006 (tails.swift:47) assert activePcmChannels == 0, the original pause-cuts-the-ringing-preview observation. Same cppID; the two-second wait is exact frames.
+Mapping/reason: S006, slot 1, cppID transportcheck/TransportTest::pauseSilencesPlayingPreview: pause() then rig.rate*2 rendered frames and S006 (tails.swift) assert activePcmChannels == 0, the original pause-cuts-the-ringing-preview observation. Same cppID; the two-second wait is exact frames.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() == 0; }, 2000),
                "pause left the preview ringing")
 
 A007 | TransportTest::spacePathSeekAndPlayCutsTail | src/checks/playback/tails.cpp:49
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot spacePathSeekAndPlayCutsTail builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift:11-19) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift:162-166), which has no null, error or empty-bytes branch, and tails.swift:15-16 binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
+Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot spacePathSeekAndPlayCutsTail builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift), which has no null, error or empty-bytes branch, and tails.swift binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
 Original expression:
   QVERIFY2(timeline, "synthesized song built wrong")
 
 A008 | TransportTest::spacePathSeekAndPlayCutsTail | src/checks/playback/tails.cpp:52
 Disposition: MATCHED
-Mapping/reason: S003, slot 2, cppID transportcheck/TransportTest::spacePathSeekAndPlayCutsTail: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift:22) asserts playheadSamples > 0, the original playback-start precondition. Same cppID and no device callback is claimed.
+Mapping/reason: S003, slot 2, cppID transportcheck/TransportTest::spacePathSeekAndPlayCutsTail: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift) asserts playheadSamples > 0, the original playback-start precondition. Same cppID and no device callback is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
                "playback did not start for the Space-path check")
 
 A009 | TransportTest::spacePathSeekAndPlayCutsTail | src/checks/playback/tails.cpp:61
 Disposition: MATCHED
-Mapping/reason: S004/S005/S006, slot 2, cppID transportcheck/TransportTest::spacePathSeekAndPlayCutsTail: pause and rig.rate*3/10 frames replace the original QTest::qWait(300) settle, the velocity-127 key60 preview runs for the original 0.15 s with S004 (tails.swift:33) requiring a live PCM channel and rig.rate*4/10 frames plus S005 (tails.swift:37) requiring the live on+releasing release tail, then seek(0), play(), rig.rate*2 frames and S006 (tails.swift:47) assert activePcmChannels == 0. Same cppID and end state.
+Mapping/reason: S004/S005/S006, slot 2, cppID transportcheck/TransportTest::spacePathSeekAndPlayCutsTail: pause and rig.rate*3/10 frames replace the original QTest::qWait(300) settle, the velocity-127 key60 preview runs for the original 0.15 s with S004 (tails.swift) requiring a live PCM channel and rig.rate*4/10 frames plus S005 (tails.swift) requiring the live on+releasing release tail, then seek(0), play(), rig.rate*2 frames and S006 (tails.swift) assert activePcmChannels == 0. Same cppID and end state.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() == 0; }, 2000),
                "audition tail persisted after Space-style seek + play from pause")
 
 A010 | TransportTest::resumeCutsCountingDownPreview | src/checks/playback/tails.cpp:70
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot resumeCutsCountingDownPreview builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift:11-19) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift:162-166), which has no null, error or empty-bytes branch, and tails.swift:15-16 binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
+Mapping/reason: No-ingress: the original guard covers loadedSong() (tst_transport.cpp:48-78), whose only null-publication source was TransportMidiFile::encode() written to a QTemporaryFile and projected through pd_playback_data_load_file(). Slot resumeCutsCountingDownPreview builds the same two-track silent timeline in memory: playbackCheckSilentTimeline() (src/checks/playback/transportfixture.swift) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:) (src/swift/core/PlaybackTimeline.swift), which has no null, error or empty-bytes branch, and tails.swift binds it before S001 and S002 assert both audition tracks and the loaded song. The retired loader-failure branch is unreachable in the Swift path and is not executed.
 Original expression:
   QVERIFY2(timeline, "synthesized song built wrong")
 
 A011 | TransportTest::resumeCutsCountingDownPreview | src/checks/playback/tails.cpp:73
 Disposition: MATCHED
-Mapping/reason: S003, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift:22) asserts playheadSamples > 0; pause and rig.rate*3/10 frames follow before the preview, matching the original resume ordering. Same cppID and no device callback is claimed.
+Mapping/reason: S003, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: play() on the bound silent song, rig.rate/4 rendered frames, then S003 (tails.swift) asserts playheadSamples > 0; pause and rig.rate*3/10 frames follow before the preview, matching the original resume ordering. Same cppID and no device callback is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
                "playback did not start for the resume check")
 
 A012 | TransportTest::resumeCutsCountingDownPreview | src/checks/playback/tails.cpp:79
 Disposition: MATCHED
-Mapping/reason: S004, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: previewNoteTimed(track 1, key 64, velocity 127, rig.rate*60) matches the original paused 60-second preview arguments exactly, and S004 (tails.swift:33) asserts activePcmChannels >= 1 after a 512-frame render. Same cppID and observation.
+Mapping/reason: S004, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: previewNoteTimed(track 1, key 64, velocity 127, rig.rate*60) matches the original paused 60-second preview arguments exactly, and S004 (tails.swift) asserts activePcmChannels >= 1 after a 512-frame render. Same cppID and observation.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() >= 1; }, 2000),
                "timed preview during pause never sounded")
 
 A013 | TransportTest::resumeCutsCountingDownPreview | src/checks/playback/tails.cpp:82
 Disposition: MATCHED
-Mapping/reason: S006, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: play() with no seek, matching the original resume path, then rig.rate*2 rendered frames and S006 (tails.swift:47) assert activePcmChannels == 0, the original counting-down preview cut on resume. Same cppID; the two-second wait is exact frames.
+Mapping/reason: S006, slot 3, cppID transportcheck/TransportTest::resumeCutsCountingDownPreview: play() with no seek, matching the original resume path, then rig.rate*2 rendered frames and S006 (tails.swift) assert activePcmChannels == 0, the original counting-down preview cut on resume. Same cppID; the two-second wait is exact frames.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() == 0; }, 2000),
                "counting-down preview persisted after resuming playback")
 
 A014 | TransportTest::unloadWhilePlayingCutsSongVoices | src/checks/playback/tails.cpp:96
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: No-ingress: the original guard covers loadedSong(buildNoteSong(), ...) (tst_transport.cpp:48-78), whose only null-publication source was fixture encoding plus a QTemporaryFile write and pd_playback_data_load_file. The Swift counterpart builds the one-note song in memory: AudioControllerCheckFixture.timeline(...) (src/checks/audio/controllerfixture.swift:55-79) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:), and checkUnloadedVoicegroupLifetime binds bank!.timeline(velocity: 127) directly (tails.swift:68) before S009 and S010 assert the loaded song and its single used track. The retired loader-failure branch is unreachable in the Swift path and is not executed.
+Mapping/reason: No-ingress: the original guard covers loadedSong(buildNoteSong(), ...) (tst_transport.cpp:48-78), whose only null-publication source was fixture encoding plus a QTemporaryFile write and pd_playback_data_load_file. The Swift counterpart builds the one-note song in memory: AudioControllerCheckFixture.timeline(...) (src/checks/audio/controllerfixture.swift) returns a non-optional PlaybackTimeline from PlaybackTimeline.build(file:sampleRate:), and checkUnloadedVoicegroupLifetime binds bank!.timeline(velocity: 127) directly (tails.swift) before S009 and S010 assert the loaded song and its single used track. The retired loader-failure branch is unreachable in the Swift path and is not executed.
 Original expression:
   QVERIFY2(timeline, "note song built wrong")
 
 A015 | TransportTest::unloadWhilePlayingCutsSongVoices | src/checks/playback/tails.cpp:97
 Disposition: MATCHED
-Mapping/reason: S010, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: checkUnloadedVoicegroupLifetime binds bank!.timeline(velocity: 127) (tails.swift:68) and S010 (tails.swift:71) asserts audio.timeline!.usedTrackCount == 1, the exact original fixture-count predicate for the one-note buildNoteSong. This does not claim equivalence of the separate unload, device and lifetime observations in A016/A017.
+Mapping/reason: S010, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: checkUnloadedVoicegroupLifetime binds bank!.timeline(velocity: 127) (tails.swift) and S010 (tails.swift) asserts audio.timeline!.usedTrackCount == 1, the exact original fixture-count predicate for the one-note buildNoteSong. This does not claim equivalence of the separate unload, device and lifetime observations in A016/A017.
 Original expression:
   QVERIFY2(timeline->usedTrackCount == 1, "note song built wrong")
 
 A016 | TransportTest::unloadWhilePlayingCutsSongVoices | src/checks/playback/tails.cpp:102
 Disposition: MATCHED
-Mapping/reason: S011, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: checkUnloadedVoicegroupLifetime builds the heap AudioControllerCheckFixture(square: true) with release 254 on all 128 voices (tails.swift:66-67), binds bank!.timeline(velocity: 127) matching the buildNoteSong key60 velocity127 note (controllerfixture.swift:55-79, tails.swift:68), plays, renders 12000 frames, and S011 (tails.swift:74) asserts activePcmChannels >= 1. That is the live-song-voice observation the original qFail guarded after its two-second wait. Same cppID and no device callback is claimed.
+Mapping/reason: S011, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: checkUnloadedVoicegroupLifetime builds the heap AudioControllerCheckFixture(square: true) with release 254 on all 128 voices (tails.swift), binds bank!.timeline(velocity: 127) matching the buildNoteSong key60 velocity127 note (controllerfixture.swift, tails.swift), plays, renders 12000 frames, and S011 (tails.swift) asserts activePcmChannels >= 1. That is the live-song-voice observation the original qFail guarded after its two-second wait. Same cppID and no device callback is claimed.
 Original expression:
   QTest::qFail("song note never sounded before unload", __FILE__, __LINE__)
 
 A017 | TransportTest::unloadWhilePlayingCutsSongVoices | src/checks/playback/tails.cpp:106
 Disposition: MATCHED
-Mapping/reason: S012/S013, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: unload() then S012 (tails.swift:76) asserts activePcmChannels == 0, and after bank = nil frees the heap-backed sample, wave and voicegroup memory, 29 renders of 512 frames (14848 samples, replacing the original 300 ms device-callback window) with S013 (tails.swift:82) require activePcmChannels == 0. S013 republishes engine channel telemetry every render, so a channel surviving the unload would read the freed bank storage; unload() also clears telemetry, so S012 alone is not the whole observation. No sanitizer run or device-thread callback is claimed.
+Mapping/reason: S012/S013, cppID transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices: unload() then S012 (tails.swift) asserts activePcmChannels == 0, and after bank = nil frees the heap-backed sample, wave and voicegroup memory, 29 renders of 512 frames (14848 samples, replacing the original 300 ms device-callback window) with S013 (tails.swift) require activePcmChannels == 0. S013 republishes engine channel telemetry every render, so a channel surviving the unload would read the freed bank storage; unload() also clears telemetry, so S012 alone is not the whole observation. No sanitizer run or device-thread callback is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activePcmChannels() == 0; }, 2000),
                "unloadSong left song channels sounding — they outlive the voicegroup "
@@ -193,29 +192,42 @@ src/swift/playback/Sequencer.swift: 8392421562e4aa97abc8a30b675f41af833bd7a4dbea
 
 Swift assertion predicates
 
-S001 | checkAuditionTailTransitions | src/checks/playback/tails.swift:17
+S001 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "both audition tracks initialized"
   report.expectEqual(2, timeline.usedTrackCount, cppID: id, what: "both audition tracks initialized")
-S002 | checkAuditionTailTransitions | src/checks/playback/tails.swift:18
+S002 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "silent song loaded"
   report.expect(audio.songLoaded, cppID: id, message: "silent song loaded")
-S003 | checkAuditionTailTransitions | src/checks/playback/tails.swift:22
+S003 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "playback started"
   report.expect(audio.playheadSamples > 0, cppID: id, message: "playback started")
-S004 | checkAuditionTailTransitions | src/checks/playback/tails.swift:33
+S004 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "timed preview sounds before transition"
   report.expect(audio.activePcmChannels >= 1, cppID: id, message: "timed preview sounds before transition")
-S005 | checkAuditionTailTransitions | src/checks/playback/tails.swift:37
+S005 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "expired preview has a live release tail"
   report.expect(audio.polySnapshot().pcm.contains { $0.on && $0.releasing }, cppID: id, message: "expired preview has a live release tail")
-S006 | checkAuditionTailTransitions | src/checks/playback/tails.swift:47
+S006 | checkAuditionTailTransitions | src/checks/playback/tails.swift
+Anchor: message "transition cuts preview and release tail within two seconds"
   report.expectEqual(0, audio.activePcmChannels, cppID: id, what: "transition cuts preview and release tail within two seconds")
-S007 | checkUnloadPlayingSong | src/checks/playback/tails.swift:55
+S007 | checkUnloadPlayingSong | src/checks/playback/tails.swift
+Anchor: message "song voice sounds before unload"
   report.expect(audio.activePcmChannels >= 1, cppID: "transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices", message: "song voice sounds before unload")
-S008 | checkUnloadPlayingSong | src/checks/playback/tails.swift:60
+S008 | checkUnloadPlayingSong | src/checks/playback/tails.swift
+Anchor: message "unload retires voices before bank release"
   report.expect(audio.activePcmChannels == 0 && audio.activeCgbChannels == 0 && !audio.songLoaded, cppID: "transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices", message: "unload retires voices before bank release")
-S009 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift:70
+S009 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift
+Anchor: message "heap-bank note song loaded"
   report.expect(audio.songLoaded, cppID: id, message: "heap-bank note song loaded")
-S010 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift:71
+S010 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift
+Anchor: message "one song track"
   report.expectEqual(1, audio.timeline!.usedTrackCount, cppID: id, what: "one song track")
-S011 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift:74
+S011 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift
+Anchor: message "heap-bank note sounds"
   report.expect(audio.activePcmChannels >= 1, cppID: id, message: "heap-bank note sounds")
-S012 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift:76
+S012 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift
+Anchor: message "unload immediately retires song voices"
   report.expectEqual(0, audio.activePcmChannels, cppID: id, what: "unload immediately retires song voices")
-S013 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift:82
+S013 | checkUnloadedVoicegroupLifetime | src/checks/playback/tails.swift
+Anchor: message "callbacks remain voiceless after heap-bank destruction"
   report.expectEqual(0, audio.activePcmChannels, cppID: id, what: "callbacks remain voiceless after heap-bank destruction")

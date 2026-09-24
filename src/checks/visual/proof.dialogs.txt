@@ -4,7 +4,6 @@ Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/dialogs.cpp
 Original SHA-256: 83b7c5889b8c614092920dd3054fe74bc478aa8fb3c4ddcce7dd515cc2c2428c
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ This file: 27 assertion sites: 24 GAP, 3 RETIRED-REPRESENTATION. Dispositions ta
 
 Verification
 Command: deno task verify --filter visual --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The visual-* harnesses compare against frozen baselines under
 src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
 targets, their runVisual*Check entry points have zero callsites, and they are
@@ -774,7 +773,7 @@ Original expression:
 
 A018 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:621
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       name->setText(QStringLiteral("mus_visual_check"));
@@ -793,7 +792,7 @@ Original expression:
 
 A020 | VisualDialogsTest::newSongWizardPages | src/checks/visual/dialogs.cpp:630
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/new-identity-vanilla"), wizard, regions);
@@ -816,7 +815,7 @@ Original expression:
 
 A022 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:645
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/new-sound-vanilla"), wizard, regions);
@@ -845,7 +844,7 @@ Original expression:
 
 A024 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:654
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/import-analysis-vanilla"), wizard, regions);
@@ -868,7 +867,7 @@ Original expression:
 
 A026 | VisualDialogsTest::midiImportWizardPages | src/checks/visual/dialogs.cpp:663
 Disposition: GAP
-Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift:18-49 carries no new-song/import action, ShellWindow.qml:347-406 holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
+Mapping/reason: feature not yet ported: new-song/MIDI-import wizard; the wizard flow has no Swift/QML owner (ShellPresenter's action list at src/swift/app/shell/ShellPresenter.swift carries no new-song/import action, ShellWindow.qml holds only the project picker, song picker, and information/critical dialogs, and newsongwizard.cpp is uncompiled), and dead QWizard mechanics cannot retire absent behavior.
 Source context since previous assertion:
 
       compareShown(QStringLiteral("wizard/import-identity-vanilla"), wizard, regions);

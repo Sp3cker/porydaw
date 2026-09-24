@@ -4,7 +4,6 @@ Reference revision: fceecd888e29c0a39c3a98d17e47d3d734b1de06
 Original: src/checks/voicegroup/tst_voicegrouploader.cpp
 Original SHA-256: 739660ff97d4e8782c4d7264d8fa9e5f25b3379341540441fba5579bb4ab1fb3
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ original predicate without a replacement assertion. VoicegroupLoaderTest proves 
 
 Verification
 Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 C++ entry point runVgLoadCheck (qExec name "voicegroup-loader", or "voicegroup-load-bench" when a song label is passed) drives VoicegroupLoaderTest against a ProjectFixture copy staged by voicegroup_load_test::stageBatchVoicegroup/stageAliasedVoicegroup in init(). Shared C++ fixture: checks/voicegroup/voicegrouploadfixture.h/.cpp (BatchAdapter, staging, openContext, sameBank, sameSampleSet, verifyRichSubgroupNames). This suite is not on the vgbankcheck lane. No Swift entry point executes any paired check.

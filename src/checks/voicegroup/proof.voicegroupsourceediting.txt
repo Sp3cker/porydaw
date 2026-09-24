@@ -4,7 +4,6 @@ Reference revision: fbe1015aaf056089f5d773f99d961ba906246cff
 Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ original predicate without a replacement assertion. These VoicegroupSourceTest e
 
 Verification
 Command: deno task verify --filter vgbankcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 C++ entry point runVgCheck (qExec name "voicegroup-source") drives VoicegroupSourceTest; the cases in this file use the staged session (m_session) opened in init(), except sparseInsertions which builds a QTemporaryDir tree and displayNamesAreStable which is pure function output. Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, snapshot, sameVoiceFields, sameResolvedTone, loaderVoiceName, isDirectSound/isSquare1/isNoise/isProgWave, readFile/writeFile) and checks/voicegroup/tst_voicegroupsource.h. This file's cases are not on the vgbankcheck lane. No Swift entry point executes any paired check.

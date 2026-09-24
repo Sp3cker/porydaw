@@ -4,7 +4,6 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midiengine.cpp
 Original SHA-256: 6260d911943cb93de174b2061578b626bf4c717e05ddf0ac17e038218ffc1648
 Swift counterpart: src/checks/midi/MidiEngineBoundsChecks.swift
-Swift SHA-256: 0f650ff53b5dfeb7c65673ed9d9cd2a116ca2d8a94a6bb36ddcb4635176523d5
 Swift entry point: src/checks/playback/PlaybackChecks.swift
 Entry point SHA-256: 7e1cc988b6542fc2fdcdcb377a7b73b2369df0c4901dfe460b0986fefb7f1bfe
 Shared engine fixture: src/checks/playback/transportfixture.swift
@@ -43,14 +42,14 @@ Execution ownership
 The swiftcore harness (src/checks/checkcatalog.cpp:97) runs SwiftCoreTest::playback
 (src/checks/support/corecheck/tst_swiftcore.cpp:36-38), which calls
 pdc_suite_run(PDC_SUITE_PLAYBACK) into the case-3 branch of pdcSuiteRun
-(src/checks/support/corecheck/CoreCheckSupport.swift:98-99), reaching runPlaybackSuite
-(src/checks/playback/PlaybackChecks.swift:11), which calls checkMidiEngineBounds
-(PlaybackChecks.swift:29) in src/checks/midi/MidiEngineBoundsChecks.swift:31. Each of its
-two scenarios opens with withKeysplitEngine (MidiEngineBoundsChecks.swift:3) on a fresh
-48 kHz PlaybackCheckEngine (transportfixture.swift:3,28-39) with freshly zeroed 128-entry
+(src/checks/support/corecheck/CoreCheckSupport.swift), reaching runPlaybackSuite
+(src/checks/playback/PlaybackChecks.swift), which calls checkMidiEngineBounds
+(PlaybackChecks.swift) in src/checks/midi/MidiEngineBoundsChecks.swift. Each of its
+two scenarios opens with withKeysplitEngine (MidiEngineBoundsChecks.swift) on a fresh
+48 kHz PlaybackCheckEngine (transportfixture.swift,28-39) with freshly zeroed 128-entry
 voice/subgroup/split tables and program 5 configured as VOICE_KEYSPLIT, matching the native
 fixture. Clang macros do not cross the Swift module re-export, so playbackCheckChannelOn
-(transportfixture.swift:26) restates the pinned poryaaaa m4a_engine.h CHN_ON bit set
+(transportfixture.swift) restates the pinned poryaaaa m4a_engine.h CHN_ON bit set
 (0x80|0x40|0x04|0x03) that the original A003 expression masks. The Swift assertions inspect
 the real M4AEngine track and every PCM channel. Predicates carry the original harness/test
 names as cppIDs (midienginecheck/MidiEngineBoundsTest::programChangesRejectOutOfRangeValues
@@ -181,12 +180,15 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:35
+S001 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift
+Anchor: message "valid program selects keysplit voice"
   report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
                      cppID: programID, what: "valid program selects keysplit voice")
-S002 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:39
+S002 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift
+Anchor: message "invalid programs retain selection"
   report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
                      cppID: programID, what: "invalid programs retain selection")
-S003 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:52
+S003 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift
+Anchor: message "PCM channel \(index) remains off"
   report.expect(channels[index].status & playbackCheckChannelOn == 0,
                 cppID: keyID, message: "PCM channel \(index) remains off")

@@ -4,11 +4,8 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/windowtier_keyboard.cpp
 Original SHA-256: f00861f60ece3fc2b9de78b2c6b886d6139a71f79c7c07aeb5d1c8a69a5730d0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -18,7 +15,7 @@ Verification
 Command: deno task verify --filter swiftcore --verbose (controller-observed)
 Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skipped); run_checks PASS. That run executes the paired prompt-transaction predicates S001-S017 only.
 Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
-Result: PASS; build ok (4.47 s), ok shellwindow (3.87 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S036 plus the grip/chrome rows S037-S040 and the parameter-tab/tap rows S041-S060 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift:46).
+Result: PASS; build ok (4.47 s), ok shellwindow (3.87 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S018-S036 plus the grip/chrome rows S037-S040 and the parameter-tab/tap rows S041-S060 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
 Result (post-fix re-pin, this checkout): PASS; build ok (6.64 s), ok swiftcore (10.58 s); verify 1/6 ok (5 skipped); run_checks PASS — the paired prompt-transaction predicates S001-S017 still pass against localinputtier_text.swift de186cca (S-line audit: all cited rows unshifted). Post-fix shellwindow: build ok (4.64 s), verify 1/11 ok (3.87 s, 10 skipped); run_checks PASS — the shellwindow predicates S018-S060 pass; tst_ShellWindow.qml unchanged at 39595ccd.
 The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
 
@@ -1476,121 +1473,150 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:23
+S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original selected fixture note exists"
   report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
 
-S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:34
+S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original empty-tick numeric prompt opens"
   report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
                     message: "the original empty-tick numeric prompt opens")
 
-S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:37
+S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the production prompt retains the supplied numeric draft"
   report.expectEqual("12", page.promptDraft, cppID: id,
                          what: "the production prompt retains the supplied numeric draft")
 
-S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:39
+S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing does not mutate the song"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "draft editing does not mutate the song")
 
-S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:41
+S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing preserves note selection"
   report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
                          what: "draft editing preserves note selection")
 
-S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:44
+S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation closes the prompt"
   report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
 
-S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:45
+S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation leaves the original document unchanged"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "cancellation leaves the original document unchanged")
 
-S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
+S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft and cancellation preserve the full song contents"
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
 
-S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:53
+S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original CC10 lane is present in the page's row stack"
   report.expect(page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
                     message: "the original CC10 lane is present in the page's row stack")
 
-S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:55
+S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original fixture note resolves by its inserted ID"
   report.expect(insertedNotes.first.flatMap { fixture.document.note($0) } != nil, cppID: id,
                     message: "the original fixture note resolves by its inserted ID")
 
-S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:62
+S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original volume lane is present in the page's row stack"
   report.expect(page.rows.contains { $0.parameter == fixture.volumeLane }, cppID: labelID,
                     message: "the original volume lane is present in the page's row stack")
 
-S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:64
+S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original volume-lane insertion prompt opens"
   report.expect(page.openPrompt(tick: 5808, value: 48), cppID: labelID,
                     message: "the original volume-lane insertion prompt opens")
 
-S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:66
+S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the volume prompt opens with the plotted value as its draft"
   report.expectEqual("48", page.promptDraft, cppID: labelID,
                          what: "the volume prompt opens with the plotted value as its draft")
 
-S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:75
+S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original pan-lane insertion prompt opens"
   report.expect(page.openPrompt(tick: 5760, value: 64), cppID: lifetimeID,
                     message: "the original pan-lane insertion prompt opens")
 
-S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:78
+S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the document-switch cancellation closes the prompt"
   report.expect(!page.promptOpen, cppID: lifetimeID,
                     message: "the document-switch cancellation closes the prompt")
 
-S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:80
+S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "accepting a closed prompt commits nothing"
   report.expect(!page.acceptPrompt(displayedValue: 96), cppID: lifetimeID,
                     message: "accepting a closed prompt commits nothing")
 
-S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:82
+S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the closed prompt's late acceptance leaves the document unchanged"
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
-S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml:125
+S018 | openTwoSongShell | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "mus_route101"
   session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
   session.openSong("mus_littleroot_test")
   // The shellwindow entry of ShellQmlLane (src/checks/editorqml/ShellQmlTests.swift:46)
   // stages the same two-song fixture; the velocity drawer seed rows above it
   // reproduce MainWindowRoutingFixture::openSession.
 
-S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml:182
+S019 | selectDrawnVelocityNote | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "selectedCount"
   tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
   // After a real mouseClick on the drawn velocityNodeFill hit target.
 
-S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:255
+S020 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "native Copy is registered as a window shortcut"
   verify(shell.shellPresenter.actionSequences("roll.copy").length > 0,
                "native Copy is registered as a window shortcut")
 
-S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:257
+S021 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "S"
   compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S")
 
-S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:258
+S022 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Space"
   compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
 
-S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:290
+S023 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the real node click selected one note"
   compare(copied.length, 1, "the real node click selected one note")
 
-S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:291
+S024 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Copy starts from a clean song"
   compare(session.documentDirty, false, "Copy starts from a clean song")
 
-S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:292
+S025 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the Edit menu returned keyboard focus to the roll"
   roll.forceActiveFocus(Qt.OtherFocusReason)
   tryCompare(roll, "activeFocus", true, 3000,
              "the Edit menu returned keyboard focus to the roll")
 
-S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:295
+S026 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "shellShortcut_roll.copy"
   keySequence(StandardKey.Copy)
   compare(copyActivatedSpy.count, 1, "native Copy activates the window shortcut once")
   // copyActivatedSpy targets the production window Shortcut objectName
   // "shellShortcut_roll.copy" selected by windowShortcut().
 
-S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:297
+S027 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the copied note retains its original key"
   var clip = JSON.parse(bootstrap.copiedClipSummary())
   compare(clip.length, 3, "the native clipboard carries a decodable song clip")
   compare(clip[0], 1, "the copied clip contains one track")
   compare(clip[1], 1, "the copied track contains one selected note")
   compare(clip[2], copied[0].pitch, "the copied note retains its original key")
 
-S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:302
+S028 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the native window Copy never edits the song"
   compare(session.documentDirty, false, "the native window Copy never edits the song")
 
-S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:325
+S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "shellShortcut_roll.solo_tracks"
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", true, 3000)
   compare(soloActivatedSpy.count, 1, "first non-text S activates Solo once")
@@ -1598,12 +1624,14 @@ S029 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // the focused non-text window child shortcutTarget, and soloActivatedSpy
   // targets the production "shellShortcut_roll.solo_tracks" Shortcut.
 
-S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:328
+S030 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "second non-text S activates Solo twice total"
   keyClick(Qt.Key_S)
   tryCompare(firstTrack, "soloChecked", false, 3000)
   compare(soloActivatedSpy.count, 2, "second non-text S activates Solo twice total")
 
-S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:394
+S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "drawerToggle_velocity"
   var velocityToggle = findChild(drawer, "drawerToggle_velocity")
   verify(velocityToggle && velocityToggle.visible, "the velocity toggle is drawn")
   velocityToggle.forceActiveFocus(Qt.OtherFocusReason)
@@ -1613,46 +1641,55 @@ S031 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_Shell
   // (src/ui/songview/quick/drawer/EditorDrawer.qml:316) with activeFocusOnTab
   // and Return/Enter-only local keys; bare Space is not consumed there.
 
-S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:401
+S032 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "bare Space on focused drawer chrome owns transport"
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000,
              "bare Space on focused drawer chrome owns transport")
 
-S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:404
+S033 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "chrome Space never toggles the focused section"
   compare(surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).visible, toggleSectionVisible,
           "chrome Space never toggles the focused section")
 
-S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:407
+S034 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "chrome Space never edits the song"
   compare(session.documentDirty, false, "chrome Space never edits the song")
 
-S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml:408
+S035 | test_cWindowShortcutsAndNumericOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the second chrome Space stops transport"
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", false, 3000,
              "the second chrome Space stops transport")
 
-S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift:190
+S036 | copiedClipSummary | src/checks/editorqml/ShellQmlTests.swift
+Anchor: function
   return "[\(tracks.count),\(notes.count),\(notes.first.map { Int($0.key) } ?? -1)]"
   // Reads the native clip through production pd_clipboard_read and
   // ClipboardCodec.decode (ShellQmlTests.swift:176-180); "[]" means absent.
 
-S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:709
+S037 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: function
   var beforeGrip = grid.noteSummary
   var heightBefore = surface.drawerPresenter.section(
               bootstrap.velocitySectionKind()).bodyHeight
   // Snapshot precedes every grip arrow; S039 compares against it.
-S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:712
+S038 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "grip Down restores its height"
   keyClick(Qt.Key_Up)
   verify(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight
          > heightBefore, "grip Up resizes the drawer locally")
   keyClick(Qt.Key_Down)
   compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
           heightBefore, "grip Down restores its height")
-S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml:718
+S039 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "grip arrows never mutate selected notes"
   keyClick(Qt.Key_Left)
   keyClick(Qt.Key_Right)
   compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
-S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml:749
+S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "chrome Space never changes musical selection"
   keyClick(Qt.Key_Space)
   tryCompare(playhead, "playing", true, 3000)
   compare(section.visible, sectionVisible, "chrome Space does not toggle the section")
@@ -1660,11 +1697,13 @@ S040 | test_hKeyboardFocusAndDrawerSpacePriority | src/checks/editorqml/tst_Shel
           "chrome Space never changes musical selection")
   // drawerToggle_velocity owns active focus (:691-692); the second Space stops
   // transport (:700-701).
-S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1143
+S041 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the focused label is not yet active"
   verify(!firstLabel.checked, "the focused label is not yet active")
   // firstLabel holds keyboard focus (:977-979) without being active: the
   // pre-Space precondition that it is not the active parameter.
-S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:988
+S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "transport Space never moves the selection"
   keyClick(Qt.Key_Space) (:987)
   tryCompare(playhead, "playing", true, 3000) (:988-989, bare Space owns transport)
   compare(firstLabel.checked, false, "transport Space never activates the label") (:990)
@@ -1672,60 +1711,78 @@ S042 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_Shel
   compare(session.documentDirty, false, "transport Space never edits the song") (:998)
   compare(grid.noteSummary, notesBefore, "transport Space never moves the selection") (:999)
   // the second Space stops transport (:1000-1002).
-S043 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1004
+S043 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Enter activates the focused label once"
   keyClick(Qt.Key_Enter) (:1003)
   tryCompare(firstLabel, "checked", true, 3000, "Enter activates the focused label once") (:1004-1005)
-S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1170
+S044 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "label Enter never moves the selection"
   compare(grid.noteSummary, notesBefore, "label Enter never moves the selection") (:1007)
   compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
   compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
   // Partial: the time-selection half is unproved (the shell lane stages no
   // time selection); the Return-side note no-change at :1018 rides unsplit.
-S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1177-1179
+S045 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Return activates the focused second label"
   tryCompare(secondLabel, "checked", true, 3000,
              "Return activates the focused second label")
   compare(firstLabel.checked, false, "Return retargets activation exactly once")
-S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1169
+S046 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "label Enter never edits the song"
   compare(session.documentDirty, false, "label Enter never edits the song") (:1006)
   compare(session.documentDirty, false, "label Return never edits the song") (:1017)
-S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1171
+S047 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "label Enter never moves the cursor"
   compare(grid.editCursorTick, cursorBefore, "label Enter never moves the cursor") (:1008)
   compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor") (:1019)
-S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1172
+S048 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "label Enter never retargets the track"
   compare(grid.trackIndex, trackBefore, "label Enter never retargets the track") (:1009)
-S049 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1184-1186
+S049 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Up never retargets the active label"
   compare(secondLabel.checked, true, "Up never retargets the active label")
   compare(session.documentDirty, false, "Up on a label never edits the song")
   compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection")
-S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1191-1193
+S050 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Enter on the focused Tap button registers exactly one tap"
   tryCompare(model, "tapTempoTapCount", 1, 3000,
              "Enter on the focused Tap button registers exactly one tap")
   compare(tapButton.activeFocus, true, "the first tap keeps button focus")
-S051 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1032
+S051 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Return on the focused Tap button adds the second tap"
   keyClick(Qt.Key_Return) (:1031)
   tryCompare(model, "tapTempoTapCount", 2, 3000, "Return on the focused Tap button adds the second tap") (:1032-1033)
-S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1200
+S052 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "tap keys never edit the song"
   compare(session.documentDirty, false, "tap keys never edit the song") (:1037)
-S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1201
+S053 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "tap keys never move the selection"
   compare(grid.noteSummary, notesBefore, "tap keys never move the selection") (:1038)
-S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1198
+S054 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the two-tap session shows the draft readout"
   verify(draft && draft.visible, "the two-tap session shows the draft readout") (:1035)
   verify(draft.text.indexOf("BPM") >= 0, "the two-tap draft names a tempo") (:1036)
-S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1202-1203
+S055 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Shift+Return never registers a tap"
   keyClick(Qt.Key_Return, Qt.ShiftModifier)
   compare(model.tapTempoTapCount, 2, "Shift+Return never registers a tap")
-S056 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1042
+S056 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: function
   keyClick(Qt.Key_Space) (:1041)
   tryCompare(playhead, "playing", true, 3000, "bare Space on the Tap button owns transport") (:1042-1043)
-S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1207
+S057 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "transport Space never taps"
   compare(model.tapTempoTapCount, 2, "transport Space never taps") (:1044)
-S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1208
+S058 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "tap Space never edits the song"
   compare(session.documentDirty, false, "tap Space never edits the song") (:1045)
-S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1209
+S059 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "tap Space never moves the selection"
   compare(grid.noteSummary, notesBefore, "tap Space never moves the selection") (:1046)
   // Partial: the time-selection half is unproved (the shell lane stages no
   // time selection).
-S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml:1213-1215
+S060 | test_kParameterTabActivationAndTapCession | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "resetTapTempo drops the draft"
       model.resetTapTempo()
       compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
   }

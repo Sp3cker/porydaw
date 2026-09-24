@@ -4,7 +4,6 @@ Reference revision: 02752345fa3a1dbaf11ee6f1cd3ad5da475f0e06
 Original: src/checks/rollcheck/presentation.cpp
 Original SHA-256: 898cf2f8c3470a0ebcee65764bb17ac67081ad0d659ec53bd4d850efe741e38d
 Swift counterpart: src/checks/rollcheck/presentation.swift
-Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -112,7 +111,7 @@ QFAIL("automation input item not found")
 
 A002 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:57
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/presentation.swift:30-32) asserts that while the roll pan is live the SharedPlayheadPolicy follow is blocked and the camera scrollX is unchanged — the follow-suspension observable of this site.
+Mapping: S001 (src/checks/rollcheck/presentation.swift) asserts that while the roll pan is live the SharedPlayheadPolicy follow is blocked and the camera scrollX is unchanged — the follow-suspension observable of this site.
 Source context since previous assertion:
 ;
         return;
@@ -132,7 +131,7 @@ QFAIL("playhead follow-scroll moved the view during a pan gesture")
 
 A003 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:62
 Disposition: MATCHED
-Mapping: S002 (presentation.swift:37-38) asserts follow becomes eligible once the pan ends, and S003 (presentation.swift:41-42) asserts the resumed follow scrolls the shared roll camera.
+Mapping: S002 (presentation.swift) asserts follow becomes eligible once the pan ends, and S003 (presentation.swift) asserts the resumed follow scrolls the shared roll camera.
 Source context since previous assertion:
 ;
         checks::events::sendMouse(surface, QEvent::MouseButtonRelease, middle, Qt::MiddleButton,
@@ -145,7 +144,7 @@ QFAIL("playhead follow-scroll did not resume after the pan ended")
 
 A004 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:68
 Disposition: MATCHED
-Mapping: S005 (presentation.swift:51-53) asserts the document state and history identity are unchanged after the pan/follow probe — the state/identity public-API form of the unchanged undo index. S004 (presentation.swift:49-50) additionally asserts the incoming camera snapshot is restored.
+Mapping: S005 (presentation.swift) asserts the document state and history identity are unchanged after the pan/follow probe — the state/identity public-API form of the unchanged undo index. S004 (presentation.swift) additionally asserts the incoming camera snapshot is restored.
 Source context since previous assertion:
 ;
         view.setPlayheadSample(0, false);
@@ -159,7 +158,7 @@ QCOMPARE(doc.undoStack()->index(), undo)
 
 A005 | PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.cpp:69
 Disposition: MATCHED
-Mapping: S005 (presentation.swift:51-53) asserts session.document.state == before after the pan/follow probe; SongState equality includes the serialized file, the observable this SMF byte comparison pins.
+Mapping: S005 (presentation.swift) asserts session.document.state == before after the pan/follow probe; SongState equality includes the serialized file, the observable this SMF byte comparison pins.
 Source context since previous assertion:
 ;
 
@@ -211,7 +210,7 @@ QTRY_VERIFY2(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders,
 
 A009 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:99
 Disposition: PARTIAL
-Mapping/reason: S007 (presentation.swift:85-86) asserts the presenter publishes the typed draft (renameDraft == "Rolled"). Unproved: the native Quick rename field receiving the model draft (its text property and focus).
+Mapping/reason: S007 (presentation.swift) asserts the presenter publishes the typed draft (renameDraft == "Rolled"). Unproved: the native Quick rename field receiving the model draft (its text property and focus).
 Source context since previous assertion:
 ;
     const auto renameIsOpen = [&] {
@@ -230,7 +229,7 @@ QFAIL("Quick rename input did not receive the model draft")
 
 A010 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:102
 Disposition: PARTIAL
-Mapping/reason: S006 (presentation.swift:82-83) asserts the presenter rename opens with renamingTrack == the selected track. Unproved: the Quick rename field's visible/activeFocus state that the original renameIsOpen() also requires.
+Mapping/reason: S006 (presentation.swift) asserts the presenter rename opens with renamingTrack == the selected track. Unproved: the Quick rename field's visible/activeFocus state that the original renameIsOpen() also requires.
 Source context since previous assertion:
 ;
     };
@@ -241,7 +240,7 @@ QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not open")
 
 A011 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:108
 Disposition: MATCHED
-Mapping: S008 (presentation.swift:88-90) asserts the committed name reaches the document and the editor closes (trackName == "Rolled" && renamingTrack == -1) after finishRename(commit: true).
+Mapping: S008 (presentation.swift) asserts the committed name reaches the document and the editor closes (trackName == "Rolled" && renamingTrack == -1) after finishRename(commit: true).
 Source context since previous assertion:
 ;
     QObject *field = renameInput(view);
@@ -255,7 +254,7 @@ QFAIL("Quick Return did not commit the inline rename")
 
 A012 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:112
 Disposition: PARTIAL
-Mapping/reason: S009 (presentation.swift:91-92) asserts the renamed header can reopen its editor (renamingTrack == track). Unproved: the Quick rename field's visible/activeFocus state.
+Mapping/reason: S009 (presentation.swift) asserts the renamed header can reopen its editor (renamingTrack == track). Unproved: the Quick rename field's visible/activeFocus state.
 Source context since previous assertion:
 ;
         return;
@@ -267,7 +266,7 @@ QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen")
 
 A013 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:118
 Disposition: MATCHED
-Mapping: S010 (presentation.swift:95-96) asserts Escape discards the draft: the name stays "Rolled" and the editor closes.
+Mapping: S010 (presentation.swift) asserts Escape discards the draft: the name stays "Rolled" and the editor closes.
 Source context since previous assertion:
 ;
     field = renameInput(view);
@@ -281,7 +280,7 @@ QFAIL("Quick Escape did not discard the inline rename draft")
 
 A014 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:122
 Disposition: PARTIAL
-Mapping/reason: S011 (presentation.swift:98-99) asserts the editor can reopen for the loop-marker guard. Unproved: the Quick rename field's visible/activeFocus state.
+Mapping/reason: S011 (presentation.swift) asserts the editor can reopen for the loop-marker guard. Unproved: the Quick rename field's visible/activeFocus state.
 Source context since previous assertion:
 ;
         return;
@@ -293,7 +292,7 @@ QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen for the loop-mar
 
 A015 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:129
 Disposition: MATCHED
-Mapping: S012 (presentation.swift:104-106) asserts the loop-marker draft "[" is refused: the name stays "Rolled", and state and history identity are unchanged (no transaction); S013 (presentation.swift:107-108) asserts the single accepted rename undoes.
+Mapping: S012 (presentation.swift) asserts the loop-marker draft "[" is refused: the name stays "Rolled", and state and history identity are unchanged (no transaction); S013 (presentation.swift) asserts the single accepted rename undoes.
 Source context since previous assertion:
 ;
     const int commands = doc.undoStack()->count();
@@ -308,7 +307,7 @@ QFAIL("loop-marker name was not refused")
 
 A016 | PianoRollTest::headerRename | src/checks/rollcheck/presentation.cpp:132
 Disposition: MATCHED
-Mapping: S014 (presentation.swift:109-110) asserts the document state and history identity are back to the pre-rename snapshot after the undo drain — the state/identity form of the unchanged undo index and the restored SMF bytes.
+Mapping: S014 (presentation.swift) asserts the document state and history identity are back to the pre-rename snapshot after the undo drain — the state/identity form of the unchanged undo index and the restored SMF bytes.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo)
@@ -480,7 +479,7 @@ QFAIL("canonical solo action was not bound to the view")
 
 A027 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:217
 Disposition: MATCHED
-Mapping: S015 (presentation.swift:157-158) asserts mute and solo scopes are clean before the keyboard toggles.
+Mapping: S015 (presentation.swift) asserts mute and solo scopes are clean before the keyboard toggles.
 Source context since previous assertion:
 ;
 
@@ -492,7 +491,7 @@ QFAIL("mute/solo masks not clean before the keyboard toggles")
 
 A028 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:220
 Disposition: MATCHED
-Mapping: S016 (presentation.swift:160-161) asserts M mutes the selected track (mutedTracks == [0]).
+Mapping: S016 (presentation.swift) asserts M mutes the selected track (mutedTracks == [0]).
 Source context since previous assertion:
 ;
         sendKeyStroke(roll, Qt::Key_M, Qt::NoModifier, false);
@@ -503,7 +502,7 @@ QFAIL("M did not mute the selected track")
 
 A029 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:222
 Disposition: MATCHED
-Mapping: S016 (presentation.swift:160-161) asserts the same site publishes the checked header mute role (headers.rows[0].muteChecked).
+Mapping: S016 (presentation.swift) asserts the same site publishes the checked header mute role (headers.rows[0].muteChecked).
 Source context since previous assertion:
 ;
         if (!roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
@@ -513,7 +512,7 @@ QFAIL("keyboard mute did not publish the checked Quick header role")
 
 A030 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:225
 Disposition: MATCHED
-Mapping: S017 (presentation.swift:163-164) asserts the second M clears the selected track mute.
+Mapping: S017 (presentation.swift) asserts the second M clears the selected track mute.
 Source context since previous assertion:
 ;
         sendKeyStroke(roll, Qt::Key_M, Qt::NoModifier, false);
@@ -524,7 +523,7 @@ QFAIL("second M did not unmute the selected track")
 
 A031 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:227
 Disposition: MATCHED
-Mapping: S017 (presentation.swift:163-164) asserts the second M clears the checked header mute role.
+Mapping: S017 (presentation.swift) asserts the second M clears the checked header mute role.
 Source context since previous assertion:
 ;
         if (roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
@@ -534,7 +533,7 @@ QFAIL("keyboard unmute did not clear the checked Quick header role")
 
 A032 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:231
 Disposition: MATCHED
-Mapping: S018 (presentation.swift:166-167) asserts the Solo command marks the selected track solo and publishes the checked header solo role.
+Mapping: S018 (presentation.swift) asserts the Solo command marks the selected track solo and publishes the checked header solo role.
 Source context since previous assertion:
 ;
         soloAction->trigger();
@@ -546,7 +545,7 @@ QFAIL("S did not publish the selected track's solo role")
 
 A033 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:236
 Disposition: MATCHED
-Mapping: S019 (presentation.swift:169-170) asserts the second Solo action clears both the solo set and the checked header solo role.
+Mapping: S019 (presentation.swift) asserts the second Solo action clears both the solo set and the checked header solo role.
 Source context since previous assertion:
 ;
         }
@@ -559,7 +558,7 @@ QFAIL("second S did not clear the selected track's solo role")
 
 A034 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:244
 Disposition: MATCHED
-Mapping: S020 (presentation.swift:171-173) guards that a second header row exists for the mixed-scope probe (report.fail when missing).
+Mapping: S020 (presentation.swift) guards that a second header row exists for the mixed-scope probe (report.fail when missing).
 Source context since previous assertion:
 ;
         }
@@ -575,7 +574,7 @@ QFAIL("Quick header record was missing for the scoped keyboard probe")
 
 A035 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:252
 Disposition: MATCHED
-Mapping: S021 (presentation.swift:178-181) asserts M over the mixed scope mutes every scoped track (mutedTracks == [0, other] with both header roles checked).
+Mapping: S021 (presentation.swift) asserts M over the mixed scope mutes every scoped track (mutedTracks == [0, other] with both header roles checked).
 Source context since previous assertion:
 ;
         } else {
@@ -591,7 +590,7 @@ QFAIL("M over a mixed scope did not mute every scoped track")
 
 A036 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:256
 Disposition: MATCHED
-Mapping: S022 (presentation.swift:182-183) asserts the second M unmutes the whole scoped selection (mutedTracks.isEmpty).
+Mapping: S022 (presentation.swift) asserts the second M unmutes the whole scoped selection (mutedTracks.isEmpty).
 Source context since previous assertion:
 ;
             }
@@ -603,7 +602,7 @@ QFAIL("second M did not unmute the whole scope")
 
 A037 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:260
 Disposition: MATCHED
-Mapping: S023 (presentation.swift:185-186) asserts mute/solo role updates never reset the header rows (rowRebuildCount unchanged).
+Mapping: S023 (presentation.swift) asserts mute/solo role updates never reset the header rows (rowRebuildCount unchanged).
 Source context since previous assertion:
 ;
             view.trackHeaderClicked(selectedTrack, Qt::NoModifier); // collapse scope
@@ -615,7 +614,7 @@ QFAIL("keyboard mute/solo reset the TrackHeaderModel")
 
 A038 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:262
 Disposition: MATCHED
-Mapping: S024 (presentation.swift:187-188) asserts the keyboard toggles leave the document state and history identity untouched (no undo entry).
+Mapping: S024 (presentation.swift) asserts the keyboard toggles leave the document state and history identity untouched (no undo entry).
 Source context since previous assertion:
 ;
         if (doc.undoStack()->count() != preCount)
@@ -625,7 +624,7 @@ QFAIL("keyboard mute/solo touched the undo stack")
 
 A039 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:266
 Disposition: MATCHED
-Mapping: S024 (presentation.swift:187-188) asserts the document and history identity are unchanged by the mute/solo sequence; the check's defer additionally asserts state == before (presentation.swift:136-138).
+Mapping: S024 (presentation.swift) asserts the document and history identity are unchanged by the mute/solo sequence; the check's defer additionally asserts state == before (presentation.swift).
 Source context since previous assertion:
 ;
         QObject::disconnect(resetConnection);
@@ -637,7 +636,7 @@ QCOMPARE(doc.undoStack()->index(), undo)
 
 A040 | PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.cpp:267
 Disposition: MATCHED
-Mapping: S024 (presentation.swift:187-188) asserts the document state is untouched (SongState equality includes the serialized file), corroborated by the defer assertion at presentation.swift:136-138.
+Mapping: S024 (presentation.swift) asserts the document state is untouched (SongState equality includes the serialized file), corroborated by the defer assertion at presentation.swift.
 Source context since previous assertion:
 ;
 
@@ -653,103 +652,127 @@ The S entries are exact report predicates (report.expect except the S020 report.
 runPresentationChecks in the swiftcore projectSession suite (deno task verify
 --filter swiftcore --verbose, PASS 1/14 ok, controller-recorded).
 
-S001 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:30
+S001 | checkHeaderPanFollow | src/checks/rollcheck/presentation.swift
+Anchor: message "live roll pan suspends follow without moving the camera"
   report.expect(grid.interactionActive && blocked == nil
                 && session.camera.snapshot.scrollX == home, cppID: id,
                 message: "live roll pan suspends follow without moving the camera")
 
-S002 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:37
+S002 | checkHeaderPanFollow | src/checks/rollcheck/presentation.swift
+Anchor: message "follow becomes eligible once the pan ends"
   report.expect(!grid.interactionActive && resumed != nil, cppID: id,
                 message: "follow becomes eligible once the pan ends")
 
-S003 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:41
+S003 | checkHeaderPanFollow | src/checks/rollcheck/presentation.swift
+Anchor: message "resumed follow scrolls the shared roll camera"
   report.expect(session.camera.snapshot.scrollX != home, cppID: id,
                 message: "resumed follow scrolls the shared roll camera")
 
-S004 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:49
+S004 | checkHeaderPanFollow | src/checks/rollcheck/presentation.swift
+Anchor: message "pan probe restores the incoming camera viewport and scroll"
   report.expectEqual(oldCamera, session.camera.snapshot, cppID: id,
                      what: "pan probe restores the incoming camera viewport and scroll")
 
-S005 | swiftcore/PianoRollTest::headerPanFollow | src/checks/rollcheck/presentation.swift:51
+S005 | checkHeaderPanFollow | src/checks/rollcheck/presentation.swift
+Anchor: message "pan and follow do not edit the song or its undo history"
   report.expect(session.document.state == before && session.document.history.currentIdentity == identity,
                 cppID: id, message: "pan and follow do not edit the song or its undo history")
 
-S006 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:82
+S006 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "inline rename opens on the selected header"
   report.expectEqual(track, headers.renamingTrack, cppID: id,
                      what: "inline rename opens on the selected header")
 
-S007 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:85
+S007 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "header publishes the typed draft"
   report.expectEqual("Rolled", headers.renameDraft, cppID: id,
                      what: "header publishes the typed draft")
 
-S008 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:88
+S008 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "Return commits the inline rename and closes the editor"
   report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                 cppID: id, message: "Return commits the inline rename and closes the editor")
 
-S009 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:91
+S009 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "the renamed header can reopen its editor"
   report.expectEqual(track, headers.renamingTrack, cppID: id,
                      what: "the renamed header can reopen its editor")
 
-S010 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:95
+S010 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "Escape discards the draft without changing the name"
   report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                 cppID: id, message: "Escape discards the draft without changing the name")
 
-S011 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:98
+S011 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "editor can reopen for the marker-name guard"
   report.expectEqual(track, headers.renamingTrack, cppID: id,
                      what: "editor can reopen for the marker-name guard")
 
-S012 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:104
+S012 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "loop-marker name is refused without a transaction"
   report.expect(document.trackName(track) == "Rolled" && document.state == accepted
                 && document.history.currentIdentity == acceptedIdentity, cppID: id,
                 message: "loop-marker name is refused without a transaction")
 
-S013 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:107
+S013 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "one undo reverts the only accepted rename"
   report.expect(document.history.undoDocument(), cppID: id,
                 message: "one undo reverts the only accepted rename")
 
-S014 | swiftcore/PianoRollTest::headerRename | src/checks/rollcheck/presentation.swift:109
+S014 | checkHeaderRename | src/checks/rollcheck/presentation.swift
+Anchor: message "cancellation and invalid marker add no undo steps"
   report.expect(document.state == before && document.history.currentIdentity == identity,
                 cppID: id, message: "cancellation and invalid marker add no undo steps")
 
-S015 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:157
+S015 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "keyboard mute and solo begin with clear scopes"
   report.expect(session.mutedTracks.isEmpty && session.soloedTracks.isEmpty,
                 cppID: id, message: "keyboard mute and solo begin with clear scopes")
 
-S016 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:160
+S016 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "M mutes the selected track and publishes the header role"
   report.expect(session.mutedTracks == [0] && headers.rows[0].muteChecked,
                 cppID: id, message: "M mutes the selected track and publishes the header role")
 
-S017 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:163
+S017 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "second M clears the selected header mute role"
   report.expect(session.mutedTracks.isEmpty && !headers.rows[0].muteChecked,
                 cppID: id, message: "second M clears the selected header mute role")
 
-S018 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:166
+S018 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "Solo action publishes the selected header solo role"
   report.expect(session.soloedTracks == [0] && headers.rows[0].soloChecked,
                 cppID: id, message: "Solo action publishes the selected header solo role")
 
-S019 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:169
+S019 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "second Solo action clears the solo role"
   report.expect(session.soloedTracks.isEmpty && !headers.rows[0].soloChecked,
                 cppID: id, message: "second Solo action clears the solo role")
 
-S020 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:171
+S020 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: function
   guard headers.rows.count > other else {
       report.fail(id, "second header row is missing for mixed-scope mute")
       return
   }
 
-S021 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:178
+S021 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "M over a mixed scope mutes every scoped track"
   report.expect(session.mutedTracks == [0, other]
                 && headers.rows[0].muteChecked && headers.rows[other].muteChecked,
                 cppID: id, message: "M over a mixed scope mutes every scoped track")
 
-S022 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:182
+S022 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "second M unmutes the whole scoped selection"
   report.expect(session.mutedTracks.isEmpty, cppID: id,
                 message: "second M unmutes the whole scoped selection")
 
-S023 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:185
+S023 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "mute and solo role updates never reset header rows"
   report.expect(headers.rowRebuildCount == rebuilds, cppID: id,
                 message: "mute and solo role updates never reset header rows")
 
-S024 | swiftcore/PianoRollTest::headerKeyboardMuteSolo | src/checks/rollcheck/presentation.swift:187
+S024 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
+Anchor: message "keyboard toggles do not touch MIDI or the undo stack"
   report.expect(document.state == noEdit && document.history.currentIdentity == noEditIdentity,
                 cppID: id, message: "keyboard toggles do not touch MIDI or the undo stack")

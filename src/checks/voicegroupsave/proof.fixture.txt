@@ -4,7 +4,6 @@ Reference revision: 92f1a51fea5c7be17f2478271fd12633a6514225
 Original: src/checks/voicegroupsave/fixture.cpp
 Original SHA-256: d845e0149ded4783a934830eea99ebba48431d74984e712ce4f268c362c67d66
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The "voicegroup-save" filter selects the retained native harness; it provides
 no Swift parity evidence.
 

@@ -4,7 +4,6 @@ Reference revision: 65a72a959c853ec155871d9b33065d897d704aa8
 Original: src/checks/swiftrollbench/tst_swiftrollbench.cpp
 Original SHA-256: 4ef9cc29122dd7d160fe3cd916d6d49f538ba4f81a7d437635e0d24487b78178
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -23,7 +22,7 @@ deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftrollbench --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 SwiftRollBenchTest mounts the real window, detects the roll flavor at runtime

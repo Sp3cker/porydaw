@@ -4,9 +4,7 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_settings.cpp
 Original SHA-256: 9e92739e88f01754265f606f62b2d5a3b8bbb4bc41053c902576bac95d23cd27
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
-Swift SHA-256: 33fdddcda2114a17a7047c58cab7ab7c062647b3e4e720d50ace2e2b858089a1
 Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
-Additional Swift SHA-256: c99a86a08b0e926ebc93d63e14f6b3e4d3d6f9f6407c9c158611eb619eb37db9
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -62,7 +60,7 @@ Original assertion inventory
 
 A001 | DeferredThemeLayoutTest::trackIdentityContrast | src/checks/themelayout/tst_themelayout_settings.cpp:135
 Disposition: MATCHED
-Mapping/reason: S001 asserts validity for all sixteen identity fills (ThemeColorChecks.swift:394).
+Mapping/reason: S001 asserts validity for all sixteen identity fills (ThemeColorChecks.swift).
 Source context since previous assertion:
   // Deferred UI reference cases. This file is intentionally absent from the
   // rewrite check target until the corresponding widgets return.
@@ -303,7 +301,7 @@ Original expression:
 
 A011 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:177
 Disposition: MATCHED
-Mapping/reason: S004 asserts the dark-neutral-high commit at contrast 80 (ThemeColorChecks.swift:419); S005 observes the dark/80 persistence row on the production shell (tst_Theme.qml:119).
+Mapping/reason: S004 asserts the dark-neutral-high commit at contrast 80 (ThemeColorChecks.swift); S005 observes the dark/80 persistence row on the production shell (tst_Theme.qml).
 Source context since previous assertion:
   ;
 
@@ -325,7 +323,7 @@ Original expression:
 
 A013 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:181
 Disposition: MATCHED
-Mapping/reason: S004 asserts the dark chrome preview value (ThemeColorChecks.swift:419).
+Mapping/reason: S004 asserts the dark chrome preview value (ThemeColorChecks.swift).
 Source context since previous assertion:
   ;
 
@@ -391,7 +389,7 @@ Original expression:
 
 A018 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:215
 Disposition: MATCHED
-Mapping/reason: S006 pins the item surface per theme row (ThemeColorChecks.swift:280, palette.menuBackground == row.item, the #D2D0CA/#424242/#393C43 literals) and S007 observes the same value on the live production context-menu delegate (tst_Theme.qml:208-210). The QWidget table-cell grab has no Swift layer; the item-surface value and its live delegate binding are the portable observables.
+Mapping/reason: S006 pins the item surface per theme row (ThemeColorChecks.swift, palette.menuBackground == row.item, the #D2D0CA/#424242/#393C43 literals) and S007 observes the same value on the live production context-menu delegate (tst_Theme.qml). The QWidget table-cell grab has no Swift layer; the item-surface value and its live delegate binding are the portable observables.
 Source context since previous assertion:
   ;
 
@@ -405,7 +403,7 @@ Original expression:
 
 A019 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:216
 Disposition: PARTIAL
-Mapping/reason: No Swift itemAlternate owner: GridPalette exposes no alternate item surface and no Swift/QML surface renders one. The legacy seam is EventListPage.qml tableAlternateBackground (EventListPage.qml:46) fed by eventlistcontroller.cpp:147-148 (themes::Role::item_alternate_background); EventListPage.qml is mounted only by the unmounted TimelineCanvas.qml event-list host. Unproved: the item-alternate value and the second-row cell rendering.
+Mapping/reason: No Swift itemAlternate owner: GridPalette exposes no alternate item surface and no Swift/QML surface renders one. The legacy seam is EventListPage.qml tableAlternateBackground (EventListPage.qml) fed by eventlistcontroller.cpp:147-148 (themes::Role::item_alternate_background); EventListPage.qml is mounted only by the unmounted TimelineCanvas.qml event-list host. Unproved: the item-alternate value and the second-row cell rendering.
 Source context since previous assertion:
   ;
 Original expression:
@@ -607,7 +605,7 @@ Original expression:
 
 A035 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:303
 Disposition: MATCHED
-Mapping/reason: S002 asserts the contrast-100 grid rule (ThemeColorChecks.swift:361-370: strengthened grid contrast and alpha gain over the roll) and S003 observes the strengthened grid through the production restore path (tst_Theme.qml:177-185). The QWidget ThemeChange delivery count has no Swift event layer; the applied strengthened grid value is the portable observable.
+Mapping/reason: S002 asserts the contrast-100 grid rule (ThemeColorChecks.swift: strengthened grid contrast and alpha gain over the roll) and S003 observes the strengthened grid through the production restore path (tst_Theme.qml). The QWidget ThemeChange delivery count has no Swift event layer; the applied strengthened grid value is the portable observable.
 Source context since previous assertion:
   ;
       const QPalette paletteBefore = m_application->palette();
@@ -622,7 +620,7 @@ Original expression:
 
 A036 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:304
 Disposition: MATCHED
-Mapping/reason: The strengthened grid sample is pinned by S002 (ThemeColorChecks.swift:359-366) and read back from the production shell by S003 (tst_Theme.qml:177-185). The QWidget probe field has no Swift counterpart; the applied strengthened grid value is the portable observable.
+Mapping/reason: The strengthened grid sample is pinned by S002 (ThemeColorChecks.swift) and read back from the production shell by S003 (tst_Theme.qml). The QWidget probe field has no Swift counterpart; the applied strengthened grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -630,7 +628,7 @@ Original expression:
 
 A037 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:307
 Disposition: MATCHED
-Mapping/reason: S002 asserts the contrast-0 grid rule (ThemeColorChecks.swift:361-370: softened grid contrast and alpha loss against the roll) and S003 observes the second applied grid through the production restore path (tst_Theme.qml:167-175). The QWidget ThemeChange delivery count has no Swift event layer; the applied softened grid value is the portable observable.
+Mapping/reason: S002 asserts the contrast-0 grid rule (ThemeColorChecks.swift: softened grid contrast and alpha loss against the roll) and S003 observes the second applied grid through the production restore path (tst_Theme.qml). The QWidget ThemeChange delivery count has no Swift event layer; the applied softened grid value is the portable observable.
 Source context since previous assertion:
   ;
       gridLineContrast->setValue(0);
@@ -640,7 +638,7 @@ Original expression:
 
 A038 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:308
 Disposition: MATCHED
-Mapping/reason: The second grid sample is pinned by S002 (ThemeColorChecks.swift:359-366) and read back from the production shell by S003 (tst_Theme.qml:167-175). The QWidget probe field has no Swift counterpart; the applied softened grid value is the portable observable.
+Mapping/reason: The second grid sample is pinned by S002 (ThemeColorChecks.swift) and read back from the production shell by S003 (tst_Theme.qml). The QWidget probe field has no Swift counterpart; the applied softened grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -648,7 +646,7 @@ Original expression:
 
 A039 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:309
 Disposition: MATCHED
-Mapping/reason: S002 asserts the strengthened contrast gain against the roll (ThemeColorChecks.swift:364-366) and S003 observes it on the production shell (tst_Theme.qml:177-185).
+Mapping/reason: S002 asserts the strengthened contrast gain against the roll (ThemeColorChecks.swift) and S003 observes it on the production shell (tst_Theme.qml).
 Source context since previous assertion:
   ;
 Original expression:
@@ -657,7 +655,7 @@ Original expression:
 
 A040 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:311
 Disposition: MATCHED
-Mapping/reason: S002 asserts the softened contrast loss against the roll (ThemeColorChecks.swift:361-363) and S003 observes it on the production shell (tst_Theme.qml:167-175).
+Mapping/reason: S002 asserts the softened contrast loss against the roll (ThemeColorChecks.swift) and S003 observes it on the production shell (tst_Theme.qml).
 Source context since previous assertion:
   ;
 Original expression:
@@ -704,7 +702,7 @@ Original expression:
 
 A044 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:325
 Disposition: MATCHED
-Mapping/reason: S003 asserts the default-contrast reset restores the pinned grid value on the production shell (tst_Theme.qml:187-190) and S002 pins the default-contrast identity row (ThemeColorChecks.swift:352-353). The QWidget tab-bar grab and QPalette/stylesheet object identity have no Swift layer; the restored grid value is the portable observable.
+Mapping/reason: S003 asserts the default-contrast reset restores the pinned grid value on the production shell (tst_Theme.qml) and S002 pins the default-contrast identity row (ThemeColorChecks.swift). The QWidget tab-bar grab and QPalette/stylesheet object identity have no Swift layer; the restored grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -839,41 +837,48 @@ shell-theme entry; grid-contrast value rules are shared with the color proof
 (proof.tst_themelayout_color.txt S005/S009) and the item-surface rule with that
 proof's S003.
 
-S001 | themeTrackIdentityChecks | src/checks/themecolor/ThemeColorChecks.swift:394
+S001 | themeTrackIdentityChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: function
 Counterpart expression:
   report.expect(onLight || onDark, ..., message: piano-key surface floor)
   over all sixteen identity fills (A001-A003).
 
-S002 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift:348
+S002 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: function
 Counterpart expression:
   report.expect(strengthened grid contrast > base grid contrast, ...)
   shared with the color proof; also pins the default-contrast identity row
   (:352-353) and the softened and strengthened alpha/contrast rules (:361-370)
   for the refresh targets (A035-A040, A044).
 
-S003 | test_gridContrastDirection | src/checks/editorqml/tst_Theme.qml:157
+S003 | test_gridContrastDirection | src/checks/editorqml/tst_Theme.qml
+Anchor: function
 Counterpart expression:
   verify(strengthened contrast > baseline contrast, ...)
   contrasting, reading back and restoring the applied grid on the production
   shell (:167-190) for the refresh targets (A035-A040, A044).
 
-S004 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:421
+S004 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "commit applies the dark window surface"
 Counterpart expression:
   report.expectEqual("#373737", committed.windowBackground, ...)
   with contrast-80, preview and revert rows (A011-A016).
 
-S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:126
+S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml
+Anchor: message "themeMode"
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", data.mode)
   observing the dark/80 commit row on the production shell (A011-A012).
 
-S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:280
+S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift
+Anchor: message "\(tag): menu aliases the item surface"
 Counterpart expression:
   report.expectEqual(row.item, palette.menuBackground, ...)   (:280)
   pinning the item surface per preset row (#D2D0CA/#424242/#393C43), the
   value A018 compares against.
 
-S007 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:208
+S007 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml
+Anchor: message "Copy is a real context-menu action"
 Counterpart expression:
   verify(copyItem, ...) then
   compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA", ...)

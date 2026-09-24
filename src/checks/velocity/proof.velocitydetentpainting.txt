@@ -4,13 +4,9 @@ Reference revision: f842f7e128adea2958d0967e2afbd834893f21b4
 Original: src/checks/velocity/velocitydetentpainting.cpp
 Original SHA-256: 7bc730bbf3ce529992e6c37da9d24ac40a86bc271cab4b2d207354fd1704e165
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
-Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: cb49bddf735ed93df3d0faaa0e9a76e46cf989d3c6498ac05faff54de3d48b6e
 Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
-Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
@@ -1385,7 +1381,6 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Swift executable assertion index
-Tally: MATCHED 43, PARTIAL 66, NATIVE-SETUP 0, RETIRED-REPRESENTATION 10, GAP 2. All 121
 sites are dispositioned; every PARTIAL names the unproved condition, and no MATCHED claim
 rests on a related case alone. The two remaining GAPs are the legacy chrome detent-checkbox
 checked-state readbacks (A005, A006): the control has no Swift ingress, and the paired
@@ -1393,237 +1388,294 @@ cases assert only the resulting ruler velocity, not the toggle state.
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:14
+S001 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: function
   report.fail(drawerVelocityTransactionID, "the synthetic fixture published fewer than three notes")
 
-S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:26
+S002 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one released drag advances the document revision once"
   report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityTransactionID,
                      what: "one released drag advances the document revision once")
 
-S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:28
+S003 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one released drag makes exactly one history entry"
   report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
                 message: "one released drag makes exactly one history entry")
 
-S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:30
+S004 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the drag's entry becomes undoable"
   report.expect(committed.canUndo && !baseline.canUndo, cppID: drawerVelocityTransactionID,
                 message: "the drag's entry becomes undoable")
 
-S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:32
+S005 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the drag's commit reached the document"
   report.expect(document.note(notes[0].id)?.velocity != notes[0].velocity, cppID: drawerVelocityTransactionID,
                 message: "the drag's commit reached the document")
 
-S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:34
+S006 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "every selected target moved with the gesture"
   report.expect(document.note(notes[1].id)?.velocity != notes[1].velocity, cppID: drawerVelocityTransactionID,
                 message: "every selected target moved with the gesture")
 
-S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:36
+S007 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a released gesture clears its preview"
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityTransactionID,
                 message: "a released gesture clears its preview")
 
-S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:38
+S008 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the published handle follows the committed value (before \(before) "
   report.expect(fixture.handle(notes[0])?.y != before, cppID: drawerVelocityProjectionID,
                 message: "the published handle follows the committed value (before \(before) "
                     + "after \(fixture.handle(notes[0])?.y ?? -1) velocity "
                     + "\(document.note(notes[0].id)?.velocity ?? 0) level "
                     + "\(fixture.handle(notes[0])?.level ?? -99)")
 
-S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:45
+S009 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo restores the captured velocity"
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                      cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
 
-S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:47
+S010 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo restores every target of the transaction"
   report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0),
                      cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
 
-S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:50
+S011 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Undo rebuilds the page without losing its handles"
   report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityHistoryID,
                      what: "Undo rebuilds the page without losing its handles")
 
-S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:53
+S012 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Redo restores the committed history identity"
   report.expectEqual(committed.identity, drawerVelocityDocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
                      what: "Redo restores the committed history identity")
 
-S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:61
+S013 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stationary click records no history"
   report.expectEqual(pointerBaseline.revision, drawerVelocityDocumentSnapshot(document).revision,
                      cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
 
-S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:63
+S014 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stationary click selects only its own note"
   report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
                 message: "a stationary click selects only its own note")
 
-S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:74
+S015 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag previews before release"
   report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                     message: "a live drag previews before release")
 
-S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:76
+S016 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag reports an active interaction"
   report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
                     message: "a live drag reports an active interaction")
 
-S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:78
+S017 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape is claimed while a gesture is live"
   report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
                     message: "Escape is claimed while a gesture is live")
 
-S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:81
+S018 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape clears the frozen preview"
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityCancellationID,
                 message: "Escape clears the frozen preview")
 
-S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:83
+S019 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape writes nothing at all"
   report.expect(drawerVelocityDocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
                 message: "Escape writes nothing at all")
 
-S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:85
+S020 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape restores selection membership and insertion order"
   report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
                 message: "Escape restores selection membership and insertion order")
 
-S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:96
+S021 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a release after a foreign change writes nothing"
   report.expectEqual(foreignRevision + 1, document.revision, cppID: drawerVelocityCancellationID,
                          what: "a release after a foreign change writes nothing")
 
-S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:98
+S022 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a stale release ends the gesture"
   report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
                     message: "a stale release ends the gesture")
 
-S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:109
+S023 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the ruler consumes its own press"
   report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
                 cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
 
-S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:112
+S024 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one ruler click makes one revision"
   report.expectEqual(rulerBaseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID,
                      what: "one ruler click makes one revision")
 
-S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:114
+S025 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one ruler click makes one history entry"
   report.expect(document.history.currentIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
                 message: "one ruler click makes one history entry")
 
-S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:116
+S026 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a press inside the plot is not the ruler's"
   report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
                 cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
 
-S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:130
+S027 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a middle drag pans the shared camera"
   report.expect(fixture.session.camera.snapshot.scrollX > panScroll, cppID: drawerVelocityTransactionID,
                 message: "a middle drag pans the shared camera")
 
-S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:132
+S028 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live pan suspends follow through the page's own interaction"
   report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
                 message: "a live pan suspends follow through the page's own interaction")
 
-S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:135
+S029 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the pan ends on release"
   report.expect(!page.hasGesture, cppID: drawerVelocityTransactionID, message: "the pan ends on release")
 
-S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:136
+S030 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "panning writes no document state"
   report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                 message: "panning writes no document state")
 
-S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:143
+S031 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a PSG context offers the detent control, enabled by default"
   report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityTransactionID,
                 message: "a PSG context offers the detent control, enabled by default")
 
-S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:145
+S032 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the PSG context presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode,
                      cppID: drawerVelocityTransactionID,
                      what: "the PSG context presents the intrinsic ruler")
 
-S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:148
+S033 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "an enabled detent set draws the level graduations"
   report.expect(page.axisGraduationsVisible, cppID: drawerVelocityTransactionID,
                 message: "an enabled detent set draws the level graduations")
 
-S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:153
+S034 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the detent case starts from a live preview"
   report.expect(!page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                     message: "the detent case starts from a live preview")
 
-S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:156
+S035 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "toggling detents cancels the live interaction"
   report.expect(!page.detentsEnabled && page.frozenPreview.isEmpty, cppID: drawerVelocityTransactionID,
                     message: "toggling detents cancels the live interaction")
 
-S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:159
+S036 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "disabled detents put the ruler on the continuous rendering"
   report.expect(page.axisGraduationsVisible == false, cppID: drawerVelocityTransactionID,
                 message: "disabled detents put the ruler on the continuous rendering")
 
-S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:161
+S037 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the voice's own map stays intrinsic under the ruler switch"
   report.expect(page.axisModel.mode == .intrinsic, cppID: drawerVelocityTransactionID,
                 message: "the voice's own map stays intrinsic under the ruler switch")
 
-S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:165
+S038 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a disabled detent set places nodes at their exact velocity"
   report.expect(abs(handle.y - exactY) < 0.001, cppID: drawerVelocityTransactionID,
                     message: "a disabled detent set places nodes at their exact velocity")
 
-S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:168
+S039 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the detent toggle writes no document state"
   report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                 message: "the detent toggle writes no document state")
 
-S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:181
+S040 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a band selection writes nothing"
   report.expectEqual(bandBaseline.revision, document.revision, cppID: drawerVelocityTransactionID,
                      what: "a band selection writes nothing")
 
-S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift:183
+S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the band selected every note it covered"
   report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
                      what: "the band selected every note it covered")
 
-S042 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:14
+S042 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: function
   report.fail(drawerVelocityGestureID, "the synthetic fixture published fewer than three notes")
 
-S043 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:18
+S043 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "every note of the primary track publishes one handle"
   report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityProjectionID,
                      what: "every note of the primary track publishes one handle")
 
-S044 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:23
+S044 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: function
   report.fail(drawerVelocityProjectionID, "the fixture's notes have no published handles")
 
-S045 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:27
+S045 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a fresh selection publishes no selected handle"
   report.expect(!firstHandle.selected, cppID: drawerVelocityProjectionID,
                 message: "a fresh selection publishes no selected handle")
 
-S046 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:29
+S046 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "an intrinsic handle publishes the level of its displayed value"
   report.expectEqual(openingMap.level(of: Int(notes[0].velocity)) ?? -1, firstHandle.level,
                      cppID: drawerVelocityProjectionID,
                      what: "an intrinsic handle publishes the level of its displayed value")
 
-S047 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:32
+S047 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the handle's x is a plot-local camera projection"
   report.expect(abs(firstHandle.x - page.axisModel.geometry.labelWidth - 56) < 1.0
                     || firstHandle.x <= 400, cppID: drawerVelocityProjectionID,
                 message: "the handle's x is a plot-local camera projection")
 
-S048 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:35
+S048 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the handle publishes a drawn y inside the body"
   report.expect(fixture.handle(notes[0])!.y < firstHandle.hitRadius * 2
                     || firstHandle.y > 0, cppID: drawerVelocityProjectionID,
                 message: "the handle publishes a drawn y inside the body")
 
-S049 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:52
+S049 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a drag inside the activation distance previews nothing"
   report.expect(!gesture.relativeActivated && gesture.preview.isEmpty, cppID: drawerVelocityGestureID,
                 message: "a drag inside the activation distance previews nothing")
 
-S050 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:55
+S050 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "leaving the activation distance arms the relative drag"
   report.expect(gesture.relativeActivated, cppID: drawerVelocityGestureID,
                 message: "leaving the activation distance arms the relative drag")
 
-S051 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:57
+S051 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the low note takes the whole delta"
   report.expectEqual(30, Int(gesture.preview[NoteID(1)] ?? 0), cppID: drawerVelocityGestureID,
                      what: "the low note takes the whole delta")
 
-S052 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:59
+S052 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the high note clamps to the maximum instead of wrapping"
   report.expectEqual(127, Int(gesture.preview[NoteID(2)] ?? 0), cppID: drawerVelocityGestureID,
                      what: "the high note clamps to the maximum instead of wrapping")
 
-S053 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:61
+S053 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the commit payload carries one update per frozen note"
   report.expectEqual(2, VelocityGesturePolicy.updates(gesture).count, cppID: drawerVelocityGestureID,
                      what: "the commit payload carries one update per frozen note")
 
-S054 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:78
+S054 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the first level follows the level delta"
   report.expectEqual(Int(psgMap.representative(9)), Int(psgGesture.preview[NoteID(3)] ?? 0),
                      cppID: drawerVelocityGestureID, what: "the first level follows the level delta")
 
-S055 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:80
+S055 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the second level keeps its own offset"
   report.expectEqual(Int(psgMap.representative(11)), Int(psgGesture.preview[NoteID(4)] ?? 0),
                      cppID: drawerVelocityGestureID, what: "the second level keeps its own offset")
 
-S056 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:82
+S056 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the detent unlock takes exact MIDI velocity"
   report.expectEqual(127,
                      Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
                                                                 detentUnlock: true, y: 0)),
                      cppID: drawerVelocityGestureID,
                      what: "the detent unlock takes exact MIDI velocity")
 
-S057 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:87
+S057 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a locked intrinsic drag canonicalizes onto the note's own map"
   report.expectEqual(Int(psgMap.canonicalize(76)),
                      Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
                                                                 detentUnlock: false,
@@ -1631,312 +1683,404 @@ S057 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdra
                      cppID: drawerVelocityGestureID,
                      what: "a locked intrinsic drag canonicalizes onto the note's own map")
 
-S058 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:104
+S058 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the sweep covers every node the column reaches"
   report.expectEqual(2, painted.count, cppID: drawerVelocityGestureID,
                      what: "the sweep covers every node the column reaches")
 
-S059 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:106
+S059 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the painted ramp follows the swept line's own direction"
   report.expect(painted[0].velocity < painted[1].velocity, cppID: drawerVelocityGestureID,
                 message: "the painted ramp follows the swept line's own direction")
 
-S060 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:111
+S060 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a sweep that stops short leaves the far node alone"
   report.expectEqual(1, partial.count, cppID: drawerVelocityGestureID,
                      what: "a sweep that stops short leaves the far node alone")
 
-S061 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:116
+S061 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a stationary paint only takes the nodes in its own column"
   report.expectEqual(1, singleColumn.count, cppID: drawerVelocityGestureID,
                      what: "a stationary paint only takes the nodes in its own column")
 
-S062 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:128
+S062 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the note at the press position keeps the press velocity"
   report.expectEqual(100, Int(ramp.preview[NoteID(5)] ?? 0), cppID: drawerVelocityGestureID,
                      what: "the note at the press position keeps the press velocity")
 
-S063 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:130
+S063 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a note inside the ramp span takes the swept line's value"
   report.expectEqual(75, Int(ramp.preview[NoteID(7)] ?? 0), cppID: drawerVelocityGestureID,
                      what: "a note inside the ramp span takes the swept line's value")
 
-S064 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:132
+S064 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a note outside the ramp span keeps its captured velocity"
   report.expectEqual(40, Int(ramp.preview[NoteID(6)] ?? 0), cppID: drawerVelocityGestureID,
                      what: "a note outside the ramp span keeps its captured velocity")
 
-S065 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:142
+S065 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a preview that matches the captured values commits nothing"
   report.expect(VelocityGesturePolicy.updates(flatState).isEmpty, cppID: drawerVelocityGestureID,
                 message: "a preview that matches the captured values commits nothing")
 
-S066 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:148
+S066 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "only the values that differ from the captured ones are committed"
   report.expect(moved.count == 1 && moved[0].noteID == movedNote.noteID
                 && moved[0].velocity == Int(movedNote.velocity) + 7,
                 cppID: drawerVelocityGestureID,
                 message: "only the values that differ from the captured ones are committed")
 
-S067 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:152
+S067 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the ramp interpolates linearly"
   report.expect(abs(velocityRampValue(at: 20, x0: 0, y0: 0, x1: 40, y1: 40) - 20) < 1e-9,
                 cppID: drawerVelocityGestureID, message: "the ramp interpolates linearly")
 
-S068 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:154
+S068 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "a vertical span resolves to the near endpoint"
   report.expect(abs(velocityRampValue(at: 5, x0: 10, y0: 3, x1: 10, y1: 9) - 9) < 1e-9,
                 cppID: drawerVelocityGestureID, message: "a vertical span resolves to the near endpoint")
 
-S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift:156
+S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdragging.swift
+Anchor: message "the published hit radius is font-relative and positive"
   report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                 message: "the published hit radius is font-relative and positive")
 
-S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:225
+S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "Set Velocity is unavailable with no selection"
   report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity is unavailable with no selection")
 
-S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:239
+S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "Set Velocity becomes available with a selection"
   report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity becomes available with a selection")
 
-S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:243
+S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the existing command row asks its owner for the prompt"
   report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
                      what: "the existing command row asks its owner for the prompt")
 
-S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:245
+S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the command commits no value before prompt acceptance"
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "the command commits no value before prompt acceptance")
 
-S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:250
+S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the command routes every execution through the same owner"
   report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
                      what: "the command routes every execution through the same owner")
 
-S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:252
+S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the routed command opened the page's captured prompt"
   report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                 message: "the routed command opened the page's captured prompt")
 
-S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:255
+S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "cancelling the routed prompt still commits nothing"
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "cancelling the routed prompt still commits nothing")
 
-S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:259
+S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the command table keeps Set Velocity on the notes arm"
   report.expectEqual(EditNotesOperation.setVelocity.rawValue,
                      row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity on the notes arm")
 
-S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:262
+S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift
+Anchor: message "the command table keeps Set Velocity's consume route"
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
 
-S079 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:142-143
+S079 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard unlock != 0 else {
       report.fail(drawerVelocityRulerUnlockID, "the detent unlock hold resolved to no modifier")
 
-S080 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:148-149
+S080 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard notes.count >= 3 else {
       report.fail(drawerVelocityRulerUnlockID, "the synthetic fixture published fewer than three notes")
 
-S081 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:157
+S081 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the square pair presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityRulerUnlockID, what: "the square pair presents the intrinsic ruler")
 
-S082 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:158
+S082 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the square context offers the enabled detent control"
   report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityRulerUnlockID, message: "the square context offers the enabled detent control")
 
-S083 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:162
+S083 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked ruler consumes its own press"
   report.expect(page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: unlock), cppID: drawerVelocityRulerUnlockID, message: "the unlocked ruler consumes its own press")
 
-S084 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:164
+S084 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one unlocked ruler click makes one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRulerUnlockID, what: "one unlocked ruler click makes one revision")
 
-S085 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:165
+S085 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one unlocked ruler click makes one history entry"
   report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRulerUnlockID, message: "one unlocked ruler click makes one history entry")
 
-S086 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:166
+S086 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the modifier-unlocked square click keeps the raw velocity"
   report.expectEqual(73, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the modifier-unlocked square click keeps the raw velocity")
 
-S087 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:167
+S087 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the modifier-unlocked square click sets every selected note raw"
   report.expectEqual(73, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the modifier-unlocked square click sets every selected note raw")
 
-S088 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:168
+S088 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the ruler click leaves the unselected note alone"
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the ruler click leaves the unselected note alone")
 
-S089 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:169
+S089 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the ruler click keeps its selection"
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRulerUnlockID, message: "the ruler click keeps its selection")
 
-S090 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:171
+S090 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the bare release after the captured unlock writes nothing more"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRulerUnlockID, what: "the bare release after the captured unlock writes nothing more")
 
-S091 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:175
+S091 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the detents-disabled ruler consumes its own press"
   report.expect(page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: 0), cppID: drawerVelocityRulerUnlockID, message: "the detents-disabled ruler consumes its own press")
 
-S092 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:177
+S092 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one detents-disabled ruler click makes one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRulerUnlockID, what: "one detents-disabled ruler click makes one revision")
 
-S093 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:178
+S093 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the detents-disabled square click keeps the raw velocity"
   report.expectEqual(73, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the detents-disabled square click keeps the raw velocity")
 
-S094 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:179
+S094 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the detents-disabled square click sets every selected note raw"
   report.expectEqual(73, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the detents-disabled square click sets every selected note raw")
 
-S095 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:186
+S095 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the noise pair presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityRulerUnlockID, what: "the noise pair presents the intrinsic ruler")
 
-S096 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:191
+S096 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one unlocked noise ruler click makes one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRulerUnlockID, what: "one unlocked noise ruler click makes one revision")
 
-S097 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:192
+S097 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the modifier-unlocked noise click keeps the raw velocity"
   report.expectEqual(73, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the modifier-unlocked noise click keeps the raw velocity")
 
-S098 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:193
+S098 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the modifier-unlocked noise click sets every selected note raw"
   report.expectEqual(73, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the modifier-unlocked noise click sets every selected note raw")
 
-S099 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:199
+S099 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one detents-disabled noise ruler click makes one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRulerUnlockID, what: "one detents-disabled noise ruler click makes one revision")
 
-S100 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:200
+S100 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the detents-disabled noise click keeps the raw velocity"
   report.expectEqual(73, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the detents-disabled noise click keeps the raw velocity")
 
-S101 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:201
+S101 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the detents-disabled noise click sets every selected note raw"
   report.expectEqual(73, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the detents-disabled noise click sets every selected note raw")
 
-S102 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:205
+S102 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlock bypasses the wave detent the locked ruler canonicalizes onto"
   report.expect(Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: true, y: waveAxis.velocityToY(73))) == 73 && Int(VelocityGesturePolicy.resolvedVelocity(axis: waveAxis, noteMap: waveMap, detentUnlock: false, y: waveAxis.velocityToY(73))) == 64, cppID: drawerVelocityRulerUnlockID, message: "the unlock bypasses the wave detent the locked ruler canonicalizes onto")
 
-S103 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:212-213
+S103 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard notes.count >= 3 else {
       report.fail(drawerVelocityLockedPaintID, "the synthetic fixture published fewer than three notes")
 
-S104 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:220
+S104 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the square pair presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityLockedPaintID, what: "the square pair presents the intrinsic ruler")
 
-S105 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:221-222
+S105 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard let firstHandle = fixture.handle(notes[0]), let secondHandle = fixture.handle(notes[1]) else {
       report.fail(drawerVelocityLockedPaintID, "the square pair published no handles")
 
-S106 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:229
+S106 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked square sweep previews the detent above raw 73"
   report.expectEqual(76, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked square sweep previews the detent above raw 73")
 
-S107 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:230
+S107 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked square sweep snaps every selected note"
   report.expectEqual(76, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked square sweep snaps every selected note")
 
-S108 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:231
+S108 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unselected note previews nothing"
   report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityLockedPaintID, message: "the unselected note previews nothing")
 
-S109 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:232
+S109 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the deferred locked paint stages no revision before release"
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityLockedPaintID, what: "the deferred locked paint stages no revision before release")
 
-S110 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:233
+S110 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the deferred locked paint stages no history entry before release"
   report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityLockedPaintID, what: "the deferred locked paint stages no history entry before release")
 
-S111 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:235
+S111 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one locked paint release commits one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityLockedPaintID, what: "one locked paint release commits one revision")
 
-S112 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:236
+S112 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the square detent"
   report.expectEqual(76, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityLockedPaintID, what: "the release commits the square detent")
 
-S113 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:237
+S113 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the detent on every selected note"
   report.expectEqual(76, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityLockedPaintID, what: "the release commits the detent on every selected note")
 
-S114 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:238
+S114 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release leaves the unselected note alone"
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityLockedPaintID, what: "the release leaves the unselected note alone")
 
-S115 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:239
+S115 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release keeps the paint selection"
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityLockedPaintID, message: "the release keeps the paint selection")
 
-S116 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:245
+S116 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the noise pair presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityLockedPaintID, what: "the noise pair presents the intrinsic ruler")
 
-S117 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:246-247
+S117 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard let noiseHandle = fixture.handle(notes[2]), let noiseSecondHandle = fixture.handle(secondNoise) else {
       report.fail(drawerVelocityLockedPaintID, "the noise pair published no handles")
 
-S118 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:253
+S118 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked noise sweep previews the detent above raw 73"
   report.expectEqual(76, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked noise sweep previews the detent above raw 73")
 
-S119 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:254
+S119 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked noise sweep snaps every selected note"
   report.expectEqual(76, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked noise sweep snaps every selected note")
 
-S120 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:255
+S120 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the deferred noise paint stages no revision before release"
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityLockedPaintID, what: "the deferred noise paint stages no revision before release")
 
-S121 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:257
+S121 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one locked noise release commits one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityLockedPaintID, what: "one locked noise release commits one revision")
 
-S122 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:258
+S122 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the noise detent"
   report.expectEqual(76, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityLockedPaintID, what: "the release commits the noise detent")
 
-S123 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:259
+S123 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the detent on every noise note"
   report.expectEqual(76, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityLockedPaintID, what: "the release commits the detent on every noise note")
 
-S124 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:265
+S124 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked wave sweep covers both columns"
   report.expectEqual(2, painted.count, cppID: drawerVelocityLockedPaintID, what: "the locked wave sweep covers both columns")
 
-S125 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift:266
+S125 | drawerVelocityLockedPaintUsesDetents | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the locked wave paint canonicalizes raw 73 onto its detent"
   report.expect(painted.allSatisfy { $0.velocity == 64 }, cppID: drawerVelocityLockedPaintID, message: "the locked wave paint canonicalizes raw 73 onto its detent")
 
-S126 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:272-273
+S126 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard unlock != 0 else {
       report.fail(drawerVelocityUnlockedPaintID, "the detent unlock hold resolved to no modifier")
 
-S127 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:278-279
+S127 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard notes.count >= 3 else {
       report.fail(drawerVelocityUnlockedPaintID, "the synthetic fixture published fewer than three notes")
 
-S128 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:286
+S128 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the square pair presents the intrinsic ruler"
   report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityUnlockedPaintID, what: "the square pair presents the intrinsic ruler")
 
-S129 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:287-288
+S129 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard let firstHandle = fixture.handle(notes[0]), let secondHandle = fixture.handle(notes[1]) else {
       report.fail(drawerVelocityUnlockedPaintID, "the square pair published no handles")
 
-S130 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:296
+S130 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked square sweep previews the first raw velocity"
   report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the unlocked square sweep previews the first raw velocity")
 
-S131 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:297
+S131 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked square sweep previews the last raw velocity"
   report.expectEqual(91, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the unlocked square sweep previews the last raw velocity")
 
-S132 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:298
+S132 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unselected note previews nothing"
   report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedPaintID, message: "the unselected note previews nothing")
 
-S133 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:299
+S133 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the deferred unlocked paint stages no revision before release"
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedPaintID, what: "the deferred unlocked paint stages no revision before release")
 
-S134 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:301
+S134 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one unlocked paint release commits one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedPaintID, what: "one unlocked paint release commits one revision")
 
-S135 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:302
+S135 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked paint entry is undoable"
   report.expect(document.history.canUndo, cppID: drawerVelocityUnlockedPaintID, message: "the unlocked paint entry is undoable")
 
-S136 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:303
+S136 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the first raw velocity"
   report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the release commits the first raw velocity")
 
-S137 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:304
+S137 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the last raw velocity"
   report.expectEqual(91, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the release commits the last raw velocity")
 
-S138 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:305
+S138 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release leaves the unselected note alone"
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the release leaves the unselected note alone")
 
-S139 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:306
+S139 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release keeps the paint selection"
   report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityUnlockedPaintID, message: "the release keeps the paint selection")
 
-S140 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:312-313
+S140 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: function
   guard let noiseHandle = fixture.handle(notes[2]), let noiseSecondHandle = fixture.handle(secondNoise) else {
       report.fail(drawerVelocityUnlockedPaintID, "the noise pair published no handles")
 
-S141 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:322
+S141 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked noise sweep previews the first raw velocity"
   report.expectEqual(37, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the unlocked noise sweep previews the first raw velocity")
 
-S142 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:323
+S142 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked noise sweep previews the last raw velocity"
   report.expectEqual(91, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the unlocked noise sweep previews the last raw velocity")
 
-S143 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:324
+S143 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the deferred noise paint stages no revision before release"
   report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedPaintID, what: "the deferred noise paint stages no revision before release")
 
-S144 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:326
+S144 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one unlocked noise release commits one revision"
   report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedPaintID, what: "one unlocked noise release commits one revision")
 
-S145 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:327
+S145 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the first noise raw velocity"
   report.expectEqual(37, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the release commits the first noise raw velocity")
 
-S146 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:328
+S146 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the release commits the last noise raw velocity"
   report.expectEqual(91, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the release commits the last noise raw velocity")
 
-S147 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:334
+S147 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked wave sweep covers both columns"
   report.expectEqual(2, painted.count, cppID: drawerVelocityUnlockedPaintID, what: "the unlocked wave sweep covers both columns")
 
-S148 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:335
+S148 | drawerVelocityUnlockedPaintKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the unlocked wave paint keeps both raw velocities"
   report.expect(painted.contains { $0.noteID == waveFirst.noteID && $0.velocity == 37 } && painted.contains { $0.noteID == waveSecond.noteID && $0.velocity == 91 }, cppID: drawerVelocityUnlockedPaintID, message: "the unlocked wave paint keeps both raw velocities")
 
-S149 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:75
+S149 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the paint release clears its preview"
   report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityPaintID, message: "the paint release clears its preview")

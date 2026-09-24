@@ -5,7 +5,6 @@ Original: src/checks/playback/settle.cpp
 Original SHA-256: a6c2aaa4c7119cca57c3b11becc5aa78a12a51d9e308f53b6a1e4b4e877df0d4
 Swift counterpart: src/checks/playback/settle.swift (shared sequence) and
 src/checks/playback/ResonanceSuppressionChecks.swift (per-case suppressionSettleChecks)
-Swift SHA-256: 272ea2b5df83ebd3db281922cdd2fb122f394353e28a830bdaef2db711c48ef3 (settle.swift);
 2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32 (ResonanceSuppressionChecks.swift)
 
 Deletion certificate
@@ -330,97 +329,128 @@ Original expression:
 
 Swift predicate index
 
-S001 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift:69
+S001 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "initial play was not applied"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — applied Playing within one second of one-frame renders on each caller's fresh rig.
 
-S002 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift:75
+S002 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "active suppressor control signal did not play or engage"
 report.expect(playingPeak >= 0.01 && deepest < -0.1, ...) — three-second render sounds and adapts the suppressor.
 
-S003 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:86
+S003 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "initial play was not applied"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — initial play applies within one second.
 
-S004 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:89
+S004 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "initial play began below full output gain"
 report.expect(audio.transportState.cutGain >= 0.999, ...) — onset enters at unity gain.
 
-S005 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:91
+S005 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "initial play advanced before reaching full output gain"
 report.expectEqual(UInt64(0), audio.playheadSamples, ...) — cursor stays at zero through the unity onset.
 
-S006 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:94
+S006 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "active suppressor control signal did not play or engage"
 report.expect(peak >= 0.01 && deepestGain < -0.1, ...) — three-second render sounds and adapts.
 
-S007 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:105
+S007 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "pause was not applied during active suppressor check"
 report.expect(applied == .paused, ...) — pause applies after ramp+512 frames.
 
-S008 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:107
+S008 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "pause reset active suppressor gain state"
 report.expect(rig.deepestGain() < -0.1, ...) — pause retains adapted gain.
 
-S009 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:115
+S009 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume was not applied during active suppressor check"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — resume applies within one second.
 
-S010 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:117
+S010 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume re-primed active suppressor gain state"
 report.expect(rig.deepestGain() < -0.1, ...) — resume does not re-prime adaptation.
 
-S011 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift:128
+S011 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "stop was not applied during active suppressor check"
 report.expect(suppressionRenderUntilApplied(rig, .stopped), ...) — stop applies within one second.
 
-S012 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift:132
+S012 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "stopped transport leaked delayed suppressor audio"
 report.expect(peak <= 1e-7, ...) — settle+ramp+latency capture leaks no delayed audio.
 
-S013 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:142
+S013 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "stop was not applied before the restart check"
 report.expect(suppressionRenderUntilApplied(rig, .stopped), ...) — stop applies before the restart.
 
-S014 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:146
+S014 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "restart was not applied during active suppressor check"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — restart applies within one second.
 
-S015 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:150
+S015 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "restart did not produce audio with suppression active"
 report.expect(peak >= 0.01, ...) — 2*frameSize restart capture sounds.
 
-S016 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:169
+S016 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "second song-start play was not applied"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — second song-start applies within one second.
 
-S017 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:172
+S017 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "second song-start play began below full output gain"
 report.expect(cutGain >= 0.999, ...) — second start enters at unity gain.
 
-S018 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:174
+S018 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "second song-start play advanced before reaching full output gain"
 report.expectEqual(UInt64(0), audio.playheadSamples, ...) — second start consumes nothing below unity.
 
-S019 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:191
+S019 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "pause did not settle before the resume regression"
 report.expect(applied == .paused && !cutting, ...) — pause fully settles before the resume regression.
 
-S020 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:193
+S020 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume regression needs a nonzero cursor"
 report.expect(audio.playheadSamples != 0, ...) — resume begins at a nonzero cursor.
 
-S021 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:204
+S021 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume was not applied for the resume regression"
 report.expect(applied == .playing, ...) — resume applies within one second of one-frame renders.
 
-S022 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:206
+S022 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume advanced the player during the zero-gain settle"
 report.expect(!advancedDuringSettle, ...) — per-frame cursor predicate holds through the zero-gain settle.
 
-S023 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:208
+S023 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume entered Playing below unity cut-fade gain"
 report.expect(cutGain >= 0.999, ...) — resume enters Playing at unity cut-fade gain.
 
-S024 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:210
+S024 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "resume consumed timeline audio before full output gain"
 report.expectEqual(resumeCursor, audio.playheadSamples, ...) — resume consumes no timeline audio before unity.
 
-S025 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:213
+S025 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "timeline did not advance after the resumed start"
 report.expect(audio.playheadSamples > resumeCursor, ...) — the next frame advances the timeline.
 
-S026 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:227
+S026 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "pause cut did not start in its fade-down for the retarget check"
 report.expect(cutting && applied == .playing && cutGain < 1, ...) — pause cut is in its fade-down (applied flips only at the down-ramp end, the observable form of !m_cutFadeRising).
 
-S027 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:236
+S027 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "retargeted cut never completed"
 report.expect(!cutting, ...) — retargeted cut completes within one second of one-frame renders.
 
-S028 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:238
+S028 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "retargeted cut lost the playing state"
 report.expect(applied == .playing, ...) — retargeted cut keeps the playing state.
 
-S029 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:240
+S029 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "retargeted cut ended below unity output gain"
 report.expect(cutGain >= 0.999, ...) — retargeted cut ends at unity gain.
 
-S030 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift:250
+S030 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "play was not applied before the cold replacement"
 report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — play applies before the cold replacement.
 
-S031 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift:259
+S031 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift
+Anchor: message "new playback leaked delayed suppressor audio from the prior song"
 report.expect(peak <= 1e-7, ...) — silent-song start leaks no prior-song audio over settle+2*ramp+2*frameSize.
 
 Reconciled dependency snapshot (SHA-256)

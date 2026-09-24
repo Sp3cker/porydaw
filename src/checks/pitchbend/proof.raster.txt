@@ -4,7 +4,6 @@ Reference revision: 91cab247f7600b41c92b14114ad0352e3a002df0
 Original: src/checks/pitchbend/raster.cpp
 Original SHA-256: 91c692e0cfb7a0ecc7c797cc397958c954685b30ce3adee78fe8473ae922df88
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -30,7 +29,7 @@ resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution ownership
 No Swift entry point executes these checks, and no native one either: the T7A
@@ -316,4 +315,3 @@ Swift assertion predicates
 None: no Swift counterpart file carries report.expect*/expectEqual predicates
 for this suite.
 
-Tally: 22 sites: MATCHED 0, PARTIAL 0, GAP 22, NATIVE 0.

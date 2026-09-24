@@ -4,9 +4,7 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/note_rendering.cpp
 Original SHA-256: 0f8d60d3551145e9a748ee0d0871dd0a0f5bf0e8fc592491f1abf04b8ac6b271
 Swift counterpart: src/checks/rollcheck/note_rendering.swift
-Swift SHA-256: 7dbe0a49d10a8f68d26beee519aba7b6386942c27ac6bd7ab2c113a089a161ae
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
-Additional Swift SHA-256: 0c4e102040e4682e215720f4e2aa3829513afe9a14e873a78454762647d14223
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -105,7 +103,7 @@ Original expression:
 
 A002 | PianoRollTest::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.cpp:90
 Disposition: PARTIAL
-Mapping/reason: S004 (src/checks/rollcheck/note_rendering.swift:169-170) asserts the 5.0-key-height note has room for a one-pixel border, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the production shell's framebuffer for small-note border thinning. Unproved: the legacy Quick surface's physical-pixel geometry, since the Swift predicates observe the published scene model.
+Mapping/reason: S004 (src/checks/rollcheck/note_rendering.swift) asserts the 5.0-key-height note has room for a one-pixel border, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the production shell's framebuffer for small-note border thinning. Unproved: the legacy Quick surface's physical-pixel geometry, since the Swift predicates observe the published scene model.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -161,7 +159,7 @@ Original expression:
 
 A003 | PianoRollTest::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.cpp:94
 Disposition: PARTIAL
-Mapping/reason: S005 (src/checks/rollcheck/note_rendering.swift:171-173) asserts the tiny note keeps its one-pixel black border on the published scene, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the shell framebuffer's small-note thinning. Unproved: the legacy Quick surface's physical border pixels.
+Mapping/reason: S005 (src/checks/rollcheck/note_rendering.swift) asserts the tiny note keeps its one-pixel black border on the published scene, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the shell framebuffer's small-note thinning. Unproved: the legacy Quick surface's physical border pixels.
 Source context since previous assertion:
           } else {
               for (int borderPixel = 0; borderPixel < fittedBorder; ++borderPixel) {
@@ -171,7 +169,7 @@ Original expression:
 
 A004 | PianoRollTest::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.cpp:98
 Disposition: PARTIAL
-Mapping/reason: S006 (src/checks/rollcheck/note_rendering.swift:174-176) asserts the tiny note's face survives inside its border, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the shell framebuffer's small-note ring/border/face probes. Unproved: the legacy Quick surface's pixel probe.
+Mapping/reason: S006 (src/checks/rollcheck/note_rendering.swift) asserts the tiny note's face survives inside its border, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the shell framebuffer's small-note ring/border/face probes. Unproved: the legacy Quick surface's pixel probe.
 Source context since previous assertion:
               }
               if (tinyImage.pixel(tinyCenterX, tinyTopPixel + fittedBorder) !=
@@ -208,7 +206,7 @@ Original expression:
 
 A007 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:168
 Disposition: PARTIAL
-Mapping/reason: S001 (src/checks/rollcheck/note_rendering.swift:144-146) asserts the display-scaled selection ring is contiguous and stops where the inset begins at the fractional 16.375 key height, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the ring colour on the production shell. Unproved: the legacy Quick surface's ring pixels.
+Mapping/reason: S001 (src/checks/rollcheck/note_rendering.swift) asserts the display-scaled selection ring is contiguous and stops where the inset begins at the fractional 16.375 key height, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the ring colour on the production shell. Unproved: the legacy Quick surface's ring pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -269,7 +267,7 @@ Original expression:
 
 A008 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:174
 Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift:147-149) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
+Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
 Source context since previous assertion:
               }
           }
@@ -281,7 +279,7 @@ Original expression:
 
 A009 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:177
 Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift:147-149) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
+Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
 Source context since previous assertion:
               if (!isBlackBorder(selectedNoteImage.pixel(centerPixelX,
                                                          bottomPixel - 1 - ringPixels - borderPixel)))
@@ -290,7 +288,7 @@ Original expression:
 
 A010 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:180
 Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift:147-149) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
+Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
 Source context since previous assertion:
               if (!isBlackBorder(
                       selectedNoteImage.pixel(leftPixel + ringPixels + borderPixel, centerPixelY)))
@@ -299,7 +297,7 @@ Original expression:
 
 A011 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:183
 Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift:147-149) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
+Mapping/reason: S002 (src/checks/rollcheck/note_rendering.swift) asserts the 2-px black frame lies inside every selected edge of the published scene. Unproved: the legacy Quick surface's physical pixels for this edge.
 Source context since previous assertion:
               if (!isBlackBorder(selectedNoteImage.pixel(rightPixel - 1 - ringPixels - borderPixel,
                                                          centerPixelY)))
@@ -308,7 +306,7 @@ Original expression:
 
 A012 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:187
 Disposition: PARTIAL
-Mapping/reason: S001 (src/checks/rollcheck/note_rendering.swift:144-146) asserts the display-scaled selection ring is contiguous and stops where the inset begins at the fractional 16.375 key height, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the ring colour on the production shell. Unproved: the legacy Quick surface's ring pixels.
+Mapping/reason: S001 (src/checks/rollcheck/note_rendering.swift) asserts the display-scaled selection ring is contiguous and stops where the inset begins at the fractional 16.375 key height, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the ring colour on the production shell. Unproved: the legacy Quick surface's ring pixels.
 Source context since previous assertion:
           }
           // The ring must stop where the black border starts.
@@ -318,7 +316,7 @@ Original expression:
 
 A013 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:194
 Disposition: PARTIAL
-Mapping/reason: S003 (src/checks/rollcheck/note_rendering.swift:152-154) asserts the unselected border bounds the face on the published scene, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml:162) samples the unselected face plus display-scaled border on the production shell. Unproved: the legacy Quick surface's bottom-edge pixels.
+Mapping/reason: S003 (src/checks/rollcheck/note_rendering.swift) asserts the unselected border bounds the face on the published scene, and S013 (src/checks/editorqml/tst_ShellNoteVisuals.qml) samples the unselected face plus display-scaled border on the production shell. Unproved: the legacy Quick surface's bottom-edge pixels.
 Source context since previous assertion:
           view.selectionModel().clearNoteSelection();
           const QImage unselectedNoteImage = check.captureQuickFramebuffer();
@@ -330,7 +328,7 @@ Original expression:
 
 A014 | PianoRollTest::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.cpp:197
 Disposition: PARTIAL
-Mapping/reason: S003 (src/checks/rollcheck/note_rendering.swift:152-154) asserts the unselected border bounds the face (the face does not extend past the border). Unproved: the legacy Quick surface's pixel probe.
+Mapping/reason: S003 (src/checks/rollcheck/note_rendering.swift) asserts the unselected border bounds the face (the face does not extend past the border). Unproved: the legacy Quick surface's pixel probe.
 Source context since previous assertion:
           }
           if (QColor(unselectedNoteImage.pixel(centerPixelX, bottomPixel)) == expectedNoteColor) {
@@ -430,7 +428,7 @@ Original expression:
 
 A020 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:296
 Disposition: GAP
-Mapping/reason: The document clamps note velocities to 1...127 (a velocity-0 note-on is a note-off), so no document note can carry velocity zero. The only Swift predicate for the neutral endpoint is the palette-only echo at S007 (src/checks/rollcheck/note_rendering.swift:215-216), which compares the palette fill for velocity 0 with the same palette property it returns; the view-level velocity-zero fill observation has no independent Swift counterpart.
+Mapping/reason: The document clamps note velocities to 1...127 (a velocity-0 note-on is a note-off), so no document note can carry velocity zero. The only Swift predicate for the neutral endpoint is the palette-only echo at S007 (src/checks/rollcheck/note_rendering.swift), which compares the palette fill for velocity 0 with the same palette property it returns; the view-level velocity-zero fill observation has no independent Swift counterpart.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -473,7 +471,7 @@ Original expression:
 
 A021 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:297
 Disposition: GAP
-Mapping/reason: The document clamps note velocities to 1...127, so no document note can carry velocity zero; the only Swift predicate is the palette-only opacity check at S008 (src/checks/rollcheck/note_rendering.swift:217-218). The view-level velocity-zero fill observation has no independent Swift counterpart.
+Mapping/reason: The document clamps note velocities to 1...127, so no document note can carry velocity zero; the only Swift predicate is the palette-only opacity check at S008 (src/checks/rollcheck/note_rendering.swift). The view-level velocity-zero fill observation has no independent Swift counterpart.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -481,7 +479,7 @@ Original expression:
 
 A022 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:298
 Disposition: MATCHED
-Mapping: S009 (src/checks/rollcheck/note_rendering.swift:222-223) compares the published velocity-127 note fill with the track identity palette fill after the same note velocity is set.
+Mapping: S009 (src/checks/rollcheck/note_rendering.swift) compares the published velocity-127 note fill with the track identity palette fill after the same note velocity is set.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -489,7 +487,7 @@ Original expression:
 
 A023 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:299
 Disposition: MATCHED
-Mapping: S010 (src/checks/rollcheck/note_rendering.swift:224-225) asserts the published velocity-127 note fill has an opaque #RRGGBB value.
+Mapping: S010 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-127 note fill has an opaque #RRGGBB value.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -497,7 +495,7 @@ Original expression:
 
 A024 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:300
 Disposition: MATCHED
-Mapping: S011 (src/checks/rollcheck/note_rendering.swift:226-227) asserts the published velocity-64 note fill has an opaque #RRGGBB value.
+Mapping: S011 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-64 note fill has an opaque #RRGGBB value.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -505,7 +503,7 @@ Original expression:
 
 A025 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:301
 Disposition: MATCHED
-Mapping: S012 (src/checks/rollcheck/note_rendering.swift:228-229) asserts the published velocity-64 note fill differs from the neutral zero palette and the published velocity-127 fill (also velocity 1).
+Mapping: S012 (src/checks/rollcheck/note_rendering.swift) asserts the published velocity-64 note fill differs from the neutral zero palette and the published velocity-127 fill (also velocity 1).
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -1097,76 +1095,89 @@ indexed is not on disk and is not registered in this checkout; its live equivale
 Predicate presence alone does not close an A entry: each mapping requires corresponding
 execution and equivalent setup.
 
-S001 | swiftcore/PianoRoll::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.swift:144
+S001 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A007/A012 3px contiguous selection ring stops at inset"
 Counterpart expression:
 report.expect(hasFrame(borders, box: box, inset: 0, thickness: ring,
                        color: grid.palette.selectionRing),
               cppID: id, message: "A007/A012 3px contiguous selection ring stops at inset")
 
-S002 | swiftcore/PianoRoll::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.swift:147
+S002 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A008-A011 2px black frame lies inside every selected edge"
 Counterpart expression:
 report.expect(hasFrame(borders, box: box, inset: ring, thickness: border,
                        color: grid.palette.noteBorder),
               cppID: id, message: "A008-A011 2px black frame lies inside every selected edge")
 
-S003 | swiftcore/PianoRoll::selectedNoteFrameRaster | src/checks/rollcheck/note_rendering.swift:152
+S003 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A013/A014 unselected bottom border bounds the face"
 Counterpart expression:
 report.expect(hasFrame(borders, box: box, inset: 0, thickness: border,
                        color: grid.palette.noteBorder),
               cppID: id, message: "A013/A014 unselected bottom border bounds the face")
 
-S004 | swiftcore/PianoRoll::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.swift:169
+S004 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A002 5.0-key-height note has room for a 1px border"
 Counterpart expression:
 report.expect(fitted == 1, cppID: tinyID,
               message: "A002 5.0-key-height note has room for a 1px border")
 
-S005 | swiftcore/PianoRoll::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.swift:171
+S005 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A003 tiny note retains its 1px black border"
 Counterpart expression:
 report.expect(hasFrame(borders, box: tiny, inset: 0, thickness: Double(fitted),
                        color: grid.palette.noteBorder),
               cppID: tinyID, message: "A003 tiny note retains its 1px black border")
 
-S006 | swiftcore/PianoRoll::tinyNoteBorderRaster | src/checks/rollcheck/note_rendering.swift:174
+S006 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A004 tiny note face survives inside its border"
 Counterpart expression:
 report.expect(tinyFill.fillColor == grid.palette.noteFill(track: grid.trackIndex, velocity: 100)
                   && tiny.w > 2 * Double(fitted) && tiny.h > 2 * Double(fitted),
               cppID: tinyID, message: "A004 tiny note face survives inside its border")
 
-S007 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:215
+S007 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A020 velocity zero uses the neutral palette fill"
 Counterpart expression:
 report.expect(zero == palette.noteVelocityZero, cppID: id,
               message: "A020 velocity zero uses the neutral palette fill")
 Palette-only and echo-style: palette.noteFill(track:velocity: 0) returns the zeroColor argument,
 so this predicate compares the palette entry with itself rather than an independent view fill.
 
-S008 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:217
+S008 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A021 velocity zero palette fill is opaque"
 Counterpart expression:
 report.expect(publishedOpaque(zero), cppID: id,
               message: "A021 velocity zero palette fill is opaque")
 Palette-only: the document clamps note velocities to 1..127, so the neutral endpoint is reachable
 only through the palette API.
 
-S009 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:222
+S009 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A022 published full velocity uses the track identity fill"
 Counterpart expression:
 report.expect(maximum == palette.noteFill(track: track, velocity: 127),
               cppID: id, message: "A022 published full velocity uses the track identity fill")
 
-S010 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:224
+S010 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A023 published full velocity is opaque"
 Counterpart expression:
 report.expect(publishedOpaque(maximum), cppID: id,
               message: "A023 published full velocity is opaque")
 
-S011 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:226
+S011 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A024 published middle velocity is opaque"
 Counterpart expression:
 report.expect(publishedOpaque(midpoint), cppID: id,
               message: "A024 published middle velocity is opaque")
 
-S012 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:228
+S012 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A025 published middle velocity differs from both endpoints"
 Counterpart expression:
 report.expect(midpoint != zero && midpoint != minimum && midpoint != maximum, cppID: id,
               message: "A025 published middle velocity differs from both endpoints")
 
-S013 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml:162
+S013 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: function
 Shell framebuffer probes of the production roll: the unselected note face follows the
 track/velocity contract beside its display-scaled black border; a selected note keeps its
 selection-ring role colour, its inset black border and its face; at the small-font viewport the

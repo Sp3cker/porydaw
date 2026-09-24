@@ -4,11 +4,8 @@ Reference revision: 03a190a0bf1bba3a007f31bf74eb01ed362b92ce
 Original: src/checks/swiftrollgated/tabchecks.cpp
 Original SHA-256: cbd7d2960bdc5b0b6923b7aea1bb34095687b40eb39ae269a515b186b609a489
 Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
-Swift SHA-256: d5875c0c5d83b79f1ab4f0bda4d25127de7d5a71e3af4fab57fd3f3e63c5055f
 Additional Swift counterpart: src/checks/editorqml/TabsDrawerProbe.swift
-Swift SHA-256: 21e07f8d90aed7739b1791ed2905ca7c5b9107eaa4879d7201aaba2c0f63adc9
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -2626,90 +2623,112 @@ QVERIFY2(writeSongBytes(otherSongPath, otherSongBefore),
              "could not restore the scratch song the save overwrote")
 Swift assertion predicates
 
-S001 | shell-tabs entry | src/checks/editorqml/ShellQmlTests.swift:48
+S001 | entries | src/checks/editorqml/ShellQmlTests.swift
+Anchor: function
 Counterpart expression:
   stages mus_route101, mus_littleroot_test, mus_route102 and mus_gym with the _fixture_rich voicegroup and runs tst_ShellTabs.qml against the production ShellWindow
 
-S002 | openShell | src/checks/editorqml/tst_ShellTabs.qml:103
+S002 | openShell | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   opens the staged project and appends each song label, awaiting tabCount and waitForPage per tab
 
-S003 | waitForPage | src/checks/editorqml/tst_ShellTabs.qml:131
+S003 | waitForPage | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   awaits renderedNoteCount above zero on the tab grid before the next open starts
 
-S004 | clickSelectTab | src/checks/editorqml/tst_ShellTabs.qml:256
+S004 | clickSelectTab | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   reveals a tab with the production scroll controls and selects it with a real strip click, awaiting selectedId and page visibility
 
-S005 | revealTab | src/checks/editorqml/tst_ShellTabs.qml:236
+S005 | revealTab | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   scrolls with real scroll-control clicks until tabButtonVisible holds
 
-S006 | tabOrderIds | src/checks/editorqml/tst_ShellTabs.qml:202
+S006 | tabOrderIds | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   reads strip order from the drawn select buttons sorted by x, mirroring rowForId and idAt
 
-S007 | tabButtonVisible | src/checks/editorqml/tst_ShellTabs.qml:210
+S007 | tabButtonVisible | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   reads whether a tab button lies inside the scrolled viewport minus the scroll controls
 
-S008 | pointFor | src/checks/editorqml/tst_ShellTabs.qml:266
+S008 | pointFor | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   maps tick and pitch to roll-input coordinates through beatWidth, ticksPerBeat, rowHeight and the camera
 
-S009 | drawNote | src/checks/editorqml/tst_ShellTabs.qml:276
+S009 | drawNote | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   draws one note with a real pointer drag in an empty lane and awaits summary size plus one with a new identity
 
-S010 | settled grabImage helpers | src/checks/editorqml/tst_ShellTabs.qml:392
+S010 | grabRegionStable | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   regionOf maps controls through window coordinates with clamping; changedPixels and matchingColorCount read grabbed frames; grabRegionStable and grabUntilDifferent settle mid-repaint frames
 
-S011 | test_aOpenSwitchAndGeometry | src/checks/editorqml/tst_ShellTabs.qml:413
+S011 | test_aOpenSwitchAndGeometry | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   three-song open, strip and page geometry, captured production boxes keyed by label font, caption containment, NoFocus policy, checked state and per-tab documents
 
-S012 | test_bSelectionRepaintAndGlyph | src/checks/editorqml/tst_ShellTabs.qml:505
+S012 | test_bSelectionRepaintAndGlyph | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   settled-frame repaint of deselected and selected bodies, untouched third tab, close-glyph pixels and click-selection paint inside the page stack
 
-S013 | test_cScrollAndGridInput | src/checks/editorqml/tst_ShellTabs.qml:574
+S013 | test_cScrollAndGridInput | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   window narrowing to overflow, scroll-control reveal both ways, real note click, Escape and pointer-drawn note
 
-S014 | test_dOpenIndependentWorkspace | src/checks/editorqml/tst_ShellTabs.qml:636
+S014 | test_dOpenIndependentWorkspace | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   appended tab owns its page, session, surface, grid and document while the open tab is untouched
 
-S015 | test_eSwitchPreservesState | src/checks/editorqml/tst_ShellTabs.qml:667
+S015 | test_eSwitchPreservesState | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   drawn edit plus wheel-driven camera survive a switch away and back with history intact
 
-S016 | test_fReorderPreservesIdentities | src/checks/editorqml/tst_ShellTabs.qml:712
+S016 | test_fReorderPreservesIdentities | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   real pointer drag reorders the strip with selection, edit, history and camera preserved
 
-S017 | test_gBackgroundClosePreservesActive | src/checks/editorqml/tst_ShellTabs.qml:768
+S017 | test_gBackgroundClosePreservesActive | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   real close-button click removes a background tab with selection, row, page, grid and document intact
 
-S018 | test_hFinalCloseEmptyAndReopen | src/checks/editorqml/tst_ShellTabs.qml:796
+S018 | test_hFinalCloseEmptyAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   final close empties the strip with a background-only blank page, and a later open renders in the same scene
 
-S019 | test_iReopenExistingFocusesTab | src/checks/editorqml/tst_ShellTabs.qml:865
+S019 | test_iReopenExistingFocusesTab | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   re-opening an open label focuses its tab with no new row and no reload
 
-S020 | test_jDirtyCancelDiscardSave | src/checks/editorqml/tst_ShellTabs.qml:891
+S020 | test_jDirtyCancelDiscardSave | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   dirty caption, modal gate with Save, Discard and Cancel, fingerprint-preserved Discard and fingerprint-changing Save with reopened-note persistence
 
-S021 | TabsDrawerProbe fingerprints | src/checks/editorqml/TabsDrawerProbe.swift:11
+S021 | fileFingerprint | src/checks/editorqml/TabsDrawerProbe.swift
+Anchor: function
 Counterpart expression:
   size plus FNV-1a fingerprint of a staged song file, read before and after each gate answer
 
-S022 | dialogButton and awaitGateButtons | src/checks/editorqml/tst_ShellTabs.qml:167
+S022 | dialogButton and awaitGateButtons | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: function
 Counterpart expression:
   window-wide lookup of the gate answers with an await for their presentation

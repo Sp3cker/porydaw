@@ -4,7 +4,6 @@ Reference revision: 59f48ea0e432c14a0da6f93684cc729d8b3c587b
 Original: src/checks/support/corecheck/tst_swiftcore.cpp
 Original SHA-256: 8639e7bc3924df28d6581e0cfa256ed989dfa7b15155bdd42b09c9f4e99e6907
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. The single
@@ -23,7 +22,7 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 SwiftCoreTest slots (midiCodec, musicalSemantics, playback, noteEdits,
@@ -153,29 +152,34 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are representative Swift predicates executed through this exact relay by the swiftcore lane. Their presence alone does not close the NATIVE relay obligation. Preserve their surrounding setup and order in the paired source.
 
-S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:531
+S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+Anchor: message "independent canonical byte vector"
 Counterpart expression:
           report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
                              what: "independent canonical byte vector")
 
-S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:794
+S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift
+Anchor: message "row=key-negative floor modulo"
 Counterpart expression:
       report.expectEqual("B-2", midiKeyName(-1), cppID: m4aSemanticsID,
                          what: "row=key-negative floor modulo")
 
-S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift:45
+S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift
+Anchor: function
 Counterpart expression:
       report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S004 | runMidiImportSuite | src/checks/editcheck/EventChecks.swift:76
+S004 | runMidiImportSuite | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Counterpart expression:
       report.expectEqual(2, added,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",
                          what: "new track occupies the next engine slot")
 
-S005 | commandMixStatePublishesImmediately | src/checks/trackheaders/TrackHeadersChecks.swift:66
+S005 | commandMixStatePublishesImmediately | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "mute command changes session mix state"
 Counterpart expression:
       report.expectEqual(Set([0]), session.mutedTracks, cppID: trackHeadersMixPublicationID,
                          what: "mute command changes session mix state")

@@ -4,7 +4,6 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/host/tst_rulergridmenu.cpp
 Original SHA-256: 050bc30d7fe744c91d1f084885730ecd67915e58ed95f823bb1dc063a4dc9876
 Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml :: test_gridDivisionAndFeelMenusDispatchAndDismiss + test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen
-Swift SHA-256: f14886994ed1fff10ad5674f007b8aad697571b8a28719d20aea1cc445a01ed2
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -52,7 +51,6 @@ from checks::support::alternateGridMenuId and the live view state, so
 re-execution order is fixed by the suite sequence.
 Swift sequence: the shell lane opens mus_route101 in a ShellWindow, drives division (kind 1, nine snapScale rows -4..4) and feel (kind 2, rows 0/1) menus through real mouseClick/keyClick, then drives timeSig (one row, actionId 9) and header (five rows, actionIds 1..5) menus; waits use tryCompare/tryVerify plus the native pump (waitForNative).
 
-Tally: MATCHED 38, PARTIAL 0, GAP 28, NATIVE 0, RETIRED-REPRESENTATION 100.
 
 Original assertion inventory and source sequence
 
@@ -257,7 +255,7 @@ QVERIFY2(!view.findChild<QMenu *>(),
 
 A009 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:148
 Disposition: GAP
-Mapping/reason: GAP: division rowCount 6 for old denominator ids (-1, 4, 8, 16, 32, 0) - Swift division rows are nine snapScale ids -4..4 (tst_ShellGridMenu.qml:165,168); the old-id count has no Swift equivalent. Open obligation.
+Mapping/reason: GAP: division rowCount 6 for old denominator ids (-1, 4, 8, 16, 32, 0) - Swift division rows are nine snapScale ids -4..4 (tst_ShellGridMenu.qml,168); the old-id count has no Swift equivalent. Open obligation.
 Source context since previous assertion:
         static constexpr std::array<int, 6> divisionIds{-1, 4, 8, 16, 32, 0};
 Original expression:
@@ -265,7 +263,7 @@ QCOMPARE(divisionMenu.model->rowCount(), int(divisionIds.size()));
 
 A010 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:152
 Disposition: MATCHED
-Mapping/reason: MATCHED: division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148) with rowCount (144), executed at 168 for nine snapScale rows; row-existence observable is identical, only the id domain changed.
+Mapping/reason: MATCHED: division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml) with rowCount (144), executed at 168 for nine snapScale rows; row-existence observable is identical, only the id domain changed.
 Source context since previous assertion:
         int divisionChecked = 0;
         for (int row = 0; row < divisionMenu.model->rowCount(); ++row) {
@@ -275,7 +273,7 @@ QVERIFY(item);
 
 A011 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:153
 Disposition: GAP
-Mapping/reason: GAP: per-row id equals old denominator literals - Swift per-row actionId compares run against snapScale ids -4..4 (tst_ShellGridMenu.qml:149,168); the old-id-to-new-row difference leaves this literal unproved. Open obligation.
+Mapping/reason: GAP: per-row id equals old denominator literals - Swift per-row actionId compares run against snapScale ids -4..4 (tst_ShellGridMenu.qml,168); the old-id-to-new-row difference leaves this literal unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -283,7 +281,7 @@ QCOMPARE(item->id, divisionIds[std::size_t(row)]);
 
 A012 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:154
 Disposition: MATCHED
-Mapping/reason: MATCHED: division rows enabled - compare(row.itemData.enabled, true) per row (tst_ShellGridMenu.qml:150), executed at 168; identical observable.
+Mapping/reason: MATCHED: division rows enabled - compare(row.itemData.enabled, true) per row (tst_ShellGridMenu.qml), executed at 168; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -291,7 +289,7 @@ QVERIFY(item->enabled);
 
 A013 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:155
 Disposition: MATCHED
-Mapping/reason: MATCHED: division rows checkable - compare(row.itemData.checkable, true) per row (tst_ShellGridMenu.qml:151), executed at 168; identical observable.
+Mapping/reason: MATCHED: division rows checkable - compare(row.itemData.checkable, true) per row (tst_ShellGridMenu.qml), executed at 168; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -299,7 +297,7 @@ QVERIFY(item->checkable);
 
 A014 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:158
 Disposition: MATCHED
-Mapping/reason: MATCHED: exactly one division row checked - checkedCount tally with compare(checkedCount, 1) (tst_ShellGridMenu.qml:145,153-156), executed at 168; identical observable.
+Mapping/reason: MATCHED: exactly one division row checked - checkedCount tally with compare(checkedCount, 1) (tst_ShellGridMenu.qml,153-156), executed at 168; identical observable.
 Source context since previous assertion:
             divisionChecked += item->checked ? 1 : 0;
         }
@@ -308,7 +306,7 @@ QCOMPARE(divisionChecked, 1);
 
 A015 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:161
 Disposition: GAP
-Mapping/reason: GAP: current grid denominator found via GridSelection::toMenuId row lookup - Swift locates the checked row by snapScale value (tst_ShellGridMenu.qml:152,168); the old toMenuId mapping has no Swift equivalent. Open obligation.
+Mapping/reason: GAP: current grid denominator found via GridSelection::toMenuId row lookup - Swift locates the checked row by snapScale value (tst_ShellGridMenu.qml,168); the old toMenuId mapping has no Swift equivalent. Open obligation.
 Source context since previous assertion:
         const int currentDivisionRow =
             divisionMenu.model->rowForId(initial.gridSelection.toMenuId());
@@ -317,7 +315,7 @@ QVERIFY2(currentDivisionRow >= 0, "the division menu omitted the current grid de
 
 A016 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:164
 Disposition: MATCHED
-Mapping/reason: MATCHED: current division row checked - per-row compare(row.itemData.checked, id === checkedId) (tst_ShellGridMenu.qml:152) with exactly-one-checked (156), executed at 168 for the initial snap (checked 0); identical observable in the snapScale domain.
+Mapping/reason: MATCHED: current division row checked - per-row compare(row.itemData.checked, id === checkedId) (tst_ShellGridMenu.qml) with exactly-one-checked (156), executed at 168 for the initial snap (checked 0); identical observable in the snapScale domain.
 Source context since previous assertion:
         const songview::QuickMenuItem *const currentDivision =
             divisionMenu.model->itemAt(currentDivisionRow);
@@ -326,7 +324,7 @@ QVERIFY(currentDivision && currentDivision->checked);
 
 A017 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:165
 Disposition: GAP
-Mapping/reason: GAP: current division row text equals control text - Swift asserts gridDivisionControlText values (tst_ShellGridMenu.qml:169) but never reads row text; the row-text coupling is unproved. Open obligation.
+Mapping/reason: GAP: current division row text equals control text - Swift asserts gridDivisionControlText values (tst_ShellGridMenu.qml) but never reads row text; the row-text coupling is unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -334,7 +332,7 @@ QCOMPARE(currentDivision->text, surface.division->property("controlText").toStri
 
 A018 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:168
 Disposition: GAP
-Mapping/reason: GAP: alternate denominator from checks::support::alternateGridMenuId present - Swift picks snapScale row 1 from -4..4 rows (tst_ShellGridMenu.qml:170) with no alternateGridMenuId; the old-id difference leaves this unproved. Open obligation.
+Mapping/reason: GAP: alternate denominator from checks::support::alternateGridMenuId present - Swift picks snapScale row 1 from -4..4 rows (tst_ShellGridMenu.qml) with no alternateGridMenuId; the old-id difference leaves this unproved. Open obligation.
 Source context since previous assertion:
         const int targetDivision = checks::support::alternateGridMenuId(initial.gridSelection);
         const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
@@ -361,7 +359,7 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
 
 A021 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:176
 Disposition: MATCHED
-Mapping/reason: MATCHED: division pick closes the menu - clickRow(divisionMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:170-171); retired QuickPopupSession isOpen replaced by Swift gridMenuKind, same user-visible close.
+Mapping/reason: MATCHED: division pick closes the menu - clickRow(divisionMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml); retired QuickPopupSession isOpen replaced by Swift gridMenuKind, same user-visible close.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -377,7 +375,7 @@ QVERIFY(!QApplication::activePopupWidget());
 
 A023 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:178
 Disposition: GAP
-Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after pick - Swift asserts snapTicks decrease plus control text (tst_ShellGridMenu.qml:172-173) but has no GridSelection::musical value; the old identity has no Swift equivalent. Open obligation.
+Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after pick - Swift asserts snapTicks decrease plus control text (tst_ShellGridMenu.qml) but has no GridSelection::musical value; the old identity has no Swift equivalent. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -386,7 +384,7 @@ QCOMPARE(view.viewState().gridSelection,
 
 A024 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:180
 Disposition: GAP
-Mapping/reason: GAP: division control text equals the picked row text - Swift asserts gridDivisionControlText values (Auto on open, picked value after dispatch at tst_ShellGridMenu.qml:169,172) but never reads row text; the row-text coupling is unproved. Open obligation.
+Mapping/reason: GAP: division control text equals the picked row text - Swift asserts gridDivisionControlText values (Auto on open, picked value after dispatch at tst_ShellGridMenu.qml,172) but never reads row text; the row-text coupling is unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -402,7 +400,7 @@ QVERIFY2(divisionReopened.session, qUtf8Printable(divisionReopened.diagnostic));
 
 A026 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:186
 Disposition: MATCHED
-Mapping/reason: MATCHED: reopened division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148), executed at 176 on reopen; identical observable.
+Mapping/reason: MATCHED: reopened division rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml), executed at 176 on reopen; identical observable.
 Source context since previous assertion:
         for (int row = 0; row < divisionReopened.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = divisionReopened.model->itemAt(row);
@@ -411,7 +409,7 @@ QVERIFY(item);
 
 A027 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:187
 Disposition: MATCHED
-Mapping/reason: MATCHED: reopen re-checks the picked row - per-row checked-iff-picked compare (tst_ShellGridMenu.qml:152) executed at 176 as assertRows(ids, -3); same checked pattern in the snapScale domain.
+Mapping/reason: MATCHED: reopen re-checks the picked row - per-row checked-iff-picked compare (tst_ShellGridMenu.qml) executed at 176 as assertRows(ids, -3); same checked pattern in the snapScale domain.
 Source context since previous assertion:
   ;
 Original expression:
@@ -455,7 +453,7 @@ QVERIFY2(!view.findChild<QMenu *>(), "opening the feel menu left a QMenu under S
 
 A032 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:201
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel rowCount 2 - tryCompare(menu, rowCount, ids.length) (tst_ShellGridMenu.qml:144), executed at 183 for [0,1]; identical count and ids.
+Mapping/reason: MATCHED: feel rowCount 2 - tryCompare(menu, rowCount, ids.length) (tst_ShellGridMenu.qml), executed at 183 for [0,1]; identical count and ids.
 Source context since previous assertion:
         static constexpr std::array<int, 2> feelIds{0, 1};
 Original expression:
@@ -463,7 +461,7 @@ QCOMPARE(feelMenu.model->rowCount(), int(feelIds.size()));
 
 A033 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:205
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml:147-148), executed at 183; identical observable.
+Mapping/reason: MATCHED: feel rows exist - assertRows rowItem non-null per row (tst_ShellGridMenu.qml), executed at 183; identical observable.
 Source context since previous assertion:
         int feelChecked = 0;
         for (int row = 0; row < feelMenu.model->rowCount(); ++row) {
@@ -473,7 +471,7 @@ QVERIFY(item);
 
 A034 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:206
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel row ids 0,1 - compare(row.itemData.actionId, ids[index]) per row (tst_ShellGridMenu.qml:149), executed at 183 for [0,1]; identical ids.
+Mapping/reason: MATCHED: feel row ids 0,1 - compare(row.itemData.actionId, ids[index]) per row (tst_ShellGridMenu.qml), executed at 183 for [0,1]; identical ids.
 Source context since previous assertion:
   ;
 Original expression:
@@ -481,7 +479,7 @@ QCOMPARE(item->id, feelIds[std::size_t(row)]);
 
 A035 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:207
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel rows enabled - compare(row.itemData.enabled, true) (tst_ShellGridMenu.qml:150), executed at 183; identical observable.
+Mapping/reason: MATCHED: feel rows enabled - compare(row.itemData.enabled, true) (tst_ShellGridMenu.qml), executed at 183; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -489,7 +487,7 @@ QVERIFY(item->enabled);
 
 A036 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:208
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel rows checkable - compare(row.itemData.checkable, true) (tst_ShellGridMenu.qml:151), executed at 183; identical observable.
+Mapping/reason: MATCHED: feel rows checkable - compare(row.itemData.checkable, true) (tst_ShellGridMenu.qml), executed at 183; identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -497,7 +495,7 @@ QVERIFY(item->checkable);
 
 A037 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:211
 Disposition: MATCHED
-Mapping/reason: MATCHED: exactly one feel row checked - checkedCount compare(checkedCount, 1) (tst_ShellGridMenu.qml:156), executed at 183; identical observable.
+Mapping/reason: MATCHED: exactly one feel row checked - checkedCount compare(checkedCount, 1) (tst_ShellGridMenu.qml), executed at 183; identical observable.
 Source context since previous assertion:
             feelChecked += item->checked ? 1 : 0;
         }
@@ -506,7 +504,7 @@ QCOMPARE(feelChecked, 1);
 
 A038 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:214
 Disposition: MATCHED
-Mapping/reason: MATCHED: current feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml:144,149), executed at 183 for [0,1]; both feels present, same observable.
+Mapping/reason: MATCHED: current feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml,149), executed at 183 for [0,1]; both feels present, same observable.
 Source context since previous assertion:
         const int currentFeelId = afterDivision.gridTriplet ? 1 : 0;
         const int currentFeelRow = feelMenu.model->rowForId(currentFeelId);
@@ -515,7 +513,7 @@ QVERIFY2(currentFeelRow >= 0, "the feel menu omitted the current grid feel");
 
 A039 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:216
 Disposition: MATCHED
-Mapping/reason: MATCHED: current feel row checked - per-row checked compare (tst_ShellGridMenu.qml:152), executed at 183 as assertRows(feelMenu, [0,1], 0) with Straight text (184); identical observable.
+Mapping/reason: MATCHED: current feel row checked - per-row checked compare (tst_ShellGridMenu.qml), executed at 183 as assertRows(feelMenu, [0,1], 0) with Straight text (184); identical observable.
 Source context since previous assertion:
         const songview::QuickMenuItem *const currentFeel = feelMenu.model->itemAt(currentFeelRow);
 Original expression:
@@ -523,7 +521,7 @@ QVERIFY(currentFeel && currentFeel->checked);
 
 A040 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:217
 Disposition: GAP
-Mapping/reason: GAP: current feel row text equals control text - Swift asserts gridFeelControlText Straight (tst_ShellGridMenu.qml:184) but never reads row text; unproved. Open obligation.
+Mapping/reason: GAP: current feel row text equals control text - Swift asserts gridFeelControlText Straight (tst_ShellGridMenu.qml) but never reads row text; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -531,7 +529,7 @@ QCOMPARE(currentFeel->text, surface.feel->property("controlText").toString());
 
 A041 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:221
 Disposition: MATCHED
-Mapping/reason: MATCHED: alternate feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml:144,149), executed at 183; identical observable.
+Mapping/reason: MATCHED: alternate feel row present - rowCount 2 plus per-row actionId compares (tst_ShellGridMenu.qml,149), executed at 183; identical observable.
 Source context since previous assertion:
         const int targetFeel = afterDivision.gridTriplet ? 0 : 1;
         const int targetFeelRow = feelMenu.model->rowForId(targetFeel);
@@ -540,7 +538,7 @@ QVERIFY2(targetFeelRow >= 0, "the feel menu omitted the alternate grid feel");
 
 A042 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:223
 Disposition: MATCHED
-Mapping/reason: MATCHED: alternate feel row exists - assertRows rowItem non-null (tst_ShellGridMenu.qml:147-148), executed at 183; identical observable.
+Mapping/reason: MATCHED: alternate feel row exists - assertRows rowItem non-null (tst_ShellGridMenu.qml), executed at 183; identical observable.
 Source context since previous assertion:
         const songview::QuickMenuItem *const targetFeelItem = feelMenu.model->itemAt(targetFeelRow);
 Original expression:
@@ -557,7 +555,7 @@ QVERIFY2(quick_popup::clickMenuRow(*feelMenu.session, targetFeelRow),
 
 A044 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:228
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel pick closes the menu - clickRow(feelMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:185-186); same user-visible close in the Swift gridMenuKind domain.
+Mapping/reason: MATCHED: feel pick closes the menu - clickRow(feelMenu, 1) then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml); same user-visible close in the Swift gridMenuKind domain.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -565,7 +563,7 @@ QVERIFY2(!feelMenu.session->isOpen(), "a feel pick left the shared menu open");
 
 A045 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:229
 Disposition: MATCHED
-Mapping/reason: MATCHED: feel pick toggles triplet - tryCompare(grid, tripletGrid, true) after the pick (tst_ShellGridMenu.qml:187); Swift tripletGrid is the gridTriplet observable.
+Mapping/reason: MATCHED: feel pick toggles triplet - tryCompare(grid, tripletGrid, true) after the pick (tst_ShellGridMenu.qml); Swift tripletGrid is the gridTriplet observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -581,7 +579,7 @@ QCOMPARE(surface.ruler->feelText(), targetFeelText);
 
 A047 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:231
 Disposition: GAP
-Mapping/reason: GAP: feel control text equals the picked row text - Swift asserts the Triplet value (tst_ShellGridMenu.qml:188) but never reads row text; unproved. Open obligation.
+Mapping/reason: GAP: feel control text equals the picked row text - Swift asserts the Triplet value (tst_ShellGridMenu.qml) but never reads row text; unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -597,7 +595,7 @@ QVERIFY2(feelReopened.session, qUtf8Printable(feelReopened.diagnostic));
 
 A049 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:237
 Disposition: MATCHED
-Mapping/reason: MATCHED: reopened feel rows exist - assertRows rowItem non-null (tst_ShellGridMenu.qml:147-148), executed at 190 on reopen; identical observable.
+Mapping/reason: MATCHED: reopened feel rows exist - assertRows rowItem non-null (tst_ShellGridMenu.qml), executed at 190 on reopen; identical observable.
 Source context since previous assertion:
         for (int row = 0; row < feelReopened.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = feelReopened.model->itemAt(row);
@@ -606,7 +604,7 @@ QVERIFY(item);
 
 A050 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:238
 Disposition: MATCHED
-Mapping/reason: MATCHED: reopened feel menu re-checks the picked feel - per-row checked compare (tst_ShellGridMenu.qml:152), executed at 190 as assertRows(feelMenu, [0,1], 1); identical observable.
+Mapping/reason: MATCHED: reopened feel menu re-checks the picked feel - per-row checked compare (tst_ShellGridMenu.qml), executed at 190 as assertRows(feelMenu, [0,1], 1); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -649,7 +647,7 @@ QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
 
 A054 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:257
 Disposition: GAP
-Mapping/reason: GAP: checked division row found via toMenuId - Swift checked-noop clicks the assertRows-checked snapScale row (tst_ShellGridMenu.qml:176,178) with no toMenuId lookup; the old-id difference leaves this unproved. Open obligation.
+Mapping/reason: GAP: checked division row found via toMenuId - Swift checked-noop clicks the assertRows-checked snapScale row (tst_ShellGridMenu.qml,178) with no toMenuId lookup; the old-id difference leaves this unproved. Open obligation.
 Source context since previous assertion:
         const int checkedRow = opened.model->rowForId(before.gridSelection.toMenuId());
 Original expression:
@@ -666,7 +664,7 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, checkedRow),
 
 A056 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:261
 Disposition: MATCHED
-Mapping/reason: MATCHED: checked-row click closes without change - clickRow on the checked division row then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:178-179) with snapTicks unchanged (180); same user-visible close, retired session isOpen replaced by gridMenuKind.
+Mapping/reason: MATCHED: checked-row click closes without change - clickRow on the checked division row then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml) with snapTicks unchanged (180); same user-visible close, retired session isOpen replaced by gridMenuKind.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -674,7 +672,7 @@ QVERIFY2(!opened.session->isOpen(), "clicking the checked division row left the 
 
 A057 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:262
 Disposition: MATCHED
-Mapping/reason: MATCHED: checked-noop leaves selection unchanged - compare(grid.snapTicks, settledSnap) (tst_ShellGridMenu.qml:180); Swift snapTicks is the gridSelection observable.
+Mapping/reason: MATCHED: checked-noop leaves selection unchanged - compare(grid.snapTicks, settledSnap) (tst_ShellGridMenu.qml); Swift snapTicks is the gridSelection observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -682,7 +680,7 @@ QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A058 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:263
 Disposition: GAP
-Mapping/reason: GAP: gridTriplet unchanged by the division checked-noop - Swift asserts snapTicks unchanged (tst_ShellGridMenu.qml:180) but no triplet predicate surrounds the division noop. Open obligation.
+Mapping/reason: GAP: gridTriplet unchanged by the division checked-noop - Swift asserts snapTicks unchanged (tst_ShellGridMenu.qml) but no triplet predicate surrounds the division noop. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -690,7 +688,7 @@ QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A059 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:264
 Disposition: GAP
-Mapping/reason: GAP: division control text unchanged by the checked-noop - Swift asserts no control-text predicate around the noop click (tst_ShellGridMenu.qml:178-180); unproved. Open obligation.
+Mapping/reason: GAP: division control text unchanged by the checked-noop - Swift asserts no control-text predicate around the noop click (tst_ShellGridMenu.qml); unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -718,7 +716,7 @@ QVERIFY2(keyboardReopened.session, qUtf8Printable(keyboardReopened.diagnostic));
 
 A062 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:274
 Disposition: GAP
-Mapping/reason: GAP: keyboard-reopened division rowCount 6 - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml:165,168); the old-count difference leaves this unproved. Open obligation.
+Mapping/reason: GAP: keyboard-reopened division rowCount 6 - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml,168); the old-count difference leaves this unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -854,7 +852,7 @@ QVERIFY2(!probe.isNull(), "no ruler point lies outside the division menu frame")
 
 A074 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:339
 Disposition: MATCHED
-Mapping/reason: MATCHED: outside click dismisses the division menu - mouseClick on the ruler outside the menu frame then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:205-206); same user-visible dismissal, retired session isOpen replaced by gridMenuKind.
+Mapping/reason: MATCHED: outside click dismisses the division menu - mouseClick on the ruler outside the menu frame then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml); same user-visible dismissal, retired session isOpen replaced by gridMenuKind.
 Source context since previous assertion:
         QTest::mouseClick(surface.quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, probe);
         QCoreApplication::processEvents();
@@ -864,7 +862,7 @@ QVERIFY2(!divisionMenu.session->isOpen(),
 
 A075 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:341
 Disposition: MATCHED
-Mapping/reason: MATCHED: outside-click dismissal leaves selection unchanged - compare(grid.snapTicks, beforeSnap) (tst_ShellGridMenu.qml:209); Swift snapTicks is the gridSelection observable.
+Mapping/reason: MATCHED: outside-click dismissal leaves selection unchanged - compare(grid.snapTicks, beforeSnap) (tst_ShellGridMenu.qml); Swift snapTicks is the gridSelection observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -872,7 +870,7 @@ QCOMPARE(view.viewState().gridSelection, beforeDismissal.gridSelection);
 
 A076 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:342
 Disposition: MATCHED
-Mapping/reason: MATCHED: outside-click dismissal leaves feel unchanged - compare(grid.tripletGrid, true) (tst_ShellGridMenu.qml:207); Swift tripletGrid is the gridTriplet observable.
+Mapping/reason: MATCHED: outside-click dismissal leaves feel unchanged - compare(grid.tripletGrid, true) (tst_ShellGridMenu.qml); Swift tripletGrid is the gridTriplet observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -880,7 +878,7 @@ QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A077 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:343
 Disposition: MATCHED
-Mapping/reason: MATCHED: outside-click dismissal moves no cursor - compare(grid.editCursorTick, beforeCursor) (tst_ShellGridMenu.qml:208); identical observable.
+Mapping/reason: MATCHED: outside-click dismissal moves no cursor - compare(grid.editCursorTick, beforeCursor) (tst_ShellGridMenu.qml); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -921,7 +919,7 @@ QVERIFY2(feelMenu.session, qUtf8Printable(feelMenu.diagnostic));
 
 A082 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:353
 Disposition: MATCHED
-Mapping/reason: MATCHED: Escape dismisses the grid menu - openGrid division then keyClick(Escape) with tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:211-213); same user-visible dismissal through the same gridMenuLoader.
+Mapping/reason: MATCHED: Escape dismisses the grid menu - openGrid division then keyClick(Escape) with tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml); same user-visible dismissal through the same gridMenuLoader.
 Source context since previous assertion:
         QTest::keyClick(feelMenu.session->window(), Qt::Key_Escape);
         QCoreApplication::processEvents();
@@ -930,7 +928,7 @@ QVERIFY2(!feelMenu.session->isOpen(), "Escape did not dismiss the feel menu");
 
 A083 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:354
 Disposition: MATCHED
-Mapping/reason: MATCHED: Escape dismissal preserves selection - gridDivisionControlText still shows the picked value after Escape (tst_ShellGridMenu.qml:214); same selection-preserved observable.
+Mapping/reason: MATCHED: Escape dismissal preserves selection - gridDivisionControlText still shows the picked value after Escape (tst_ShellGridMenu.qml); same selection-preserved observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -938,7 +936,7 @@ QCOMPARE(view.viewState().gridSelection, beforeDismissal.gridSelection);
 
 A084 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:355
 Disposition: MATCHED
-Mapping/reason: MATCHED: Escape dismissal preserves feel - compare(grid.tripletGrid, true) after Escape (tst_ShellGridMenu.qml:215); identical observable.
+Mapping/reason: MATCHED: Escape dismissal preserves feel - compare(grid.tripletGrid, true) after Escape (tst_ShellGridMenu.qml); identical observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -946,7 +944,7 @@ QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
 
 A085 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:356
 Disposition: GAP
-Mapping/reason: GAP: edit cursor tick preserved across Escape dismissal - Swift asserts cursor preservation only for outside-click (tst_ShellGridMenu.qml:208); no cursor predicate surrounds the Escape dismissal (211-215). Open obligation.
+Mapping/reason: GAP: edit cursor tick preserved across Escape dismissal - Swift asserts cursor preservation only for outside-click (tst_ShellGridMenu.qml); no cursor predicate surrounds the Escape dismissal (211-215). Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1045,7 +1043,7 @@ QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
 
 A094 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:404
 Disposition: MATCHED
-Mapping/reason: MATCHED: division pick closes the menu after selection and cursor changes - clickRow then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml:170-171) with dispatch (172-173); same pick-close observable.
+Mapping/reason: MATCHED: division pick closes the menu after selection and cursor changes - clickRow then tryCompare(grid, gridMenuKind, 0) (tst_ShellGridMenu.qml) with dispatch (172-173); same pick-close observable.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -1239,7 +1237,7 @@ QVERIFY2(reopenedGrid.session, qUtf8Printable(reopenedGrid.diagnostic));
 
 A112 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:486
 Disposition: GAP
-Mapping/reason: GAP: reopened grid rowCount 6 after foreign takeover - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml:165,168); the old-count difference leaves this unproved. Open obligation.
+Mapping/reason: GAP: reopened grid rowCount 6 after foreign takeover - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml,168); the old-count difference leaves this unproved. Open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1255,7 +1253,7 @@ QVERIFY(reusedCheckedRow >= 0);
 
 A114 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:489
 Disposition: MATCHED
-Mapping/reason: MATCHED: reopened menu still re-checks current - openGrid plus assertRows re-check (tst_ShellGridMenu.qml:175-176) with per-row checked compare (152); same re-check observable after the foreign-probe reuse.
+Mapping/reason: MATCHED: reopened menu still re-checks current - openGrid plus assertRows re-check (tst_ShellGridMenu.qml) with per-row checked compare (152); same re-check observable after the foreign-probe reuse.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1436,7 +1434,7 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
 
 A132 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:551
 Disposition: MATCHED
-Mapping/reason: MATCHED: action row opens its prompt - clickRow(timeMenu, 0) then tryCompare(session, timeSigPromptOpen, true) with promptOpenCount 1 (tst_ShellGridMenu.qml:227-230); the Swift timeSig prompt is the Insert Time form analogue.
+Mapping/reason: MATCHED: action row opens its prompt - clickRow(timeMenu, 0) then tryCompare(session, timeSigPromptOpen, true) with promptOpenCount 1 (tst_ShellGridMenu.qml); the Swift timeSig prompt is the Insert Time form analogue.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1445,7 +1443,7 @@ QTRY_VERIFY2(quick_popup::promptItem(*session, QLatin1String("insertTimePrompt")
 
 A133 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:553
 Disposition: MATCHED
-Mapping/reason: MATCHED: menu closes before the prompt opens - Connections harness records menuClosedBeforePrompt (tst_ShellGridMenu.qml:33-41) with compare(menuClosedBeforePrompt, true) after menu-closed (228) then prompt-open (229) at 231; same close-before-trigger observable, exactly-once via 230.
+Mapping/reason: MATCHED: menu closes before the prompt opens - Connections harness records menuClosedBeforePrompt (tst_ShellGridMenu.qml) with compare(menuClosedBeforePrompt, true) after menu-closed (228) then prompt-open (229) at 231; same close-before-trigger observable, exactly-once via 230.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1461,7 +1459,7 @@ QVERIFY(completionFollowedTrigger);
 
 A135 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:555
 Disposition: MATCHED
-Mapping/reason: MATCHED: action dispatched exactly once - tryCompare(testCase, promptOpenCount, 1) (tst_ShellGridMenu.qml:230); same exactly-once observable as the single QAction trigger.
+Mapping/reason: MATCHED: action dispatched exactly once - tryCompare(testCase, promptOpenCount, 1) (tst_ShellGridMenu.qml); same exactly-once observable as the single QAction trigger.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1609,7 +1607,7 @@ QVERIFY2(quick_popup::clickMenuRow(*session, 0),
 
 A150 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:607
 Disposition: MATCHED
-Mapping/reason: MATCHED: disabled row keeps the menu open - clickRow(headerMenu, 3) on the disabled duplicate row with tryCompare(headers, menuOpen, true) (tst_ShellGridMenu.qml:270-271); same disabled-stays-open observable.
+Mapping/reason: MATCHED: disabled row keeps the menu open - clickRow(headerMenu, 3) on the disabled duplicate row with tryCompare(headers, menuOpen, true) (tst_ShellGridMenu.qml); same disabled-stays-open observable.
 Source context since previous assertion:
         QCoreApplication::processEvents();
 Original expression:
@@ -1617,7 +1615,7 @@ QVERIFY2(session->isOpen(), "clicking a disabled QAction row closed its menu");
 
 A151 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:608
 Disposition: MATCHED
-Mapping/reason: MATCHED: disabled row dispatches nothing - compare(appliedRevisionText, beforeRevision) after the disabled click (tst_ShellGridMenu.qml:269,272); same no-trigger observable as the zero trigger count.
+Mapping/reason: MATCHED: disabled row dispatches nothing - compare(appliedRevisionText, beforeRevision) after the disabled click (tst_ShellGridMenu.qml,272); same no-trigger observable as the zero trigger count.
 Source context since previous assertion:
   ;
 Original expression:

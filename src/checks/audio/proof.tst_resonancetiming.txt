@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/audio/tst_resonancetiming.cpp
 Original SHA-256: e5ac67cfd7333076c094fdbfd027ad6777290d5157857fbc22f401898b2964c4
 Swift counterpart: src/checks/audio/tst_resonancetiming.swift
-Swift SHA-256: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
 
 Deletion certificate
 C++ original deleted in this lane: src/checks/audio/tst_resonancetiming.cpp and its
@@ -36,8 +35,8 @@ including the scalecheck predicates added to suite 2. This ledger claims no nati
 of the deleted C++ original and no cross-implementation differential.
 
 Registered run path: src/checks/audio/tst_resonancetiming.swift :: resonanceTimingChecks
--> src/checks/playback/ResonanceSuppressionChecks.swift:8 ::
-runResonanceSuppressionChecks -> src/checks/support/corecheck/CoreCheckSupport.swift:98-102
+-> src/checks/playback/ResonanceSuppressionChecks.swift ::
+runResonanceSuppressionChecks -> src/checks/support/corecheck/CoreCheckSupport.swift
 pdcSuiteRun case 3 (swiftcore); counterpart compiled in src/checks/CMakeLists.txt:95 ::
 swift_core_check. The deleted original is absent from native CMake and checkcatalog.
 

@@ -4,7 +4,6 @@ Reference revision: d16998ddc07628bd142dced272642f46aacc9017
 Original: src/checks/swiftdocfeed/tst_swiftdocfeed.cpp
 Original SHA-256: 4a77facffff23e3d070b100f80821f6538be4e1e8ddbf9453e823ef7d59d6e52
 Swift counterpart: src/checks/swiftdocfeed/DocumentFeedCheck.swift
-Swift SHA-256: 801c65c73b349315a94306e840fdb61c2c404d0d96e047f156f3818b00f46b97
 
 Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
 src/checks/swiftdocfeed/tst_swiftdocfeed.cpp and src/checks/swiftdocfeed/DocumentFeedCheck.swift.
@@ -19,7 +18,6 @@ Reference revision: d16998ddc07628bd142dced272642f46aacc9017
 Original: src/checks/swiftdocfeed/tst_swiftdocfeed.cpp
 Original SHA-256: 4a77facffff23e3d070b100f80821f6538be4e1e8ddbf9453e823ef7d59d6e52
 Swift counterpart (retired, pinned pre-retirement): src/checks/swiftdocfeed/DocumentFeedCheck.swift
-Swift SHA-256: 801c65c73b349315a94306e840fdb61c2c404d0d96e047f156f3818b00f46b97
 Verification: lane runs recorded by the controller, not re-run for this ledger:
 deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
 (all harnesses in 11.40s). Narrow eventEdits: 4 QINFO PASS lines for
@@ -51,10 +49,10 @@ None of these labels claims whole-case equivalence. Native passes do not prove t
 
 Execution and ownership
 Registered run paths (swiftcore lane): eventEdits suite -> runEventEditsSuite ->
-unsignedTicksAndRawSignaturePrecedence (src/checks/editcheck/TickBoundsChecks.swift:4, wired into the
-suite at src/checks/editcheck/EventChecks.swift:21); projectSession suite ->
+unsignedTicksAndRawSignaturePrecedence (src/checks/editcheck/TickBoundsChecks.swift, wired into the
+suite at src/checks/editcheck/EventChecks.swift); projectSession suite ->
 sessionPlaybackProjectionAndStatePublication
-(src/checks/workspace/session_playback.swift:10); rollcheck suites -> NoteChecks, DocumentEditChecks,
+(src/checks/workspace/session_playback.swift); rollcheck suites -> NoteChecks, DocumentEditChecks,
 EventChecks, TrackCorpusChecks, remap, selection, presentation, note_commands, session_editor_semantics;
 editcheck -> DocumentHistoryChecks. The retired sgd_check_swift_guard entry point (S001-S032) executes
 nothing in any registered check; the S001-S032 trailer below is the historical record of the retired
@@ -798,7 +796,7 @@ Original expression:
 
 A066 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:203
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift:152 (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
           capture.reset();
@@ -814,7 +812,7 @@ Original expression:
 
 A067 | SwiftDocFeedTest::fixtureMutationHistoryAndTeardown | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:204
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift:152 (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1369,7 +1367,7 @@ Original expression:
 
 A118 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:352
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift:227 (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
           compareSession(capture, view, sessionId, 13);
@@ -1379,7 +1377,7 @@ Original expression:
 
 A119 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:353
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift:227 (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1464,7 +1462,7 @@ Original expression:
 
 A127 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:374
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift:227 (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1473,7 +1471,7 @@ Original expression:
 
 A128 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:375
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift:227 (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible post-undo selection reconciliation (deleted note id pruned from selection; undo restores the note without resurrecting it into selection) is asserted by executing src/checks/workspace/session_playback.swift (cppID swiftcore/DocumentSession::selectionPrunesDeletedNotes) and src/checks/rollcheck/remap.swift::checkRemapDelete:223. No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
 
@@ -1532,7 +1530,7 @@ Original expression:
 
 A134 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:390
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift:152 (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
           sgs_unregister_feed(sessionId);
@@ -1554,7 +1552,7 @@ Original expression:
 
 A136 | SwiftDocFeedTest::sessionFeedTransitionsMasksAndReconciliation | src/checks/swiftdocfeed/tst_swiftdocfeed.cpp:393
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift:152 (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible presenter lifetime (clean teardown, fresh ids on remount, fresh delivery on the remounted feed) is asserted by executing src/checks/workspace/session_io.swift::sessionLifetime:237 and src/checks/workspace/SessionChecks.swift (fresh bankToken on mutation). No-ingress: tst_swiftdocfeed.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/SgcCommandPipe/SgcKeySurface are absent from src/swift/; the Swift suite never touches the retired feed mechanism. No live native run exists or is claimed. The exact retired-bridge end-to-end observation (sgd_/sgs_ snapshot fields, delivery counts and synthetic tokens) is not reproduced.
 Source context since previous assertion:
   ;
           remount.pushSnapshot();
@@ -1604,139 +1602,174 @@ DocumentFeedCheck.swift. They execute in no registered check. S033-S036 are the 
 predicates carrying the original swiftdocfeed/SwiftDocFeedTest cppID, indexed after S032 with verbatim
 source:
 
-S001 | runDocumentFeedCheck (guard code 1) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:26
+S001 | runDocumentFeedCheck (guard code 1) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.connect(), second!.connect(), !first!.connect() else { return 1 }
 
-S002 | runDocumentFeedCheck (guard code 2) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:27
+S002 | runDocumentFeedCheck (guard code 2) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard firstNotifications == 0, secondNotifications == 0 else { return 2 }
 
-S003 | runDocumentFeedCheck (guard code 3) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:30
+S003 | runDocumentFeedCheck (guard code 3) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !duplicate!.connect() else { return 3 }
 
-S004 | runDocumentFeedCheck (guard code 4) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:32
+S004 | runDocumentFeedCheck (guard code 4) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard firstEndpoint.pointee.fn != nil else { return 4 }
 
-S005 | runDocumentFeedCheck (guard code 5) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:50
+S005 | runDocumentFeedCheck (guard code 5) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.appliedRevision == 0, firstNotifications == 1,
                     first!.document?.notes.first?.key == 72,
                     first!.document?.notes.first?.onTick == UInt32.max - 64,
                     first!.document?.signatures.first?.numerator == 0,
                     first!.document?.signatures.first?.denomPow2 == 255 else { return 5 }
 
-S006 | runDocumentFeedCheck (guard code 6) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:58
+S006 | runDocumentFeedCheck (guard code 6) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(header: header, notes: nil, signatures: nil),
                     firstNotifications == 1, first!.document?.notes.first?.key == 72 else { return 6 }
 
-S007 | runDocumentFeedCheck (guard code 7) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:61
+S007 | runDocumentFeedCheck (guard code 7) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.apply(header: header, notes: nil, signatures: nil),
                     firstNotifications == 2, first!.document?.notes == [] else { return 7 }
 
-S008 | runDocumentFeedCheck (guard code 8) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:64
+S008 | runDocumentFeedCheck (guard code 8) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(header: header, notes: nil, signatures: nil),
                     first!.appliedRevision == 7, firstNotifications == 2 else { return 8 }
 
-S009 | runDocumentFeedCheck (guard code 9) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:68
+S009 | runDocumentFeedCheck (guard code 9) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(header: header, notes: nil, signatures: nil),
                     first!.appliedRevision == 7, firstNotifications == 2 else { return 9 }
 
-S010 | runDocumentFeedCheck (guard code 10) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:71
+S010 | runDocumentFeedCheck (guard code 10) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard second!.apply(header: header, notes: nil, signatures: nil),
                     second!.appliedRevision == 0, secondNotifications == 1 else { return 10 }
 
-S011 | runDocumentFeedCheck (guard code 11) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:75
+S011 | runDocumentFeedCheck (guard code 11) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.apply(header: header, notes: nil, signatures: nil),
                     !second!.apply(header: header, notes: nil, signatures: nil),
                     firstNotifications == 3, secondNotifications == 1 else { return 11 }
 
-S012 | runDocumentFeedCheck (guard code 12) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:80
+S012 | runDocumentFeedCheck (guard code 12) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard second!.apply(header: header, notes: nil, signatures: nil),
                     secondNotifications == 2, first!.appliedRevision == 8 else { return 12 }
 
-S013 | runDocumentFeedCheck (guard code 13) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:85
+S013 | runDocumentFeedCheck (guard code 13) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard releasedFirst == nil, firstEndpoint.pointee.fn == nil,
                     firstEndpoint.pointee.context == nil else { return 13 }
 
-S014 | runDocumentFeedCheck (guard code 14) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:91
+S014 | runDocumentFeedCheck (guard code 14) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard remount.apply(header: header, notes: nil, signatures: nil),
                     remount.appliedRevision == 0, second!.appliedRevision == 1 else { return 14 }
 
-S015 | runDocumentFeedCheck (guard code 15) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:95
+S015 | runDocumentFeedCheck (guard code 15) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard secondEndpoint.pointee.fn == nil, secondEndpoint.pointee.context == nil else { return 15 }
 
-S016 | runDocumentFeedCheck (guard code 16) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:96
+S016 | runDocumentFeedCheck (guard code 16) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !remount.connect() else { return 16 }
 
-S017 | runSessionFeedCheck (guard code 101) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:123
+S017 | runSessionFeedCheck (guard code 101) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.connect(), second!.connect(), !first!.connect() else { return 101 }
 
-S018 | runSessionFeedCheck (guard code 102) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:124
+S018 | runSessionFeedCheck (guard code 102) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard firstNotifications == 0, secondNotifications == 0 else { return 102 }
 
-S019 | runSessionFeedCheck (guard code 103) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:127
+S019 | runSessionFeedCheck (guard code 103) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !duplicate!.connect() else { return 103 }
 
-S020 | runSessionFeedCheck (guard code 104) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:129
+S020 | runSessionFeedCheck (guard code 104) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard firstEndpoint.pointee.fn != nil else { return 104 }
 
-S021 | runSessionFeedCheck (guard code 105) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:151
+S021 | runSessionFeedCheck (guard code 105) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.appliedRevision == 0, firstNotifications == 1,
                     first!.session?.selectedNoteIds == [42],
                     first!.session?.timeSelection.lanes.first?.controller == 21,
                     first!.session?.timeSelection.tempo == true,
                     first!.session?.muteMask == 1, first!.session?.soloMask == 2 else { return 105 }
 
-S022 | runSessionFeedCheck (guard code 106) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:159
+S022 | runSessionFeedCheck (guard code 106) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(state: state, noteIds: nil, lanes: nil),
                     firstNotifications == 1, first!.session?.selectedNoteIds == [42] else { return 106 }
 
-S023 | runSessionFeedCheck (guard code 107) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:162
+S023 | runSessionFeedCheck (guard code 107) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.apply(state: state, noteIds: nil, lanes: nil),
                     firstNotifications == 2, first!.session?.selectedNoteIds == [] else { return 107 }
 
-S024 | runSessionFeedCheck (guard code 108) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:165
+S024 | runSessionFeedCheck (guard code 108) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(state: state, noteIds: nil, lanes: nil),
                     first!.appliedRevision == 7, firstNotifications == 2 else { return 108 }
 
-S025 | runSessionFeedCheck (guard code 109) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:169
+S025 | runSessionFeedCheck (guard code 109) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !first!.apply(state: state, noteIds: nil, lanes: nil),
                     first!.appliedRevision == 7, firstNotifications == 2 else { return 109 }
 
-S026 | runSessionFeedCheck (guard code 110) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:172
+S026 | runSessionFeedCheck (guard code 110) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard second!.apply(state: state, noteIds: nil, lanes: nil),
                     second!.appliedRevision == 0, secondNotifications == 1 else { return 110 }
 
-S027 | runSessionFeedCheck (guard code 111) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:176
+S027 | runSessionFeedCheck (guard code 111) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard first!.apply(state: state, noteIds: nil, lanes: nil),
                     !second!.apply(state: state, noteIds: nil, lanes: nil),
                     firstNotifications == 3, secondNotifications == 1 else { return 111 }
 
-S028 | runSessionFeedCheck (guard code 112) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:181
+S028 | runSessionFeedCheck (guard code 112) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard second!.apply(state: state, noteIds: nil, lanes: nil),
                     secondNotifications == 2, first!.appliedRevision == 8 else { return 112 }
 
-S029 | runSessionFeedCheck (guard code 113) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:186
+S029 | runSessionFeedCheck (guard code 113) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard releasedFirst == nil, firstEndpoint.pointee.fn == nil,
                     firstEndpoint.pointee.context == nil else { return 113 }
 
-S030 | runSessionFeedCheck (guard code 114) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:192
+S030 | runSessionFeedCheck (guard code 114) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard remount.apply(state: state, noteIds: nil, lanes: nil),
                     remount.appliedRevision == 0, second!.appliedRevision == 1 else { return 114 }
 
-S031 | runSessionFeedCheck (guard code 115) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:196
+S031 | runSessionFeedCheck (guard code 115) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard secondEndpoint.pointee.fn == nil, secondEndpoint.pointee.context == nil else { return 115 }
 
-S032 | runSessionFeedCheck (guard code 116) | src/checks/swiftdocfeed/DocumentFeedCheck.swift:197
+S032 | runSessionFeedCheck (guard code 116) | src/checks/swiftdocfeed/DocumentFeedCheck.swift
+Anchor: deleted
               guard !remount.connect() else { return 116 }
 
-S033 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift:23
+S033 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
+Anchor: message "conductor chunk leaves two note tracks"
     report.expectEqual(2, document.engineTracks.usedTrackCount,
                        cppID: cppID, what: "conductor chunk leaves two note tracks")
 
-S034 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift:25
+S034 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
+Anchor: message "document keeps the 960-tick division"
     report.expectEqual(960, document.ticksPerBeat,
                        cppID: cppID, what: "document keeps the 960-tick division")
 
-S035 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift:27
+S035 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
+Anchor: message "both tracks preserve unsigned note ticks and durations"
     report.expectEqual(["0:64:2147483664:32", "1:72:2147483664:32"],
                        (0..<2).flatMap { track in
                            document.notes(in: track).map {
@@ -1745,7 +1778,8 @@ S035 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsC
                        },
                        cppID: cppID, what: "both tracks preserve unsigned note ticks and durations")
 
-S036 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift:34
+S036 | unsignedTicksAndRawSignaturePrecedence | src/checks/editcheck/TickBoundsChecks.swift
+Anchor: message "raw signature bytes retain order and full-width values"
     report.expectEqual(["7:3", "5:31", "0:255"],
                        document.timeSignatures.map {
                            "\($0.numerator):\($0.denominatorPower)"

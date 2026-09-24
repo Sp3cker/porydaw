@@ -4,7 +4,6 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_projection.cpp
 Original SHA-256: 4dc0fed604392d4a02f9a9f67f8b95fedf68363320ffba60658062c3f437c36d
 Swift counterpart: src/checks/rollcheck/static/geometry.swift
-Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -659,77 +658,94 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:63
+S001 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A001 Off projects all 128 pitches"
   report.expect(chromatic.visibleRowCount == 128, cppID: id,
                   message: "A001 Off projects all 128 pitches")
 
-S002 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:65
+S002 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A002 Off hides no pitch"
   report.expect((0..<128).allSatisfy { chromatic.row(forPitch: $0) != PitchProjection.hiddenRow },
                   cppID: id, message: "A002 Off hides no pitch")
 
-S003 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:68
+S003 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A003 related chromatic construction remains 128 rows"
   report.expect(PitchProjection().visibleRowCount == chromatic.visibleRowCount, cppID: id,
                   message: "A003 related chromatic construction remains 128 rows")
 
-S004 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:74
+S004 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A004 folded row count equals distinct selected-track pitches"
   report.expect(folded.visibleRowCount == occupied.count, cppID: id,
                   message: "A004 folded row count equals distinct selected-track pitches")
 
-S005 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:85
+S005 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A005 folded rows descend strictly"
   report.expect(descending, cppID: id, message: "A005 folded rows descend strictly")
 
-S006 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:86
+S006 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A006 folded visible pitches exactly equal selected-track occupancy"
   report.expect((0..<128).allSatisfy {
           (folded.row(forPitch: $0) != PitchProjection.hiddenRow) == occupied.contains(UInt8($0))
       }, cppID: id, message: "A006 folded visible pitches exactly equal selected-track occupancy")
 
-S007 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:89
+S007 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A007 each visible folded row maps back to itself"
   report.expect((0..<folded.visibleRowCount).allSatisfy { row in
           folded.visiblePitch(at: row).map { folded.row(forPitch: $0) == row } == true
       }, cppID: id, message: "A007 each visible folded row maps back to itself")
 
-S008 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:92
+S008 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A008 each visible folded pitch maps back to itself"
   report.expect((0..<128).allSatisfy { pitch in
           let row = folded.row(forPitch: pitch)
           return row == PitchProjection.hiddenRow || folded.visiblePitch(at: row) == pitch
       }, cppID: id, message: "A008 each visible folded pitch maps back to itself")
 
-S009 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:122
+S009 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A010 occupied off-scale C-sharp becomes visible"
   report.expect(inserted.row(forPitch: insertedBase) != PitchProjection.hiddenRow,
                           cppID: id, message: "A010 occupied off-scale C-sharp becomes visible")
 
-S010 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:124
+S010 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A011 unused off-scale octave remains hidden"
   report.expect(inserted.row(forPitch: insertedBase + 12) == PitchProjection.hiddenRow,
                           cppID: id, message: "A011 unused off-scale octave remains hidden")
 
-S011 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:129
+S011 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A012 unused off-scale pitch remains hidden"
   report.expect(freePitch.map { inserted.row(forPitch: $0) == PitchProjection.hiddenRow }
                           == true, cppID: id, message: "A012 unused off-scale pitch remains hidden")
 
-S012 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:134
+S012 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A013 equal-distance nearest pitch chooses lower pitch"
   report.expect(tieProjection.nearestVisiblePitch(to: 61) == 60, cppID: id,
                   message: "A013 equal-distance nearest pitch chooses lower pitch")
 
-S013 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:140
+S013 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
+Anchor: message "A014 folded scroll remains inside its projected height"
   report.expect(camera.snapshot.scrollY >= -1e-9 && camera.snapshot.scrollY <= maximum + 1e-9,
                   cppID: id, message: "A014 folded scroll remains inside its projected height")
 
-S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:211
+S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
+Anchor: function
   report.expect(document.history.currentIdentity == identity, cppID: id,
                   message: messages.history)
   checkScaleProjectionInvariants supplies history: "A015 undo restores the pre-probe document history"
 
-S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:213
+S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
+Anchor: function
   report.expect(before != nil && (try? document.captureSave().bytes) == before,
                   cppID: id, message: messages.bytes)
   checkScaleProjectionInvariants supplies bytes: "A016 undo restores serialized MIDI"
 
-S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:211
+S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
+Anchor: function
   report.expect(document.history.currentIdentity == identity, cppID: id,
                   message: messages.history)
   checkScaleHighlightRasterDocumentGuards supplies history: "A031 highlight note probe restores document history"
 
-S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:213
+S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift
+Anchor: function
   report.expect(before != nil && (try? document.captureSave().bytes) == before,
                   cppID: id, message: messages.bytes)
   checkScaleHighlightRasterDocumentGuards supplies bytes: "A032 highlight note probe restores serialized MIDI"

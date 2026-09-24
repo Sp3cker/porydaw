@@ -4,7 +4,6 @@ Reference revision: 1f9f8a5faa78069bf86c0ed9997c04c07f1f37d7
 Original: src/checks/samplecheck/dsp.cpp
 Original SHA-256: 54d949e10083ce459182fa650cae3eb9d601769ab5fa6a052286cfe0924b6b7d
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ Inventory: 67 sites across 16 test methods (dspDeterminism, markerMapping, norma
 
 Verification
 Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry points execute these checks. Retained native execution owns this suite:

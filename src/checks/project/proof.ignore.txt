@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/project/ignore.cpp
 Original SHA-256: fa52fd41b80b8e688dc14430aea39426b823bff2e169ee2a84b7cd7491452c20
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -19,7 +18,7 @@ NATIVE identifies an observation only a native window/rendering/harness run can 
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 C++ runner runIgnoreCheck (SidecarIgnoreTest) with isolated QTemporaryDir fixtures; no Swift entry point executes these checks.

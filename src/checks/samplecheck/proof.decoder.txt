@@ -4,7 +4,6 @@ Reference revision: 5af4355e8fc1337f38da60c545da4af246160bcf
 Original: src/checks/samplecheck/decoder.cpp
 Original SHA-256: 567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ Inventory: 93 sites across 7 test methods (compressedContainers, compressedRefus
 
 Verification
 Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry points execute these checks. Retained native execution owns this suite:

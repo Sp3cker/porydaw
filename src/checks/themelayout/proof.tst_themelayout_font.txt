@@ -4,9 +4,7 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/themelayout/tst_themelayout_font.cpp
 Original SHA-256: aa416bc26d730a3c4625e5861bcd80df4ee1cdad299db685d4ef851e2ac893b8
 Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
-Swift SHA-256: 68d30462170a47f1ad1587abc1a57676ce37889ea5f9c3f5a927b909882d6aee
 Swift counterpart: src/checks/editorqml/tst_Typography.qml
-Swift SHA-256: 9822c4d1e4bf47474932b2d560e2418609106f384c3f5388db037c7c67585ecf
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -42,8 +40,8 @@ src/checks/themelayout/themelayoutcheck.cpp) launches the fontcheck lane with
 the expected base size sampled from the application font before
 ui::initializeApplication; ThemeLayoutFontTest::init applies the vanilla theme
 and saves font/palette/stylesheet. Swift execution: runTypographyLayoutChecks
-(src/checks/themelayout/TypographyLayoutChecks.swift:34) via
-runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:16) into the
+(src/checks/themelayout/TypographyLayoutChecks.swift) via
+runProjectSessionSuite (src/checks/workspace/SessionChecks.swift) into the
 projectSession slot (swiftcore suite 10 via pdcSuiteRun); the counterpart is
 compiled in src/checks/CMakeLists.txt :: swift_core_check. QML execution: the
 shell-typography entry (src/checks/editorqml/ShellQmlTests.swift) stages
@@ -521,7 +519,7 @@ A041 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/t
 Disposition: PARTIAL
 Mapping/reason: S021/S022 prove bounds and maximality only: the Swift fit keeps
 1 <= fitted <= face size with one pixel larger overflowing the height across
-the mirrored loop (TypographyLayoutChecks.swift:250-263). Unproved: the
+the mirrored loop (TypographyLayoutChecks.swift). Unproved: the
 per-height ascent-plus-descent fit itself -- SGFontExtents exposes no descent
 for the per-height expression.
 Source context since previous assertion:
@@ -546,7 +544,7 @@ A043 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/t
 Disposition: GAP
 Mapping/reason: feature not yet ported: missing-face branch of
 typography::fitted (std::nullopt at height 0); Swift has an owned-but-different
-floor at the minimum size instead (S023, TypographyLayoutChecks.swift:265-267).
+floor at the minimum size instead (S023, TypographyLayoutChecks.swift).
 Source context since previous assertion:
   ;
           }
@@ -704,221 +702,261 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:52
+S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "space token \(token) pins its multiplier row at base \(Int(base))"
 Swift expression:
   report.expectEqual(
           typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier), ...)
 
-S002 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:90
+S002 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "re-resolving base \(Int(base)) reproduces the identical metrics"
 Swift expression:
   report.expect(
           again.baseFontPx == metrics.baseFontPx && again.spaceHalf == metrics.spaceHalf &&
               again.spaceTwo == metrics.spaceTwo, ...)
 
-S003 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:80
+S003 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the lane base reaches the grid metrics unchanged"
 Swift expression:
   report.expectEqual(
           base, metrics.baseFontPx, cppID: typographyLayoutBaseID,
           what: "the lane base reaches the grid metrics unchanged")
 
-S004 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:105
+S004 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a degenerate base resolves to the seeded metrics"
 Swift expression:
   report.expectEqual(
           seeded, EditorDrawerMetrics.resolve(baseFontPx: degenerate, appFontLineSpacing: 0), ...)
 
-S005 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:110
+S005 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a degenerate page base falls back to the seed"
 Swift expression:
   report.expectEqual(
           seed, VelocityPage(baseFontPx: 0).baseFontPx, ...)
 
-S006 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:127
+S006 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the body-size face stays Next at base \(Int(base)) times 1.125"
 Swift expression:
   report.expect(
           sig?.family == "Atkinson Hyperlegible Next" &&
               sig?.pixelSize == Int(typographyLayoutBodyPxExpected[lane]), ...)
 
-S007 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:121
+S007 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the caption-size face stays Next at the base size with Normal weight"
 Swift expression:
   report.expect(
           chip?.family == "Atkinson Hyperlegible Next" && chip?.pixelSize == Int(base) &&
               chip?.weight == 400, ...)
 
-S008 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:133
+S008 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the ruler mono face stays Mono at the derived size with Normal weight"
 Swift expression:
   report.expect(
           ruler?.family == "Atkinson Hyperlegible Mono" &&
               ruler?.pixelSize == Int(typographyLayoutRulerPxExpected[lane]) &&
               ruler?.weight == 400, ...)
 
-S009 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:140
+S009 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the beat mono face stays Mono at the base size with Normal weight"
 Swift expression:
   report.expect(
           beat?.family == "Atkinson Hyperlegible Mono" &&
               beat?.pixelSize == Int(base) && beat?.weight == 400, ...)
 
-S010 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:146
+S010 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the bold face keeps the ruler size with DemiBold weight"
 Swift expression:
   report.expect(
           bold?.family == "Atkinson Hyperlegible Mono" &&
               bold?.pixelSize == Int(typographyLayoutRulerPxExpected[lane]) &&
               bold?.weight == 600, ...)
 
-S011 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:153
+S011 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the key-label face stays Next at the base size with Normal weight"
 Swift expression:
   report.expect(
           keyLabel?.family == "Atkinson Hyperlegible Next" &&
               keyLabel?.pixelSize == Int(base) && keyLabel?.weight == 400, ...)
 
-S012 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:159
+S012 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "ruler spacing keeps the negative thirty-second scale at base \(Int(base))"
 Swift expression:
   report.expect(
           abs(spacing - base * (-1.0 / 24.0)) < 1e-9, ...)
 
-S013 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:174
+S013 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "drawer chrome derives bar, handle, floor, reserve, inset and step at base \(Int(base))"
 Swift expression:
   report.expect(
           resolved.barHeight == pin.barHeight && resolved.handleHeight == pin.handleHeight &&
               resolved.minimumBody == pin.minimumBody && ..., ...)
 
-S014 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:212
+S014 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the spec enables tabular figures"
 Swift expression:
   report.expect(
           chip.features["tnum"] as? Int == 1, ...)
 
-S015 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:219
+S015 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the QML map emits the tabular feature"
 Swift expression:
   report.expect(
           emissionMatches, ...,
           message: "the QML map emits the tabular feature")
 
-S016 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:226
+S016 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the mono face enables tabular figures"
 Swift expression:
   report.expect(
           faces[kind]?.features["tnum"] as? Int == 1, ...,
           message: "the mono face enables tabular figures")
 
-S017 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:231
+S017 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "single digits share one advance"
 Swift expression:
   report.expectEqual(
           measured.advance("1"), measured.advance("8"), ...,
           what: "single digits share one advance")
 
-S018 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:234
+S018 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "equal-length digit runs share one advance"
 Swift expression:
   report.expectEqual(
           measured.advance("111"), measured.advance("777"), ...,
           what: "equal-length digit runs share one advance")
 
-S019 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:237
+S019 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "year-like digit runs share one advance"
 Swift expression:
   report.expectEqual(
           measured.advance("2026"), measured.advance("1975"), ...,
           what: "year-like digit runs share one advance")
 
-S020 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:250
+S020 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a generous height keeps the full face size"
 Swift expression:
   report.expectEqual(
           16, full.fittedSize(rowHeight: fullHeight), ...,
           what: "a generous height keeps the full face size")
 
-S021 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:255
+S021 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the fit at height \(height) stays within the face size"
 Swift expression:
   report.expect(
           fitted >= 1 && fitted <= 16, ...,
           message: "the fit at height \(height) stays within the face size")
 
-S022 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:260
+S022 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "one pixel larger overflows height \(height)"
 Swift expression:
   report.expect(
           larger.extents.height > Double(height), ...,
           message: "one pixel larger overflows height \(height)")
 
-S023 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:265
+S023 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "a zero height floors at the minimum size"
 Swift expression:
   report.expectEqual(
           1, full.fittedSize(rowHeight: 0), ...,
           what: "a zero height floors at the minimum size")
 
-S024 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:104
+S024 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the resolved base font carries the bundled Next family"
 QML expression:
   tryVerify(function() {
       return shell.font.family === "Atkinson Hyperlegible Next"
   }, 5000, "the resolved base font carries the bundled Next family")
 
-S025 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:107
+S025 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the base font resolves to the threaded body size"
 QML expression:
   compare(shell.font.pixelSize, shell.bodyFontPx,
           "the base font resolves to the threaded body size")
 
-S026 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:109
+S026 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the base font prefers no hinting"
 QML expression:
   compare(shell.font.hintingPreference, Font.PreferNoHinting,
           "the base font prefers no hinting")
 
-S027 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:111
+S027 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the base font keeps Normal weight"
 QML expression:
   compare(shell.font.weight, Font.Normal, "the base font keeps Normal weight")
 
-S028 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:112
+S028 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the base font enables tabular figures"
 QML expression:
   compare(shell.font.features["tnum"], 1, "the base font enables tabular figures")
 
-S029 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:114
+S029 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "window width threads the body size into geometry"
 QML expression:
   compare(shell.width, shell.bodyFontPx * 72,
           "window width threads the body size into geometry")
 
-S030 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:116
+S030 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "window height threads the body size into geometry"
 QML expression:
   compare(shell.height, shell.bodyFontPx * 48,
           "window height threads the body size into geometry")
 
-S031 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:121
+S031 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "body text shows the restored Next family"
 QML expression:
   compare(label.font.family, "Atkinson Hyperlegible Next",
           "body text shows the restored Next family")
 
-S032 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml:134
+S032 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the bold title stays centered on the regular title"
 QML expression:
   tryVerify(function() { ... centersClose(displayed, reference) ... }, 5000,
       "the bold title stays centered on the regular title")
 
-S033 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml:166
+S033 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the title map emits tabular figures"
 QML expression:
   compare(row.titleFont.features["tnum"], 1,
           "the title map emits tabular figures")
 
-S034 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:101
+S034 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the shell keeps the production organization identity"
 QML expression:
   compare(Qt.application.organization, "sp3cker",
           "the shell keeps the production organization identity")
 
-S035 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:97
+S035 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the grid carries the single base seed"
 Swift expression:
   report.expectEqual(13.0, seed, ...) // grid, velocity and automation seeds agree
 
-S036 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:185
+S036 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the published face map pins the unhinted preference"
 Swift expression:
   for kind in [GridFontKind.ruler, GridFontKind.beat, GridFontKind.bold, GridFontKind.sig, GridFontKind.chip, GridFontKind.keyLabel] {
       report.expect(
               unhinted[kind]?.map["hintingPreference"] as? Int == fontPreferNoHinting, ...)
 
-S037 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:190
+S037 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the fallback label map pins the unhinted preference"
 Swift expression:
   report.expect(
           VelocityScene.fontMap(emphasized: false, typography: nil, baseFontPx: 16)["hintingPreference"] as? Int == fontPreferNoHinting, ...)
 
-S038 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:194
+S038 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the automation caption map pins the unhinted preference"
 Swift expression:
   report.expect(
           AutomationCaption(pixelSize: 16, weight: 400).fontMap["hintingPreference"] as? Int == fontPreferNoHinting, ...)
 
-S039 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:198
+S039 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the voice caption map pins the unhinted preference"
 Swift expression:
   report.expect(
           VoiceCaption(pixelSize: 16, weight: 400).fontMap["hintingPreference"] as? Int == fontPreferNoHinting, ...)
 
-S040 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml:171
+S040 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml
+Anchor: message "the rendered title carries the unhinted preference"
 QML expression:
   compare(rendered.font.hintingPreference, Font.PreferNoHinting,
           "the rendered title carries the unhinted preference")

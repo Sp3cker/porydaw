@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/audio/tst_audiobackend.cpp
 Original SHA-256: 337f6bca8dd8f12a8174a039543ad8a39a769dfd4f7f3a5113ebb1858d8527d9
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Purpose and status
 Each numbered entry records one original assertion/failure site, not one test

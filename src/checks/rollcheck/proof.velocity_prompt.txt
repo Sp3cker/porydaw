@@ -4,7 +4,6 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/rollcheck/velocity_prompt.cpp
 Original SHA-256: 909169cc2bebb6c06b28a98d919a9d94942d98bd35f723cf04a5b2f1f5c7fa30
 Swift counterpart: src/checks/rollcheck/velocity_prompt.swift
-Swift SHA-256: c3b986acf84e9422692cae0ecc36c78bacf81bb9eadbc23bc8f20e296f358185
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Purpose and status
@@ -122,7 +121,7 @@ Original expression:
 
 A007 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:178
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S048 | src/checks/rollcheck/velocity_prompt.swift:198 drafting 95 leaves song bytes, revision and history identity untouched. Unproved: the QUndoStack index/count conjuncts (no executing history-depth predicate).
+Mapping/reason: PARTIAL: S048 | src/checks/rollcheck/velocity_prompt.swift drafting 95 leaves song bytes, revision and history identity untouched. Unproved: the QUndoStack index/count conjuncts (no executing history-depth predicate).
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
@@ -143,7 +142,7 @@ Original expression:
 
 A010 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:190
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S049 | src/checks/rollcheck/velocity_prompt.swift:202 accepting 95 sets velocity 95 with revision +1 and a new history identity. Unproved: the undo count/index advance exactly +1.
+Mapping/reason: PARTIAL: S049 | src/checks/rollcheck/velocity_prompt.swift accepting 95 sets velocity 95 with revision +1 and a new history identity. Unproved: the undo count/index advance exactly +1.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &accepted) &&
                    accepted.velocity == 95 && doc.revision() == revision + 1 &&
@@ -158,7 +157,7 @@ Original expression:
 
 A012 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:198
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S051 | src/checks/rollcheck/velocity_prompt.swift:210 one undo restores velocity 73 and the pre-acceptance song bytes. Unproved: the undo index returns to the baseline.
+Mapping/reason: PARTIAL: S051 | src/checks/rollcheck/velocity_prompt.swift one undo restores velocity 73 and the pre-acceptance song bytes. Unproved: the undo index returns to the baseline.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &undone) &&
                    undone.velocity == 73 && doc.smf().write() == before &&
@@ -167,13 +166,13 @@ Original expression:
 
 A013 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:210
 Disposition: GAP
-Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(latchCellA.key >= 0, "no free grid cell for the pre-latch draw")
 
 A014 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:213
 Disposition: GAP
-Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), latchCellA.tick, uint8_t(latchCellA.key), &preLatch) &&
                    preLatch.velocity == 95,
@@ -200,7 +199,7 @@ Original expression:
 
 A018 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:227
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S052 | src/checks/rollcheck/velocity_prompt.swift:216 unchanged acceptance relatches (acceptedValues [95, 73]) with an unchanged revision/identity snapshot. Unproved: smf byte equality and the undo index/count conjuncts.
+Mapping/reason: PARTIAL: S052 | src/checks/rollcheck/velocity_prompt.swift unchanged acceptance relatches (acceptedValues [95, 73]) with an unchanged revision/identity snapshot. Unproved: smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &unchanged) &&
                    unchanged.velocity == 73 && doc.smf().write() == afterDraw &&
@@ -209,13 +208,13 @@ Original expression:
 
 A019 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:233
 Disposition: GAP
-Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(latchCellB.key >= 0, "no free grid cell for the post-latch draw")
 
 A020 | PianoRollTest::velocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.cpp:236
 Disposition: GAP
-Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift:207), never a drawn note. Open obligation.
+Mapping/reason: GAP: drawing notes with the latched velocity is not ported; Swift observes only the acceptedValues latch callback (S050 velocity_prompt.swift), never a drawn note. Open obligation.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), latchCellB.tick, uint8_t(latchCellB.key), &latched) &&
                    latched.velocity == 73,
@@ -242,7 +241,7 @@ Original expression:
 
 A024 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:266
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S053 | src/checks/rollcheck/velocity_prompt.swift:235 the selectionless entry refuses and the revision/identity snapshot is unchanged (no-commit corroboration). Unproved: smf byte equality and the undo index/count conjuncts.
+Mapping/reason: PARTIAL: S053 | src/checks/rollcheck/velocity_prompt.swift the selectionless entry refuses and the revision/identity snapshot is unchanged (no-commit corroboration). Unproved: smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
@@ -274,7 +273,7 @@ Original expression:
 
 A029 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:284
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift:243 cancelling a 20 draft closes the prompt with history and notes untouched. Unproved: Escape key delivery itself is native; smf byte equality and the undo index/count conjuncts.
+Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift cancelling a 20 draft closes the prompt with history and notes untouched. Unproved: Escape key delivery itself is native; smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
@@ -307,7 +306,7 @@ Original expression:
 
 A034 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:298
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift:243 same cancel-no-write predicate (20 draft). Unproved: Cancel-button click delivery is native; smf byte equality and the undo index/count conjuncts.
+Mapping/reason: PARTIAL: S054 | src/checks/rollcheck/velocity_prompt.swift same cancel-no-write predicate (20 draft). Unproved: Cancel-button click delivery is native; smf byte equality and the undo index/count conjuncts.
 Original expression:
   QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                    doc.undoStack()->count() == undoCount && doc.revision() == revision,
@@ -340,7 +339,7 @@ Original expression:
 
 A039 | PianoRollTest::velocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.cpp:316
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S055 | src/checks/rollcheck/velocity_prompt.swift:252 the stale 30 draft refuses, the prompt closes, and the foreign velocity 40 with its snapshot is preserved. Unproved: smf bytes wholesale and the undo count/index +1 conjuncts.
+Mapping/reason: PARTIAL: S055 | src/checks/rollcheck/velocity_prompt.swift the stale 30 draft refuses, the prompt closes, and the foreign velocity 40 with its snapshot is preserved. Unproved: smf bytes wholesale and the undo count/index +1 conjuncts.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &staleNote) &&
                    staleNote.velocity == 40 && doc.revision() == revision + 1 &&
@@ -670,7 +669,7 @@ Original expression:
 
 A087 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:584
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S056 | src/checks/rollcheck/velocity_prompt.swift:273 the invalid 999 draft refuses, the prompt stays open, and the snapshot is unchanged. Unproved: the QML text identity and the undo count conjunct.
+Mapping/reason: PARTIAL: S056 | src/checks/rollcheck/velocity_prompt.swift the invalid 999 draft refuses, the prompt stays open, and the snapshot is unchanged. Unproved: the QML text identity and the undo count conjunct.
 Original expression:
   QVERIFY2(popup->isOpen() &&
                    input->property("text").toString() == QString::number(seed->noteB.velocity) &&
@@ -709,7 +708,7 @@ Original expression:
 
 A093 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:606
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S057 | src/checks/rollcheck/velocity_prompt.swift:277 the valid lower-bound velocity 1 commits to the captured note. Unproved: the undo count +1 conjunct.
+Mapping/reason: PARTIAL: S057 | src/checks/rollcheck/velocity_prompt.swift the valid lower-bound velocity 1 commits to the captured note. Unproved: the undo count +1 conjunct.
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &lower) &&
                    lower.velocity == 1 && doc.undoStack()->count() == undoCount + 1,
@@ -741,7 +740,7 @@ Original expression:
 
 A098 | PianoRollTest::velocityPromptBounds | src/checks/rollcheck/velocity_prompt.cpp:624
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: S058 | src/checks/rollcheck/velocity_prompt.swift:281 the valid upper-bound velocity 127 commits to the captured note. Unproved: the undo count shape (+2 across the two-commit bounds flow).
+Mapping/reason: PARTIAL: S058 | src/checks/rollcheck/velocity_prompt.swift the valid upper-bound velocity 127 commits to the captured note. Unproved: the undo count shape (+2 across the two-commit bounds flow).
 Original expression:
   QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &upper) &&
                    upper.velocity == 127 && doc.undoStack()->count() == undoCount + 2,
@@ -795,253 +794,302 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:16
+S001 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: function
 Swift expression:
   report.fail(drawerVelocityPromptID, "the synthetic fixture published fewer than three notes")
 
-S002 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:21
+S002 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt's minimum is 1"
 Swift expression:
   report.expectEqual(1, VelocityPromptPolicy.minimum, cppID: drawerVelocityPromptID,
                          what: "the prompt's minimum is 1")
 
-S003 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:23
+S003 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt's maximum is 127"
 Swift expression:
   report.expectEqual(127, VelocityPromptPolicy.maximum, cppID: drawerVelocityPromptID,
                          what: "the prompt's maximum is 127")
 
-S004 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:25
+S004 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the domain endpoints are accepted"
 Swift expression:
   report.expect(VelocityPromptPolicy.value(draft: "1") == 1
                         && VelocityPromptPolicy.value(draft: "127") == 127, cppID: drawerVelocityPromptID,
                     message: "the domain endpoints are accepted")
 
-S005 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:28
+S005 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "values outside the domain are refused"
 Swift expression:
   report.expect(VelocityPromptPolicy.value(draft: "0") == nil
                         && VelocityPromptPolicy.value(draft: "128") == nil, cppID: drawerVelocityPromptID,
                     message: "values outside the domain are refused")
 
-S006 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:31
+S006 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "empty, non-decimal and signed drafts are refused"
 Swift expression:
   report.expect(VelocityPromptPolicy.value(draft: "") == nil
                         && VelocityPromptPolicy.value(draft: "12x") == nil
                         && VelocityPromptPolicy.value(draft: "-5") == nil, cppID: drawerVelocityPromptID,
                     message: "empty, non-decimal and signed drafts are refused")
 
-S007 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:35
+S007 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "a valid draft publishes no error"
 Swift expression:
   report.expect(VelocityPromptPolicy.error(draft: "64").isEmpty, cppID: drawerVelocityPromptID,
                     message: "a valid draft publishes no error")
 
-S008 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:42
+S008 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the selectionless entry point does not open a prompt"
 Swift expression:
   report.expect(!page.openSelectedVelocityPrompt(), cppID: drawerVelocityPromptID,
                     message: "the selectionless entry point does not open a prompt")
 
-S009 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:44
+S009 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the selectionless entry point writes nothing"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityPromptID,
                     message: "the selectionless entry point writes nothing")
 
-S010 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:50
+S010 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the selected-note entry point opens the prompt"
 Swift expression:
   report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityPromptID,
                     message: "the selected-note entry point opens the prompt")
 
-S011 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:52
+S011 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt opens with the first captured value as its draft"
 Swift expression:
   report.expectEqual("\(notes[0].velocity)", page.promptDraft, cppID: drawerVelocityPromptID,
                          what: "the prompt opens with the first captured value as its draft")
 
-S012 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:54
+S012 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt publishes its initial value"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), page.promptInitialValue, cppID: drawerVelocityPromptID,
                          what: "the prompt publishes its initial value")
 
-S013 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:56
+S013 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt captured the stable target IDs"
 Swift expression:
   report.expect(page.promptTargets == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
                     message: "the prompt captured the stable target IDs")
 
-S014 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:58
+S014 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the prompt captured every before-value"
 Swift expression:
   report.expect(page.promptBeforeValues == [notes[0].velocity, notes[1].velocity], cppID: drawerVelocityPromptID,
                     message: "the prompt captured every before-value")
 
-S015 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:60
+S015 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "an open prompt reports an active interaction"
 Swift expression:
   report.expect(page.interactionActive, cppID: drawerVelocityPromptID,
                     message: "an open prompt reports an active interaction")
 
-S016 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:63
+S016 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "typing replaces the draft without an error"
 Swift expression:
   report.expect(page.promptDraft == "95" && page.promptError.isEmpty, cppID: drawerVelocityPromptID,
                     message: "typing replaces the draft without an error")
 
-S017 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:65
+S017 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "typing into the prompt never mutates the document"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityPromptID,
                     message: "typing into the prompt never mutates the document")
 
-S018 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:68
+S018 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "cancelling closes the prompt"
 Swift expression:
   report.expect(!page.promptOpen, cppID: drawerVelocityCancellationID, message: "cancelling closes the prompt")
 
-S019 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:69
+S019 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "cancelling writes nothing"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == emptyBaseline, cppID: drawerVelocityCancellationID,
                     message: "cancelling writes nothing")
 
-S020 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:71
+S020 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "drafting and cancellation do not latch a drawing velocity"
 Swift expression:
   report.expect(acceptedValues.isEmpty, cppID: drawerVelocityPromptID,
                     message: "drafting and cancellation do not latch a drawing velocity")
 
-S021 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:78
+S021 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "acceptance commits"
 Swift expression:
   report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID, message: "acceptance commits")
 
-S022 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:79
+S022 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the accepted value reached the first target"
 Swift expression:
   report.expectEqual(95, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
                          what: "the accepted value reached the first target")
 
-S023 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:81
+S023 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the accepted value reached every captured target"
 Swift expression:
   report.expectEqual(95, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
                          what: "the accepted value reached every captured target")
 
-S024 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:83
+S024 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "acceptance makes one revision"
 Swift expression:
   report.expectEqual(acceptBaseline.revision + 1, document.revision, cppID: drawerVelocityPromptID,
                          what: "acceptance makes one revision")
 
-S025 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:85
+S025 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "acceptance makes exactly one history entry"
 Swift expression:
   report.expect(document.history.currentIdentity != acceptBaseline.identity, cppID: drawerVelocityPromptID,
                     message: "acceptance makes exactly one history entry")
 
-S026 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:87
+S026 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "acceptance closes the prompt"
 Swift expression:
   report.expect(!page.promptOpen, cppID: drawerVelocityPromptID, message: "acceptance closes the prompt")
 
-S027 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:88
+S027 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "acceptance preserves the selection"
 Swift expression:
   report.expect(fixture.session.selectedNotes == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
                     message: "acceptance preserves the selection")
 
-S028 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:90
+S028 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "valid acceptance latches the drawing velocity"
 Swift expression:
   report.expect(acceptedValues == [95], cppID: drawerVelocityPromptID,
                     message: "valid acceptance latches the drawing velocity")
 
-S029 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:95
+S029 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "an identical valid value is still accepted"
 Swift expression:
   report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID,
                     message: "an identical valid value is still accepted")
 
-S030 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:97
+S030 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "no-op acceptance relatches the drawing velocity without history"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == noOpBaseline && acceptedValues == [95, 95],
                     cppID: drawerVelocityPromptID,
                     message: "no-op acceptance relatches the drawing velocity without history")
 
-S031 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:101
+S031 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "Undo restores the prompt's before-values"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                          cppID: drawerVelocityHistoryID, what: "Undo restores the prompt's before-values")
 
-S032 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:111
+S032 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "selection insertion order seeds the prompt"
 Swift expression:
   report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
                          cppID: drawerVelocityPromptID, what: "selection insertion order seeds the prompt")
 
-S033 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:118
+S033 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "hover cannot reseed the ordered prompt"
 Swift expression:
   report.expectEqual(Int(ordered.notes[1].velocity), ordered.page.promptInitialValue,
                          cppID: drawerVelocityPromptID, what: "hover cannot reseed the ordered prompt")
 
-S034 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:126
+S034 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "an out-of-domain draft publishes an error"
 Swift expression:
   report.expect(!page.promptError.isEmpty, cppID: drawerVelocityPromptID,
                     message: "an out-of-domain draft publishes an error")
 
-S035 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:128
+S035 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "an invalid draft does not accept"
 Swift expression:
   report.expect(!page.acceptPrompt(), cppID: drawerVelocityPromptID,
                     message: "an invalid draft does not accept")
 
-S036 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:130
+S036 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the invalid prompt stays open for correction"
 Swift expression:
   report.expect(page.promptOpen, cppID: drawerVelocityPromptID,
                     message: "the invalid prompt stays open for correction")
 
-S037 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:132
+S037 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "an invalid draft adds no history entry"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == invalidBaseline, cppID: drawerVelocityPromptID,
                     message: "an invalid draft adds no history entry")
 
-S038 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:135
+S038 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "cancelling the invalid prompt writes nothing"
 Swift expression:
   report.expect(drawerVelocityDocumentSnapshot(document) == invalidBaseline, cppID: drawerVelocityCancellationID,
                     message: "cancelling the invalid prompt writes nothing")
 
-S039 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:144
+S039 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "a stale acceptance commits nothing"
 Swift expression:
   report.expect(!page.acceptPrompt(), cppID: drawerVelocityCancellationID,
                     message: "a stale acceptance commits nothing")
 
-S040 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:146
+S040 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "invalid, cancelled and stale prompts never relatch drawing velocity"
 Swift expression:
   report.expect(acceptedValues == [95, 95], cppID: drawerVelocityCancellationID,
                     message: "invalid, cancelled and stale prompts never relatch drawing velocity")
 
-S041 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:148
+S041 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the stale acceptance left its targets alone"
 Swift expression:
   report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0),
                          cppID: drawerVelocityCancellationID,
                          what: "the stale acceptance left its targets alone")
 
-S042 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:151
+S042 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the only write is the foreign document change"
 Swift expression:
   report.expectEqual(staleBaseline.revision + 1, document.revision, cppID: drawerVelocityCancellationID,
                          what: "the only write is the foreign document change")
 
-S043 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:160
+S043 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the capture never follows a later selection"
 Swift expression:
   report.expect(page.promptTargets == [notes[0].id, notes[1].id], cppID: drawerVelocityPromptID,
                     message: "the capture never follows a later selection")
 
-S044 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:162
+S044 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the captured transaction still completes after a selection change"
 Swift expression:
   report.expect(page.acceptPrompt(), cppID: drawerVelocityPromptID,
                     message: "the captured transaction still completes after a selection change")
 
-S045 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:164
+S045 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the acceptance wrote the captured target, not the new selection"
 Swift expression:
   report.expectEqual(77, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPromptID,
                          what: "the acceptance wrote the captured target, not the new selection")
 
-S046 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift:166
+S046 | drawerVelocityPromptTransaction | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "the note the prompt never captured keeps its own velocity"
 Swift expression:
   report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0),
                          cppID: drawerVelocityPromptID,
                          what: "the note the prompt never captured keeps its own velocity")
 
-S047 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:194
+S047 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A004: the selected note seeds the prompt with velocity 73"
 Swift expression:
     report.expect(fixture.page.openSelectedVelocityPrompt() &&
                   fixture.page.promptInitialValue == 73 && fixture.page.promptDraft == "73",
                   cppID: id, message: "A004: the selected note seeds the prompt with velocity 73")
 
-S048 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:198
+S048 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A007: drafting 95 does not write song bytes or history"
 Swift expression:
     report.expect(coreTimeBytes(fixture.document) == before &&
                   fixture.document.revision == revision &&
                   fixture.document.history.currentIdentity == identity,
                   cppID: id, message: "A007: drafting 95 does not write song bytes or history")
 
-S049 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:202
+S049 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A010: accepting 95 changes the captured note in one edit"
 Swift expression:
     report.expect(fixture.page.acceptPrompt() &&
                   fixture.document.note(noteID)?.velocity == 95 &&
@@ -1049,56 +1097,65 @@ Swift expression:
                   fixture.document.history.currentIdentity != identity,
                   cppID: id, message: "A010: accepting 95 changes the captured note in one edit")
 
-S050 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:207
+S050 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "accepting 95 latches the velocity for subsequent drawing"
 Swift expression:
     report.expect(acceptedValues == [95], cppID: id,
                   message: "accepting 95 latches the velocity for subsequent drawing")
 
-S051 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:210
+S051 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A012: one undo restores the original 73-velocity song bytes"
 Swift expression:
     report.expect(undone &&
                   fixture.document.note(noteID)?.velocity == 73 &&
                   coreTimeBytes(fixture.document) == before,
                   cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
 
-S052 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift:216
+S052 | checkVelocityPromptAcceptUndoLatch | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A018: accepting unchanged 73 relatches without a document edit"
 Swift expression:
     report.expect(fixture.page.openSelectedVelocityPrompt() && fixture.page.acceptPrompt() &&
                   drawerVelocityDocumentSnapshot(fixture.document) == afterUndo &&
                   acceptedValues == [95, 73],
                   cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
 
-S053 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:235
+S053 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A024: opening without a selected note writes nothing"
 Swift expression:
     report.expect(!fixture.page.openSelectedVelocityPrompt() &&
                   drawerVelocityDocumentSnapshot(fixture.document) == before,
                   cppID: id, message: "A024: opening without a selected note writes nothing")
 
-S054 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:243
+S054 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A029: cancelling a 20 draft leaves history and notes untouched"
 Swift expression:
     report.expect(!fixture.page.promptOpen &&
                   drawerVelocityDocumentSnapshot(fixture.document) == before,
                   cppID: id, message: "A029: cancelling a 20 draft leaves history and notes untouched")
 
-S055 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift:252
+S055 | checkVelocityPromptCancelStale | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "A039: a stale 30 draft never overwrites the foreign 40 edit"
 Swift expression:
     report.expect(!fixture.page.acceptPrompt() && !fixture.page.promptOpen &&
                   fixture.document.note(noteID)?.velocity == 40 &&
                   drawerVelocityDocumentSnapshot(fixture.document) == afterForeignWrite,
                   cppID: id, message: "A039: a stale 30 draft never overwrites the foreign 40 edit")
 
-S056 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:273
+S056 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "invalid 999 leaves the prompt open and the song unchanged"
 Swift expression:
     report.expect(!fixture.page.acceptPrompt() && fixture.page.promptOpen &&
                   drawerVelocityDocumentSnapshot(fixture.document) == before,
                   cppID: id, message: "invalid 999 leaves the prompt open and the song unchanged")
 
-S057 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:277
+S057 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "valid lower-bound velocity 1 commits"
 Swift expression:
     report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 1,
                   cppID: id, message: "valid lower-bound velocity 1 commits")
 
-S058 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift:281
+S058 | checkVelocityPromptBounds | src/checks/rollcheck/velocity_prompt.swift
+Anchor: message "valid upper-bound velocity 127 commits"
 Swift expression:
     report.expect(fixture.page.acceptPrompt() && fixture.document.note(noteID)?.velocity == 127,
                   cppID: id, message: "valid upper-bound velocity 127 commits")

@@ -7,9 +7,7 @@ Original header SHA-256: d5564d323861bcd1a0048fe71498324b94785c5dff2fca5b6205533
 Oracle: src/ui/voicegroupbrowser.cpp (list contract) +
         src/checks/voicegroupsave/*.cpp (retired native suite, oracle only)
 Swift counterpart: src/swift/app/voicelist/VoiceListController.swift
-Swift SHA-256: d96b22fe5de63940af7dd8a098cd6cda2fd7769a9a2175356560c3d24a2ab387
 Additional Swift counterpart: src/swift/app/voicelist/VoiceListSemantics.swift
-Swift SHA-256: c5091d1e6d3d1f1063c2321131f87ac3228afe8577d0c4eb162e293f7d3f99e9
 Check sources: src/checks/voicelist/VoiceListChecks.swift (3c0103dc1bbe10a82bb60413d34864f4ed2b626cafd549368c7bc988b53c328c)
                src/checks/voicelist/VoiceListIntentChecks.swift (6555875f1c114097b79a974da90c74a965e68e1e643c93b0e8f5f81dc70521fc)
                src/checks/voicelist/voicelist_session.swift (8c5163f2c43e70d1e74beb907772f76ba50744690f9c9816291cbdf749618c71)

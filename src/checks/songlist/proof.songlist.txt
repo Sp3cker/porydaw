@@ -4,7 +4,6 @@ Reference revision: cdac8c53d04f0bf72069353c09ebb40a8e288481
 Original: src/ui/songlistpanel.cpp (with header src/ui/songlistpanel.h)
 Original SHA-256: 182c8e69a452071152ed437ee6f599c54c7e4a2d353bbe459dcb5b7dde2def92
 Swift counterpart: src/swift/app/songlist/SongListPresenter.swift
-Swift SHA-256: e7495b4fccc2b72ef68e8be8bc7b22d9c27f5c0ee8b194b9c9447efdf9e3bcc6
 Oracle status: the native widget and its retired suites (src/checks/visual,
 src/checks/workspace session.cpp) are NOT compiled by the current root
 CMake. They are the behavioral oracle only; no native assertion was added

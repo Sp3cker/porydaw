@@ -4,7 +4,6 @@ Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/visual/chrome.cpp
 Original SHA-256: 4d56d2d67f8f8c009ea37b7f36e0fb997930c3a110a7e1e3d06bf546a514d1f5
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -20,7 +19,7 @@ This file: 24 assertion sites: 7 GAP, 17 RETIRED-REPRESENTATION. Dispositions ta
 
 Verification
 Command: deno task verify --filter visual --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 The visual-* harnesses compare against frozen baselines under
 src/checks/fixtures/visual; the harness sources are uncompiled in all CMake
 targets, their runVisual*Check entry points have zero callsites, and they are
@@ -817,7 +816,7 @@ Original expression:
 
 A019 | VisualChromeTest::polyphonyPanelVanilla | src/checks/visual/chrome.cpp:663
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift:173 returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
 Source context since previous assertion:
 
       window->close();
@@ -865,7 +864,7 @@ Original expression:
 
 A022 | VisualChromeTest::polyphonyPanelDark | src/checks/visual/chrome.cpp:691
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift:173 returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3 and section 4): nullable C++ MidiTimeline::build pointer check; Swift PlaybackTimeline.build(state:sampleRate:) at src/swift/core/PlaybackTimeline.swift returns a non-optional struct with no failure branch (spec 2.1/4/5.3 precedent); chrome.cpp uncompiled in all targets and unregistered in checkcatalog.
 Source context since previous assertion:
 
       panel.clearFocus();

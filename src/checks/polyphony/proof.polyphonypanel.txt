@@ -4,7 +4,6 @@ Reference revision: 3f830ceb349b6f5dd6e7fc76b035a83ec0cbd3d9
 Original: src/checks/polyphony/polyphonypanel.cpp
 Original SHA-256: abf46ceceb9c32a53043fc6bff7f71eb62d9f747dc6674c3e3fdcf55ad305769
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -30,7 +29,7 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter polycheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 The native panel harness is not built: the T7A runtime cutover removed
@@ -525,4 +524,3 @@ Remaining original source (closing sequence and helper bodies):
 
   } // namespace checks
 
-Tally: 32 sites: MATCHED 0, PARTIAL 0, GAP 32, NATIVE 0.

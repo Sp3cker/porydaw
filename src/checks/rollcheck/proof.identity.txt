@@ -4,9 +4,7 @@ Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/identity.cpp
 Original SHA-256: 14b6f45a36b2cf769bc6c886c20980ef133de0ba504524ab8a14c7416813bddc
 Swift counterpart: src/checks/rollcheck/identity.swift
-Swift SHA-256: 2898d686195d4e6dcd146728931deb4d25345a2bd858b874aa2621138dacb952
 Additional Swift counterpart: src/checks/rollcheck/presentation.swift
-Additional Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -102,7 +100,7 @@ Original expression:
 
 A003 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:55
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/identity.swift:49-54) mints two equal-visible duplicates (tick 480, pitch 60, duration 24, velocity 100) and asserts both receive distinct assigned IDs with equal visible fields; executed by the swiftcore projectSession suite.
+Mapping: S001 (src/checks/rollcheck/identity.swift) mints two equal-visible duplicates (tick 480, pitch 60, duration 24, velocity 100) and asserts both receive distinct assigned IDs with equal visible fields; executed by the swiftcore projectSession suite.
 Source context since previous assertion:
       }
 
@@ -143,7 +141,7 @@ Original expression:
 
 A005 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:74
 Disposition: MATCHED
-Mapping: S002 (src/checks/rollcheck/identity.swift:58-59) selects both duplicates, applies a plain active-track header scope and asserts the note selection becomes empty.
+Mapping: S002 (src/checks/rollcheck/identity.swift) selects both duplicates, applies a plain active-track header scope and asserts the note selection becomes empty.
 Source context since previous assertion:
       identityQuick->quickWindow()->resize(QSize(800, 480));
       identityView.setSong(identityTimeline.get(), nullptr);
@@ -162,7 +160,7 @@ Original expression:
 
 A006 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:97
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/identity.swift:63-69) moves only the first duplicate one key up and asserts the moved ID keeps its tick/duration/velocity at the new pitch, the second duplicate is identity-and-value unchanged, and the selected order is exactly the first ID.
+Mapping: S003 (src/checks/rollcheck/identity.swift) moves only the first duplicate one key up and asserts the moved ID keeps its tick/duration/velocity at the new pitch, the second duplicate is identity-and-value unchanged, and the selected order is exactly the first ID.
 Source context since previous assertion:
       const DocNote firstBefore = duplicates[0];
       const DocNote secondBefore = duplicates[1];
@@ -190,7 +188,7 @@ Original expression:
 
 A007 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:109
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/identity.swift:72-75) undoes the one-ID pitch edit and asserts both duplicates regain their full original field set (ID, track, chunk, tick, duration, pitch, velocity, channel) with the first ID still selected.
+Mapping: S004 (src/checks/rollcheck/identity.swift) undoes the one-ID pitch edit and asserts both duplicates regain their full original field set (ID, track, chunk, tick, duration, pitch, velocity, channel) with the first ID still selected.
 Source context since previous assertion:
       }
 
@@ -207,8 +205,8 @@ Original expression:
   QFAIL("one-ID SongView edit did not restore both duplicates on Undo");
 
 A008 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:117
-Disposition: MATCHED
-Mapping: S005 (src/checks/rollcheck/identity.swift:80-81) selects both duplicates, switches the active track header and asserts the duplicate-note selection clears; like the original the predicate is guarded by a second used track.
+Disposition: PARTIAL
+Mapping: S005 selects both duplicates, switches the active track header and asserts the duplicate-note selection clears, but like the original it is guarded by a second used track and the single-track fixture never enters that branch, so the predicate does not execute; unproved condition: the track-switch clear on a multi-track song.
 Source context since previous assertion:
       }
 
@@ -369,7 +367,8 @@ S001..S005 are report.expect predicates in the registered swiftcore check identi
 executed by deno task verify --filter swiftcore --verbose (PASS, 1/14 ok,
 controller-recorded). Their presence alone does not close any A entry.
 
-S001 | swiftcore/PianoRoll::duplicateNoteIdentity | src/checks/rollcheck/identity.swift:49
+S001 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
+Anchor: message "equal-visible notes receive distinct assigned IDs"
 Counterpart expression:
   report.expect(firstID.isAssigned && secondID.isAssigned && firstID != secondID
       && firstBefore.tick == secondBefore.tick
@@ -378,12 +377,14 @@ Counterpart expression:
       && firstBefore.velocity == secondBefore.velocity,
       cppID: id, message: "equal-visible notes receive distinct assigned IDs")
 
-S002 | swiftcore/PianoRoll::duplicateNoteIdentity | src/checks/rollcheck/identity.swift:58
+S002 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
+Anchor: message "plain active-track header clears note selection"
 Counterpart expression:
   report.expect(session.selectedNotes.isEmpty, cppID: id,
                 message: "plain active-track header clears note selection")
 
-S003 | swiftcore/PianoRoll::duplicateNoteIdentity | src/checks/rollcheck/identity.swift:63
+S003 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
+Anchor: message "one-ID pitch edit leaves the other duplicate untouched and selected ID stable"
 Counterpart expression:
   report.expect(session.document.note(firstID).map {
       $0.id == firstID && $0.tick == firstBefore.tick
@@ -393,14 +394,16 @@ Counterpart expression:
       && session.selectedNoteOrder == [firstID], cppID: id,
       message: "one-ID pitch edit leaves the other duplicate untouched and selected ID stable")
 
-S004 | swiftcore/PianoRoll::duplicateNoteIdentity | src/checks/rollcheck/identity.swift:72
+S004 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
+Anchor: message "undo restores both duplicate values without replacing their identities"
 Counterpart expression:
   report.expect(sameIdentityAndValue(session.document.note(firstID), firstBefore)
       && sameIdentityAndValue(session.document.note(secondID), secondBefore)
       && session.selectedNoteOrder == [firstID], cppID: id,
       message: "undo restores both duplicate values without replacing their identities")
 
-S005 | swiftcore/PianoRoll::duplicateNoteIdentity | src/checks/rollcheck/identity.swift:80
+S005 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift
+Anchor: message "switching track headers clears duplicate-note selection"
 Counterpart expression:
   report.expect(session.selectedNotes.isEmpty, cppID: id,
                 message: "switching track headers clears duplicate-note selection")

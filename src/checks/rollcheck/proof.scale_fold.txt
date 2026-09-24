@@ -4,7 +4,6 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_fold.cpp
 Original SHA-256: b5966041383cd6f7cf9c970f08f47567438ae3760b1eeb02ce22fa857eacaa02
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -24,7 +23,7 @@ and therefore GAP; the two free-pitch probe guards are NATIVE fixture preconditi
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry point executes these checks. The original slots run under

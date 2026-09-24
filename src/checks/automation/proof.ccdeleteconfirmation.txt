@@ -5,11 +5,8 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/ccdeleteconfirmation.cpp
 Original SHA-256: d75733bc8844b4f8ca187a03fd69501172f4ee8b727804c945aeaaccae26aba3
 Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
-Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
-Additional Swift SHA-256: 74b18a0c7b24abb1cd5b8c8e2881f42d87ffe07db114d6878d5acce44dd536bc
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -58,7 +55,7 @@ Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:154
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain: focusAutomationBand has no Swift ingress: focusedBand/TimelineBand do not exist anywhere in src/swift/app/drawer/automation, and the successor plotFocused flag is driven by the QML plot binding (src/ui/songview/quick/drawer/AutomationPage.qml:283-289), unobservable in the Swift-only lane, which has no window.
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: focusAutomationBand has no Swift ingress: focusedBand/TimelineBand do not exist anywhere in src/swift/app/drawer/automation, and the successor plotFocused flag is driven by the QML plot binding (src/ui/songview/quick/drawer/AutomationPage.qml), unobservable in the Swift-only lane, which has no window.
 Source context since previous assertion:
   // Regression coverage for the automation canvas' CC-lane delete confirmation:
   // the Quick form that replaced the nonempty-lane QMessageBox on the shared
@@ -305,7 +302,7 @@ Original expression:
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain: Cancel initial window focus is QML-owned: confirming prompts force Cancel focus in takeFocus (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-40) while Swift publishes only the branch fact promptKind==confirmLaneDelete ([S126]). Proven half: the open confirmation owns its kind ([S155]), its open state ([S156]) and the page interaction ([S157]).
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: Cancel initial window focus is QML-owned: confirming prompts force Cancel focus in takeFocus (src/ui/songview/quick/drawer/AutomationPrompt.qml) while Swift publishes only the branch fact promptKind==confirmLaneDelete ([S126]). Proven half: the open confirmation owns its kind ([S155]), its open state ([S156]) and the page interaction ([S157]).
 Source context since previous assertion:
 
 
@@ -338,7 +335,7 @@ Original expression:
 
 A013 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:186
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain: band-focus return after accept is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,646); no focused-band fact exists in Swift. The accept removal and single revision stay matched ([S130], [S132]).
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: band-focus return after accept is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml,646); no focused-band fact exists in Swift. The accept removal and single revision stay matched ([S130], [S132]).
 Source context since previous assertion:
 
 
@@ -717,7 +714,7 @@ Original expression:
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain for the focus return: it is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml:233-235,646) and unobservable in the Swift-only lane. Proven half: the production Escape route now executes on the confirmation: handleEscape claims it ([S158]) and drops the prompt and the interaction ([S159]) with nothing written ([S160]); the confirmation own cancel route stays matched ([S136], [S137]).
+Mapping/reason: GAP - native key and focus delivery. GAP-retain for the focus return: it is QML-owned (onClosed->focusOrigin, src/ui/songview/quick/drawer/AutomationPage.qml,646) and unobservable in the Swift-only lane. Proven half: the production Escape route now executes on the confirmation: handleEscape claims it ([S158]) and drops the prompt and the interaction ([S159]) with nothing written ([S160]); the confirmation own cancel route stays matched ([S136], [S137]).
 Source context since previous assertion:
 
 
@@ -878,7 +875,7 @@ Original expression:
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain: the outside right-press dismissal is native pointer delivery plus band focus: Swift has no outside-press route for confirmations (outsideMenuPress covers menus only; the prompt-underlay cancel is QML-only cancelDraft->model.cancelPrompt, src/ui/songview/quick/drawer/AutomationPrompt.qml:56-61) and no focused-band fact. The cancel outcome stays matched ([S136], [S137]).
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: the outside right-press dismissal is native pointer delivery plus band focus: Swift has no outside-press route for confirmations (outsideMenuPress covers menus only; the prompt-underlay cancel is QML-only cancelDraft->model.cancelPrompt, src/ui/songview/quick/drawer/AutomationPrompt.qml) and no focused-band fact. The cancel outcome stays matched ([S136], [S137]).
 Source context since previous assertion:
 
 
@@ -919,7 +916,7 @@ Original expression:
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
 Disposition: GAP
-Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 (src/ui/songview/quick/drawer/AutomationPrompt.qml:36-40); the confirmation kind and interaction stay proven ([S155], [S157]).
+Mapping/reason: GAP - native key and focus delivery. GAP-retain: same QML-owned initial focus as A010 (src/ui/songview/quick/drawer/AutomationPrompt.qml); the confirmation kind and interaction stay proven ([S155], [S157]).
 Source context since previous assertion:
 
 
@@ -1941,11 +1938,13 @@ S152-S154 index drawerAutomationCancellationAndNoOps in
 src/checks/automation/automationcanvasediting.swift, which owns the page Escape and
 cancellation route cited for the two dismissal sites.
 
-S001 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:12
+S001 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the catalog carries every supported parameter plus Tempo"
   report.expectEqual(AutomationCatalog.count, catalog.count, cppID: drawerAutomationCatalogID,
                          what: "the catalog carries every supported parameter plus Tempo")
 
-S002 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:14
+S002 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the supported parameters keep the production selector order"
   report.expectEqual(
           [TimeDefaults.ccVolume, TimeDefaults.ccPan, TimeDefaults.ccModulation,
            TimeDefaults.laneCCBend, TimeDefaults.ccLFOSpeed, TimeDefaults.ccBendRange,
@@ -1954,656 +1953,814 @@ S002 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domai
           AutomationCatalog.controllers, cppID: drawerAutomationCatalogID,
           what: "the supported parameters keep the production selector order")
 
-S003 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:21
+S003 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo closes the selector order"
   report.expectEqual(AutomationParameter.tempo, catalog.last, cppID: drawerAutomationCatalogID,
                          what: "Tempo closes the selector order")
 
-S004 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:23
+S004 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an XCMD row sits after the plain parameter group"
   report.expectEqual(6, AutomationCatalog.index(of: .controlChange(
           track: 0, controller: Xcmd.echoVolumeLane), track: 0) ?? -1, cppID: drawerAutomationCatalogID,
                          what: "an XCMD row sits after the plain parameter group")
 
-S005 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:26
+S005 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo is the last catalog index"
   report.expect(AutomationCatalog.index(of: .tempo, track: 0) == AutomationCatalog.count - 1,
                     cppID: drawerAutomationCatalogID, message: "Tempo is the last catalog index")
 
-S006 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:28
+S006 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a control-change parameter keeps its track scope"
   report.expectEqual(Optional(0),
                          AutomationParameter.controlChange(track: 0,
                                                            controller: TimeDefaults.ccVolume).track,
                          cppID: drawerAutomationCatalogID, what: "a control-change parameter keeps its track scope")
 
-S007 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:32
+S007 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pitch bend names the document's bend lane"
   report.expectEqual(Optional(.pitchBend), AutomationParameter.pitchBend(track: 0).lane,
                          cppID: drawerAutomationCatalogID, what: "Pitch bend names the document's bend lane")
 
-S008 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:34
+S008 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo is song-global: no track and no document lane"
   report.expect(AutomationParameter.tempo.isTempo && AutomationParameter.tempo.lane == nil
                         && AutomationParameter.tempo.track == nil,
                     cppID: drawerAutomationCatalogID,
                     message: "Tempo is song-global: no track and no document lane")
 
-S009 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:38
+S009 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the selector label is the lane name with no decoration"
   report.expectEqual("Volume", AutomationCatalog.tabLabel(
           .controlChange(track: 0, controller: TimeDefaults.ccVolume)), cppID: drawerAutomationCatalogID,
                          what: "the selector label is the lane name with no decoration")
 
-S010 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:41
+S010 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a classified parameter titles itself with its mnemonic"
   report.expectEqual("Volume (VOL)", AutomationCatalog.title(
           .controlChange(track: 0, controller: TimeDefaults.ccVolume)), cppID: drawerAutomationCatalogID,
                          what: "a classified parameter titles itself with its mnemonic")
 
-S011 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:44
+S011 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an XCMD row titles itself from its descriptor"
   report.expectEqual("Echo volume (xIECV)", AutomationCatalog.title(
           .controlChange(track: 0, controller: Xcmd.echoVolumeLane)), cppID: drawerAutomationCatalogID,
                          what: "an XCMD row titles itself from its descriptor")
 
-S012 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:47
+S012 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pitch bend keeps its dedicated title"
   report.expectEqual("Pitch bend (BEND)", AutomationCatalog.title(.pitchBend(track: 0)),
                          cppID: drawerAutomationCatalogID, what: "Pitch bend keeps its dedicated title")
 
-S013 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:49
+S013 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's lane title names its unit"
   report.expectEqual("Tempo (BPM)", AutomationCatalog.title(.tempo), cppID: drawerAutomationCatalogID,
                          what: "Tempo's lane title names its unit")
 
-S014 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:54
+S014 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Volume's range starts at 0"
   report.expectEqual(0, volume.minimum, cppID: drawerAutomationCatalogID, what: "Volume's range starts at 0")
 
-S015 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:55
+S015 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Volume's range ends at 127"
   report.expectEqual(127, volume.maximum, cppID: drawerAutomationCatalogID, what: "Volume's range ends at 127")
 
-S016 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:56
+S016 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Volume has no neutral, defaults to 127 and projects its tick-zero node"
   report.expect(volume.neutral == nil && volume.defaultValue == 127 && volume.projectsTickZero,
                     cppID: drawerAutomationCatalogID,
                     message: "Volume has no neutral, defaults to 127 and projects its tick-zero node")
 
-S017 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:59
+S017 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a plain controller formats as its raw value"
   report.expectEqual("127", volume.valueText(127), cppID: drawerAutomationCatalogID,
                          what: "a plain controller formats as its raw value")
 
-S018 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:63
+S018 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pan's neutral is 64"
   report.expectEqual(64, pan.neutral, cppID: drawerAutomationCatalogID, what: "Pan's neutral is 64")
 
-S019 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:64
+S019 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pan formats its neutral as a centered c_v value"
   report.expectEqual("c_v+0", pan.valueText(64), cppID: drawerAutomationCatalogID,
                          what: "Pan formats its neutral as a centered c_v value")
 
-S020 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:66
+S020 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pan's formatting stays centered on 64"
   report.expectEqual("c_v-4", pan.valueText(60), cppID: drawerAutomationCatalogID,
                          what: "Pan's formatting stays centered on 64")
 
-S021 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:69
+S021 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend's range is signed"
   report.expectEqual(-8192, bend.minimum, cppID: drawerAutomationCatalogID, what: "Bend's range is signed")
 
-S022 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:70
+S022 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend's range ends at 8191"
   report.expectEqual(8191, bend.maximum, cppID: drawerAutomationCatalogID, what: "Bend's range ends at 8191")
 
-S023 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:71
+S023 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend's neutral is zero"
   report.expectEqual(0, bend.neutral, cppID: drawerAutomationCatalogID, what: "Bend's neutral is zero")
 
-S024 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:72
+S024 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend formats its positive extreme"
   report.expectEqual("+8191", bend.valueText(8191), cppID: drawerAutomationCatalogID,
                          what: "Bend formats its positive extreme")
 
-S025 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:74
+S025 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend formats its negative extreme"
   report.expectEqual("-8192", bend.valueText(-8192), cppID: drawerAutomationCatalogID,
                          what: "Bend formats its negative extreme")
 
-S026 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:77
+S026 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's range starts at 20 BPM"
   report.expectEqual(20, tempo.minimum, cppID: drawerAutomationCatalogID, what: "Tempo's range starts at 20 BPM")
 
-S027 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:78
+S027 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's range ends at 255 BPM"
   report.expectEqual(255, tempo.maximum, cppID: drawerAutomationCatalogID, what: "Tempo's range ends at 255 BPM")
 
-S028 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:79
+S028 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo has no neutral and defaults to 120 BPM"
   report.expect(tempo.neutral == nil && tempo.defaultValue == 120, cppID: drawerAutomationCatalogID,
                     message: "Tempo has no neutral and defaults to 120 BPM")
 
-S029 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:81
+S029 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo formats as plain BPM"
   report.expectEqual("150", tempo.valueText(150), cppID: drawerAutomationCatalogID,
                          what: "Tempo formats as plain BPM")
 
-S030 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:85
+S030 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "LFO type is bounded to its three modes"
   report.expectEqual(2, modType.maximum, cppID: drawerAutomationCatalogID,
                          what: "LFO type is bounded to its three modes")
 
-S031 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:87
+S031 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Modulation's default value window starts at 0"
   report.expectEqual(0, AutomationCatalog.defaultRange(TimeDefaults.ccModulation), cppID: drawerAutomationCatalogID,
                          what: "Modulation's default value window starts at 0")
 
-S032 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:89
+S032 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every other zoomable parameter opens on the full window"
   report.expectEqual(127, AutomationCatalog.defaultRange(TimeDefaults.ccPan), cppID: drawerAutomationCatalogID,
                          what: "every other zoomable parameter opens on the full window")
 
-S033 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:91
+S033 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "auto range fits the smallest window to the data"
   report.expectEqual(16, AutomationCatalog.autoRange(maximum: 9), cppID: drawerAutomationCatalogID,
                          what: "auto range fits the smallest window to the data")
 
-S034 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:93
+S034 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "auto range steps up with the data"
   report.expectEqual(32, AutomationCatalog.autoRange(maximum: 20), cppID: drawerAutomationCatalogID,
                          what: "auto range steps up with the data")
 
-S035 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:95
+S035 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "auto range keeps a wider window for wider data"
   report.expectEqual(64, AutomationCatalog.autoRange(maximum: 60), cppID: drawerAutomationCatalogID,
                          what: "auto range keeps a wider window for wider data")
 
-S036 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:97
+S036 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "auto range keeps the full window for full data"
   report.expectEqual(127, AutomationCatalog.autoRange(maximum: 127), cppID: drawerAutomationCatalogID,
                          what: "auto range keeps the full window for full data")
 
-S037 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:101
+S037 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the value prompt titles the lane"
   report.expectEqual("Pan (PAN)", prompt.title, cppID: drawerAutomationCatalogID,
                          what: "the value prompt titles the lane")
 
-S038 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:103
+S038 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a centered parameter prompts in its displayed domain"
   report.expectEqual("c_v value (0 = center):", prompt.label, cppID: drawerAutomationCatalogID,
                          what: "a centered parameter prompts in its displayed domain")
 
-S039 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:105
+S039 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the displayed value offsets the stored value by the midpoint"
   report.expectEqual(0, prompt.initialValue, cppID: drawerAutomationCatalogID,
                          what: "the displayed value offsets the stored value by the midpoint")
 
-S040 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:107
+S040 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the displayed domain is the stored domain less the offset"
   report.expectEqual(-64, prompt.minimum, cppID: drawerAutomationCatalogID,
                          what: "the displayed domain is the stored domain less the offset")
 
-S041 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:109
+S041 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the prompt's displayed value maps back to the stored value"
   report.expectEqual(64, pan.storedValue(prompted: 0), cppID: drawerAutomationCatalogID,
                          what: "the prompt's displayed value maps back to the stored value")
 
-S042 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:111
+S042 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a stored value clamps into the parameter's domain"
   report.expectEqual(127, pan.storedValue(prompted: 200), cppID: drawerAutomationCatalogID,
                          what: "a stored value clamps into the parameter's domain")
 
-S043 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:114
+S043 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Bend's zero-centered prompt keeps its production label"
   report.expectEqual("Bend (0 = none):", bendPrompt.label, cppID: drawerAutomationCatalogID,
                          what: "Bend's zero-centered prompt keeps its production label")
 
-S044 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:117
+S044 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's prompt keeps its production title"
   report.expectEqual("Set tempo", tempoPrompt.title, cppID: drawerAutomationCatalogID,
                          what: "Tempo's prompt keeps its production title")
 
-S045 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:119
+S045 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's prompt labels its unit"
   report.expectEqual("BPM:", tempoPrompt.label, cppID: drawerAutomationCatalogID,
                          what: "Tempo's prompt labels its unit")
 
-S046 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift:121
+S046 | drawerAutomationParameterCatalogAndMetadata | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo's prompt carries no stored offset"
   report.expectEqual(0, tempoPrompt.storedOffset, cppID: drawerAutomationCatalogID,
                          what: "Tempo's prompt carries no stored offset")
 
-S047 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:134
+S047 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a lane the document never wrote projects no point"
   report.expectEqual(0, modulation.points.count, cppID: drawerAutomationProjectionID,
                          what: "a lane the document never wrote projects no point")
 
-S048 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:136
+S048 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an empty lane projects no curve segment"
   report.expectEqual(0, modulation.segments.count, cppID: drawerAutomationProjectionID,
                          what: "an empty lane projects no curve segment")
 
-S049 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:138
+S049 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an empty Modulation lane leads in on its engine default 0"
   report.expectEqual(0, modulation.leadIn?.value ?? -1, cppID: drawerAutomationProjectionID,
                          what: "an empty Modulation lane leads in on its engine default 0")
 
-S050 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:140
+S050 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an empty lane has no origin phantom"
   report.expect(modulation.originPhantom == nil, cppID: drawerAutomationProjectionID,
                     message: "an empty lane has no origin phantom")
 
-S051 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:145
+S051 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the display points are the projected node and the written ticks"
   report.expectEqual(["0:64", "24:90", "120:0"], fixture.laneValues(pan.points.map {
           AutomationLanePoint(tick: $0.tick, value: $0.value)
       }), cppID: drawerAutomationProjectionID,
                          what: "the display points are the projected node and the written ticks")
 
-S052 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:149
+S052 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the last occupant of a same-tick pair wins the display point"
   report.expect(pan.points[1].value == 90 && pan.points[1].tick == 24, cppID: drawerAutomationProjectionID,
                     message: "the last occupant of a same-tick pair wins the display point")
 
-S053 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:151
+S053 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every occurrence stays addressable"
   report.expectEqual(["24:30", "24:90", "120:0"],
                          pan.sources.map { "\($0.tick):\($0.value)" }, cppID: drawerAutomationProjectionID,
                          what: "every occurrence stays addressable")
 
-S054 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:154
+S054 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Pan projects its engine default instead of a lead-in"
   report.expect(pan.leadIn == nil, cppID: drawerAutomationProjectionID,
                     message: "Pan projects its engine default instead of a lead-in")
 
-S055 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:156
+S055 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a tick after a point holds that point's value"
   report.expectEqual(90, pan.heldValue(at: 30) ?? -1, cppID: drawerAutomationProjectionID,
                          what: "a tick after a point holds that point's value")
 
-S056 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:158
+S056 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a tick on a point holds its own value"
   report.expectEqual(90, pan.heldValue(at: 24) ?? -1, cppID: drawerAutomationProjectionID,
                          what: "a tick on a point holds its own value")
 
-S057 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:160
+S057 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a tick before the first written point holds the projected node"
   report.expectEqual(64, pan.heldValue(at: 20) ?? -1, cppID: drawerAutomationProjectionID,
                          what: "a tick before the first written point holds the projected node")
 
-S058 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:164
+S058 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "inclusive held lookup chooses the last equal-tick occurrence"
   report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 24, inclusive: true),
                          cppID: drawerAutomationProjectionID,
                          what: "inclusive held lookup chooses the last equal-tick occurrence")
 
-S059 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:167
+S059 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "exclusive held lookup excludes the entire equal-tick group"
   report.expect(AutomationLaneReplacement.held(occurrences, at: 24, inclusive: false) == nil,
                     cppID: drawerAutomationProjectionID,
                     message: "exclusive held lookup excludes the entire equal-tick group")
 
-S060 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:170
+S060 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "exclusive held lookup retains the previous group's last occupant"
   report.expectEqual(90, AutomationLaneReplacement.held(occurrences, at: 120, inclusive: false),
                          cppID: drawerAutomationProjectionID,
                          what: "exclusive held lookup retains the previous group's last occupant")
 
-S061 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:176
+S061 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "written Volume points project at their ticks"
   report.expectEqual(["0:127", "96:64"], fixture.laneValues(volume.points.map {
           AutomationLanePoint(tick: $0.tick, value: $0.value)
       }), cppID: drawerAutomationProjectionID, what: "written Volume points project at their ticks")
 
-S062 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:179
+S062 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a written tick-zero point replaces the projected engine node"
   report.expect(!volume.points.contains { $0.projected }, cppID: drawerAutomationProjectionID,
                     message: "a written tick-zero point replaces the projected engine node")
 
-S063 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:181
+S063 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the written-event count ignores projected nodes"
   report.expectEqual(2, volume.eventCount, cppID: drawerAutomationProjectionID,
                          what: "the written-event count ignores projected nodes")
 
-S064 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:185
+S064 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the last step runs open to the song's end"
   report.expectEqual([Tick?.some(96), nil], volume.segments.map(\.tickEnd), cppID: drawerAutomationProjectionID,
                          what: "the last step runs open to the song's end")
 
-S065 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:187
+S065 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "each step holds its own point's value"
   report.expectEqual([127, 64], volume.segments.map(\.fromValue), cppID: drawerAutomationProjectionID,
                          what: "each step holds its own point's value")
 
-S066 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:189
+S066 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the production curve is a step curve"
   report.expect(volume.segments.allSatisfy { $0.kind == .step && $0.toValue == $0.fromValue },
                     cppID: drawerAutomationProjectionID, message: "the production curve is a step curve")
 
-S067 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:191
+S067 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the step's value holds until the next point"
   report.expectEqual(127, volume.heldValue(at: 95) ?? -1, cppID: drawerAutomationProjectionID,
                          what: "the step's value holds until the next point")
 
-S068 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:193
+S068 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the next point's value holds from its own tick"
   report.expectEqual(64, volume.heldValue(at: 96) ?? -1, cppID: drawerAutomationProjectionID,
                          what: "the next point's value holds from its own tick")
 
-S069 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:199
+S069 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Volume projects exactly its engine-default node"
   report.expectEqual(1, projectedVolume.points.count, cppID: drawerAutomationProjectionID,
                          what: "Volume projects exactly its engine-default node")
 
-S070 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:201
+S070 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the projected node sits at tick zero with the engine default"
   report.expect(projectedVolume.points[0].projected && projectedVolume.points[0].tick == 0
                         && projectedVolume.points[0].value == 127,
                     cppID: drawerAutomationProjectionID,
                     message: "the projected node sits at tick zero with the engine default")
 
-S071 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:205
+S071 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the projected node adds no written event"
   report.expectEqual(0, projectedVolume.eventCount, cppID: drawerAutomationProjectionID,
                          what: "the projected node adds no written event")
 
-S072 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:207
+S072 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the camera's lead pad keeps tick zero inside the plot"
   report.expect(projectedVolume.points[0].x > 0, cppID: drawerAutomationProjectionID,
                     message: "the camera's lead pad keeps tick zero inside the plot")
 
-S073 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:211
+S073 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a positive scroll carries the tick-zero node left of the plot"
   report.expect(scrolledProjection.points[0].x < 0, cppID: drawerAutomationProjectionID,
                     message: "a positive scroll carries the tick-zero node left of the plot")
 
-S074 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:213
+S074 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an off-plot node becomes the origin phantom"
   report.expectEqual(Tick(0), scrolledProjection.originPhantom?.point.tick ?? 99,
                          cppID: drawerAutomationProjectionID,
                          what: "an off-plot node becomes the origin phantom")
 
-S075 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:219
+S075 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the ramp interpolation is linear between its endpoints"
   report.expectEqual(50, AutomationInterpolation.ramp.value(
           at: 5, from: AutomationLanePoint(tick: 0, value: 0),
           to: AutomationLanePoint(tick: 10, value: 100)), cppID: drawerAutomationProjectionID,
                          what: "the ramp interpolation is linear between its endpoints")
 
-S076 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:223
+S076 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the step interpolation holds its first point's value"
   report.expectEqual(0, AutomationInterpolation.step.value(
           at: 5, from: AutomationLanePoint(tick: 0, value: 0),
           to: AutomationLanePoint(tick: 10, value: 100)), cppID: drawerAutomationProjectionID,
                          what: "the step interpolation holds its first point's value")
 
-S077 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:227
+S077 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every catalog parameter projects a step curve"
   report.expectEqual(AutomationInterpolation.step, rampMetadata.interpolation, cppID: drawerAutomationProjectionID,
                          what: "every catalog parameter projects a step curve")
 
-S078 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:232
+S078 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a tempo point projects at its tick as BPM"
   report.expectEqual(["0:120"], fixture.laneValues(tempo.points.map {
           AutomationLanePoint(tick: $0.tick, value: $0.value)
       }), cppID: drawerAutomationProjectionID, what: "a tempo point projects at its tick as BPM")
 
-S079 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:235
+S079 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo uses the shared value axis"
   report.expectEqual(fixture.y(.tempo, 120), tempo.points.first?.y ?? -1, cppID: drawerAutomationProjectionID,
                          what: "Tempo uses the shared value axis")
 
-S080 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:239
+S080 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every x is the shared camera's projection"
   report.expectEqual(fixture.session.camera.contentX(tick: 96), volume.points[1].x, cppID: drawerAutomationProjectionID,
                          what: "every x is the shared camera's projection")
 
-S081 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:244
+S081 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a time zoom rescales the projected x"
   report.expect(afterZoom > beforeZoom * 2, cppID: drawerAutomationProjectionID,
                     message: "a time zoom rescales the projected x")
 
-S082 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:248
+S082 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a scroll offsets the projection by the same amount"
   report.expectEqual(fixture.session.camera.contentX(tick: 0), atZeroScroll, cppID: drawerAutomationProjectionID,
                          what: "a scroll offsets the projection by the same amount")
 
-S083 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:252
+S083 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a scrolled past a point leaves it left of the plot"
   report.expect(preRoll.points[0].x < 0, cppID: drawerAutomationProjectionID,
                     message: "a scrolled past a point leaves it left of the plot")
 
-S084 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:254
+S084 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the off-plot point becomes the lane's origin phantom"
   report.expectEqual(Tick(0), preRoll.originPhantom?.point.tick ?? 99, cppID: drawerAutomationProjectionID,
                          what: "the off-plot point becomes the lane's origin phantom")
 
-S085 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift:257
+S085 | drawerAutomationLaneProjection | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the camera clamps its scroll to the negative pre-roll bound"
   report.expectEqual(fixture.session.camera.minHScroll, fixture.session.camera.snapshot.scrollX,
                          cppID: drawerAutomationProjectionID,
                          what: "the camera clamps its scroll to the negative pre-roll bound")
 
-S086 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:269
+S086 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "each occurrence exposes its own identity"
   report.expectEqual(3, pan.sources.count, cppID: drawerAutomationIdentityID,
                          what: "each occurrence exposes its own identity")
 
-S087 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:271
+S087 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the identity carries the document's own occurrence handle"
   report.expectEqual(fixture.lanePoints(fixture.panLane).map(\.eventIndex),
                          pan.sources.map(\.identity.occurrence), cppID: drawerAutomationIdentityID,
                          what: "the identity carries the document's own occurrence handle")
 
-S088 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:274
+S088 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every identity carries the revision it was read at"
   report.expect(pan.sources.allSatisfy { $0.identity.revision == revision }, cppID: drawerAutomationIdentityID,
                     message: "every identity carries the revision it was read at")
 
-S089 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:276
+S089 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every identity carries its parameter"
   report.expect(pan.sources.allSatisfy { $0.identity.parameter == fixture.panLane },
                     cppID: drawerAutomationIdentityID, message: "every identity carries its parameter")
 
-S090 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:278
+S090 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a lane occurrence carries the document handle a write names"
   report.expect(pan.sources.allSatisfy { $0.lanePoint != nil && $0.tempoPoint == nil },
                     cppID: drawerAutomationIdentityID,
                     message: "a lane occurrence carries the document handle a write names")
 
-S091 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:288
+S091 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a stale identity never matches a later projection"
   report.expect(!rewritten.sources.contains { $0.identity == captured }, cppID: drawerAutomationIdentityID,
                     message: "a stale identity never matches a later projection")
 
-S092 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:290
+S092 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the same-tick occurrences keep their document order and identity"
   report.expectEqual(["24:30", "24:90", "48:20"],
                          rewritten.sources.map { "\($0.tick):\($0.value)" }, cppID: drawerAutomationIdentityID,
                          what: "the same-tick occurrences keep their document order and identity")
 
-S093 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:306
+S093 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a move whose source tick is gone resolves to nothing"
   report.expect(stale == nil, cppID: drawerAutomationIdentityID,
                     message: "a move whose source tick is gone resolves to nothing")
 
-S094 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:313
+S094 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a live source tick resolves against the frozen revision"
   report.expectEqual(1, live?.writes.count ?? 0, cppID: drawerAutomationIdentityID,
                          what: "a live source tick resolves against the frozen revision")
 
-S095 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:315
+S095 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a plan at a superseded revision writes nothing"
   report.expect(!AutomationCommit.apply(live!, in: fixture.document), cppID: drawerAutomationIdentityID,
                     message: "a plan at a superseded revision writes nothing")
 
-S096 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:317
+S096 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the stale plan left the lane alone"
   report.expectEqual(["24:30", "24:90", "120:0"],
                          ["24:30", "24:90", "120:0"], cppID: drawerAutomationIdentityID,
                          what: "the stale plan left the lane alone")
 
-S097 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:320
+S097 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the lane still holds what the delete and the failed plan left"
   report.expectEqual(["24:30", "24:90"],
                          fixture.values(fixture.panLane), cppID: drawerAutomationIdentityID,
                          what: "the lane still holds what the delete and the failed plan left")
 
-S098 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:328
+S098 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "tempo values project as BPM from the stored microseconds"
   report.expectEqual(["0:120", "48:150"], tempoFixture.laneValues(tempo.points.map {
           AutomationLanePoint(tick: $0.tick, value: $0.value)
       }), cppID: drawerAutomationIdentityID, what: "tempo values project as BPM from the stored microseconds")
 
-S099 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift:331
+S099 | drawerAutomationPointIdentityAndStaleness | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a tempo occurrence carries the tempo point a write removes"
   report.expect(tempo.sources.allSatisfy { $0.tempoPoint != nil && $0.lanePoint == nil },
                     cppID: drawerAutomationIdentityID,
                     message: "a tempo occurrence carries the tempo point a write removes")
 
-S100 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:343
+S100 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "deleting a tick with occupants commits"
   report.expect(fixture.page.deletePoints(at: [24]), cppID: drawerAutomationDeleteID,
                     message: "deleting a tick with occupants commits")
 
-S101 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:345
+S101 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "every occurrence at the deleted tick goes"
   report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationDeleteID,
                          what: "every occurrence at the deleted tick goes")
 
-S102 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:347
+S102 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the deletion is one revision"
   report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationDeleteID,
                          what: "the deletion is one revision")
 
-S103 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:349
+S103 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "one undo restores both deleted occurrences"
   report.expect(fixture.undo() && fixture.values(fixture.panLane).count == 3, cppID: drawerAutomationDeleteID,
                     message: "one undo restores both deleted occurrences")
 
-S104 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:353
+S104 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "deleting a tick with no occurrence writes nothing"
   report.expect(!fixture.page.deletePoints(at: [600]), cppID: drawerAutomationDeleteID,
                     message: "deleting a tick with no occurrence writes nothing")
 
-S105 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:355
+S105 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a missing target leaves the revision alone"
   report.expectEqual(revision, fixture.document.revision, cppID: drawerAutomationDeleteID,
                          what: "a missing target leaves the revision alone")
 
-S106 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:362
+S106 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "deleting the projected engine node writes nothing"
   report.expect(!projectionFixture.page.deletePoints(at: [0]), cppID: drawerAutomationDeleteID,
                     message: "deleting the projected engine node writes nothing")
 
-S107 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:364
+S107 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the projected node is not a written event"
   report.expectEqual(projectedRevision, projectionFixture.document.revision, cppID: drawerAutomationDeleteID,
                          what: "the projected node is not a written event")
 
-S108 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:366
+S108 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "an empty delete request writes nothing"
   report.expect(!projectionFixture.page.deletePoints(at: []), cppID: drawerAutomationDeleteID,
                     message: "an empty delete request writes nothing")
 
-S109 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:377
+S109 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the selection covers both lanes inside the range"
   report.expectEqual([selection.volumeLane, selection.panLane],
                          selection.page.selectedParameters, cppID: drawerAutomationDeleteID,
                          what: "the selection covers both lanes inside the range")
 
-S110 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:381
+S110 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the selection delete commits once"
   report.expect(selection.page.deleteSelectedNodes(), cppID: drawerAutomationDeleteID,
                     message: "the selection delete commits once")
 
-S111 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:383
+S111 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the covered lane keeps only its outside point"
   report.expectEqual(["120:40"], selection.values(selection.panLane), cppID: drawerAutomationDeleteID,
                          what: "the covered lane keeps only its outside point")
 
-S112 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:385
+S112 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the second covered lane keeps only its outside point"
   report.expectEqual(["140:20"], selection.values(selection.volumeLane), cppID: drawerAutomationDeleteID,
                          what: "the second covered lane keeps only its outside point")
 
-S113 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:387
+S113 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "Tempo stays untouched while the selection excludes it"
   report.expectEqual(["0:120", "150:150"], selection.tempoValues, cppID: drawerAutomationDeleteID,
                          what: "Tempo stays untouched while the selection excludes it")
 
-S114 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:389
+S114 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "a multi-lane delete is one revision"
   report.expectEqual(selectionBefore.revision + 1, selection.document.revision, cppID: drawerAutomationDeleteID,
                          what: "a multi-lane delete is one revision")
 
-S115 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:391
+S115 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the multi-lane delete is undoable"
   report.expect(selection.undo(), cppID: drawerAutomationDeleteID, message: "the multi-lane delete is undoable")
 
-S116 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:392
+S116 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "one undo restores the first lane"
   report.expectEqual(["24:30", "120:40"], selection.values(selection.panLane), cppID: drawerAutomationDeleteID,
                          what: "one undo restores the first lane")
 
-S117 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:394
+S117 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "one undo restores the second lane"
   report.expectEqual(["48:100", "140:20"], selection.values(selection.volumeLane), cppID: drawerAutomationDeleteID,
                          what: "one undo restores the second lane")
 
-S118 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:396
+S118 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "one undo consumes the multi-lane delete's single history entry"
   report.expect(!selection.document.history.canUndo, cppID: drawerAutomationDeleteID,
                     message: "one undo consumes the multi-lane delete's single history entry")
 
-S119 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift:398
+S119 | drawerAutomationDeleteTransactions | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "the selection survives the delete it performed"
   report.expectEqual([selection.volumeLane, selection.panLane],
                          selection.page.selectedParameters, cppID: drawerAutomationDeleteID,
                          what: "the selection survives the delete it performed")
 
-S120 | expect | src/checks/automation/domain/tst_automationdomain.swift:506
+S120 | expect | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyResolverRows",
                             message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
-S121 | expect | src/checks/automation/domain/tst_automationdomain.swift:599
+S121 | expect | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::legacyMetadataRows",
                         message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
-S122 | expect | src/checks/automation/domain/tst_automationdomain.swift:662
+S122 | expect | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: message "tst_automationdomain.cpp:\(line)"
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::defaultNodePromotion",
                         message: "tst_automationdomain.cpp:\(line)")
 
-S123 | expect | src/checks/automation/domain/tst_automationdomain.swift:717
+S123 | expect | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
   report.expect(condition(), cppID: "automation-domain/AutomationDomainTest::replaceSpans",
                             message: "tst_automationdomain.cpp:\(line) row=\(row)")
 
-S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:208
+S124 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the lane menu opens"
     report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
                   cppID: id, message: "the lane menu opens")
 
-S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:210
+S125 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the Delete events row is consumed" #1
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
                   cppID: id, message: "the Delete events row is consumed")
 
-S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:212
+S126 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the row opens the delete confirmation"
     report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
                        what: "the row opens the delete confirmation")
 
-S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:214
+S127 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the confirmation names the written count"
     report.expect(page.promptMessage.contains("2 written events"), cppID: id,
                   message: "the confirmation names the written count")
 
-S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:216
+S128 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "opening the confirmation writes nothing"
     report.expectEqual(before, fixture.snapshot, cppID: id,
                        what: "opening the confirmation writes nothing")
 
-S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:218
+S129 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the confirmation accepts" #1
     report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
 
-S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:219
+S130 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "accept removes only the target lane"
     report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                        what: "accept removes only the target lane")
 
-S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:221
+S131 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the volume lane is preserved"
     report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                        what: "the volume lane is preserved")
 
-S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:223
+S132 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "one acceptance is one revision"
     report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
                        what: "one acceptance is one revision")
 
-S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:225
+S133 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the acceptance undoes" #1
     report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
 
-S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:226
+S134 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "undo restores the target lane"
     report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the target lane")
 
-S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:228
+S135 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the acceptance recorded exactly one history entry"
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the acceptance recorded exactly one history entry")
 
-S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:236
+S136 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "cancelling drops the confirmation"
     report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
 
-S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:237
+S137 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "cancelling leaves document and history untouched"
     report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
                        what: "cancelling leaves document and history untouched")
 
-S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:246
+S138 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "a stale confirmation cannot delete its target"
     report.expect(!page.acceptPromptDraft(), cppID: staleID,
                   message: "a stale confirmation cannot delete its target")
 
-S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:248
+S139 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the rejected confirmation leaves the rewritten lane intact"
     report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
                        what: "the rejected confirmation leaves the rewritten lane intact")
 
-S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:260
+S140 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the eventless lane disables Delete events"
     report.expect(synthetic.page.publishedMenuRows.first {
         $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
     }?.enabled == false, cppID: syntheticID,
                   message: "the eventless lane disables Delete events")
 
-S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:264
+S141 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the disabled row is refused"
     report.expect(!synthetic.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
                   message: "the disabled row is refused")
 
-S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:267
+S142 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "no confirmation opens for the eventless lane"
     report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
                   message: "no confirmation opens for the eventless lane")
 
-S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:278
+S143 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the Delete events row is consumed" #2
     report.expect(single.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
                   message: "the Delete events row is consumed")
 
-S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:281
+S144 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the confirmation counts written events only"
     report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
                   message: "the confirmation counts written events only")
 
-S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:283
+S145 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the confirmation accepts" #2
     report.expect(single.page.acceptPromptDraft(), cppID: countID,
                   message: "the confirmation accepts")
 
-S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:285
+S146 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "accept removes the written event"
     report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
                        what: "accept removes the written event")
 
-S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:287
+S147 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the volume parameter remains in the catalog"
     report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
                   message: "the volume parameter remains in the catalog")
 
-S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:289
+S148 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the acceptance undoes" #2
     report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
 
-S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:290
+S149 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "undo restores the written event"
     report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
 
-S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:250
+S150 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the rejected confirmation preserves the rewritten points"
     report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
                        cppID: staleID,
                        what: "the rejected confirmation preserves the rewritten points")
 
-S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:269
+S151 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the refused row writes nothing"
     report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
 
-S152 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:23
+S152 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "Escape claims the live gesture"
     report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
                   message: "Escape claims the live gesture")
 
-S153 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:25
+S153 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "cancelling ends the gesture synchronously"
     report.expect(!fixture.page.hasGesture && !fixture.page.interactionActive, cppID: drawerAutomationCancelID,
                   message: "cancelling ends the gesture synchronously")
 
-S154 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:27
+S154 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a cancelled gesture mutates nothing"
     report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationCancelID,
                        what: "a cancelled gesture mutates nothing")
 
-S155 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:294
+S155 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the reopened row owns the delete confirmation"
     report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
 
-S156 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:295
+S156 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the delete confirmation is open"
     report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
 
-S157 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:296
+S157 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the open confirmation marks the page interacting"
     report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
 
-S158 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:299
+S158 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "Escape claims the open confirmation"
     report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
 
-S159 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:300
+S159 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "Escape drops the confirmation and the interaction"
     report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
 
-S160 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift:301
+S160 | drawerAutomationLaneDeleteConfirmation | src/checks/automation/automationpointmenus.swift
+Anchor: message "Escape cancellation writes nothing"
     report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift

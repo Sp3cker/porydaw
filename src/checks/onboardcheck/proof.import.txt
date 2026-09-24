@@ -4,7 +4,6 @@ Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
 Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)
-Swift SHA-256: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -21,7 +20,7 @@ importAnalysis and importTransforms are ported: runMidiImportSuite executes both
 Site tally: 102 sites (51 MATCHED, 51 GAP).
 
 Execution and ownership
-One executing owner. The native runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest, but that harness is absent from every CMake target and from checkcatalog.cpp (which registers only production-startup, audiocheck-backend, swiftcore, vgbankcheck, exportcheck-loop and exportcheck-tail), so nothing executes the native methods below. In Swift, runMidiImportSuite (src/checks/editcheck/EventChecks.swift:45, reached through CoreCheckSupport suite 8 and the QtTest slot midiImport in tst_swiftcore.cpp:61) executes importAnalysis() and importTransforms(), whose report.expect*/report.fail calls carry the onboardcheck cppIDs catalogued below as S001-S053. No Swift entry point executes importWizardOverflow, importWizard, importRoundtrip, or compilesThroughMid2agb. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and onboardingtest.h helpers (midiFixture, copyProject, rescaleDivision via core/midiimport.h, NewSongWizard via ui/newsongwizard.h).
+One executing owner. The native runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest, but that harness is absent from every CMake target and from checkcatalog.cpp (which registers only production-startup, audiocheck-backend, swiftcore, vgbankcheck, exportcheck-loop and exportcheck-tail), so nothing executes the native methods below. In Swift, runMidiImportSuite (src/checks/editcheck/EventChecks.swift, reached through CoreCheckSupport suite 8 and the QtTest slot midiImport in tst_swiftcore.cpp:61) executes importAnalysis() and importTransforms(), whose report.expect*/report.fail calls carry the onboardcheck cppIDs catalogued below as S001-S053. No Swift entry point executes importWizardOverflow, importWizard, importRoundtrip, or compilesThroughMid2agb. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and onboardingtest.h helpers (midiFixture, copyProject, rescaleDivision via core/midiimport.h, NewSongWizard via ui/newsongwizard.h).
 
 Fixture, sequence and row constraints
 importAnalysis_data expands budget rows 16 (default), 1 (tight), and -1 (unknown); warning-category loops fold analysis.warnings into three booleans per row, and CC loops fold analysis.ccs into mod/reverb booleans. importRescale's per-track/per-event loop expands the monotonicity site over every event. importDedup's tick-0 loop folds lead events into program/cc7/bend/label/firstNote accumulators. compilesThroughMid2agb_data expands blank and imported kinds; the imported kind rescales before compiling. importWizardOverflow and importWizard drive wizard checkboxes (rescale, 48-clocks extended), name sanitization, analysis/identity combo-box pairing, and the mute-track warning label. importRoundtrip writes, re-reads, and re-writes the SMF asserting byte stability, then opens the project and loads the document. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
@@ -44,7 +43,7 @@ Original assertion inventory and source sequence
 
 A001 | OnboardingTest::importAnalysis | src/checks/onboardcheck/import.cpp:28
 Disposition: MATCHED
-Mapping/reason: Matched by S010 (missing --swiftcore fixture root fails the suite) and S011 (throwing MidiFile.decode of test_midis/external_import.mid at EventChecks.swift:309, whose do/catch branch at :340-341 fails the suite); the same fixture the original reads.
+Mapping/reason: Matched by S010 (missing --swiftcore fixture root fails the suite) and S011 (throwing MidiFile.decode of test_midis/external_import.mid at EventChecks.swift, whose do/catch branch at :340-341 fails the suite); the same fixture the original reads.
 Source context since previous assertion:
   #include "checks/onboardcheck/onboardingtest.h"
 
@@ -198,7 +197,7 @@ Original expression:
 
 A013 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:66
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (do/catch at EventChecks.swift:422-424 fails the suite when the external_import.mid read/decode/rescale fails) over the same fixture decode at :385.
+Mapping/reason: Matched by S034 (do/catch at EventChecks.swift fails the suite when the external_import.mid read/decode/rescale fails) over the same fixture decode at :385.
 Source context since previous assertion:
 
   }
@@ -214,7 +213,7 @@ Original expression:
 
 A014 | OnboardingTest::importRescale | src/checks/onboardcheck/import.cpp:68
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (MidiImport.rescaleDivision(to: 24) at EventChecks.swift:386, whose failure branch :422-424 fails the suite) plus S006/S007 for the floor rescale arithmetic; the exact ticks and monotonicity continue in S025-S029. Supersedes the earlier PARTIAL.
+Mapping/reason: Matched by S034 (MidiImport.rescaleDivision(to: 24) at EventChecks.swift, whose failure branch :422-424 fails the suite) plus S006/S007 for the floor rescale arithmetic; the exact ticks and monotonicity continue in S025-S029. Supersedes the earlier PARTIAL.
 Source context since previous assertion:
 
 
@@ -280,7 +279,7 @@ Original expression:
 
 A021 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:87
 Disposition: MATCHED
-Mapping/reason: Matched by S048 (do/catch at EventChecks.swift:498-500 fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
+Mapping/reason: Matched by S048 (do/catch at EventChecks.swift fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
 Source context since previous assertion:
 
               previous = event.tick;
@@ -514,7 +513,7 @@ Original expression:
 
 A042 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:164
 Disposition: MATCHED
-Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift:505-510). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
+Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
 Source context since previous assertion:
 
   }
@@ -969,7 +968,7 @@ Original expression:
 
 A080 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:297
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (do/catch at EventChecks.swift:422-424 fails the suite by the roundtrip cppID when the fixture read/decode/rescale fails) over the decode at :385 of test_midis/external_import.mid, the same fixture; the native disk hop stays GAP with A083/A085/A087/A089.
+Mapping/reason: Matched by S034 (do/catch at EventChecks.swift fails the suite by the roundtrip cppID when the fixture read/decode/rescale fails) over the decode at :385 of test_midis/external_import.mid, the same fixture; the native disk hop stays GAP with A083/A085/A087/A089.
 Source context since previous assertion:
 
       const QString root = fixture->root();
@@ -981,7 +980,7 @@ Original expression:
 
 A081 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:299
 Disposition: MATCHED
-Mapping/reason: Matched by S034 (rescaleDivision(to: 24) at EventChecks.swift:386, whose failure branch :423-424 reports the roundtrip cppID).
+Mapping/reason: Matched by S034 (rescaleDivision(to: 24) at EventChecks.swift, whose failure branch :423-424 reports the roundtrip cppID).
 Source context since previous assertion:
 
 
@@ -1031,7 +1030,7 @@ Original expression:
 
 A086 | OnboardingTest::importRoundtrip | src/checks/onboardcheck/import.cpp:310
 Disposition: MATCHED
-Mapping/reason: Matched by S033 (MidiFile.decode of the serialized bytes at EventChecks.swift:411-412 inside the roundtrip do-block, whose catch at :419-420 fails the suite by the roundtrip cppID over the same rescaled fixture); the native disk hop stays GAP with A083/A085/A087/A089.
+Mapping/reason: Matched by S033 (MidiFile.decode of the serialized bytes at EventChecks.swift inside the roundtrip do-block, whose catch at :419-420 fails the suite by the roundtrip cppID over the same rescaled fixture); the native disk hop stays GAP with A083/A085/A087/A089.
 Source context since previous assertion:
 
       SmfFile reread;
@@ -1208,7 +1207,7 @@ Original expression:
 
 A102 | OnboardingTest::compilesThroughMid2agb | src/checks/onboardcheck/import.cpp:358
 Disposition: GAP
-Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. compile() shells out to the mid2agb binary; no lane compiles SongRegistry::blankSong() or the rescaled external_import.mid (the swiftcore mid2agb runner at MidiChecks.swift:763-780 compiles project songs and synthetic XCMD traffic only).
+Mapping/reason: no executing harness asserts mid2agb compilation of these fixtures. compile() shells out to the mid2agb binary; no lane compiles SongRegistry::blankSong() or the rescaled external_import.mid (the swiftcore mid2agb runner at MidiChecks.swift compiles project songs and synthetic XCMD traffic only).
 Source context since previous assertion:
 
 
@@ -1229,31 +1228,36 @@ midiImport), except S001, which executes under the event-edits suite path
 document track-name queries, not the analyzeForImport budgets or warnings
 asserted in importAnalysis.
 
-S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift:174
+S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift
+Anchor: message "import and document queries select the same bare name"
 Verbatim call:
     report.expectEqual("Bare", imported.tracks.first?.name,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                        what: "import and document queries select the same bare name")
 
-S002 | importAnalysis | src/checks/editcheck/EventChecks.swift:297
+S002 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "import counts logical XCMD points"
 Verbatim call:
     report.expectEqual(1, analysis.silentTracks,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis",
                        what: "player track budget identifies silent tracks")
 
-S003 | importAnalysis | src/checks/editcheck/EventChecks.swift:300
+S003 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "unknown controller is not exported"
 Verbatim call:
     report.expect(analysis.tracks[0].notesBeforeProgram,
                   cppID: "onboardcheck/OnboardingTest::importAnalysis",
                   message: "notes before instrument are reported")
 
-S004 | importTransforms | src/checks/editcheck/EventChecks.swift:352
+S004 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "only eligible same-tick setter is removed"
 Verbatim call:
     report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
                        cppID: "onboardcheck/OnboardingTest::importDedup",
                        what: "only eligible same-tick setter is removed")
 
-S005 | importTransforms | src/checks/editcheck/EventChecks.swift:355
+S005 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "action-like XCMD selectors are preserved"
 Verbatim call:
     report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
         if case let .channel(status, data0, data1) = $0.payload {
@@ -1263,172 +1267,206 @@ Verbatim call:
     }, cppID: "onboardcheck/OnboardingTest::importDedup",
     what: "action-like XCMD selectors are preserved")
 
-S006 | importTransforms | src/checks/editcheck/EventChecks.swift:363
+S006 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "rescale uses floor arithmetic"
 Verbatim call:
     report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "rescale uses floor arithmetic")
 
-S007 | importTransforms | src/checks/editcheck/EventChecks.swift:366
+S007 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "end tick uses the same floor arithmetic"
 Verbatim call:
     report.expectEqual(Tick(1), file.chunks[0].endTick,
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "end tick uses the same floor arithmetic")
 
-S008 | importTransforms | src/checks/editcheck/EventChecks.swift:374
+S008 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
         report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
                     "overflowing rescale unexpectedly succeeded")
 
-S009 | importTransforms | src/checks/editcheck/EventChecks.swift:377
+S009 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "overflow rejection leaves file untouched"
 Verbatim call:
         report.expectEqual(baseline, overflow,
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
 
-S010 | importAnalysis | src/checks/editcheck/EventChecks.swift:305
+S010 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
         report.fail(importID, "missing --swiftcore fixture root")
 
-S011 | importAnalysis | src/checks/editcheck/EventChecks.swift:341
+S011 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
         report.fail(importID, "external_import.mid read/decode failed: \(error)")
 
-S012 | importAnalysis | src/checks/editcheck/EventChecks.swift:314
+S012 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) maps two tracks"
 Verbatim call:
             report.expectEqual(2, result.mappedTracks, cppID: importID,
                                what: "\(row) maps two tracks")
 
-S013 | importAnalysis | src/checks/editcheck/EventChecks.swift:316
+S013 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) peak concurrent notes"
 Verbatim call:
             report.expectEqual(7, result.peakConcurrentNotes, cppID: importID,
                                what: "\(row) peak concurrent notes")
 
-S014 | importAnalysis | src/checks/editcheck/EventChecks.swift:318
+S014 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) maps two tracks"
 Verbatim call:
             report.expectEqual(5, result.sampleNoteLimit, cppID: importID,
                                what: "\(row) sample note limit")
 
-S015 | importAnalysis | src/checks/editcheck/EventChecks.swift:320
+S015 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) peak concurrent notes"
 Verbatim call:
             report.expect(result.warnings.contains { $0.contains("note timing") },
                           cppID: importID, message: "\(row) warns of timing adjustment")
 
-S016 | importAnalysis | src/checks/editcheck/EventChecks.swift:322
+S016 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) sample note limit"
 Verbatim call:
             report.expect(result.warnings.contains { $0.contains("same time") },
                           cppID: importID, message: "\(row) warns of polyphony")
 
-S017 | importAnalysis | src/checks/editcheck/EventChecks.swift:324
+S017 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) warns of timing adjustment"
 Verbatim call:
             report.expectEqual(budget == 1 ? 1 : 0, result.silentTracks, cppID: importID,
                                what: "\(row) silent tracks")
 
-S018 | importAnalysis | src/checks/editcheck/EventChecks.swift:326
+S018 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) warns of polyphony"
 Verbatim call:
             report.expectEqual(budget == 1, result.warnings.contains {
                 $0.contains("MUSIC_PLAYER_BGM") && $0.contains("will not play")
             }, cppID: importID, what: "\(row) budget warning")
 
-S019 | importAnalysis | src/checks/editcheck/EventChecks.swift:329
+S019 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) silent tracks"
 Verbatim call:
             report.expectEqual(2, result.tracks.count, cppID: importID,
                                what: "\(row) analyzed tracks")
 
-S020 | importAnalysis | src/checks/editcheck/EventChecks.swift:331
+S020 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) second track programs"
 Verbatim call:
             report.expectEqual(2, result.tracks.dropFirst().first?.programs.count,
                                cppID: importID, what: "\(row) second track programs")
 
-S021 | importAnalysis | src/checks/editcheck/EventChecks.swift:333
+S021 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) analyzed tracks"
 Verbatim call:
             report.expectEqual(.supported, result.controllers.first {
                 $0.controller == 1
             }?.support, cppID: importID, what: "\(row) modulation exports")
 
-S022 | importAnalysis | src/checks/editcheck/EventChecks.swift:336
+S022 | importAnalysis | src/checks/editcheck/EventChecks.swift
+Anchor: message "\(row) second track programs"
 Verbatim call:
             report.expectEqual(.notExported, result.controllers.first {
                 $0.controller == 91
             }?.support, cppID: importID, what: "\(row) reverb is not exported")
 
-S023 | importTransforms | src/checks/editcheck/EventChecks.swift:387
+S023 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "external import division after rescale"
 Verbatim call:
             report.expectEqual(UInt16(24), imported.division, cppID: rescaleID,
                                what: "external import division after rescale")
 
-S024 | importTransforms | src/checks/editcheck/EventChecks.swift:391
+S024 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.fail(rescaleID, "external import has missing chunks or events")
 
-S025 | importTransforms | src/checks/editcheck/EventChecks.swift:394
+S025 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "external import event 4 tick"
 Verbatim call:
             report.expectEqual(Tick(28), imported.chunks[1].events[4].tick,
                                cppID: rescaleID, what: "external import event 4 tick")
 
-S026 | importTransforms | src/checks/editcheck/EventChecks.swift:396
+S026 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
             report.expectEqual(Tick(57), imported.chunks[1].events[11].tick,
                                cppID: rescaleID, what: "external import event 11 tick")
 
-S027 | importTransforms | src/checks/editcheck/EventChecks.swift:398
+S027 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
             report.expectEqual(Tick(230), imported.chunks[1].endTick,
                                cppID: rescaleID, what: "external import second chunk end")
 
-S028 | importTransforms | src/checks/editcheck/EventChecks.swift:400
+S028 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "external import third chunk first tick"
 Verbatim call:
             report.expectEqual(Tick(0), imported.chunks[2].events[0].tick,
                                cppID: rescaleID, what: "external import third chunk first tick")
 
-S029 | importTransforms | src/checks/editcheck/EventChecks.swift:405
+S029 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                     report.expect(event.tick >= previous, cppID: rescaleID,
                                   message: "chunk \(chunkIndex) event \(eventIndex) remains monotonic")
 
-S030 | importTransforms | src/checks/editcheck/EventChecks.swift:413
+S030 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.expectEqual(serialized, try reread.encoded(), cppID: roundtripID,
                                    what: "rescaled fixture re-encodes byte-identically")
 
-S031 | importTransforms | src/checks/editcheck/EventChecks.swift:415
+S031 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.expectEqual(UInt16(24), reread.division, cppID: roundtripID,
                                    what: "rescaled fixture reload division")
 
-S032 | importTransforms | src/checks/editcheck/EventChecks.swift:417
+S032 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.expectEqual(imported.chunks.count, reread.chunks.count,
                                    cppID: roundtripID, what: "rescaled fixture reload chunk count")
 
-S033 | importTransforms | src/checks/editcheck/EventChecks.swift:420
+S033 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.fail(roundtripID, "rescaled fixture roundtrip failed: \(error)")
 
-S034 | importTransforms | src/checks/editcheck/EventChecks.swift:422-424
+S034 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
             report.fail(rescaleID, "external_import.mid read/decode/rescale failed: \(error)")
             report.fail(roundtripID, "roundtrip source read/decode/rescale failed: \(error)")
 
-S035 | importTransforms | src/checks/editcheck/EventChecks.swift:427
+S035 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
         report.fail(rescaleID, "missing --swiftcore fixture root")
 
-S036 | importTransforms | src/checks/editcheck/EventChecks.swift:434
+S036 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "only eligible same-tick setter is removed"
 Verbatim call:
             report.expectEqual(8, MidiImport.removeRedundantSetters(&duplicate),
                                cppID: dedupID, what: "duplicate fixture removes eight setters")
 
-S037 | importTransforms | src/checks/editcheck/EventChecks.swift:436
+S037 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate fixture second pass is idempotent"
 Verbatim call:
             report.expectEqual(0, MidiImport.removeRedundantSetters(&duplicate),
                                cppID: dedupID, what: "duplicate fixture second pass is idempotent")
 
-S038 | importTransforms | src/checks/editcheck/EventChecks.swift:439
+S038 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
                 report.fail(dedupID, "duplicate fixture has no lead chunk")
 
-S039 | importTransforms | src/checks/editcheck/EventChecks.swift:449-459
+S039 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "deduplicated \(name) event count"
 Verbatim call:
             let expectedCounts: [(UInt8, UInt8?, Int, String)] = [
                 (0xC, nil, 2, "program"), (0xB, 7, 3, "cc7"),
@@ -1442,68 +1480,82 @@ Verbatim call:
                                    what: "deduplicated \(name) event count")
             }
 
-S040 | importTransforms | src/checks/editcheck/EventChecks.swift:464
+S040 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "tempo meta payload remains intact"
 Verbatim call:
                 report.expectEqual([UInt8(0x07), 0xA1, 0x20], data, cppID: dedupID,
                                    what: "tempo meta payload remains intact")
 
-S041 | importTransforms | src/checks/editcheck/EventChecks.swift:467
+S041 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "external import division after rescale"
 Verbatim call:
             report.expectEqual(1, tempos.count, cppID: dedupID, what: "tempo event count")
 
-S042 | importTransforms | src/checks/editcheck/EventChecks.swift:468
+S042 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "external import division after rescale"
 Verbatim call:
             report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
                                cppID: dedupID, what: "text event count")
 
-S043 | importTransforms | src/checks/editcheck/EventChecks.swift:483
+S043 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "tick-zero label \(labelCount) increases"
 Verbatim call:
                     report.expect(data1 > previousLabel, cppID: dedupID,
                                   message: "tick-zero label \(labelCount) increases")
 
-S044 | importTransforms | src/checks/editcheck/EventChecks.swift:490
+S044 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "tick-zero program, volume and bend survive"
 Verbatim call:
             report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
                           message: "tick-zero program, volume and bend survive")
 
-S045 | importTransforms | src/checks/editcheck/EventChecks.swift:492
+S045 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "tick-zero label count"
 Verbatim call:
             report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
 
-S046 | importTransforms | src/checks/editcheck/EventChecks.swift:493
+S046 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "rescaled fixture re-encodes byte-identically"
 Verbatim call:
             report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
                                what: "last tick-zero label value")
 
-S047 | importTransforms | src/checks/editcheck/EventChecks.swift:495
+S047 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "rescaled fixture reload division"
 Verbatim call:
             report.expect(programIndex.flatMap { program in
                 firstNote.map { program < $0 }
             } == true, cppID: dedupID, message: "tick-zero program precedes first note")
 
-S048 | importTransforms | src/checks/editcheck/EventChecks.swift:499
+S048 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
             report.fail(dedupID, "duplicate_setters.mid read/decode failed: \(error)")
 
-S049 | importTransforms | src/checks/editcheck/EventChecks.swift:502
+S049 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
         report.fail(dedupID, "missing --swiftcore fixture root")
 
-S050 | importTransforms | src/checks/editcheck/EventChecks.swift:513
+S050 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: function
 Verbatim call:
             report.fail(overflowID, "boundary rescale unexpectedly succeeded")
 
-S051 | importTransforms | src/checks/editcheck/EventChecks.swift:515
+S051 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate fixture removes eight setters"
 Verbatim call:
         report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
                            what: "overflow keeps original division")
 
-S052 | importTransforms | src/checks/editcheck/EventChecks.swift:517
+S052 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate fixture second pass is idempotent"
 Verbatim call:
         report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
                            cppID: overflowID, what: "overflow keeps boundary event tick")
 
-S053 | importTransforms | src/checks/editcheck/EventChecks.swift:519
+S053 | importTransforms | src/checks/editcheck/EventChecks.swift
+Anchor: message "overflow describes the division and tick limit"
 Verbatim call:
         report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
                            String(describing: error), cppID: overflowID,

@@ -4,11 +4,8 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/project/workspace.cpp
 Original SHA-256: 0a6cdc0225c40a0fcc81df7eeef22ecdfeeffd7dad740d4fdfc1dc3b6a43a2e9
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
 Swift counterpart: src/checks/workspace/bank_edits.swift
-Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Swift counterpart: src/checks/workspace/session_playback.swift
-Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -23,7 +20,7 @@ NATIVE identifies an observation only a native window/rendering/harness run can 
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 runBankHistorySuite (SessionChecks.swift) owns the single related conflict predicate via ProjectService bank calls. No Swift suite models ProjectWorkspace publication (Loading/Ready/Failed states, catalog replacement, keyed plan events, reload staging, exact log-size counts).
@@ -1524,12 +1521,14 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:61
+S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
+Anchor: message "document mutation invokes session presenter callback"
   report.expect(publishedChangeCount > 0,
                     cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
                     message: "document mutation invokes session presenter callback")
 
-S002 | bankConflicts | src/checks/workspace/bank_edits.swift:185
+S002 | bankConflicts | src/checks/workspace/bank_edits.swift
+Anchor: message "materializing occupied slot triggers bankConflict"
   report.expectEqual(ProjectServiceError.bankConflict, error,
                              cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
                              what: "materializing occupied slot triggers bankConflict")

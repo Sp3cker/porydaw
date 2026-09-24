@@ -338,6 +338,68 @@ async function runProcess(
 function lastNonemptyLine(output: string): string | undefined {
   return output.trimEnd().split(/\r?\n/).findLast((line) => line.length > 0);
 }
+interface ProofEvidencePass {
+  readonly cppId: string;
+  readonly row: string;
+}
+
+interface ProofEvidence {
+  readonly check: string;
+  readonly passes: readonly ProofEvidencePass[];
+  readonly functions: readonly string[];
+}
+
+function collectProofEvidence(check: string, output: string): ProofEvidence {
+  const passes: ProofEvidencePass[] = [];
+  const functions: string[] = [];
+  for (const line of output.split(/\r?\n/)) {
+    const marker = "swiftcore PASS cppId=";
+    const markerIndex = line.indexOf(marker);
+    if (markerIndex >= 0) {
+      const rest = line.slice(markerIndex + marker.length);
+      const separator = rest.indexOf(": ");
+      if (separator >= 0) {
+        let row = rest.slice(separator + 2);
+        if (row.endsWith(": passed")) {
+          row = row.slice(0, row.length - ": passed".length);
+        }
+        passes.push({ cppId: rest.slice(0, separator), row });
+      }
+      continue;
+    }
+    const pass = /^\s*PASS\s+:\s*(\S+?)::([A-Za-z_]\w*)\s*\(/.exec(line);
+    if (pass !== null) {
+      const name = pass[2];
+      if (
+        name === "initTestCase" || name === "cleanupTestCase" ||
+        name === "init" || name === "cleanup"
+      ) {
+        continue;
+      }
+      functions.push(`${pass[1]}::${name}`);
+    }
+  }
+  return { check, passes, functions };
+}
+
+async function writeProofEvidence(
+  check: string,
+  output: string,
+): Promise<void> {
+  try {
+    await Deno.mkdir(join(buildRoot, "proof-evidence"), { recursive: true });
+    await Deno.writeTextFile(
+      join(buildRoot, "proof-evidence", `${check}.json`),
+      `${JSON.stringify(collectProofEvidence(check, output))}\n`,
+    );
+  } catch (error) {
+    console.error(
+      `run_checks: could not write proof evidence for ${check}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
 
 if (Deno.args.length < 1) usage("missing checks binary");
 let options;
@@ -405,10 +467,21 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       ? applicationBinary!
       : checksBinary;
     const args = expandArguments(check, scratch, mid2agb);
+    const uncapQt = check.binary !== "application" &&
+      check.framework === "qt-test" &&
+      (qtPayload === undefined ||
+        !qtPayload.some((token) =>
+          token === "-maxwarnings" || token.startsWith("-maxwarnings=")
+        ));
     if (qtPayload !== undefined) {
       // Terminal separator: the checks binary splits here before interpreting
       // optional check arguments, so the payload can never eat check flags.
       args.push("--qt", ...qtPayload);
+      if (uncapQt) {
+        args.push("-maxwarnings", "0");
+      }
+    } else if (uncapQt) {
+      args.push("--qt", "-maxwarnings", "0");
     }
     result = await runProcess(binary, args, executionEnvironment(check));
   } catch (error) {
@@ -421,6 +494,7 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       durationMs: 0,
     };
   }
+  await writeProofEvidence(check.name, result.output);
   if (result.code !== 0 || result.signal !== null || result.timedOut) {
     failures.push(check.name);
     reporter.onCheckFail(check.name, result);

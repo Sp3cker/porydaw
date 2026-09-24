@@ -5,17 +5,11 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/contract.cpp
 Original SHA-256: e0c6eb5c80d9707aaac5d21eacc5bfd0e106242433ebd51562b71ec7faee0ae2
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 63adc07fcdc5c8e068bd224b684c7ac90f674ef1d857a741bccc31d562d1bc14
 Additional Swift counterpart: src/checks/automation/domain/xcmd.swift
-Additional Swift SHA-256: 26eece18eea053a7ee9129ada88d5a8feab9005ce1f23d59e9e7d7533d5cc074
 Additional Swift counterpart: src/checks/automation/domain/xcmdRanges.swift
-Additional Swift SHA-256: 1c3a629660321519a711cc8d1d1ecad1dce918541ca5bedd5a6ecdb53941f7b9
 Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
-Additional Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/automation/automationselection.swift
-Additional Swift SHA-256: 37ac484181e8abead7bf7b5ce96b36c6e2b66160ce6131224b2c465a5d661339
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: 2312a1bff212ca509ac35206940f60facfa3d87bbb7fd7c392b1b1c5fe77a939
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -295,7 +289,7 @@ Original expression:
 
 A005 | checkEffectivePoints | src/checks/automationgesturecheck/contract.cpp:231
 Disposition: PARTIAL
-Mapping/reason: S023 (drawerAutomationSweepSteppingAndRampFinish, gestures.swift:81) asserts an empty lane projects no points and carries no lead-in; unproved: the Tempo adapter empty projection and a CC lane that carries an engine default.
+Mapping/reason: S023 (drawerAutomationSweepSteppingAndRampFinish, gestures.swift) asserts an empty lane projects no points and carries no lead-in; unproved: the Tempo adapter empty projection and a CC lane that carries an engine default.
 Source context since previous assertion:
       document.undoStack()->undo();
   }
@@ -338,7 +332,7 @@ Original expression:
 
 A006 | checkEffectivePoints | src/checks/automationgesturecheck/contract.cpp:246
 Disposition: MATCHED
-Mapping/reason: S028 (drawerAutomationGestureContractParity, gestures.swift:824) asserts two same-tick CC writes keep their projection order, the observable the original raw-event ordering guard checks.
+Mapping/reason: S028 (drawerAutomationGestureContractParity, gestures.swift) asserts two same-tick CC writes keep their projection order, the observable the original raw-event ordering guard checks.
 Source context since previous assertion:
       if (context.adapter.kind == AdapterKind::Tempo) {
           setTempo(document, {tempoAt(288, 110), tempoAt(0, 120), tempoAt(96, 150)});
@@ -359,7 +353,7 @@ Original expression:
 
 A007 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:255
 Disposition: MATCHED
-Mapping/reason: S025 (gestures.swift:793) asserts both adapter titles through AutomationCatalog (Pan (PAN), Tempo (BPM)) on the converted parameter surface.
+Mapping/reason: S025 (gestures.swift) asserts both adapter titles through AutomationCatalog (Pan (PAN), Tempo (BPM)) on the converted parameter surface.
 Source context since previous assertion:
   }
 
@@ -386,7 +380,7 @@ Original expression:
 
 A009 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:265
 Disposition: PARTIAL
-Mapping/reason: S026 (drawerAutomationGestureContractParity, gestures.swift:803) asserts Tempo valueText(150) formats the raw BPM; unproved: the fractional Tempo valueText.
+Mapping/reason: S026 (drawerAutomationGestureContractParity, gestures.swift) asserts Tempo valueText(150) formats the raw BPM; unproved: the fractional Tempo valueText.
 Source context since previous assertion:
           setTempo(context.session.document, {tempoAt(0, 150), {96, kFractionalTempoUs}});
           const auto fractional = tempoBpm(kFractionalTempoUs);
@@ -408,7 +402,7 @@ Original expression:
 
 A011 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:274
 Disposition: MATCHED
-Mapping/reason: S026 (gestures.swift:799) asserts the CC lane minimum 0 and maximum 127 through AutomationParameterMetadata, the converted lane range surface.
+Mapping/reason: S026 (gestures.swift) asserts the CC lane minimum 0 and maximum 127 through AutomationParameterMetadata, the converted lane range surface.
 Source context since previous assertion:
       } else {
 Original expression:
@@ -422,7 +416,7 @@ Original expression:
 
 A012 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:281
 Disposition: PARTIAL
-Mapping/reason: S026 (gestures.swift:805) asserts the neutral CC value formats through its own metadata; unproved: valueText(0).
+Mapping/reason: S026 (gestures.swift) asserts the neutral CC value formats through its own metadata; unproved: valueText(0).
 Source context since previous assertion:
 Original expression:
           context.check.require(
@@ -432,7 +426,7 @@ Original expression:
 
 A013 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:286
 Disposition: PARTIAL
-Mapping/reason: S025 (gestures.swift:797) asserts the bend catalog title only; unproved: the bend minimum/maximum and valueText(0) and valueText(100).
+Mapping/reason: S025 (gestures.swift) asserts the bend catalog title only; unproved: the bend minimum/maximum and valueText(0) and valueText(100).
 Source context since previous assertion:
           CCLaneAdapter bend(context.session.document, context.session.engineTrack, DOC_CC_BEND);
 Original expression:
@@ -447,7 +441,7 @@ Original expression:
 
 A014 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:310
 Disposition: PARTIAL
-Mapping/reason: S027 (gestures.swift:809) asserts the published band start tick and (line 811) that a band covers its own lane; unproved: the published end tick and the CC adapter lane-coverage identity.
+Mapping/reason: S027 (gestures.swift) asserts the published band start tick and (line 811) that a band covers its own lane; unproved: the published end tick and the CC adapter lane-coverage identity.
 Source context since previous assertion:
       }
       uint32_t usedTrackMask = 0;
@@ -473,7 +467,7 @@ Original expression:
 
 A015 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:316
 Disposition: PARTIAL
-Mapping/reason: S027 (gestures.swift:813) asserts a CC band excludes Tempo and (line 819) a Tempo band excludes CC lanes; unproved: the excluded band reported active tick range.
+Mapping/reason: S027 (gestures.swift) asserts a CC band excludes Tempo and (line 819) a Tempo band excludes CC lanes; unproved: the excluded band reported active tick range.
 Source context since previous assertion:
       selectTicks(context, 50, 150, false);
       const auto uncoveredRange = laneSelection.activeTickRange();
@@ -485,7 +479,7 @@ Original expression:
 
 A016 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:321
 Disposition: PARTIAL
-Mapping/reason: S027 (gestures.swift:809) indexes the band range and coverage predicates; unproved: an active/covers query after a cleared time selection.
+Mapping/reason: S027 (gestures.swift) indexes the band range and coverage predicates; unproved: an active/covers query after a cleared time selection.
 Source context since previous assertion:
       selection.clearTimeSelection();
 Original expression:
@@ -588,7 +582,7 @@ Original expression:
 
 A023 | checkMove | src/checks/automationgesturecheck/contract.cpp:386
 Disposition: PARTIAL
-Mapping/reason: S033 (drawerAutomationGestureContractParity, gestures.swift:898) asserts an unchanged-value tempo move preserves its microseconds for an exact-BPM source (500000 microseconds at 120 BPM); unproved: a fractional non-integer-BPM source where preservation and recomputation differ.
+Mapping/reason: S033 (drawerAutomationGestureContractParity, gestures.swift) asserts an unchanged-value tempo move preserves its microseconds for an exact-BPM source (500000 microseconds at 120 BPM); unproved: a fractional non-integer-BPM source where preservation and recomputation differ.
 Source context since previous assertion:
           const auto preservedBpm = tempoBpm(kPreservedTempoUs);
           applyMoves(context, {{uint64_t{96}, NodePoint{192, preservedBpm}}});
@@ -602,7 +596,7 @@ Original expression:
 
 A024 | checkMove | src/checks/automationgesturecheck/contract.cpp:396
 Disposition: PARTIAL
-Mapping/reason: S034 (gestures.swift:915) asserts a fractional tempo drag commits one edit, one revision (line 917), and is undoable (line 918); unproved: the rewritten microseconds for the changed value.
+Mapping/reason: S034 (gestures.swift) asserts a fractional tempo drag commits one edit, one revision (line 917), and is undoable (line 918); unproved: the rewritten microseconds for the changed value.
 Source context since previous assertion:
           checkUndoRestores(context, before, beforePoints, {{192, preservedBpm}, {288, 110}});
           const auto rewriteBefore = snapshot(document);
@@ -645,7 +639,7 @@ Original expression:
 
 A027 | checkMove | src/checks/automationgesturecheck/contract.cpp:417
 Disposition: PARTIAL
-Mapping/reason: S028 (gestures.swift:824) asserts two same-tick CC writes keep their order and S029 (line 839) that a move onto a free tick keeps every occupant in order; unproved: a same-tick group moved as a group keeps both raw events ordered at the destination tick.
+Mapping/reason: S028 (gestures.swift) asserts two same-tick CC writes keep their order and S029 (line 839) that a move onto a free tick keeps every occupant in order; unproved: a same-tick group moved as a group keeps both raw events ordered at the destination tick.
 Source context since previous assertion:
       applyMoves(context, {{uint64_t{96}, NodePoint{192, 20}}});
       expectOneEdit(context, before);
@@ -660,7 +654,7 @@ Original expression:
 
 A028 | checkReplaceSpan | src/checks/automationgesturecheck/contract.cpp:433
 Disposition: MATCHED
-Mapping/reason: S039 (drawerAutomationLegacySpanRows, tst_automationdomain.swift:723) asserts an empty-span write on an empty lane leaves the document snapshot identical, the original empty-lane guard.
+Mapping/reason: S039 (drawerAutomationLegacySpanRows, tst_automationdomain.swift) asserts an empty-span write on an empty lane leaves the document snapshot identical, the original empty-lane guard.
 Source context since previous assertion:
       checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
   }
@@ -679,7 +673,7 @@ Original expression:
 
 A029 | checkReplaceSpan | src/checks/automationgesturecheck/contract.cpp:444
 Disposition: MATCHED
-Mapping/reason: S040 (tst_automationdomain.swift:733) asserts an identical span replacement leaves the document snapshot identical.
+Mapping/reason: S040 (tst_automationdomain.swift) asserts an identical span replacement leaves the document snapshot identical.
 Source context since previous assertion:
       lane.replaceSpan(0, 10000, {{96, 90}});
       expectOneEdit(context, emptyBefore);
@@ -695,7 +689,7 @@ Original expression:
 
 A030 | checkReplaceSpan | src/checks/automationgesturecheck/contract.cpp:466
 Disposition: MATCHED
-Mapping/reason: S041 (tst_automationdomain.swift:755) asserts a fractional Tempo span write stores TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), the canonical rewrite the original asserts.
+Mapping/reason: S041 (tst_automationdomain.swift) asserts a fractional Tempo span write stores TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), the canonical rewrite the original asserts.
 Source context since previous assertion:
       lane.replaceSpan(96, 200, {{96, 80}, {128, 70}});
       expectOneEdit(context, before);
@@ -724,7 +718,7 @@ Original expression:
 
 A031 | checkMoveCollision | src/checks/automationgesturecheck/contract.cpp:485
 Disposition: PARTIAL
-Mapping/reason: S029 (gestures.swift:851) asserts a move onto an occupied tick evicts its occupant and (line 855) two hops are two revisions; unproved: the Tempo collision path and its source-microsecond preservation.
+Mapping/reason: S029 (gestures.swift) asserts a move onto an occupied tick evicts its occupant and (line 855) two hops are two revisions; unproved: the Tempo collision path and its source-microsecond preservation.
 Source context since previous assertion:
       checkUndoRestores(context, fractionalBefore, fractionalBeforePoints, {{96, displayed}});
   }
@@ -751,7 +745,7 @@ Original expression:
 
 A032 | checkMoveCollision | src/checks/automationgesturecheck/contract.cpp:503
 Disposition: PARTIAL
-Mapping/reason: S029 (gestures.swift:851 and 857) asserts the destination composition and one-undo restoration after an occupied-tick move; unproved: the vacated source tick raw events and the same-tick group order at the destination.
+Mapping/reason: S029 (gestures.swift and 857) asserts the destination composition and one-undo restoration after an occupied-tick move; unproved: the vacated source tick raw events and the same-tick group order at the destination.
 Source context since previous assertion:
           checkUndoRestores(context, before, beforePoints, {{288, preservedBpm}});
           return;
@@ -777,7 +771,7 @@ Original expression:
 
 A033 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:525
 Disposition: MATCHED
-Mapping/reason: S037 (drawerAutomationLegacyDefaultPromotion, tst_automationdomain.swift:675) asserts the volume lane projects its engine default 0:127.
+Mapping/reason: S037 (drawerAutomationLegacyDefaultPromotion, tst_automationdomain.swift) asserts the volume lane projects its engine default 0:127.
 Source context since previous assertion:
       checkUndoRestores(context, before, beforePoints, {{192, 20}, {288, 40}});
   }
@@ -800,7 +794,7 @@ Original expression:
 
 A034 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:527
 Disposition: MATCHED
-Mapping/reason: S024 (drawerAutomationGestureContractParity, gestures.swift:783) asserts an empty lane displays its projected engine node 0:64 and carries no written lead-in; S037 (tst_automationdomain.swift:676) asserts the same series.
+Mapping/reason: S024 (drawerAutomationGestureContractParity, gestures.swift) asserts an empty lane displays its projected engine node 0:64 and carries no written lead-in; S037 (tst_automationdomain.swift) asserts the same series.
 Source context since previous assertion:
 Original expression:
       check.require(sameNodePoints(pan.points(), {{0, 64}}),
@@ -808,7 +802,7 @@ Original expression:
 
 A035 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:529
 Disposition: MATCHED
-Mapping/reason: S037 (tst_automationdomain.swift:677) asserts the Modulation lane projects no points, so no synthetic default node is exposed.
+Mapping/reason: S037 (tst_automationdomain.swift) asserts the Modulation lane projects no points, so no synthetic default node is exposed.
 Source context since previous assertion:
 Original expression:
       check.require(modulation.points().empty(),
@@ -816,7 +810,7 @@ Original expression:
 
 A036 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:533
 Disposition: MATCHED
-Mapping/reason: S024 (gestures.swift:789) and S037 (tst_automationdomain.swift:678) assert the unwritten Modulation lane leads in on its engine default 0, the implicit tick-zero baseline the original pins.
+Mapping/reason: S024 (gestures.swift) and S037 (tst_automationdomain.swift) assert the unwritten Modulation lane leads in on its engine default 0, the implicit tick-zero baseline the original pins.
 Source context since previous assertion:
       const auto modulationLeadIn = modulation.leadIn();
       const auto bendLeadIn = bend.leadIn();
@@ -826,7 +820,7 @@ Original expression:
 
 A037 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:535
 Disposition: MATCHED
-Mapping/reason: S037 (tst_automationdomain.swift:679) asserts the bend lane projects no points and (line 680) leads in on its engine default 0.
+Mapping/reason: S037 (tst_automationdomain.swift) asserts the bend lane projects no points and (line 680) leads in on its engine default 0.
 Source context since previous assertion:
 Original expression:
       check.require(bend.points().empty() && bendLeadIn && bendLeadIn->tick == 0 &&
@@ -835,7 +829,7 @@ Original expression:
 
 A038 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:547
 Disposition: MATCHED
-Mapping/reason: S038 (tst_automationdomain.swift:699) asserts the projected-node write resolves a plan and (line 701) the plan is not empty.
+Mapping/reason: S038 (tst_automationdomain.swift) asserts the projected-node write resolves a plan and (line 701) the plan is not empty.
 Source context since previous assertion:
 
       const auto checkPromotion = [&](CCLaneAdapter &lane, uint8_t controller, int value,
@@ -852,7 +846,7 @@ Original expression:
 
 A039 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:553
 Disposition: MATCHED
-Mapping/reason: S038 (tst_automationdomain.swift:703) asserts the promotion is one edit and (lines 704-705) the written point at tick 96 carries the moved value.
+Mapping/reason: S038 (tst_automationdomain.swift) asserts the promotion is one edit and (lines 704-705) the written point at tick 96 carries the moved value.
 Source context since previous assertion:
           if (!resolved || edit.empty())
               return;
@@ -866,7 +860,7 @@ Original expression:
 
 A040 | checkEngineDefaultNodes | src/checks/automationgesturecheck/contract.cpp:558
 Disposition: MATCHED
-Mapping/reason: S038 (tst_automationdomain.swift:707) asserts undo restores the original MIDI bytes and (line 708) the projected default series.
+Mapping/reason: S038 (tst_automationdomain.swift) asserts undo restores the original MIDI bytes and (line 708) the projected default series.
 Source context since previous assertion:
           document.undoStack()->undo();
 Original expression:
@@ -876,7 +870,7 @@ Original expression:
 
 A041 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:637
 Disposition: MATCHED
-Mapping/reason: S047 (drawerAutomationXcmdLaneEdits, xcmd.swift:275) asserts both volume occurrences project and each encodes its ordered selector/payload pair at 96 and 192.
+Mapping/reason: S047 (drawerAutomationXcmdLaneEdits, xcmd.swift) asserts both volume occurrences project and each encodes its ordered selector/payload pair at 96 and 192.
 Source context since previous assertion:
       };
       checkPromotion(volume, 7, 100, QStringLiteral("Volume"));
@@ -967,7 +961,7 @@ Original expression:
 
 A042 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:648
 Disposition: MATCHED
-Mapping/reason: S048 (xcmd.swift:283) asserts the survivor at 192, the emptied source bytes, and the rebuilt survivor pair.
+Mapping/reason: S048 (xcmd.swift) asserts the survivor at 192, the emptied source bytes, and the rebuilt survivor pair.
 Source context since previous assertion:
       document.deleteLanePoints(track, DOC_CC_ECHO_VOLUME, {volume[0]});
       volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
@@ -983,7 +977,7 @@ Original expression:
 
 A043 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:657
 Disposition: MATCHED
-Mapping/reason: S049 (xcmd.swift:291) asserts deleting both occurrences empties the volume lane and the XCMD traffic.
+Mapping/reason: S049 (xcmd.swift) asserts deleting both occurrences empties the volume lane and the XCMD traffic.
 Source context since previous assertion:
       document.deleteLanePoints(track, DOC_CC_ECHO_VOLUME, {volume[0]});
 Original expression:
@@ -993,7 +987,7 @@ Original expression:
 
 A044 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:669
 Disposition: PARTIAL
-Mapping/reason: S050 (drawerAutomationXcmdLaneEdits, xcmd.swift:306) asserts the moved occurrence projects two points with the survivor and moved byte pairs; unproved: the vacated source tick keeps no protocol bytes, native lane stack delivery, and the retired rig fixture.
+Mapping/reason: S050 (drawerAutomationXcmdLaneEdits, xcmd.swift) asserts the moved occurrence projects two points with the survivor and moved byte pairs; unproved: the vacated source tick keeps no protocol bytes, native lane stack delivery, and the retired rig fixture.
 Source context since previous assertion:
 
       // Moving one point of a known epoch is a canonical rebuild: the whole
@@ -1019,7 +1013,7 @@ Original expression:
 
 A045 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:691
 Disposition: MATCHED
-Mapping/reason: S051 (xcmd.swift:334) asserts the second length occurrence keeps its own canonical pair at 192; the distinct pairs at 96 and 192 establish the two-point length lane.
+Mapping/reason: S051 (xcmd.swift) asserts the second length occurrence keeps its own canonical pair at 192; the distinct pairs at 96 and 192 establish the two-point length lane.
 Source context since previous assertion:
       document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
                                {});
@@ -1041,7 +1035,7 @@ Original expression:
 
 A046 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:699
 Disposition: MATCHED
-Mapping/reason: S051 (xcmd.swift:328) asserts the moved volume projects only at 160 with its pair while the shared tick 96 keeps only the length pair and 192 keeps the other.
+Mapping/reason: S051 (xcmd.swift) asserts the moved volume projects only at 160 with its pair while the shared tick 96 keeps only the length pair and 192 keeps the other.
 Source context since previous assertion:
       volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
       document.moveLanePoints({{track, DOC_CC_ECHO_VOLUME, volume.front(), 160, 36}});
@@ -1063,7 +1057,7 @@ Original expression:
 
 A047 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:724
 Disposition: MATCHED
-Mapping/reason: S052 (xcmd.swift:347) asserts a write inside an opaque epoch changes neither bytes nor history.
+Mapping/reason: S052 (xcmd.swift) asserts a write inside an opaque epoch changes neither bytes nor history.
 Source context since previous assertion:
       document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
                                {});
@@ -1083,7 +1077,7 @@ Original expression:
 
 A048 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:740
 Disposition: MATCHED
-Mapping/reason: S053 (xcmd.swift:360) asserts the append beyond malformed epochs changes revision and identity once and preserves both epochs in ordered bytes.
+Mapping/reason: S053 (xcmd.swift) asserts the append beyond malformed epochs changes revision and identity once and preserves both epochs in ordered bytes.
 Source context since previous assertion:
       document.undoStack()->undo();
       document.undoStack()->undo();
@@ -1114,7 +1108,7 @@ Original expression:
 
 A049 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:755
 Disposition: MATCHED
-Mapping/reason: S054 (xcmd.swift:374) asserts a selector-tick write changes neither bytes nor history.
+Mapping/reason: S054 (xcmd.swift) asserts a selector-tick write changes neither bytes nor history.
 Source context since previous assertion:
       // A write that would turn the stray payload into consumed XCMD traffic
       // must fail without mutating anything.
@@ -1126,7 +1120,7 @@ Original expression:
 
 A050 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:777
 Disposition: MATCHED
-Mapping/reason: S055 (xcmdTimeRangeCuts, xcmdRanges.swift:117) asserts the volume-scoped cut changes the document, empties the volume lane, and retains the length pair at tick 96.
+Mapping/reason: S055 (xcmdTimeRangeCuts, xcmdRanges.swift) asserts the volume-scoped cut changes the document, empties the volume lane, and retains the length pair at tick 96.
 Source context since previous assertion:
       document.undoStack()->undo(); // drop the addLanePoint above
       document.undoStack()->undo();
@@ -1157,7 +1151,7 @@ Original expression:
 
 A051 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:783
 Disposition: MATCHED
-Mapping/reason: S055 (xcmdRanges.swift:124) asserts undo restores the pre-cut bytes.
+Mapping/reason: S055 (xcmdRanges.swift) asserts undo restores the pre-cut bytes.
 Source context since previous assertion:
       document.undoStack()->undo();
 Original expression:
@@ -1166,7 +1160,7 @@ Original expression:
 
 A052 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:801
 Disposition: MATCHED
-Mapping/reason: S056 (xcmdRanges.swift:135) asserts the whole-song cut changes the document.
+Mapping/reason: S056 (xcmdRanges.swift) asserts the whole-song cut changes the document.
 Source context since previous assertion:
       document.undoStack()->redo();
       document.undoStack()->undo();
@@ -1190,7 +1184,7 @@ Original expression:
 
 A053 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:805
 Disposition: MATCHED
-Mapping/reason: S056 (xcmdRanges.swift:137) asserts the cut removes volume, reanchors the surviving length to the cut edge, and rebuilds its canonical pair.
+Mapping/reason: S056 (xcmdRanges.swift) asserts the cut removes volume, reanchors the surviving length to the cut edge, and rebuilds its canonical pair.
 Source context since previous assertion:
       const auto volumeAfter = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
       const auto lengthAfter = document.lanePoints(track, DOC_CC_ECHO_LENGTH);
@@ -1206,7 +1200,7 @@ Original expression:
 
 A054 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:814
 Disposition: MATCHED
-Mapping/reason: S056 (xcmdRanges.swift:144) asserts undo restores the whole-song cut bytes.
+Mapping/reason: S056 (xcmdRanges.swift) asserts undo restores the whole-song cut bytes.
 Source context since previous assertion:
       document.undoStack()->undo();
 Original expression:
@@ -1215,7 +1209,7 @@ Original expression:
 
 A055 | checkLogicalXcmdOccurrences | src/checks/automationgesturecheck/contract.cpp:817
 Disposition: MATCHED
-Mapping/reason: S057 (xcmdRanges.swift:150) asserts the redo again removes volume and reanchors length at tick 96.
+Mapping/reason: S057 (xcmdRanges.swift) asserts the redo again removes volume and reanchors length at tick 96.
 Source context since previous assertion:
       document.undoStack()->redo();
 Original expression:
@@ -1225,7 +1219,7 @@ Original expression:
 
 A056 | checkLogicalXcmdEdits | src/checks/automationgesturecheck/contract.cpp:842
 Disposition: MATCHED
-Mapping/reason: S042 (drawerAutomationXcmdLaneEdits, xcmd.swift:199) asserts the canonical volume and length rows plus the ordered four-byte pair at tick 96.
+Mapping/reason: S042 (drawerAutomationXcmdLaneEdits, xcmd.swift) asserts the canonical volume and length rows plus the ordered four-byte pair at tick 96.
 Source context since previous assertion:
   }
 
@@ -1258,7 +1252,7 @@ Original expression:
 
 A057 | checkLogicalXcmdEdits | src/checks/automationgesturecheck/contract.cpp:855
 Disposition: MATCHED
-Mapping/reason: S043 (xcmd.swift:214) asserts the move is one edit, projects at tick 192, and encodes the canonical pair.
+Mapping/reason: S043 (xcmd.swift) asserts the move is one edit, projects at tick 192, and encodes the canonical pair.
 Source context since previous assertion:
 
       const auto moveBefore = snapshot(document);
@@ -1277,7 +1271,7 @@ Original expression:
 
 A058 | checkLogicalXcmdEdits | src/checks/automationgesturecheck/contract.cpp:864
 Disposition: MATCHED
-Mapping/reason: S044 (xcmd.swift:226) asserts undoing every edit restores the pre-edit MIDI bytes and leaves both lanes empty.
+Mapping/reason: S044 (xcmd.swift) asserts undoing every edit restores the pre-edit MIDI bytes and leaves both lanes empty.
 Source context since previous assertion:
 
       document.undoStack()->undo();
@@ -1291,7 +1285,7 @@ Original expression:
 
 A059 | checkXcmdSweepPreservesNotes | src/checks/automationgesturecheck/contract.cpp:901
 Disposition: MATCHED
-Mapping/reason: S046 (drawerAutomationXcmdLaneEdits, xcmd.swift:255) asserts the sweep preserves the original note events and replaces the lane span with both projected points; S045 pins the fixture notes.
+Mapping/reason: S046 (drawerAutomationXcmdLaneEdits, xcmd.swift) asserts the sweep preserves the original note events and replaces the lane span with both projected points; S045 pins the fixture notes.
 Source context since previous assertion:
   }
 
@@ -1335,7 +1329,7 @@ Original expression:
 
 A060 | checkXcmdSweepPreservesNotes | src/checks/automationgesturecheck/contract.cpp:909
 Disposition: MATCHED
-Mapping/reason: S046 (xcmd.swift:259) asserts undoing the sweep and the fixture edits restores the original MIDI bytes.
+Mapping/reason: S046 (xcmd.swift) asserts undoing the sweep and the fixture edits restores the original MIDI bytes.
 Source context since previous assertion:
 
       while (document.undoStack()->index() > before.undoIndex)
@@ -1494,69 +1488,82 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:24
+S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "a 24-tick document's clock lattice steps one tick"
 Counterpart expression:
       report.expectEqual(Tick(1), projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepStepsID,
                          what: "a 24-tick document's clock lattice steps one tick")
 
-S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:33
+S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "a move past the activation distance arms the sweep"
 Counterpart expression:
       report.expect(sweep.slopExceeded, cppID: drawerAutomationSweepStepsID,
                     message: "a move past the activation distance arms the sweep")
 
-S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:37
+S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "each stepped tick interpolates its value across the stroke"
 Counterpart expression:
       report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
                          fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
                          what: "each stepped tick interpolates its value across the stroke")
 
-S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:61
+S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
 Counterpart expression:
       report.expectEqual(11, rampPoints.count, cppID: drawerAutomationSweepStepsID,
                          what: "a ramp sweep fills every lattice tick between its endpoints")
 
-S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:66
+S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "the ramp's midpoint interpolates linearly"
 Counterpart expression:
       report.expectEqual(50, rampPoints[5].value, cppID: drawerAutomationSweepStepsID,
                          what: "the ramp's midpoint interpolates linearly")
 
-S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:69
+S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "the completed ramp is a changed span replacement"
 Counterpart expression:
       report.expect(edit != nil && !edit!.unchanged, cppID: drawerAutomationSweepStepsID,
                     message: "the completed ramp is a changed span replacement")
 
-S007 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:331
+S007 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+Anchor: message "a gesture with no target finishes as a no-op"
 Counterpart expression:
       report.expectEqual(AutomationPointRelease.noOp, empty.finish().release, cppID: drawerAutomationNodeDragID,
                          what: "a gesture with no target finishes as a no-op")
 
-S008 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:347
+S008 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+Anchor: message "a stationary release without Shift deletes"
 Counterpart expression:
       report.expectEqual(AutomationPointRelease.stationaryDelete, plainPress.finish().release,
                          cppID: drawerAutomationNodeDragID, what: "a stationary release without Shift deletes")
 
-S009 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:354
+S009 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+Anchor: message "a released stroke past the slop is a move"
 Counterpart expression:
       report.expectEqual(AutomationPointRelease.move, plainPress.finish().release, cppID: drawerAutomationNodeDragID,
                          what: "a released stroke past the slop is a move")
 
-S010 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:632
+S010 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the stroke writes its point and restores the lane's held value"
 Counterpart expression:
       report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
                          cppID: drawerAutomationPointRangeID,
                          what: "the stroke writes its point and restores the lane's held value")
 
-S011 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:635
+S011 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "the stroke's preview matches its completion"
 Counterpart expression:
       report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.preview.points),
                          cppID: drawerAutomationPointRangeID, what: "the stroke's preview matches its completion")
 
-S012 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:684
+S012 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+Anchor: message "one undo restores the pre-stroke lane"
 Counterpart expression:
       report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
                          what: "one undo restores the pre-stroke lane")
 
-S013 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift:703
+S013 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
+Anchor: message "core held-span replacement including the trailing held-value seam"
 Counterpart expression:
       report.expectEqual(
           ["0:20", "24:80", "48:60", "72:90"],
@@ -1565,58 +1572,69 @@ Counterpart expression:
           cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
           what: "core held-span replacement including the trailing held-value seam")
 
-S014 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:765
+S014 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+Anchor: message "one undo restores all four written Pan occurrences"
 Counterpart expression:
       report.expectEqual(beforeMove, fx.document.state, cppID: id,
                          what: "one undo restores all four written Pan occurrences")
 
-S015 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:14
+S015 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift
+Anchor: message "an XCMD lane projects through the same lane API"
 Counterpart expression:
       report.expectEqual(["120:100"], fixture.laneValues(echo.points.map {
           AutomationLanePoint(tick: $0.tick, value: $0.value)
       }), cppID: drawerAutomationProjectionID, what: "an XCMD lane projects through the same lane API")
 
-S016 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:33
+S016 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift
+Anchor: message "an XCMD lane commits through the same lane write"
 Counterpart expression:
       report.expect(AutomationCommit.apply(edit, in: fixture.document), cppID: drawerAutomationProjectionID,
                     message: "an XCMD lane commits through the same lane write")
 
-S017 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:37
+S017 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift
+Anchor: message "one XCMD replacement is one revision"
 Counterpart expression:
       report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationProjectionID,
                          what: "one XCMD replacement is one revision")
 
-S018 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:71
+S018 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift
+Anchor: message "lane-only XCMD sweep preserves notes"
 Counterpart expression:
       report.expect(document.notes(in: 0).count == 1,
                     cppID: "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes",
                     message: "lane-only XCMD sweep preserves notes")
 
-S019 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:86
+S019 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift
+Anchor: message "track expansion builds descriptor traffic through the canonical planner"
 Counterpart expression:
       report.expect(expansion.applyRangeEdit(xcmdEdit) &&
           expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
           cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
           message: "track expansion builds descriptor traffic through the canonical planner")
 
-S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:63
+S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the frozen facts carry the revision"
 Counterpart expression:
       report.expectEqual(pressRevision, fixture.page.frozenRevision ?? 0, cppID: drawerAutomationCancelID,
                          what: "the frozen facts carry the revision")
 
-S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:53
+S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the stationary delete is undoable"
 Counterpart expression:
       report.expect(fixture.undo(), cppID: drawerAutomationCancelID, message: "the stationary delete is undoable")
-S022 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:769
+S022 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+Anchor: message "redo restores the node value move"
 Counterpart expression:
     report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
 
-S023 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:81
+S023 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+Anchor: message "the completion fixture is an empty lane"
 Counterpart expression:
       report.expect(emptyFacts.displayPoints.isEmpty && emptyFacts.snapshot.leadInValue == nil,
                     cppID: drawerAutomationSweepStepsID, message: "the completion fixture is an empty lane")
 
-S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:783
+S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "an empty lane displays its projected engine node"
 Counterpart expression:
       report.expectEqual(["0:64"], emptyLane.laneValues(emptyFacts.displayPoints),
                          cppID: drawerAutomationContractParityID,
@@ -1627,7 +1645,8 @@ Counterpart expression:
                          cppID: drawerAutomationContractParityID,
                          what: "an unwritten Modulation lane leads in on its engine default")
 
-S025 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:793
+S025 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "the catalog titles a CC lane"
 Counterpart expression:
       report.expectEqual("Pan (PAN)", AutomationCatalog.title(emptyLane.panLane),
                          cppID: drawerAutomationContractParityID, what: "the catalog titles a CC lane")
@@ -1636,7 +1655,8 @@ Counterpart expression:
       report.expectEqual("Pitch bend (BEND)", AutomationCatalog.title(emptyLane.bendLane),
                          cppID: drawerAutomationContractParityID, what: "the catalog titles bend")
 
-S026 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:799
+S026 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a CC lane bottoms at zero"
 Counterpart expression:
       report.expectEqual(0, metadata.minimum, cppID: drawerAutomationContractParityID,
                          what: "a CC lane bottoms at zero")
@@ -1647,7 +1667,8 @@ Counterpart expression:
       report.expectEqual("c_v+0", metadata.valueText(64), cppID: drawerAutomationContractParityID,
                          what: "the neutral value formats through its own metadata")
 
-S027 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:809
+S027 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a band publishes its active tick range"
 Counterpart expression:
       report.expectEqual(Tick(50), band.range.startTick, cppID: drawerAutomationContractParityID,
                          what: "a band publishes its active tick range")
@@ -1661,13 +1682,15 @@ Counterpart expression:
                     cppID: drawerAutomationContractParityID,
                     message: "a Tempo band excludes CC lanes")
 
-S028 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:824
+S028 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "same-tick CC writes keep their order"
 Counterpart expression:
       report.expectEqual(["96:10", "96:20"], sameTick.values(sameTick.panLane),
                          cppID: drawerAutomationContractParityID,
                          what: "same-tick CC writes keep their order")
 
-S029 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:839
+S029 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a move onto a free tick keeps every occupant in order"
 Counterpart expression:
       report.expectEqual(["48:80", "96:60"], moved.values(moved.panLane),
                          cppID: drawerAutomationContractParityID,
@@ -1680,7 +1703,8 @@ Counterpart expression:
       report.expectEqual(["48:80", "96:60"], moved.values(moved.panLane),
                          cppID: drawerAutomationContractParityID, what: "one undo restores the evicted occupant")
 
-S030 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:860
+S030 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a move from an unknown tick resolves to nothing"
 Counterpart expression:
       report.expect(AutomationNodeResolver.moves([.init(unknownFacts, [
           AutomationNodeMove(parameter: moved.panLane, sourceTick: 9999, tick: 100, value: 60),
@@ -1690,7 +1714,8 @@ Counterpart expression:
                          cppID: drawerAutomationContractParityID,
                          what: "an unresolvable move leaves document and history untouched")
 
-S031 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:873
+S031 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a batch delete over repeated ticks resolves its removals"
 Counterpart expression:
       report.expect(!deletePlan.isEmpty, cppID: drawerAutomationContractParityID,
                     message: "a batch delete over repeated ticks resolves its removals")
@@ -1699,14 +1724,16 @@ Counterpart expression:
       report.expect(moved.values(moved.panLane).isEmpty, cppID: drawerAutomationContractParityID,
                     message: "a batch delete empties the lane's raw events")
 
-S032 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:880
+S032 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a delete of an unknown tick resolves to nothing"
 Counterpart expression:
       report.expect(AutomationNodeResolver.deletions(revision: unknownDeleteFacts.revision, [.init(
           parameter: moved.panLane, snapshot: unknownDeleteFacts.snapshot, ticks: [9999])]) == nil,
                     cppID: drawerAutomationContractParityID,
                     message: "a delete of an unknown tick resolves to nothing")
 
-S033 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:898
+S033 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "an unchanged-value tempo move preserves its microseconds"
 Counterpart expression:
       report.expectEqual(preservedUs, tempo.document.state.tempo.first(where: { $0.tick == 48 })?
           .microsecondsPerQuarterNote ?? 0, cppID: drawerAutomationContractParityID,
@@ -1715,7 +1742,8 @@ Counterpart expression:
                          cppID: drawerAutomationContractParityID, what: "one tempo move is one revision")
       report.expect(tempo.undo(), cppID: drawerAutomationContractParityID, message: "the tempo move is undoable")
 
-S034 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift:914
+S034 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+Anchor: message "a fractional tempo drag commits one edit"
 Counterpart expression:
       report.expect(AutomationCommit.apply(fractionalPlan, in: fractional.document),
                     cppID: drawerAutomationContractParityID, message: "a fractional tempo drag commits one edit")
@@ -1724,7 +1752,8 @@ Counterpart expression:
       report.expect(fractional.undo(), cppID: drawerAutomationContractParityID,
                     message: "the fractional drag is undoable")
 
-S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:35
+S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "the heterogeneous drag is redoable"
 Counterpart expression:
       report.expect(redone, cppID: id, message: "the heterogeneous drag is redoable")
       report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
@@ -1732,13 +1761,15 @@ Counterpart expression:
       report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
                          what: "redo restores the committed secondary CC lane")
 
-S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:40
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "a second undo parks the drag again"
 Counterpart expression:
       report.expect(fixture.undo(), cppID: id, message: "a second undo parks the drag again")
       report.expect(!fixture.document.history.canUndo, cppID: id,
                     message: "the drag records exactly one history entry")
 
-S037 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift:675
+S037 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
 Counterpart expression:
       expect(points(volume) == ["0:127"], 486)
       expect(points(pan) == ["0:64"], 487)
@@ -1747,7 +1778,8 @@ Counterpart expression:
       expect(points(bend).isEmpty, 491)
       expect(lane(bend).leadInValue == 0, 493)
 
-S038 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift:699
+S038 | drawerAutomationLegacyDefaultPromotion | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
 Counterpart expression:
       expect(resolved != nil, base)
       expect(!resolved.isEmpty, base + 3)
@@ -1757,20 +1789,24 @@ Counterpart expression:
       expect(fixture.snapshot.bytes == before.bytes, base + 8)
       expect(points(parameter) == defaultPoints, base + 9)
 
-S039 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift:723
+S039 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
 Counterpart expression:
       expect(fixture.snapshot == emptyBefore, 440)
 
-S040 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift:733
+S040 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
 Counterpart expression:
       expect(fixture.snapshot == before, 450)
 
-S041 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift:755
+S041 | drawerAutomationLegacySpanRows | src/checks/automation/domain/tst_automationdomain.swift
+Anchor: function
 Counterpart expression:
       expect(fixture.document.state.tempo.first?.microsecondsPerQuarterNote
           == TimeDefaults.microsecondsPerQuarterNote(forBPM: displayed), 470)
 
-S042 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:199
+S042 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "volume lane projects the canonical point"
 Counterpart expression:
       report.expectEqual(["96:34"], canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
                          what: "volume lane projects the canonical point")
@@ -1779,7 +1815,8 @@ Counterpart expression:
       report.expect(canonical.xcmdBytes(at: 96).elementsEqual(bytesAt96, by: { $0 == $1 }),
                     cppID: canonicalID, message: "canonical lanes encode ordered bytes at tick 96")
 
-S043 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:214
+S043 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "moving the volume point commits one edit"
 Counterpart expression:
       report.expect(canonical.oneEdit(moveBefore), cppID: canonicalID,
                     message: "moving the volume point commits one edit")
@@ -1788,7 +1825,8 @@ Counterpart expression:
       report.expect(canonical.xcmdBytes(at: 192).elementsEqual(bytesAt192, by: { $0 == $1 }),
                     cppID: canonicalID, message: "moved point encodes ordered bytes at tick 192")
 
-S044 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:226
+S044 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "undoing every edit restores pre-edit MIDI bytes"
 Counterpart expression:
       report.expect(canonical.undoToRoot() && canonical.snapshot.bytes == before.bytes,
                     cppID: canonicalID, message: "undoing every edit restores pre-edit MIDI bytes")
@@ -1797,12 +1835,14 @@ Counterpart expression:
       report.expectEqual([String](), canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
                          what: "undo leaves length lane empty")
 
-S045 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:243
+S045 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "sweep fixture contains the original note-on and note-off"
 Counterpart expression:
       report.expect(notesBeforeSweep.elementsEqual(expectedNotes, by: { $0 == $1 }),
                     cppID: sweepID, message: "sweep fixture contains the original note-on and note-off")
 
-S046 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:255
+S046 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "lane sweep preserves the original note events"
 Counterpart expression:
       report.expect(sweep.notes().elementsEqual(notesBeforeSweep, by: { $0 == $1 }),
                     cppID: sweepID, message: "lane sweep preserves the original note events")
@@ -1811,7 +1851,8 @@ Counterpart expression:
       report.expect(sweep.undoToRoot() && sweep.snapshot.bytes == beforeSweep.bytes,
                     cppID: sweepID, message: "undoing sweep and fixture edits restores original MIDI bytes")
 
-S047 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:275
+S047 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "two volume occurrences project"
 Counterpart expression:
       report.expectEqual(2, occurrences.document.lanePoints(track: 0, lane: volumeLane).count,
                          cppID: occurrencesID, what: "two volume occurrences project")
@@ -1820,7 +1861,8 @@ Counterpart expression:
       report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
                     cppID: occurrencesID, message: "second occurrence encodes the ordered volume pair")
 
-S048 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:283
+S048 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "deleting the first occurrence preserves the second"
 Counterpart expression:
       report.expectEqual(["192:35"], occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
                          what: "deleting the first occurrence preserves the second")
@@ -1829,14 +1871,16 @@ Counterpart expression:
       report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
                     cppID: occurrencesID, message: "deleting the first occurrence preserves second bytes")
 
-S049 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:291
+S049 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "deleting both occurrences empties the volume lane"
 Counterpart expression:
       report.expectEqual([String](), occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
                          what: "deleting both occurrences empties the volume lane")
       report.expect(occurrences.xcmdBytes().isEmpty, cppID: occurrencesID,
                     message: "deleting both occurrences empties XCMD traffic")
 
-S050 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:306
+S050 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "moving the first occurrence preserves the second"
 Counterpart expression:
       report.expectEqual(["192:35", "384:36"], occurrences.points(Xcmd.echoVolumeLane),
                          cppID: occurrencesID, what: "moving the first occurrence preserves the second")
@@ -1845,7 +1889,8 @@ Counterpart expression:
       report.expect(occurrences.xcmdBytes(at: 384).elementsEqual(volume36, by: { $0 == $1 }),
                     cppID: occurrencesID, message: "moved occurrence encodes at tick 384")
 
-S051 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:322
+S051 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "moving volume away from a shared tick projects only the moved volume"
 Counterpart expression:
       report.expectEqual(["160:36"], occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
                          what: "moving volume away from a shared tick projects only the moved volume")
@@ -1856,28 +1901,32 @@ Counterpart expression:
       report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(length18, by: { $0 == $1 }),
                     cppID: occurrencesID, message: "other length occurrence retains its bytes")
 
-S052 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:347
+S052 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "a write inside an opaque epoch changes neither bytes nor history"
 Counterpart expression:
       report.expect(opaqueAfter.bytes == opaqueBefore.bytes &&
                     opaqueAfter.revision == opaqueBefore.revision &&
                     opaqueAfter.identity == opaqueBefore.identity,
                     cppID: occurrencesID, message: "a write inside an opaque epoch changes neither bytes nor history")
 
-S053 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:360
+S053 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "appending beyond malformed epochs changes revision and identity once"
 Counterpart expression:
       report.expect(occurrences.oneEdit(malformedBefore), cppID: occurrencesID,
                     message: "appending beyond malformed epochs changes revision and identity once")
       report.expect(occurrences.xcmdBytes().elementsEqual(appendedBytes, by: { $0 == $1 }),
                     cppID: occurrencesID, message: "appending preserves both malformed epochs and ordered bytes")
 
-S054 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift:374
+S054 | drawerAutomationXcmdLaneEdits | src/checks/automation/domain/xcmd.swift
+Anchor: message "a selector-tick write changes neither bytes nor history"
 Counterpart expression:
       report.expect(rejectedAfter.bytes == rejectedBefore.bytes &&
                     rejectedAfter.revision == rejectedBefore.revision &&
                     rejectedAfter.identity == rejectedBefore.identity,
                     cppID: occurrencesID, message: "a selector-tick write changes neither bytes nor history")
 
-S055 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift:117
+S055 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift
+Anchor: message "A029 volume-scoped cut changes the document"
 Counterpart expression:
       report.expect(document.removeTime(range, scope: volumeScope), cppID: cppID,
                     message: "A029 volume-scoped cut changes the document")
@@ -1889,7 +1938,8 @@ Counterpart expression:
       report.expect(document.history.undoDocument() && fixture.snapshot.bytes == rangeBefore.bytes,
                     cppID: cppID, message: "A032 undo restores the pre-cut bytes")
 
-S056 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift:135
+S056 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift
+Anchor: message "A033 whole-song cut changes the document"
 Counterpart expression:
       report.expect(document.removeTime(range, scope: TimeScope(wholeSong: true)), cppID: cppID,
                     message: "A033 whole-song cut changes the document")
@@ -1903,24 +1953,28 @@ Counterpart expression:
       report.expect(document.history.undoDocument() && fixture.snapshot.bytes == cutBefore.bytes,
                     cppID: cppID, message: "A037 undo restores the whole-song cut bytes")
 
-S057 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift:150
+S057 | xcmdTimeRangeCuts | src/checks/automation/domain/xcmdRanges.swift
+Anchor: message "A038 redo again removes volume"
 Counterpart expression:
       report.expectEqual([String](), fixture.values(Xcmd.echoVolumeLane), cppID: cppID,
                          what: "A038 redo again removes volume")
       report.expectEqual(["96:18"], fixture.values(Xcmd.echoLengthLane), cppID: cppID,
                          what: "A039 redo reanchors length at tick 96")
 
-S058 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:72
+S058 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a cancelled stale gesture never writes on release"
 Counterpart expression:
       report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
                          what: "a cancelled stale gesture never writes on release")
 
-S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:395
+S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 Counterpart expression:
       report.expectEqual(afterRebuild, fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
                          what: "a stale release after a mid-gesture rebuild commits nothing")
 
-S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:397
+S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a stale release leaves no interaction live"
 Counterpart expression:
       report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
                     message: "a stale release leaves no interaction live")

@@ -4,13 +4,9 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/project/save.cpp
 Original SHA-256: 5f5306be9e71206a513833ec502664570672a044a793d9061915d0c400e2964b
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
-Swift SHA-256: 421e737799b9ec913dd08667f0867a96dbc089dc64157a21927105f9601ed2eb
 Swift counterpart: src/checks/workspace/session_playback.swift
-Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 Swift counterpart: src/checks/workspace/session_save.swift
-Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -25,7 +21,7 @@ NATIVE identifies an observation only a native window/rendering/harness run can 
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 runProjectSessionSuite (SessionChecks.swift) owns the save/reload and identity predicates via DocumentSession save/reopen against the staged swiftcore-session-test project. savedMidiCompilesAfterDocumentSave edits a DocumentSession tail note, saves, and compiles the persisted MIDI via pdc_check_compile_saved_midi.
@@ -592,107 +588,128 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/session_save.swift:279
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/session_save.swift
+Anchor: message "actual mid2agb exit result for the persisted edited MIDI and flags"
   report.expectEqual(Int32(1), compileResult, cppID: cppID,
                          what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 
-S002 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:27
+S002 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
+Anchor: message "adoption stripped tempo meta events from file chunks into authoritative state.tempo"
   report.expect(chunkMetasStripped,
                     cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                     message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
 
-S003 | sessionSavePersistence | src/checks/workspace/session_save.swift:16
+S003 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "fixture exposes the other song's midi.cfg line"
   report.expect(otherSongCfgBefore != nil,
                     cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                     message: "fixture exposes the other song's midi.cfg line")
 
-S004 | sessionSavePersistence | src/checks/workspace/session_save.swift:26
+S004 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "the loop-start edit is present before save"
   report.expectEqual(Tick(72), preSaveLoopStart,
                          cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                          what: "the loop-start edit is present before save")
 
-S005 | sessionSavePersistence | src/checks/workspace/session_save.swift:35
+S005 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "edited song save confirms clean state"
   report.expectEqual(false, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "edited song save confirms clean state")
 
-S006 | sessionSavePersistence | src/checks/workspace/session_save.swift:42
+S006 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "save preserves the other song's complete midi.cfg line bytes"
   report.expectEqual(
           otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
           what: "save preserves the other song's complete midi.cfg line bytes")
 
-S007 | sessionSavePersistence | src/checks/workspace/session_save.swift:62
+S007 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "edit after save is dirty"
   report.expectEqual(true, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "edit after save is dirty")
 
-S008 | sessionSavePersistence | src/checks/workspace/session_save.swift:66
+S008 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "undo to the saved state is clean"
   report.expectEqual(false, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "undo to the saved state is clean")
 
-S009 | sessionSavePersistence | src/checks/workspace/session_save.swift:70
+S009 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "redo away from the saved state is dirty"
   report.expectEqual(true, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "redo away from the saved state is dirty")
 
-S010 | sessionSavePersistence | src/checks/workspace/session_save.swift:74
+S010 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "cleanup undo returns to the saved state"
   report.expectEqual(false, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "cleanup undo returns to the saved state")
 
-S011 | sessionSavePersistence | src/checks/workspace/session_save.swift:96
+S011 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "note and non-tempo metadata streams survive save/reopen"
   report.expectEqual(preSaveFile, reopened.document.state.file,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "note and non-tempo metadata streams survive save/reopen")
 
-S012 | sessionSavePersistence | src/checks/workspace/session_save.swift:99
+S012 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "loop-start marker survives save/reopen"
   report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "loop-start marker survives save/reopen")
 
-S013 | sessionSavePersistence | src/checks/workspace/session_save.swift:102
+S013 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "loop-end marker survives save/reopen"
   report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "loop-end marker survives save/reopen")
 
-S014 | sessionSavePersistence | src/checks/workspace/session_save.swift:106
+S014 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "raw config flags survive save/reopen"
   report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "raw config flags survive save/reopen")
 
-S015 | sessionSavePersistence | src/checks/workspace/session_save.swift:109
+S015 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "voicegroup argument survives save/reopen"
   report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "voicegroup argument survives save/reopen")
 
-S016 | sessionSavePersistence | src/checks/workspace/session_save.swift:112
+S016 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "master volume survives save/reopen"
   report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "master volume survives save/reopen")
 
-S017 | sessionSavePersistence | src/checks/workspace/session_save.swift:115
+S017 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "reverb survives save/reopen"
   report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "reverb survives save/reopen")
 
-S018 | sessionSavePersistence | src/checks/workspace/session_save.swift:118
+S018 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "priority survives save/reopen"
   report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
                              cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                              what: "priority survives save/reopen")
 
-S019 | sessionSavePersistence | src/checks/workspace/session_save.swift:152
+S019 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "stale snapshot completion leaves the newer document dirty"
   report.expectEqual(true, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "stale snapshot completion leaves the newer document dirty")
 
-S020 | sessionSavePersistence | src/checks/workspace/session_save.swift:156
+S020 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "undoing only the newer edit remains dirty"
   report.expectEqual(true, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "undoing only the newer edit remains dirty")
 
-S021 | sessionSavePersistence | src/checks/workspace/session_save.swift:160
+S021 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "undoing both post-save edits returns to the saved state"
   report.expectEqual(false, session.document.isDirty,
                              cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                              what: "undoing both post-save edits returns to the saved state")

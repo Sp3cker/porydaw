@@ -4,7 +4,6 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck.cpp
 Original SHA-256: 4bbd205e3a1f4762746d34d9fe0fc9feb2d898b12fb80c9c1e7534a0c79c9d6b
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -21,7 +20,7 @@ PianoRollTest::init builds the shared native suite fixture (project copy, song l
 
 Verification
 Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 PianoRollTest::init/cleanup run around every PianoRollTest slot; runRollCheck (bottom of this file) executes the suite through QTest::qExec. Seeds and the fixture shell live in src/checks/rollcheck/harness.cpp, fixtures.h and fixtures.cpp, with slot declarations in tst_pianoroll.h. No counterpart file carries predicates for suite-entry setup.

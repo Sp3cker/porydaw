@@ -5,9 +5,7 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/editcheck/tst_scale.cpp
 Original SHA-256: 07fd50abf49010fc921a3a0a99cdf56e1b5f41d919f29b19f017fe67f696c746
 Swift counterpart: src/checks/editcheck/ScaleChecks.swift
-Swift SHA-256: b798695cfe6e80893e43f5857d16fbd95e03d4bf15cd82e439a500586386ed64
 Additional Swift counterpart: src/swift/core/MusicalScale.swift
-Swift SHA-256: 71e93b8ad7c766c5a58fb232572a3249204363e13c5a9a0c1fdf670571a5244b
 
 Covered native implementation: src/porydaw_scale.cpp, src/porydaw_scale.h :: cScaleCount, cRootCount, displayOrder, scaleDisplayName, scaleMask, rootDisplayName, defaultScale, defaultRoot, isScalePitch, firstScalePitchAbove, firstScalePitchBelow, nextScalePitch, resolveDiatonicDestinations.
 Native engine status: The C++ check and implementation were deleted in this lane: src/checks/editcheck/tst_scale.{cpp,h}, src/porydaw_scale.{cpp,h}; the registration was removed from src/checks/checkcatalog.cpp and the source entries from src/checks/CMakeLists.txt. Active checks use Swift PorydawCore (src/swift/core/MusicalScale.swift). No live native run or differential comparison is claimed.
@@ -15,9 +13,8 @@ Native engine status: The C++ check and implementation were deleted in this lane
 Retirement: 24 original assertion sites, all terminal (24 MATCHED); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
 Fixture and execution: table_data expanded 28 rows (scale name to table index); table asserted count, identity order, name, mask and display order per row. rootsAndDefaults checked 12 root names in a loop plus default scale and root. membershipAndNeighbors was 12 fixed assertions on C-major membership, D-major transposition, first above/below, boundaries, and stepped pitches. diatonicDestinations_data expanded 7 rows (upward/downward/repeated/ordered plus high/low-boundary rejection sentinel 0xFF and mismatched-shape passthrough 0x2A); diatonicDestinations asserted the accepted flag and destination bytes. checkScaleTables ports each family under the same cppIDs and row order: table 5 predicates over 28 rows, rootsAndDefaults 4, membershipAndNeighbors 12, diatonicDestinations 2 over 7 rows.
-Registered run path: src/checks/editcheck/ScaleChecks.swift :: checkScaleTables, called at the end of runMusicalSemanticsSuite (src/checks/midi/MidiChecks.swift:728), swiftcore suite 2 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check, and the production ScaleID lives in src/swift/core/MusicalScale.swift (src/swift/core/CMakeLists.txt). Legacy editcheck source is absent from active CMake/checkcatalog.
+Registered run path: src/checks/editcheck/ScaleChecks.swift :: checkScaleTables, called at the end of runMusicalSemanticsSuite (src/checks/midi/MidiChecks.swift), swiftcore suite 2 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; the counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check, and the production ScaleID lives in src/swift/core/MusicalScale.swift (src/swift/core/CMakeLists.txt). Legacy editcheck source is absent from active CMake/checkcatalog.
 
-Tally: MATCHED 23, PARTIAL 0, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 1.
 
 Original assertion inventory
 
@@ -196,84 +193,107 @@ Every report.expect / report.expectEqual call in checkScaleTables, in execution 
 cppID arguments are scalecheck/ScaleCheckTest::table, ::rootsAndDefaults,
 ::membershipAndNeighbors and ::diatonicDestinations.
 
-S001 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:37
+S001 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "scale count"
   report.expectEqual(expected.count, ScaleID.scaleCount, cppID: table, what: "scale count")
 
-S002 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:38
+S002 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "scale identity order"
   report.expectEqual(index, row.0.rawValue, cppID: table, what: "scale identity order")
 
-S003 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:39
+S003 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "scale name"
   report.expectEqual(row.1, row.0.displayName, cppID: table, what: "scale name")
 
-S004 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:40
+S004 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "scale mask"
   report.expectEqual(row.2, row.0.mask, cppID: table, what: "scale mask")
 
-S005 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:41
+S005 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "display order"
   report.expectEqual(row.0, ScaleID.displayOrder[index], cppID: table, what: "display order")
 
-S006 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:46
+S006 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "root count"
   report.expectEqual(rootNames.count, ScaleID.rootCount, cppID: roots, what: "root count")
 
-S007 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:48
+S007 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "root name"
   report.expectEqual(rootNames[index], ScaleID.rootDisplayName(index), cppID: roots,
                      what: "root name")
 
-S008 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:51
+S008 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "default scale"
   report.expectEqual(ScaleID.major, ScaleID.defaultScale, cppID: roots, what: "default scale")
 
-S009 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:52
+S009 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "default root"
   report.expectEqual(0, ScaleID.defaultRoot, cppID: roots, what: "default root")
 
-S010 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:55
+S010 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "C is a C-major pitch"
   report.expect(ScaleID.major.isPitch(60, root: 0), cppID: neighbors,
                 message: "C is a C-major pitch")
 
-S011 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:57
+S011 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "C# is not a C-major pitch"
   report.expect(!ScaleID.major.isPitch(61, root: 0), cppID: neighbors,
                 message: "C# is not a C-major pitch")
 
-S012 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:59
+S012 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "D is a D-major pitch"
   report.expect(ScaleID.major.isPitch(62, root: 2), cppID: neighbors,
                 message: "D is a D-major pitch")
 
-S013 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:61
+S013 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "C is not a D-major pitch"
   report.expect(!ScaleID.major.isPitch(60, root: 2), cppID: neighbors,
                 message: "C is not a D-major pitch")
 
-S014 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:63
+S014 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "first pitch above C#"
   report.expectEqual(62, ScaleID.major.firstPitchAbove(61, root: 0), cppID: neighbors,
                      what: "first pitch above C#")
 
-S015 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:65
+S015 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "first pitch below C#"
   report.expectEqual(60, ScaleID.major.firstPitchBelow(61, root: 0), cppID: neighbors,
                      what: "first pitch below C#")
 
-S016 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:67
+S016 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "no pitch above top"
   report.expectEqual(-1, ScaleID.major.firstPitchAbove(127, root: 0), cppID: neighbors,
                      what: "no pitch above top")
 
-S017 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:69
+S017 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "no pitch below bottom"
   report.expectEqual(-1, ScaleID.major.firstPitchBelow(0, root: 0), cppID: neighbors,
                      what: "no pitch below bottom")
 
-S018 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:71
+S018 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "one degree above C"
   report.expectEqual(62, ScaleID.major.pitch(60, steps: 1, root: 0), cppID: neighbors,
                      what: "one degree above C")
 
-S019 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:73
+S019 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "one degree below D"
   report.expectEqual(60, ScaleID.major.pitch(62, steps: -1, root: 0), cppID: neighbors,
                      what: "one degree below D")
 
-S020 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:75
+S020 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "three degrees above C"
   report.expectEqual(65, ScaleID.major.pitch(60, steps: 3, root: 0), cppID: neighbors,
                      what: "three degrees above C")
 
-S021 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:77
+S021 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "three degrees below G"
   report.expectEqual(62, ScaleID.major.pitch(67, steps: -3, root: 0), cppID: neighbors,
                      what: "three degrees below G")
 
-S022 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:94
+S022 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "diatonic resolution"
   report.expectEqual(row.accepted, result, cppID: diatonic, what: "diatonic resolution")
 
-S023 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift:95
+S023 | checkScaleTables | src/checks/editcheck/ScaleChecks.swift
+Anchor: message "diatonic destination"
   report.expectEqual(row.expected, destinations, cppID: diatonic, what: "diatonic destination")

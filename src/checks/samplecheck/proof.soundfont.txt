@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/soundfont.cpp
 Original SHA-256: 6e45372c5a0d33c5d55f1a07d883a5ba5c65a9833877a07076ea517ed1fba310
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker,
 
 Verification
 Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry points execute these checks. Retained native execution owns this suite:

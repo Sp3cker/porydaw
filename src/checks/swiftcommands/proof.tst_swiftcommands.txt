@@ -4,7 +4,6 @@ Reference revision: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced
 Original: src/checks/swiftcommands/tst_swiftcommands.cpp
 Original SHA-256: 8a4c514120397574cb6ae33827e816b52e782be39245441ddd9bfc635ac2da63
 Swift counterpart: src/checks/swiftcommands/SwiftCommandsCheck.swift
-Swift SHA-256: d03fde5f97ee09479759a49e0ec549ea98973427cae0d0710cf31bd7faed4156
 
 Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
 src/checks/swiftcommands/tst_swiftcommands.cpp and src/checks/swiftcommands/SwiftCommandsCheck.swift.
@@ -19,7 +18,6 @@ Reference revision: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced
 Original: src/checks/swiftcommands/tst_swiftcommands.cpp
 Original SHA-256: 8a4c514120397574cb6ae33827e816b52e782be39245441ddd9bfc635ac2da63
 Swift counterpart (retired, pinned pre-retirement): src/checks/swiftcommands/SwiftCommandsCheck.swift
-Swift SHA-256: d03fde5f97ee09479759a49e0ec549ea98973427cae0d0710cf31bd7faed4156
 Verification: lane run recorded by the controller, not re-run for this ledger:
 deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
 (all harnesses in 11.40s).
@@ -56,7 +54,7 @@ tst_songdocument_songnotes (coreNoteResizeChecks:89), DocumentEditChecks, EventC
 trackRenameContract:611, trackMoveContract:446), TrackCorpusChecks (coreTrackRenameRow:226),
 DocumentTrackChecks (trackRemapPublicationContract:88, documentDuplicationOwnershipContract:12),
 DocumentHistoryChecks (documentPublicationNetZeroContract:74); projectSession suite ->
-sessionPlaybackProjectionAndStatePublication (session_playback.swift:10); rollcheck -> selection
+sessionPlaybackProjectionAndStatePublication (session_playback.swift); rollcheck -> selection
 (checkSelectionBandSweep:13). The retired sgc_check_swift_submission entry point (S001-S011) executes
 nothing in any registered check; the S001-S011 trailer below is the historical record of the retired
 counterpart, not execution evidence.
@@ -1638,42 +1636,53 @@ surfaced through its @_cdecl guard entry; it contains no report.expect* or
 expectEqual calls. Each entry below is one guard checkpoint with its verbatim
 source:
 
-S001 | runCommandsCheck (guard code 1) | src/checks/swiftcommands/SwiftCommandsCheck.swift:12
+S001 | runCommandsCheck (guard code 1) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard added.result == .executed, added.noteId != 0 else { return 1 }
 
-S002 | runCommandsCheck (guard code 2) | src/checks/swiftcommands/SwiftCommandsCheck.swift:14
+S002 | runCommandsCheck (guard code 2) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.noteMove(noteId: added.noteId, deltaTicks: 48, deltaKeys: 2)).result
           == .executed else { return 2 }
 
-S003 | runCommandsCheck (guard code 3) | src/checks/swiftcommands/SwiftCommandsCheck.swift:16
+S003 | runCommandsCheck (guard code 3) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.noteResize(noteId: added.noteId, durationTicks: 96)).result
           == .executed else { return 3 }
 
-S004 | runCommandsCheck (guard code 4) | src/checks/swiftcommands/SwiftCommandsCheck.swift:18
+S004 | runCommandsCheck (guard code 4) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.trackRename(track: 0, name: "Lead")).result == .executed else { return 4 }
 
-S005 | runCommandsCheck (guard code 5) | src/checks/swiftcommands/SwiftCommandsCheck.swift:21
+S005 | runCommandsCheck (guard code 5) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.selectionSetNotes(noteIds: [added.noteId])).result == .executed
           else { return 5 }
 
-S006 | runCommandsCheck (guard code 6) | src/checks/swiftcommands/SwiftCommandsCheck.swift:23
+S006 | runCommandsCheck (guard code 6) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.trackMute(track: 0, on: true)).result == .executed else { return 6 }
 
-S007 | runCommandsCheck (guard code 7) | src/checks/swiftcommands/SwiftCommandsCheck.swift:24
+S007 | runCommandsCheck (guard code 7) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.trackSolo(track: 1, on: true)).result == .executed else { return 7 }
 
-S008 | runCommandsCheck (guard code 8) | src/checks/swiftcommands/SwiftCommandsCheck.swift:25
+S008 | runCommandsCheck (guard code 8) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.selectionClear).result == .executed else { return 8 }
 
-S009 | runCommandsCheck (guard code 9) | src/checks/swiftcommands/SwiftCommandsCheck.swift:28
+S009 | runCommandsCheck (guard code 9) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.noteMove(noteId: added.noteId + 100_000, deltaTicks: 1, deltaKeys: 0))
           .result == .rejectedInvalid else { return 9 }
 
-S010 | runCommandsCheck (guard code 10) | src/checks/swiftcommands/SwiftCommandsCheck.swift:30
+S010 | runCommandsCheck (guard code 10) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard pipe.submit(.noteAdd(track: 99, key: 60, onTick: 0, durationTicks: 24, velocity: 90))
           .result == .rejectedInvalid else { return 10 }
 
-S011 | runCommandsCheck (guard code 11) | src/checks/swiftcommands/SwiftCommandsCheck.swift:35
+S011 | runCommandsCheck (guard code 11) | src/checks/swiftcommands/SwiftCommandsCheck.swift
+Anchor: deleted
       guard orphan.submit(.selectionClear).result == .rejectedUnavailable else { return 11 }
 
 Shared helper:

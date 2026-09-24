@@ -5,11 +5,8 @@ Original: src/checks/selectionkey/localinputtier_text.cpp
 Original SHA-256: 80adaaa8ce5a7eddfa1a779243b266c24be61bd830b111f4fd65f4f6f0d8b3d6
 Original removed from current checkout; use git show at reference.
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
-Swift SHA-256: 3579cf4cbc5c7a00b79a00411404a30e1e835ba5a242d42260f3d9aca3f77abd
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
-Additional Swift SHA-256: c9ab660ade2e1b4d887ec940cc91a2f1df84c9a1e6fd4f70559018d2f04bd2de
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Additional Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 
 Scope: numericPromptOwnsKeys and velocityPromptOwnsKeys. Other historical text-surface methods are not covered by this scoped proof; this is not a file-retirement certificate.
 
@@ -270,7 +267,7 @@ QCOMPARE(input->property("text").toString(), QStringLiteral("12"))
 
 Original 497
 Disposition: MATCHED
-Mapping: The lane delivers the production field own selectAll() at the digit row (S022, delivery at tst_ShellWindow.qml:334), the same QML method on the same field the original invoked through QMetaObject. No QWidget layer exists in the Swift app.
+Mapping: The lane delivers the production field own selectAll() at the digit row (S022, delivery at tst_ShellWindow.qml), the same QML method on the same field the original invoked through QMetaObject. No QWidget layer exists in the Swift app.
 Swift counterpart expression (S022):
   field.selectAll()
 QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
@@ -287,7 +284,7 @@ QVERIFY2(!copiedFrom.isEmpty() && QApplication::clipboard()->text() == copiedFro
 
 Original 506
 Disposition: MATCHED
-Mapping: The lane delivers the production field own selectAll() at the Paste row (S022, delivery at tst_ShellWindow.qml:343) before the native Paste replaces the selected draft with the copied text, the same QML method the original invoked through QMetaObject. No QWidget layer exists in the Swift app.
+Mapping: The lane delivers the production field own selectAll() at the Paste row (S022, delivery at tst_ShellWindow.qml) before the native Paste replaces the selected draft with the copied text, the same QML method the original invoked through QMetaObject. No QWidget layer exists in the Swift app.
 Swift counterpart expression (S022):
   field.selectAll()
 QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
@@ -303,7 +300,7 @@ QVERIFY2(input->property("text").toString() == QStringLiteral("12") &&
 
 Original 516
 Disposition: MATCHED
-Mapping: The lane delivers the same production field selectAll() (S022, deliveries at tst_ShellWindow.qml:334/339/341/343) where the original re-selected the whole draft for a key-delivery row; the following S row observes firstTrack.soloChecked false with the prompt open (S026). No QWidget layer exists in the Swift app.
+Mapping: The lane delivers the same production field selectAll() (S022, deliveries at tst_ShellWindow.qml/339/341/343) where the original re-selected the whole draft for a key-delivery row; the following S row observes firstTrack.soloChecked false with the prompt open (S026). No QWidget layer exists in the Swift app.
 Swift counterpart expression (S022, S026):
   field.selectAll()
   keyClick(Qt.Key_S); compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo")
@@ -338,7 +335,7 @@ QVERIFY2(popup && popup->isOpen() && input->property("text").toString() == initi
 
 Original 551
 Disposition: MATCHED
-Mapping: The lane delivers the same production field selectAll() (S022, deliveries at tst_ShellWindow.qml:334/339/341/343) for the following window-key rows; the Space row observes the field text unchanged and the field still focused while transport toggles (S028), the same field ownership the original selected the whole draft for. No QWidget layer exists in the Swift app.
+Mapping: The lane delivers the same production field selectAll() (S022, deliveries at tst_ShellWindow.qml/339/341/343) for the following window-key rows; the Space row observes the field text unchanged and the field still focused while transport toggles (S028), the same field ownership the original selected the whole draft for. No QWidget layer exists in the Swift app.
 Swift counterpart expression (S022, S028):
   field.selectAll()
   keyClick(Qt.Key_Space); compare(field.text, promptTextAfterArrows, "transport Space never modifies numeric text"); compare(field.activeFocus, true)
@@ -399,119 +396,149 @@ QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt")
 
 Swift assertion predicates
 
-S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:23
+S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original selected fixture note exists"
   report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
 
-S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:34
+S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original empty-tick numeric prompt opens"
   report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
                     message: "the original empty-tick numeric prompt opens")
 
-S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:37
+S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the production prompt retains the supplied numeric draft"
   report.expectEqual("12", page.promptDraft, cppID: id,
                          what: "the production prompt retains the supplied numeric draft")
 
-S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:39
+S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing does not mutate the song"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "draft editing does not mutate the song")
 
-S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:41
+S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft editing preserves note selection"
   report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
                          what: "draft editing preserves note selection")
 
-S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:44
+S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation closes the prompt"
   report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
 
-S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:45
+S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "cancellation leaves the original document unchanged"
   report.expectEqual(before, fixture.snapshot, cppID: id,
                          what: "cancellation leaves the original document unchanged")
 
-S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:47
+S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "draft and cancellation preserve the full song contents"
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
 
-S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:53
+S009 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original CC10 lane is present in the page's row stack"
   report.expect(page.rows.contains { $0.parameter == fixture.panLane }, cppID: id,
                     message: "the original CC10 lane is present in the page's row stack")
 
-S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:55
+S010 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original fixture note resolves by its inserted ID"
   report.expect(insertedNotes.first.flatMap { fixture.document.note($0) } != nil, cppID: id,
                     message: "the original fixture note resolves by its inserted ID")
 
-S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:62
+S011 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original volume lane is present in the page's row stack"
   report.expect(page.rows.contains { $0.parameter == fixture.volumeLane }, cppID: labelID,
                     message: "the original volume lane is present in the page's row stack")
 
-S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:64
+S012 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original volume-lane insertion prompt opens"
   report.expect(page.openPrompt(tick: 5808, value: 48), cppID: labelID,
                     message: "the original volume-lane insertion prompt opens")
 
-S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:66
+S013 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the volume prompt opens with the plotted value as its draft"
   report.expectEqual("48", page.promptDraft, cppID: labelID,
                          what: "the volume prompt opens with the plotted value as its draft")
 
-S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:75
+S014 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the original pan-lane insertion prompt opens"
   report.expect(page.openPrompt(tick: 5760, value: 64), cppID: lifetimeID,
                     message: "the original pan-lane insertion prompt opens")
 
-S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:78
+S015 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the document-switch cancellation closes the prompt"
   report.expect(!page.promptOpen, cppID: lifetimeID,
                     message: "the document-switch cancellation closes the prompt")
 
-S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:80
+S016 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "accepting a closed prompt commits nothing"
   report.expect(!page.acceptPrompt(displayedValue: 96), cppID: lifetimeID,
                     message: "accepting a closed prompt commits nothing")
 
-S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:82
+S017 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
+Anchor: message "the closed prompt's late acceptance leaves the document unchanged"
   report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
                          what: "the closed prompt's late acceptance leaves the document unchanged")
 
-S020 | test_cWindowShortcutsAndNumericOwnership prompt field | src/checks/editorqml/tst_ShellWindow.qml:350
+S020 | test_cWindowShortcutsAndNumericOwnership prompt field | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "noteVelocityInput"
   var field = findChild(surface, "noteVelocityInput"); verify(field, "the original numeric prompt has a text field")
 
-S021 | test_cWindowShortcutsAndNumericOwnership field focus | src/checks/editorqml/tst_ShellWindow.qml:352
+S021 | test_cWindowShortcutsAndNumericOwnership field focus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "activeFocus" #6
   tryCompare(field, "activeFocus", true, 3000)
 
-S022 | test_cWindowShortcutsAndNumericOwnership selectAll deliveries | src/checks/editorqml/tst_ShellWindow.qml:334
+S022 | test_cWindowShortcutsAndNumericOwnership selectAll deliveries | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "soloChecked" #3
   field.selectAll() before the digit row, and again at :339 (Copy row), :341 (draft replacement) and :343 (Paste row)
 
-S023 | test_cWindowShortcutsAndNumericOwnership digit replacement | src/checks/editorqml/tst_ShellWindow.qml:337
+S023 | test_cWindowShortcutsAndNumericOwnership digit replacement | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "soloChecked" #4
   keyClick(Qt.Key_1); keyClick(Qt.Key_2); compare(field.text, "12", "digits stay in the focused numeric editor")
 
-S024 | test_cWindowShortcutsAndNumericOwnership Copy stays in the field | src/checks/editorqml/tst_ShellWindow.qml:340
+S024 | test_cWindowShortcutsAndNumericOwnership Copy stays in the field | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "activeFocus" #5
   keySequence(StandardKey.Copy) after field.selectAll(); compare(copyActivatedSpy.count, windowCopyBeforePrompt, "prompt Copy/Paste never fire the window Copy action")
 
-S025 | test_cWindowShortcutsAndNumericOwnership Paste round trip | src/checks/editorqml/tst_ShellWindow.qml:344
+S025 | test_cWindowShortcutsAndNumericOwnership Paste round trip | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "native Copy and Paste stay with the text editor"
   keySequence(StandardKey.Paste) after field.selectAll() and the replacing digit; compare(field.text, "12", "native Copy and Paste stay with the text editor")
 
-S026 | test_cWindowShortcutsAndNumericOwnership S stays in the field | src/checks/editorqml/tst_ShellWindow.qml:369-370
+S026 | test_cWindowShortcutsAndNumericOwnership S stays in the field | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "S in a numeric editor never fires Solo"
   compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo")
   compare(session.velocityPage().promptOpen, true)
 
-S027 | test_cWindowShortcutsAndNumericOwnership arrows stay in the prompt | src/checks/editorqml/tst_ShellWindow.qml:373-377
+S027 | test_cWindowShortcutsAndNumericOwnership arrows stay in the prompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt arrows keep focus in the numeric editor"
   compare(field.activeFocus, true, "prompt arrows keep focus in the numeric editor")
   compare(session.velocityPage().promptOpen, true)
   tryCompare(session.velocityPage(), "selectedCount", 1, 3000,
              "prompt arrows keep the musical selection")
   compare(session.documentDirty, false, "prompt arrows never edit the song")
 
-S028 | test_cWindowShortcutsAndNumericOwnership first Space toggles transport | src/checks/editorqml/tst_ShellWindow.qml:382-385
+S028 | test_cWindowShortcutsAndNumericOwnership first Space toggles transport | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "window Space owns transport even with numeric text focus"
   tryCompare(playhead, "playing", true, 3000,
              "window Space owns transport even with numeric text focus")
   compare(field.text, promptTextAfterArrows, "transport Space never modifies numeric text")
   compare(field.activeFocus, true)
 
-S029 | test_cWindowShortcutsAndNumericOwnership second Space reverses transport | src/checks/editorqml/tst_ShellWindow.qml:387-389
+S029 | test_cWindowShortcutsAndNumericOwnership second Space reverses transport | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the second window Space reverses one transport activation"
   tryCompare(playhead, "playing", false, 3000,
              "the second window Space reverses one transport activation")
   compare(session.velocityPage().promptOpen, true)
 
-S030 | test_cWindowShortcutsAndNumericOwnership Escape closes the prompt | src/checks/editorqml/tst_ShellWindow.qml:390-391
+S030 | test_cWindowShortcutsAndNumericOwnership Escape closes the prompt | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "promptOpen" #2
   keyClick(Qt.Key_Escape)
   tryCompare(session.velocityPage(), "promptOpen", false, 3000)
 
-S031 | test_cWindowShortcutsAndNumericOwnership production window bindings | src/checks/editorqml/tst_ShellWindow.qml:255
+S031 | test_cWindowShortcutsAndNumericOwnership production window bindings | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "native Copy is registered as a window shortcut"
   verify(shell.shellPresenter.actionSequences("roll.copy").length > 0); compare(shell.shellPresenter.actionSequences("roll.solo_tracks")[0], "S"); compare(shell.shellPresenter.actionSequences("transport.play_pause")[0], "Space")
 
-S032 | ShellQmlBootstrap.setVelocityCommand | src/checks/editorqml/ShellQmlTests.swift:198
+S032 | setVelocityCommand | src/checks/editorqml/ShellQmlTests.swift
+Anchor: function
   public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }; the row drives it through
   session.performGridCommand(bootstrap.setVelocityCommand())

@@ -5,9 +5,7 @@ Reference revision: f2b0b0451b911e7f7faef860f26f04f63f460ffe
 Original: src/checks/editcheck/tst_songdocument_logic.cpp
 Original SHA-256: f7b940c2e589c8fc69d2a17ab0ab4db3e424db7d8d3bfbdff8c99995d2fe7c39
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 Swift counterpart: src/checks/editcheck/NoteIdentityChecks.swift
-Swift SHA-256: 52513cd651c0e220145da4c8c78667e3429d86c90416f205d0a83d4176a5c696
 Covered native implementation: src/core/noteid.h, src/core/miditimeline.cpp :: note ID assignment, adoption reminting, timeline transport.
 Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
@@ -443,154 +441,189 @@ Original expression:
   QVERIFY(ordinaryUnassigned);
 
 Swift assertion predicates
-Every report.expect/expectEqual/fail call in adoptionAndPairing and noteIdentityContracts; identity cppID constants are declared at NoteIdentityChecks.swift:3-6.
+Every report.expect/expectEqual/fail call in adoptionAndPairing and noteIdentityContracts; identity cppID constants are declared at NoteIdentityChecks.swift.
 
-S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
+S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "all note-ons projected"
   report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:48
+S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "first following matching ends pair exactly"
   report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "first following matching ends pair exactly")
 
-S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
+S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "unterminated note is preserved"
   report.expect(notes[2].isUnterminated,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "unterminated note is preserved")
 
-S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:54
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "adoption remints unique document identities"
   report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
                     cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
                     message: "adoption remints unique document identities")
 
-S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:57
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "typed tempo is removed from raw chunks"
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                     cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                     message: "typed tempo is removed from raw chunks")
 
-S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "valid conductor tempo becomes typed state"
   report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
                          document.state.tempo,
                          cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                          what: "valid conductor tempo becomes typed state")
 
-S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:66
+S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "serialized MIDI carries no note identity"
   report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
           .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
           cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
           message: "serialized MIDI carries no note identity")
 
-S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:70
+S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "note-end status is retained during adoption"
   report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")
 
-S009 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:22
+S009 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "decoded MIDI retains one chunk"
   report.expectEqual(1, decoded.chunks.count, cppID: parsedIdentityID,
                      what: "decoded MIDI retains one chunk")
 
-S010 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:25
+S010 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "decoded MIDI retains three lifecycle events"
   report.expectEqual(3, events.count, cppID: parsedIdentityID,
                      what: "decoded MIDI retains three lifecycle events")
 
-S011 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:28
+S011 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "first duplicate is a note-on"
   report.expect(events[0].isNoteOn, cppID: parsedIdentityID,
                 message: "first duplicate is a note-on")
 
-S012 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:30
+S012 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "second duplicate is a note-on"
   report.expect(events[1].isNoteOn, cppID: parsedIdentityID,
                 message: "second duplicate is a note-on")
 
-S013 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:32
+S013 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "third event is a note-end"
   report.expect(events[2].isNoteEnd, cppID: parsedIdentityID,
                 message: "third event is a note-end")
 
-S014 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:34
+S014 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "first parsed note-on has no identity"
   report.expect(!(events[0].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
                 message: "first parsed note-on has no identity")
 
-S015 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:36
+S015 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "second parsed note-on has no identity"
   report.expect(!(events[1].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
                 message: "second parsed note-on has no identity")
 
-S016 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:38
+S016 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "parsed note-end has no identity"
   report.expect(!(events[2].noteID?.isAssigned ?? false), cppID: parsedIdentityID,
                 message: "parsed note-end has no identity")
 
-S017 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:48
+S017 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "two raw note-ons reach playback"
   report.expectEqual(2, rawOns.count, cppID: parsedIdentityID,
                      what: "two raw note-ons reach playback")
 
-S018 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:50
+S018 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "raw playback does not mint note-on identities"
   report.expect(rawOns.allSatisfy { !$0.noteID.isAssigned }, cppID: parsedIdentityID,
                 message: "raw playback does not mint note-on identities")
 
-S019 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:52
+S019 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "raw playback note-end remains unassigned"
   report.expect(rawEnds.count == 1 && !rawEnds[0].noteID.isAssigned,
                 cppID: parsedIdentityID, message: "raw playback note-end remains unassigned")
 
-S020 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:56
+S020 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: function
   report.fail(parsedIdentityID, "MIDI encode/decode failed: \(error)")
 
-S021 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:61
+S021 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "initial adoption projects two assigned, distinct note-ons"
   report.expect(original.count == 2 && original.allSatisfy(\.isAssigned)
                 && Set(original).count == 2, cppID: adoptedIdentityID,
                 message: "initial adoption projects two assigned, distinct note-ons")
 
-S022 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:72
+S022 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "readoption followed by insertion produces three notes"
   report.expectEqual(3, ids.count, cppID: adoptedIdentityID,
                      what: "readoption followed by insertion produces three notes")
 
-S023 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:74
+S023 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "every readopted and newly inserted identity is assigned"
   report.expect(ids.allSatisfy(\.isAssigned), cppID: adoptedIdentityID,
                 message: "every readopted and newly inserted identity is assigned")
 
-S024 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:76
+S024 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "readopted and newly inserted identities are pairwise distinct"
   report.expectEqual(ids.count, Set(ids).count, cppID: adoptedIdentityID,
                      what: "readopted and newly inserted identities are pairwise distinct")
 
-S025 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:79
+S025 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: function
   report.fail(adoptedIdentityID, "adding a note after readoption failed: \(error)")
 
-S026 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:84
+S026 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "first synthetic identity is assigned"
   report.expect(firstID.isAssigned, cppID: equalityIdentityID,
                 message: "first synthetic identity is assigned")
 
-S027 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:86
+S027 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "second synthetic identity is assigned"
   report.expect(secondID.isAssigned, cppID: equalityIdentityID,
                 message: "second synthetic identity is assigned")
 
-S028 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:88
+S028 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "synthetic identities differ"
   report.expect(firstID != secondID, cppID: equalityIdentityID,
                 message: "synthetic identities differ")
 
-S029 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:93
+S029 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "otherwise identical MIDI events compare equal despite different IDs"
   report.expect(stamped.chunks[0].events[0] == stamped.chunks[0].events[1],
                 cppID: equalityIdentityID,
                 message: "otherwise identical MIDI events compare equal despite different IDs")
 
-S030 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:97
+S030 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "stamped and unstamped MIDI serialize identically"
   report.expectEqual(try source.encoded(), try stamped.encoded(),
                      cppID: equalityIdentityID,
                      what: "stamped and unstamped MIDI serialize identically")
 
-S031 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:101
+S031 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: function
   report.fail(equalityIdentityID, "MIDI serialization failed: \(error)")
 
-S032 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:109
+S032 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "both stamped note-ons reach playback"
   report.expectEqual(2, stampedOns.count, cppID: timelineIdentityID,
                      what: "both stamped note-ons reach playback")
 
-S033 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:111
+S033 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "first stamped identity reaches playback"
   report.expect(stampedOns.contains { $0.noteID == firstID }, cppID: timelineIdentityID,
                 message: "first stamped identity reaches playback")
 
-S034 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:113
+S034 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "second stamped identity reaches playback"
   report.expect(stampedOns.contains { $0.noteID == secondID }, cppID: timelineIdentityID,
                 message: "second stamped identity reaches playback")
 
-S035 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift:115
+S035 | noteIdentityContracts | src/checks/editcheck/NoteIdentityChecks.swift
+Anchor: message "playback note-end stays unassigned"
   report.expect(stampedEnds.count == 1 && !stampedEnds[0].noteID.isAssigned,
                 cppID: timelineIdentityID, message: "playback note-end stays unassigned")

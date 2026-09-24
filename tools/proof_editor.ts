@@ -1,16 +1,17 @@
 // Edit one selected proof section without regenerating or inferring correspondence.
 import {
-  counts,
-  loadProof,
-  parseProof,
-  reconcileTally,
-} from "./proof_reader.ts";
+  parseAnchorLine,
+  parsePredicateHeader,
+  resolveAnchor,
+} from "./proof_anchor.ts";
+import { counts, loadProof, parseProof } from "./proof_reader.ts";
 import type { Entry, Proof, Site } from "./proof_reader.ts";
 
 const HELP =
   `usage: deno task proof:edit <source-or-proof-path> <A###|S###|Original N|header> --before <exact text> --after <replacement> [--apply]
   Preview an exact, unique replacement within one proof entry. --apply writes it.
   A disposition change must also change that site's Mapping or Mapping/reason line.
+  An S edit must keep exactly one Anchor: line that resolves to its cited source.
   The command preserves entry IDs and validates proof structure, but cannot prove
   source freshness, execution, or correspondence. Inspect the source first.
 
@@ -74,6 +75,51 @@ function assertPreserved(
   }
 }
 
+async function assertAnchorResolves(changed: string): Promise<void> {
+  const changedLines = changed.split("\n");
+  const header = parsePredicateHeader(changedLines[0].trim());
+  if (!header) {
+    throw new Error(
+      "edited S entry header must be `S### | function | src/path` without a line suffix",
+    );
+  }
+  const anchors = changedLines.filter((line) =>
+    line.trim().startsWith("Anchor:")
+  );
+  if (anchors.length !== 1) {
+    throw new Error(
+      `edited S entry must keep exactly one Anchor: line, found ${anchors.length}`,
+    );
+  }
+  const anchor = parseAnchorLine(anchors[0].trim());
+  if (!anchor) {
+    throw new Error(
+      `edited S entry has an unparseable Anchor: line: ${anchors[0].trim()}`,
+    );
+  }
+  let source: string | undefined;
+  try {
+    source = await Deno.readTextFile(header.path);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+    source = undefined;
+  }
+  if (anchor.kind === "deleted") {
+    if (source !== undefined) {
+      throw new Error(
+        "a deleted anchor is allowed only when the cited file is missing",
+      );
+    }
+    return;
+  }
+  const resolution = resolveAnchor(source, header.functionField, anchor);
+  if (!resolution.ok) {
+    throw new Error(
+      `edited S entry anchor does not resolve: ${resolution.reason}`,
+    );
+  }
+}
+
 async function replace(
   proof: Proof,
   id: string,
@@ -108,34 +154,19 @@ async function replace(
     );
   }
   const changed = text.replace(before, after);
-  let result = [
+  if (
+    current.predicates.some((predicate) =>
+      predicate.id.toUpperCase() === id.toUpperCase()
+    )
+  ) {
+    await assertAnchorResolves(changed);
+  }
+  const result = [
     ...lines.slice(0, start),
     ...changed.split("\n"),
     ...lines.slice(end),
   ].join(newline);
-  let updated = parseProof(proof.path, result);
-  let tallyChange: [string, string] | undefined;
-  if (
-    site &&
-    updated.sites.find((item) => item.id === site.id)?.status !== site.status
-  ) {
-    const tallyIndex = lines.findIndex((line) => line.startsWith("Tally:"));
-    if (tallyIndex !== -1) {
-      const oldTally = lines[tallyIndex];
-      const resultLines = result.split(/\r?\n/);
-      const nextTallyIndex = resultLines.findIndex((line) =>
-        line.startsWith("Tally:")
-      );
-      const updatedTally = reconcileTally(
-        resultLines[nextTallyIndex],
-        updated.sites,
-      );
-      resultLines[nextTallyIndex] = updatedTally;
-      result = resultLines.join(newline);
-      updated = parseProof(proof.path, result);
-      tallyChange = [oldTally, updatedTally];
-    }
-  }
+  const updated = parseProof(proof.path, result);
   assertPreserved(current, updated, site);
   console.log(
     `${proof.path}:${start + 1} ${id} ${
@@ -143,13 +174,6 @@ async function replace(
     }`,
   );
   console.log(`- ${JSON.stringify(before)}\n+ ${JSON.stringify(after)}`);
-  if (tallyChange) {
-    console.log(
-      `Tally: ${JSON.stringify(tallyChange[0])} → ${
-        JSON.stringify(tallyChange[1])
-      }`,
-    );
-  }
   if (!apply) {
     console.log(
       `Counts before: ${counts(current.sites)}\nCounts proposed: ${

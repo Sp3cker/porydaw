@@ -4,13 +4,9 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationactions.cpp
 Original SHA-256: 32f5e5de2ff62c9d9bf4b0c9b8b73f462a356dd2f83a5f22bfba1e65fad98768
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: d00e05534bcb9e621426c20fbe36aca9d386c8fb906c735901b97509f866fea1
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
-Swift SHA-256: 5d487adf3c2e316b00eae469f838e13eb76ee610c3329c23f85d6076849c1be3
 Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
-Swift SHA-256: 1815b25fa9324fe0c694879db826643105c7fc5563408e0335dbe1d21f91159e
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -29,9 +25,9 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 The shortcut-delivery predicates S028-S029 execute from runKeybindingRegistryChecks
 (src/checks/keyboard/KeybindingRegistryChecks.swift) through runProjectSessionSuite
-(SessionChecks.swift:11, swiftcore lane) and through the shellwindow lane bootstrap
-(ShellQmlTests.swift:169, reached from test_aKeymapNativeSettingsSeeds at
-tst_ShellWindow.qml:181). S030-S034 execute in the shellwindow lane as
+(SessionChecks.swift, swiftcore lane) and through the shellwindow lane bootstrap
+(ShellQmlTests.swift, reached from test_aKeymapNativeSettingsSeeds at
+tst_ShellWindow.qml). S030-S034 execute in the shellwindow lane as
 test_fPencilLatchTextAndSpaceOwnership over the same tst_ShellWindow.qml.
 
 Verification evidence
@@ -45,9 +41,9 @@ lane executes the tst_ShellWindow.qml rows cited by S030-S034 and re-runs
 runKeybindingRegistryChecks (S028/S029, S035) through ShellQmlTests.registryFailures. The legacy automation C++ harness is retired, so this file is an
 assertion-obligation inventory, never current execution evidence for the C++ original.
 Converted-window command: deno task verify:qml --verbose.
-drawerAutomationProjectionInsertionAndPencilClick (automationactions.swift:98) is called at
+drawerAutomationProjectionInsertionAndPencilClick (automationactions.swift) is called at
 the end of drawerAutomationProjectionValueBounds, registered by runAutomationPageChecks at
-AutomationPageChecks.swift:380, and executes under cppID
+AutomationPageChecks.swift, and executes under cppID
 automation/AutomationEditingTest::projectionInsertionTiming and cppID
 automation/AutomationEditingTest::pencilClickHalfOpenQuantization. Its indexed statements
 are S020-S027 below.
@@ -77,7 +73,7 @@ Original expression:
 
 A003 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:41
 Disposition: MATCHED
-Mapping/reason: S030 asserts a B press delivered to the focused roll turns BOTH grid.pencilMode and automation.isPencilMode true from the verified-false start state, the same production sync that mirrors the grid flag onto the automation page (ApplicationSession.swift:867-871); this site reads that latch back from the action. [S030]
+Mapping/reason: S030 asserts a B press delivered to the focused roll turns BOTH grid.pencilMode and automation.isPencilMode true from the verified-false start state, the same production sync that mirrors the grid flag onto the automation page (ApplicationSession.swift); this site reads that latch back from the action. [S030]
 Original expression:
   QVERIFY(action->isChecked())
 
@@ -388,37 +384,43 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:12
+S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "no Qt bit arms no policy"
 Swift expression:
   report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
                          what: "no Qt bit arms no policy")
 
-S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:14
+S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's shift bit arms the ramp and axis-lock policy"
 Swift expression:
   report.expectEqual(AutomationModifiers(shift: true),
                          AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's shift bit arms the ramp and axis-lock policy")
 
-S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:17
+S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's control bit arms the value snap"
 Swift expression:
   report.expectEqual(AutomationModifiers(snapValue: true),
                          AutomationQtModifier.automation(AutomationQtModifier.control),
                          cppID: drawerAutomationModifierMappingID,
                          what: "Qt's control bit arms the value snap")
 
-S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:21
+S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's alt bit arms the fine lattice"
 Swift expression:
   report.expectEqual(AutomationModifiers(fine: true),
                          AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's alt bit arms the fine lattice")
 
-S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:24
+S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "Qt's meta bit arms nothing"
 Swift expression:
   report.expectEqual(AutomationModifiers(),
                          AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
                          what: "Qt's meta bit arms nothing")
 
-S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:27
+S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the three policy bits compose through the same mapping"
 Swift expression:
   report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
                          AutomationQtModifier.automation(AutomationQtModifier.shift
@@ -427,120 +429,142 @@ Swift expression:
                          cppID: drawerAutomationModifierMappingID,
                          what: "the three policy bits compose through the same mapping")
 
-S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:39
+S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the Qt bits that policy composes to map back to it"
 Swift expression:
   report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
                              cppID: drawerAutomationModifierMappingID,
                              what: "the Qt bits that policy composes to map back to it")
 
-S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:52
+S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the neutral radius covers more than one value step"
 Swift expression:
   report.expect(threshold > 1, cppID: drawerAutomationModifierMappingID,
                     message: "the neutral radius covers more than one value step")
 
-S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:56
+S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the pointer route took the drag without a Qt modifier bit"
 Swift expression:
   report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
                     cppID: drawerAutomationModifierMappingID,
                     message: "the pointer route took the drag without a Qt modifier bit")
 
-S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:59
+S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "a drag without the Qt control bit keeps the dragged value"
 Swift expression:
   report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
                          what: "a drag without the Qt control bit keeps the dragged value")
 
-S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:64
+S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the pointer route took the drag carrying the Qt control bit"
 Swift expression:
   report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
                                  modifiers: AutomationQtModifier.control),
                     cppID: drawerAutomationModifierMappingID,
                     message: "the pointer route took the drag carrying the Qt control bit")
 
-S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:68
+S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
+Anchor: message "the Qt control bit a QML event carries lands the drag on the neutral"
 Swift expression:
   report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                          what: "the Qt control bit a QML event carries lands the drag on the neutral")
 
-S013 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift:88
+S013 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
+Anchor: message "the value axis minimum maps back to zero"
 Swift expression:
   report.expectEqual(0, projection.value(atY: yMin, metadata: metadata), cppID: id,
                      what: "the value axis minimum maps back to zero")
 
-S014 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift:90
+S014 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
+Anchor: message "the value axis maximum maps back to full scale"
 Swift expression:
   report.expectEqual(127, projection.value(atY: yMax, metadata: metadata), cppID: id,
                      what: "the value axis maximum maps back to full scale")
 
-S015 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift:92
+S015 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
+Anchor: message "the neutral value maps within a pixel of the lane midpoint"
 Swift expression:
   report.expect(abs(projection.y(64, metadata: metadata) - 60) < 1.0, cppID: id,
                 message: "the neutral value maps within a pixel of the lane midpoint")
 
-S016 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:61
+S016 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a cell is half-open and inside the song"
 Swift expression:
   report.expect(cell.tickBegin < cell.tickEnd && cell.tickEnd <= fixture.songEndTick,
                     cppID: drawerAutomationLayoutID, message: "a cell is half-open and inside the song")
 
-S017 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift:68
+S017 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the song's end belongs to the cell that ends there"
 Swift expression:
   report.expectEqual(fixture.songEndTick, endCell.tickEnd, cppID: drawerAutomationLayoutID,
                          what: "the song's end belongs to the cell that ends there")
 
-S018 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+S018 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the row stack carries one row per catalog parameter"
 Swift expression:
   report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
                          what: "the row stack carries one row per catalog parameter")
 
-S019 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+S019 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift
+Anchor: message "the Tempo row leads the stack"
 Swift expression:
   report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
                          what: "the Tempo row leads the stack")
 
-S020 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:118
+S020 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "the intermediate position is neither the cell begin nor caret"
 Swift expression:
   report.expect(rawTick != Double(mappedCell.tickBegin) && rawTick != Double(caretTick),
                 cppID: timingID, message: "the intermediate position is neither the cell begin nor caret")
 
-S021 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:120
+S021 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "pencil insertion floors to the half-open cell begin"
 Swift expression:
   report.expectEqual(mappedCell.tickBegin, projection.insertionTick(atX: x, pencil: true),
                      cppID: timingID, what: "pencil insertion floors to the half-open cell begin")
 
-S022 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:122
+S022 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "non-pencil insertion uses the fine-grid caret"
 Swift expression:
   report.expectEqual(caretTick, projection.insertionTick(atX: x, pencil: false),
                      cppID: timingID, what: "non-pencil insertion uses the fine-grid caret")
 
-S023 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:132
+S023 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "the first half-open cell holds the clicked value"
 Swift expression:
   report.expectEqual([72], fixture.lanePoints(fixture.panLane)
       .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
       cppID: clickID, what: "the first half-open cell holds the clicked value")
 
-S024 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:137
+S024 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "the following cell is a nonempty half-open interval"
 Swift expression:
   report.expect(following.tickBegin < following.tickEnd, cppID: clickID,
                 message: "the following cell is a nonempty half-open interval")
 
-S025 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:147
+S025 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "the first cell survives the following click"
 Swift expression:
   report.expectEqual([72], fixture.lanePoints(fixture.panLane)
       .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
       cppID: clickID, what: "the first cell survives the following click")
 
-S026 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:150
+S026 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "the following half-open cell holds the second clicked value"
 Swift expression:
   report.expectEqual([96], fixture.lanePoints(fixture.panLane)
       .filter { $0.tick == following.tickBegin }.map(\.value),
       cppID: clickID, what: "the following half-open cell holds the second clicked value")
 
-S027 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift:167
+S027 | drawerAutomationProjectionInsertionAndPencilClick | src/checks/automation/automationactions.swift
+Anchor: message "a late-cell click still writes at the half-open cell begin"
 Swift expression:
   report.expectEqual([72], biased.lanePoints(biased.panLane)
       .filter { $0.tick == cell.tickBegin }.map(\.value),
       cppID: clickID, what: "a late-cell click still writes at the half-open cell begin")
 
-S028 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:92
+S028 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
 Swift expression:
   for row in scopeRows {
       onAssertion(registry.scope(row.id) == row.expected, deliveryScopes, row.id)
@@ -550,7 +574,8 @@ Swift expression:
       binding's presence and its editor-routed delivery scope.
       cppID: KeymapCheckTest::deliveryScopes.
 
-S029 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift:104
+S029 | runKeybindingRegistryChecks (deliveryScopes) | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: function
 Swift expression:
   onAssertion(
       registry.sequences("automation.pencil_mode").map(\.strokes) ==
@@ -561,14 +586,16 @@ Swift expression:
       QtKeyCode.b.rawValue, QtKeyboardModifier.none.rawValue, true) at :122 asserting
       registry.matches(0x42, 0, "automation.pencil_mode"). cppID: KeymapCheckTest::deliveryScopes.
 
-S030 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:558
+S030 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: function
 Swift expression:
   keyPress(Qt.Key_B) with tryCompare(grid, "pencilMode", true, 3000) at :559 and
   tryCompare(automation, "isPencilMode", true, 3000) at :560, after
   compare(grid.pencilMode, false) and compare(automation.isPencilMode, false) at :554-555
   establish the off state; automation is session.automationPage().
 
-S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:616-620
+S031 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the pencil latch survives the B hold without release"
 Swift expression:
   compare(grid.pencilMode, true, "the pencil latch survives the B hold without release")
   compare(automation.isPencilMode, true, "holding B preserves automation pencil mode")
@@ -576,7 +603,8 @@ Swift expression:
   compare(grid.pencilMode, true, "releasing B keeps the pencil latched")
   compare(automation.isPencilMode, true, "releasing B keeps automation pencil latched")
 
-S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:575
+S032 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "releasing the second B preserves the off state"
 Swift expression:
   keyPress(Qt.Key_B) at :575 with tryCompare(grid, "pencilMode", false, 3000) at :576 and
   tryCompare(automation, "isPencilMode", false, 3000) at :577; keyRelease(Qt.Key_B) at :578;
@@ -584,7 +612,8 @@ Swift expression:
   and compare(automation.isPencilMode, false, "releasing the second B preserves the
   automation off state") at :580-581.
 
-S033 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:587
+S033 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: function
 Swift expression:
   textProbe.forceActiveFocus(Qt.OtherFocusReason) at :587 with
   tryCompare(textProbe, "activeFocus", true, 3000) at :588; keyClick(Qt.Key_B) at :589;
@@ -593,7 +622,8 @@ Swift expression:
   compare(automation.isPencilMode, false, "text-field B never changes automation pencil
   mode") at :592-593.
 
-S034 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml:601
+S034 | test_fPencilLatchTextAndSpaceOwnership | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "numeric B never changes automation pencil mode"
 Swift expression:
   var field = findChild(surface, "noteVelocityInput") at :599 with
   tryCompare(field, "activeFocus", true, 3000) at :601; keyClick(Qt.Key_B) at :603;
@@ -602,7 +632,8 @@ Swift expression:
   compare(automation.isPencilMode, false, "numeric B never changes automation pencil mode")
   at :606-607.
 
-S035 | test_aKeymapNativeSettingsSeeds (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml:181
+S035 | test_aKeymapNativeSettingsSeeds (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "; "
 Swift expression:
   var failures = bootstrap.registryFailures();
   compare(failures.length, 0, "the complete native keymap assertions: " + failures.join("; "))

@@ -4,7 +4,6 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
 Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry
-Swift SHA-256: 082d48e525b63b67e283a691fd43edce36eae437fe4dd1b287c087a717bcbb75
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
@@ -24,7 +23,6 @@ Fixture, sequence and row constraints
 Every case opens with the host.prepare guard; band-geometry cases expand one QCOMPARE site per published band row (rect, plot, visibility entries). The four physicalInputsMatchCanonical calls expand input-parity obligations across pointer surfaces. Velocity/roll plot assertions expand over the track-headers, keyboard, and drawer-body geometry rows.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 15, PARTIAL 0, GAP 93, NATIVE 0, RETIRED-REPRESENTATION 87.
 
 Original assertion inventory and source sequence
 
@@ -547,7 +545,7 @@ Original expression:
 
 A042 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:191
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: C++ TimelineBandLayout velocity rect.x == track-headers width (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165-166 (velocityPlotRect.x == split).
+Mapping/reason: Retired host representation: C++ TimelineBandLayout velocity rect.x == track-headers width (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml (velocityPlotRect.x == split).
 Source context since previous assertion:
   ;
 
@@ -556,7 +554,7 @@ Original expression:
 
 A043 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:192
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165-166 test_mountedRulerRollVelocityAndDrawerChromeGeometry (velocityPlotRect.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (velocityPlotRect.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -565,7 +563,7 @@ Original expression:
 
 A044 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:193
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165-166 test_mountedRulerRollVelocityAndDrawerChromeGeometry (rollPlotRect.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (rollPlotRect.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -574,7 +572,7 @@ Original expression:
 
 A045 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:194
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: C++ TimelineBandLayout velocity plot offset == piano-keyboard width (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165-166 (velocityPlotRect.x == split).
+Mapping/reason: Retired host representation: C++ TimelineBandLayout velocity plot offset == piano-keyboard width (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml (velocityPlotRect.x == split).
 Source context since previous assertion:
   ;
 
@@ -583,7 +581,7 @@ Original expression:
 
 A046 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:195
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:175 test_mountedRulerRollVelocityAndDrawerChromeGeometry (rollPlotRect.x - rollRect.x == keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (rollPlotRect.x - rollRect.x == keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -592,7 +590,7 @@ Original expression:
 
 A047 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:196
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: C++ editorDrawer()->bodyRect QWidget matched to the velocity band rect (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165-166 (velocityPlotRect.x == split).
+Mapping/reason: Retired host representation: C++ editorDrawer()->bodyRect QWidget matched to the velocity band rect (band-frame origin) has no Swift ingress — Swift drawer body is body-local (bodyX=0); uncompiled in all CMake targets and unregistered in checkcatalog. Visible plot alignment at the split is proved by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml (velocityPlotRect.x == split).
 Source context since previous assertion:
   ;
 
@@ -848,7 +846,7 @@ Original expression:
 
 A071 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:260
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:140 test_mountedRulerRollVelocityAndDrawerChromeGeometry (tryVerify body.visible && velocityHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (tryVerify body.visible && velocityHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -857,7 +855,7 @@ Original expression:
 
 A072 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:261
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:183 test_mountedRulerRollVelocityAndDrawerChromeGeometry (!automationHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (!automationHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -866,7 +864,7 @@ Original expression:
 
 A073 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:262
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:183 test_mountedRulerRollVelocityAndDrawerChromeGeometry (!voiceHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (!voiceHandle.visible); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -884,7 +882,7 @@ Original expression:
 
 A075 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:264
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:184-185 test_mountedRulerRollVelocityAndDrawerChromeGeometry (velocityHandle bottom == bodyRect.y); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (velocityHandle bottom == bodyRect.y); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -893,7 +891,7 @@ Original expression:
 
 A076 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:265
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:186 test_mountedRulerRollVelocityAndDrawerChromeGeometry (bodyRect bottom == bar.y); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (bodyRect bottom == bar.y); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -902,7 +900,7 @@ Original expression:
 
 A077 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:266
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:188-192 test_mountedRulerRollVelocityAndDrawerChromeGeometry (voice/automation/velocity toggle ordering with equal bar spacing); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (voice/automation/velocity toggle ordering with equal bar spacing); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -913,7 +911,7 @@ Original expression:
 
 A078 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:269
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:190-192 test_mountedRulerRollVelocityAndDrawerChromeGeometry (automation/velocity toggle gaps equal with bar spacing); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (automation/velocity toggle gaps equal with bar spacing); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -986,7 +984,7 @@ Original expression:
 
 A084 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:294
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:196 test_mountedRulerRollVelocityAndDrawerChromeGeometry (scroll.width == scrollbarWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (scroll.width == scrollbarWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -995,7 +993,7 @@ Original expression:
 
 A085 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:295
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:197 test_mountedRulerRollVelocityAndDrawerChromeGeometry (scroll.visible == maximumScrollY > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (scroll.visible == maximumScrollY > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -1004,7 +1002,7 @@ Original expression:
 
 A086 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:296
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:198 test_mountedRulerRollVelocityAndDrawerChromeGeometry (thumb.visible == maximumScrollY > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (thumb.visible == maximumScrollY > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -1013,7 +1011,7 @@ Original expression:
 
 A087 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:297
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:165 test_mountedRulerRollVelocityAndDrawerChromeGeometry (rulerPlot.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (rulerPlot.x == split == trackHeaderWidth+keyboardWidth); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 
@@ -1023,7 +1021,7 @@ Original expression:
 
 A088 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:299
 Disposition: MATCHED
-Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:199 test_mountedRulerRollVelocityAndDrawerChromeGeometry (Screen.devicePixelRatio > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
+Mapping/reason: MATCHED by src/checks/rollqml/tst_SwiftRollTrackHeaders.qml test_mountedRulerRollVelocityAndDrawerChromeGeometry (Screen.devicePixelRatio > 0); executed green via deno task verify:qml-roll --filter swiftroll-window (post-merge fc39ba34).
 Source context since previous assertion:
   ;
 

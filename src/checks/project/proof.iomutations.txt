@@ -4,15 +4,10 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/project/iomutations.cpp
 Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
 Swift counterpart: src/checks/workspace/bank_edits.swift
-Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
 Swift counterpart: src/checks/workspace/session_io.swift
-Swift SHA-256: 2d67c3d8a2a13fb2686e7f7ef2c9d4b3fb12e5afa0cfd0b119f2e16a31b904d4
 Swift counterpart: src/checks/workspace/session_playback.swift
-Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 Swift counterpart: src/checks/workspace/session_save.swift
-Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -27,7 +22,7 @@ NATIVE identifies an observation only a native window/rendering/harness run can 
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 runProjectSessionSuite and runBankHistorySuite (SessionChecks.swift) own the paired Swift predicates via ProjectService/DocumentSession against staged swiftcore projects. The C++ ProjectIoFixture async deque, FileAside move-aside/restore brackets, and waitForResults/closed-ProjectIo helpers are C++-only.
@@ -1382,73 +1377,88 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:36
+S001 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift
+Anchor: message "initial tempo 120 BPM schedules exactly 24000 samples at tick 24"
   report.expectEqual(UInt64(24_000), initialSampleAt24,
                          cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
                          what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
 
-S002 | sessionSavePersistence | src/checks/workspace/session_save.swift:51
+S002 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "save leaves legacy sidecar JSON untouched"
   report.expect(legacyContent?.contains("\"protected\": true") == true,
                     cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
                     message: "save leaves legacy sidecar JSON untouched")
 
-S003 | sessionSavePersistence | src/checks/workspace/session_save.swift:90
+S003 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "reopen reproduces saved authoritative 150 BPM timing"
   report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
                              cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
                              what: "reopen reproduces saved authoritative 150 BPM timing")
 
-S004 | sessionSavePersistence | src/checks/workspace/session_save.swift:133
+S004 | sessionSavePersistence | src/checks/workspace/session_save.swift
+Anchor: message "tempo metas remain stripped while authoritative timing persists"
   report.expectEqual(false, reopenedHasTempoMeta,
                              cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
                              what: "tempo metas remain stripped while authoritative timing persists")
 
-S005 | sessionFailureStages | src/checks/workspace/session_io.swift:117
+S005 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "failed stage preserves MIDI file bytes"
   report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
                              what: "failed stage preserves MIDI file bytes")
 
-S006 | sessionFailureStages | src/checks/workspace/session_io.swift:119
+S006 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "failed stage preserves voicegroup file bytes"
   report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
                              what: "failed stage preserves voicegroup file bytes")
 
-S007 | sessionFailureStages | src/checks/workspace/session_io.swift:121
+S007 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "failed stage leaves document dirty"
   report.expectEqual(true, session.document.isDirty, cppID: cppID,
                              what: "failed stage leaves document dirty")
 
-S008 | sessionFailureStages | src/checks/workspace/session_io.swift:123
+S008 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "failed stage leaves bank dirty"
   report.expectEqual(true, session.bankDirty, cppID: cppID,
                              what: "failed stage leaves bank dirty")
 
-S009 | sessionFailureStages | src/checks/workspace/session_io.swift:134
+S009 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "reconcile stage reports the native playable-song failure"
   report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
                         cppID: reconcileID,
                         message: "reconcile stage reports the native playable-song failure")
 
-S010 | sessionFailureStages | src/checks/workspace/session_io.swift:152
+S010 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "MIDI stage reports its missing source file"
   report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
                             cppID: midiID,
                             message: "MIDI stage reports its missing source file")
 
-S011 | sessionFailureStages | src/checks/workspace/session_io.swift:173
+S011 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "voicegroup stage reports its missing source file"
   report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
                             cppID: voicegroupID,
                             message: "voicegroup stage reports its missing source file")
 
-S012 | sessionFailureStages | src/checks/workspace/session_io.swift:197
+S012 | sessionFailureStages | src/checks/workspace/session_io.swift
+Anchor: message "save stage reports the unwritable destination"
   report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
                         cppID: saveID,
                         message: "save stage reports the unwritable destination")
 
-S013 | bankConflicts | src/checks/workspace/bank_edits.swift:162
+S013 | bankConflicts | src/checks/workspace/bank_edits.swift
+Anchor: message "stale expected voice triggers bankConflict"
   report.expectEqual(ProjectServiceError.bankConflict, error,
                              cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                              what: "stale expected voice triggers bankConflict")
 
-S014 | bankConflicts | src/checks/workspace/bank_edits.swift:169
+S014 | bankConflicts | src/checks/workspace/bank_edits.swift
+Anchor: message "initial conflict leaves canUndo unchanged"
   report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
                          cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                          what: "initial conflict leaves canUndo unchanged")
 
-S015 | bankConflicts | src/checks/workspace/bank_edits.swift:172
+S015 | bankConflicts | src/checks/workspace/bank_edits.swift
+Anchor: message "initial conflict leaves canRedo unchanged"
   report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
                          cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                          what: "initial conflict leaves canRedo unchanged")

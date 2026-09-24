@@ -4,7 +4,6 @@ Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
 Original: src/checks/keyboard/tst_settingsdialog.cpp
 Original SHA-256: 23c2e40d1157d1005fb2dacffbbb2ba35b4e216b7f68a08aa0a43cee289f6b8f
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -18,7 +17,7 @@ deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 No dedicated --filter row names this native check, so the unfiltered integrated
 run is the vehicle; no Swift lane executes any of these predicates.
 

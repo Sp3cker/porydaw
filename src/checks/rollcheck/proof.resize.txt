@@ -4,15 +4,10 @@ Reference revision: 5f768e3401d74d5df185a6de5692595351156a9d
 Original: src/checks/rollcheck/resize.cpp
 Original SHA-256: 37b983c01f4d66212216d87b519d6de8da76b8fdeed6344195d40b59e246a7af
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Additional Swift counterpart: src/checks/rollcheck/resize.swift
-Additional Swift SHA-256: ce9b1ec1127a17782a74aecae30ac054a96e635a436601597eeac591473eb424
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml
-Additional Swift SHA-256: dff414a55b7131b777f5348885f268a6466af266f0e2fdbbf4968834a207bc0e
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
-Additional Swift SHA-256: 4538a7863acc6e39fbed17606e2bc1402eed7607058685780b7e0f1f6f5db726
 Additional Swift counterpart: src/checks/editorqml/tst_ShellNoteVisuals.qml
-Additional Swift SHA-256: 0c4e102040e4682e215720f4e2aa3829513afe9a14e873a78454762647d14223
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -110,7 +105,7 @@ QVERIFY2(d.key >= 0, "no free grid cell for the off-grid resize")
 
 A002 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:57
 Disposition: PARTIAL
-Mapping/reason: S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) drives a real pointer hover onto a wide note's edges in the production overlay and asserts the published cursorKind 3 with the QML cursorShape Qt.SizeHorCursor; S020/S021 (src/checks/rollcheck/resize.swift:373, :376) publish cursorKind 3 for the right and left edges. Unproved: the DPI-matched custom cursor bitmaps and that the left and right edge images are distinguishable pixmaps (the Swift cursor is a named shape, not a bitmap).
+Mapping/reason: S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) drives a real pointer hover onto a wide note's edges in the production overlay and asserts the published cursorKind 3 with the QML cursorShape Qt.SizeHorCursor; S020/S021 (src/checks/rollcheck/resize.swift, :376) publish cursorKind 3 for the right and left edges. Unproved: the DPI-matched custom cursor bitmaps and that the left and right edge images are distinguishable pixmaps (the Swift cursor is a named shape, not a bitmap).
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -141,7 +136,7 @@ QVERIFY2(leftImage != rightImage,
 
 A003 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:61
 Disposition: PARTIAL
-Mapping/reason: S021 (src/checks/rollcheck/resize.swift:376) asserts the left edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the left-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
+Mapping/reason: S021 (src/checks/rollcheck/resize.swift) asserts the left edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the left-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, leftHandle, Qt::NoButton, Qt::NoButton,
@@ -154,7 +149,7 @@ QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
 
 A004 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:66
 Disposition: PARTIAL
-Mapping/reason: S020 (src/checks/rollcheck/resize.swift:373) asserts the right edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift:127) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the right-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
+Mapping/reason: S020 (src/checks/rollcheck/resize.swift) asserts the right edge grip publishes cursorKind 3 and S023 (src/checks/rollcheck/resize.swift) asserts the grip targets the planted off-grid note; S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts the production overlay shows Qt.SizeHorCursor at an edge. Unproved: the right-drag custom cursor pixmap identity, since the Swift surface publishes a named cursor shape rather than a DPI-matched bitmap.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, rightHandle, Qt::NoButton, Qt::NoButton,
@@ -167,7 +162,7 @@ QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
 
 A005 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:78
 Disposition: MATCHED
-Mapping: S001 (src/checks/rollcheck/resize.swift:133-134) plants the same off-grid note (duration + duration/4) and drags its right edge to 1.9*duration, asserting the committed note keeps its tick with duration exactly 2*duration; S027 (src/checks/rollcheck/EditorGridCameraChecks.swift:794-796) asserts the same right-edge snap to the ruler grid.
+Mapping: S001 (src/checks/rollcheck/resize.swift) plants the same off-grid note (duration + duration/4) and drags its right edge to 1.9*duration, asserting the committed note keeps its tick with duration exactly 2*duration; S027 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the same right-edge snap to the ruler grid.
 Source context since previous assertion:
 ;
     const QPointF pull(view.camera().displayX(double(d.tick) + 1.9 * double(d.dur), 0.0, dpr),
@@ -186,7 +181,7 @@ QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &resized) && resized.durati
 
 A006 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:82
 Disposition: MATCHED
-Mapping: S002 (src/checks/rollcheck/resize.swift:136-138) executes a right-edge drag of the planted off-grid note, undoes to the planted document identity, and compares the restored serialized MIDI bytes with the pre-drag bytes.
+Mapping: S002 (src/checks/rollcheck/resize.swift) executes a right-edge drag of the planted off-grid note, undoes to the planted document identity, and compares the restored serialized MIDI bytes with the pre-drag bytes.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -264,7 +259,7 @@ QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &bBefore),
 
 A011 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:123
 Disposition: MATCHED
-Mapping: S003 (src/checks/rollcheck/resize.swift:191-192) presses the Ctrl+edge grip of the seeded pair and asserts the selection is exactly the grabbed note plus the seeded neighbour; S031 (src/checks/rollcheck/EditorGridCameraChecks.swift:837-840) asserts the stationary Ctrl+edge click joins the note to the selection.
+Mapping: S003 (src/checks/rollcheck/resize.swift) presses the Ctrl+edge grip of the seeded pair and asserts the selection is exactly the grabbed note plus the seeded neighbour; S031 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the stationary Ctrl+edge click joins the note to the selection.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseButtonPress, edge, Qt::LeftButton, Qt::LeftButton,
@@ -281,7 +276,7 @@ QVERIFY2(selection.size() == 2 &&
 
 A012 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:128
 Disposition: MATCHED
-Mapping: S004 (src/checks/rollcheck/resize.swift:193-194) asserts the grabbed note keeps its 2*duration after the stationary Ctrl+edge click; S031 (src/checks/rollcheck/EditorGridCameraChecks.swift:837-840) asserts the joined note is not resized.
+Mapping: S004 (src/checks/rollcheck/resize.swift) asserts the grabbed note keeps its 2*duration after the stationary Ctrl+edge click; S031 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the joined note is not resized.
 Source context since previous assertion:
 ;
     DocNote still;
@@ -292,7 +287,7 @@ QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &still) && still.duration =
 
 A013 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:130
 Disposition: MATCHED
-Mapping: S005 (src/checks/rollcheck/resize.swift:195-196) asserts the stationary Ctrl+edge click leaves the history identity and the document revision unchanged, i.e. pushed no command.
+Mapping: S005 (src/checks/rollcheck/resize.swift) asserts the stationary Ctrl+edge click leaves the history identity and the document revision unchanged, i.e. pushed no command.
 Source context since previous assertion:
 ;
 
@@ -301,7 +296,7 @@ QCOMPARE(doc.undoStack()->count(), count)
 
 A014 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:142
 Disposition: MATCHED
-Mapping: S006 (src/checks/rollcheck/resize.swift:204) drags the Ctrl+edge grip exactly one cell width off a 2*duration note and asserts the grabbed note ends at 3*duration; S029 (src/checks/rollcheck/EditorGridCameraChecks.swift:846-851) asserts the same grabbed-note growth.
+Mapping: S006 (src/checks/rollcheck/resize.swift) drags the Ctrl+edge grip exactly one cell width off a 2*duration note and asserts the grabbed note ends at 3*duration; S029 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the same grabbed-note growth.
 Source context since previous assertion:
 ;
     const qreal cellPx = view.camera().displayX(double(d.tick + 3 * d.dur), 0.0, dpr) -
@@ -322,7 +317,7 @@ QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &dAfter) && dAfter.duration
 
 A015 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:144
 Disposition: MATCHED
-Mapping: S007 (src/checks/rollcheck/resize.swift:206-208) asserts the rest of the selection grows by exactly one cell (bBefore.duration + d.duration); S029 (src/checks/rollcheck/EditorGridCameraChecks.swift:846-851) asserts the joined selection note grows with the drag.
+Mapping: S007 (src/checks/rollcheck/resize.swift) asserts the rest of the selection grows by exactly one cell (bBefore.duration + d.duration); S029 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the joined selection note grows with the drag.
 Source context since previous assertion:
 ;
 
@@ -333,7 +328,7 @@ QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &bAfter) &&
 
 A016 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:147
 Disposition: PARTIAL
-Mapping/reason: S008 (src/checks/rollcheck/resize.swift:209-211) asserts the selection resize gesture advances the document revision by exactly one and changes the recorded history identity. Unproved: the command-count delta itself — revision advance corroborates a commit but is not history depth, so the single-command claim is asserted only indirectly.
+Mapping/reason: S008 (src/checks/rollcheck/resize.swift) asserts the selection resize gesture advances the document revision by exactly one and changes the recorded history identity. Unproved: the command-count delta itself — revision advance corroborates a commit but is not history depth, so the single-command claim is asserted only indirectly.
 Source context since previous assertion:
 ;
 
@@ -342,7 +337,7 @@ QCOMPARE(doc.undoStack()->count(), count + 1)
 
 A017 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:151
 Disposition: MATCHED
-Mapping: S009 (src/checks/rollcheck/resize.swift:212-215) undoes the selection resize to the planted document identity and compares the restored serialized MIDI bytes with the pre-drag pair bytes; the check's defer drains the remaining history.
+Mapping: S009 (src/checks/rollcheck/resize.swift) undoes the selection resize to the planted document identity and compares the restored serialized MIDI bytes with the pre-drag pair bytes; the check's defer drains the remaining history.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -369,7 +364,7 @@ QVERIFY2(d.key >= 0, "no free grid cell for the minimum resize")
 
 A019 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:180
 Disposition: MATCHED
-Mapping: S010 (src/checks/rollcheck/resize.swift:249-251) plants the same 2*duration note, drags its right edge past the start, and asserts the committed note keeps its tick with duration clamped to one snap cell; S028 (src/checks/rollcheck/EditorGridCameraChecks.swift:809-811) asserts the same overshoot clamp.
+Mapping: S010 (src/checks/rollcheck/resize.swift) plants the same 2*duration note, drags its right edge past the start, and asserts the committed note keeps its tick with duration clamped to one snap cell; S028 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the same overshoot clamp.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -400,7 +395,7 @@ QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &collapsed) && collapsed.du
 
 A020 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:186
 Disposition: PARTIAL
-Mapping/reason: S022 (src/checks/rollcheck/resize.swift:379-380) asserts the note body publishes cursorKind 0 (arrow) once the pointer is clear of the edge grips, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:320-321) asserts the production roll's cursorShape returns to the arrow over the note body. Unproved: the native Qt.ArrowCursor shape on the legacy input item.
+Mapping/reason: S022 (src/checks/rollcheck/resize.swift) asserts the note body publishes cursorKind 0 (arrow) once the pointer is clear of the edge grips, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts the production roll's cursorShape returns to the arrow over the note body. Unproved: the native Qt.ArrowCursor shape on the legacy input item.
 Source context since previous assertion:
 ;
     const QPointF middle(view.camera().displayX(double(d.tick + snap), 0.0, dpr) - 6,
@@ -413,7 +408,7 @@ QCOMPARE(roll.cursor().shape(), Qt::ArrowCursor)
 
 A021 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:197
 Disposition: MATCHED
-Mapping: S011 (src/checks/rollcheck/resize.swift:264-265) sets the camera to four pixels per beat after clamping the note to one snap cell and asserts that its projected width is at most three pixels.
+Mapping: S011 (src/checks/rollcheck/resize.swift) sets the camera to four pixels per beat after clamping the note to one snap cell and asserts that its projected width is at most three pixels.
 Source context since previous assertion:
 ;
     const SongView::ViewState originalView = view.viewState();
@@ -470,7 +465,7 @@ QVERIFY2(!centerSwallowed, "narrow note outline clouded the face into a black ba
 
 A025 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:215
 Disposition: MATCHED
-Mapping: S012 (src/checks/rollcheck/resize.swift:271-273) restores the original camera after the narrow-zoom check, undoes the overshot edge resize to the planted document identity, and compares the restored serialized MIDI bytes with the pre-drag bytes.
+Mapping: S012 (src/checks/rollcheck/resize.swift) restores the original camera after the narrow-zoom check, undoes the overshot edge resize to the planted document identity, and compares the restored serialized MIDI bytes with the pre-drag bytes.
 Source context since previous assertion:
 ;
     view.applyViewState(originalView);
@@ -501,7 +496,7 @@ QVERIFY2(g.key >= 0, "no free grid cell for the abutting-notes resize")
 
 A027 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:243
 Disposition: PARTIAL
-Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
+Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
 Source context since previous assertion:
 ;
     doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
@@ -526,7 +521,7 @@ QCOMPARE(roll.cursor().pixmap().toImage(), rightGrip.toImage())
 
 A028 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:248
 Disposition: PARTIAL
-Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift:308, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift:376) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml:313-318) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
+Mapping/reason: S013/S016 (src/checks/rollcheck/resize.swift, :325) assert the shared boundary grips target the first and second abutting note (activeNoteId plus a Resizing status), S021 (src/checks/rollcheck/resize.swift) publishes cursorKind 3 at an edge grip, and S024 (src/checks/rollqml/tst_SwiftRollSelection.qml) asserts Qt.SizeHorCursor on the production overlay. Unproved: the left-drag/right-drag custom cursor bitmaps at the shared boundary.
 Source context since previous assertion:
 ;
     checks::events::sendMouse(roll, QEvent::MouseMove, right, Qt::NoButton, Qt::NoButton,
@@ -539,7 +534,7 @@ QCOMPARE(roll.cursor().pixmap().toImage(), leftGrip.toImage())
 
 A029 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:259
 Disposition: MATCHED
-Mapping: S014 (src/checks/rollcheck/resize.swift:312-314) drags the shared boundary left by one snap cell and asserts the first note keeps its tick with duration g.duration - snap; S013 (src/checks/rollcheck/resize.swift:308-309) asserts that boundary-left grip targets that first note; S030 (src/checks/rollcheck/EditorGridCameraChecks.swift:885-890) asserts the same end-only resize.
+Mapping: S014 (src/checks/rollcheck/resize.swift) drags the shared boundary left by one snap cell and asserts the first note keeps its tick with duration g.duration - snap; S013 (src/checks/rollcheck/resize.swift) asserts that boundary-left grip targets that first note; S030 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the same end-only resize.
 Source context since previous assertion:
 ;
     const QPointF pullLeft(view.camera().displayX(double(g.tick + g.dur - snap), 0.0, dpr),
@@ -560,7 +555,7 @@ QVERIFY2(doc.findNote(track, g.tick, uint8_t(g.key), &leftNote) &&
 
 A030 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:262
 Disposition: MATCHED
-Mapping: S015 (src/checks/rollcheck/resize.swift:315-317) asserts the second abutting note keeps its tick and duration after the boundary-left drag.
+Mapping: S015 (src/checks/rollcheck/resize.swift) asserts the second abutting note keeps its tick and duration after the boundary-left drag.
 Source context since previous assertion:
 ;
 
@@ -571,7 +566,7 @@ QVERIFY2(doc.findNote(track, g.tick + g.dur, uint8_t(g.key), &rightNote) &&
 
 A031 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:275
 Disposition: MATCHED
-Mapping: S017 (src/checks/rollcheck/resize.swift:329-331) drags the shared boundary right by one snap cell and asserts the second note starts at g.tick + g.duration + snap with duration g.duration - snap; S016 (src/checks/rollcheck/resize.swift:325-326) asserts that boundary-right grip targets that second note; S030 (src/checks/rollcheck/EditorGridCameraChecks.swift:898-905) asserts the same start-only resize.
+Mapping: S017 (src/checks/rollcheck/resize.swift) drags the shared boundary right by one snap cell and asserts the second note starts at g.tick + g.duration + snap with duration g.duration - snap; S016 (src/checks/rollcheck/resize.swift) asserts that boundary-right grip targets that second note; S030 (src/checks/rollcheck/EditorGridCameraChecks.swift) asserts the same start-only resize.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -592,7 +587,7 @@ QVERIFY2(doc.findNote(track, g.tick + g.dur + snap, uint8_t(g.key), &rightNote) 
 
 A032 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:278
 Disposition: MATCHED
-Mapping: S018 (src/checks/rollcheck/resize.swift:332-334) asserts the first abutting note keeps its tick and duration after the boundary-right drag.
+Mapping: S018 (src/checks/rollcheck/resize.swift) asserts the first abutting note keeps its tick and duration after the boundary-right drag.
 Source context since previous assertion:
 ;
 
@@ -602,7 +597,7 @@ QVERIFY2(doc.findNote(track, g.tick, uint8_t(g.key), &leftNote) && leftNote.dura
 
 A033 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:283
 Disposition: MATCHED
-Mapping: S019 (src/checks/rollcheck/resize.swift:335-337) exercises both directions of an abutting pair edge resize with an intervening undo, then undoes to the planted document identity and compares the restored serialized MIDI bytes with the original pair bytes.
+Mapping: S019 (src/checks/rollcheck/resize.swift) exercises both directions of an abutting pair edge resize with an intervening undo, then undoes to the planted document identity and compares the restored serialized MIDI bytes with the original pair bytes.
 Source context since previous assertion:
 ;
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
@@ -628,162 +623,191 @@ live equivalents are the shell QML predicates indexed here. Predicate presence a
 does not close an A entry: each mapping requires corresponding execution and equivalent
 setup.
 
-S001 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:133
+S001 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "off-grid right edge ends exactly two ruler cells after start"
 Counterpart expression:
 report.expect(document.note(noteID).map {
     Int($0.tick) == d.tick && Int($0.duration) == 2 * d.duration
 } == true, cppID: id, message: "off-grid right edge ends exactly two ruler cells after start")
 
-S002 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:136
+S002 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted off-grid MIDI bytes"
 Counterpart expression:
 report.expect(resizeUndoTo(planted, session: session)
                   && (try? document.captureSave().bytes) == before,
               cppID: id, message: "Undo restores the planted off-grid MIDI bytes")
 
-S003 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:191
+S003 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge joins grabbed note to selection"
 Counterpart expression:
 report.expect(session.selectedNotes == Set([bID, dID]), cppID: id,
               message: "stationary Ctrl+edge joins grabbed note to selection")
 
-S004 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:193
+S004 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge does not resize grabbed note"
 Counterpart expression:
 report.expect(document.note(dID).map { Int($0.duration) == 2 * d.duration } == true,
               cppID: id, message: "stationary Ctrl+edge does not resize grabbed note")
 
-S005 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:195
+S005 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "stationary Ctrl+edge creates no history entry"
 Counterpart expression:
 report.expect(document.history.currentIdentity == selected && document.revision == revision,
               cppID: id, message: "stationary Ctrl+edge creates no history entry")
 
-S006 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:204
+S006 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Ctrl+edge drag grows grabbed note by exactly one cell"
 Counterpart expression:
 report.expect(document.note(dID).map { Int($0.duration) == 3 * d.duration } == true,
               cppID: id, message: "Ctrl+edge drag grows grabbed note by exactly one cell")
 
-S007 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:206
+S007 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Ctrl+edge drag grows the rest of selection by one cell"
 Counterpart expression:
 report.expect(document.note(bID).map {
     Int($0.duration) == Int(bBefore.duration) + d.duration
 } == true, cppID: id, message: "Ctrl+edge drag grows the rest of selection by one cell")
 
-S008 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:209
+S008 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "one selection resize gesture commits one transaction"
 Counterpart expression:
 report.expect(document.revision == revision + 1
                   && document.history.currentIdentity != selected,
               cppID: id, message: "one selection resize gesture commits one transaction")
 
-S009 | swiftcore/PianoRoll::resizeSelection | src/checks/rollcheck/resize.swift:212
+S009 | checkResizeSelection | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted selection MIDI bytes"
 Counterpart expression:
 report.expect(document.history.undoDocument()
                   && document.history.currentIdentity == planted
                   && (try? document.captureSave().bytes) == before,
               cppID: id, message: "Undo restores the planted selection MIDI bytes")
 
-S010 | swiftcore/PianoRoll::resizeMinimum | src/checks/rollcheck/resize.swift:249
+S010 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "overshot edge clamps at one snap cell"
 Counterpart expression:
 report.expect(document.note(noteID).map {
     Int($0.tick) == d.tick && Int($0.duration) == snap
 } == true, cppID: id, message: "overshot edge clamps at one snap cell")
 
-S011 | swiftcore/PianoRoll::resizeMinimum | src/checks/rollcheck/resize.swift:264
+S011 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "minimum-duration note spans at most three pixels at narrow zoom"
 Counterpart expression:
 report.expect(narrowRight - narrowLeft <= 3, cppID: id,
               message: "minimum-duration note spans at most three pixels at narrow zoom")
 
-S012 | swiftcore/PianoRoll::resizeMinimum | src/checks/rollcheck/resize.swift:271
+S012 | checkResizeMinimum | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted minimum-resize MIDI bytes"
 Counterpart expression:
 report.expect(resizeUndoTo(planted, session: session)
                   && (try? document.captureSave().bytes) == before,
               cppID: id, message: "Undo restores the planted minimum-resize MIDI bytes")
 
-S013 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:308
+S013 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left grip targets the first note"
 Counterpart expression:
 report.expect(grid.activeNoteId == ids[0].rawValue && grid.statusText.contains("Resizing"),
               cppID: id, message: "boundary-left grip targets the first note")
 
-S014 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:312
+S014 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left drag shortens first note by one snap cell"
 Counterpart expression:
 report.expect(document.note(ids[0]).map {
     Int($0.tick) == g.tick && Int($0.duration) == g.duration - snap
 } == true, cppID: id, message: "boundary-left drag shortens first note by one snap cell")
 
-S015 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:315
+S015 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-left drag leaves second note unchanged"
 Counterpart expression:
 report.expect(document.note(ids[1]).map {
     Int($0.tick) == g.tick + g.duration && Int($0.duration) == g.duration
 } == true, cppID: id, message: "boundary-left drag leaves second note unchanged")
 
-S016 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:325
+S016 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right grip targets the second note"
 Counterpart expression:
 report.expect(grid.activeNoteId == ids[1].rawValue && grid.statusText.contains("Resizing"),
               cppID: id, message: "boundary-right grip targets the second note")
 
-S017 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:329
+S017 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right drag advances second start one snap cell"
 Counterpart expression:
 report.expect(document.note(ids[1]).map {
     Int($0.tick) == g.tick + g.duration + snap && Int($0.duration) == g.duration - snap
 } == true, cppID: id, message: "boundary-right drag advances second start one snap cell")
 
-S018 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:332
+S018 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "boundary-right drag leaves first note unchanged"
 Counterpart expression:
 report.expect(document.note(ids[0]).map {
     Int($0.tick) == g.tick && Int($0.duration) == g.duration
 } == true, cppID: id, message: "boundary-right drag leaves first note unchanged")
 
-S019 | swiftcore/PianoRoll::resizeAbutting | src/checks/rollcheck/resize.swift:335
+S019 | checkResizeAbutting | src/checks/rollcheck/resize.swift
+Anchor: message "Undo restores the planted abutting pair MIDI bytes"
 Counterpart expression:
 report.expect(resizeUndoTo(planted, session: session)
                   && (try? document.captureSave().bytes) == before,
               cppID: id, message: "Undo restores the planted abutting pair MIDI bytes")
 
-S020 | swiftcore/PianoRoll::resizeOffGrid (hover) | src/checks/rollcheck/resize.swift:373
+S020 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the right edge grip publishes the horizontal resize cursor"
 Counterpart expression:
 report.expect(grid.cursorKind == 3, cppID: id,
               message: "the right edge grip publishes the horizontal resize cursor")
 
-S021 | swiftcore/PianoRoll::resizeOffGrid (hover) | src/checks/rollcheck/resize.swift:376
+S021 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the left edge grip publishes the horizontal resize cursor"
 Counterpart expression:
 report.expect(grid.cursorKind == 3, cppID: id,
               message: "the left edge grip publishes the horizontal resize cursor")
 
-S022 | swiftcore/PianoRoll::resizeOffGrid (hover) | src/checks/rollcheck/resize.swift:379
+S022 | checkResizeHoverCursor | src/checks/rollcheck/resize.swift
+Anchor: message "the note body publishes the arrow cursor"
 Counterpart expression:
 report.expect(grid.cursorKind == 0, cppID: id,
               message: "the note body publishes the arrow cursor")
 
-S023 | swiftcore/PianoRoll::resizeOffGrid | src/checks/rollcheck/resize.swift:127
+S023 | checkResizeOffGrid | src/checks/rollcheck/resize.swift
+Anchor: message "right edge grips the off-grid note"
 Counterpart expression:
 report.expect(grid.activeNoteId == noteID.rawValue && grid.statusText.contains("Resizing"),
               cppID: id, message: "right edge grips the off-grid note")
 
-S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml:313-318
+S024 | test_edgeHoverShowsResizeCursor | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: function
 Real pointer input into the production overlay: mouseMove onto a wide note's edge publishes
 g.cursorKind === 3 and the mounted roll input's cursorShape === Qt.SizeHorCursor; moving to
 the note body publishes g.cursorKind === 0 (arrow). Covers the edge-hover cursor equivalence.
 
-S025 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml:262
+S025 | test_resizeMinimum | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: function
 Real left-button drags in the production shell: trailing right-edge drag clamps the note to
 (tick, snap); leading left-edge drag clamps it to (leadingEnd - snap, snap).
 
-S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml:162
+S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
+Anchor: function
 Shell framebuffer probes of the production roll: unselected note face follows the
 track/velocity contract with its display-scaled black border; a selected note keeps its
 selection-ring role colour, its inset black border and its face; at the small-font viewport
 the physical border thins instead of vanishing while ring and face survive.
 
-S027 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:794
+S027 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "off-grid right-edge drag snaps the end to the ruler grid"
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.duration) == 2 * snap } == true,
     cppID: id, message: "off-grid right-edge drag snaps the end to the ruler grid")
 
-S028 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:809
+S028 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "overshot right-edge drag stops at one snap cell"
 Counterpart expression:
 report.expect(
     session.document.note(a).map { Int($0.duration) == snap } == true,
     cppID: id, message: "overshot right-edge drag stops at one snap cell")
 
-S029 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:846
+S029 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "Ctrl+edge drag resizes the grabbed note and the joined selection"
 Counterpart expression:
 report.expect(
     session.document.note(b).map { Int($0.duration) == 12 + snap } == true
@@ -792,7 +816,8 @@ report.expect(
         } == true,
     cppID: id, message: "Ctrl+edge drag resizes the grabbed note and the joined selection")
 
-S030 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:898
+S030 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "boundary-right drag resizes the right note's start only"
 Counterpart expression:
 report.expect(
     session.document.note(cPair[1]).map {
@@ -803,7 +828,8 @@ report.expect(
         } == true,
     cppID: id, message: "boundary-right drag resizes the right note's start only")
 
-S031 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:837
+S031 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "stationary Ctrl+edge click joins the note without resizing"
 Counterpart expression:
 report.expect(
     session.selectedNotes == Set([a, b])

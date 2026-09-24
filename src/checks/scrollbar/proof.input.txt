@@ -4,7 +4,6 @@ Reference revision: 6b7e1fd989441360d234026c2d744218684966ce
 Original: src/checks/scrollbar/input.cpp
 Original SHA-256: 4a78343b01b892bfed84f1758538155a650775aec2543a0028ef9a3dbdc15a69
 Swift counterpart: none identified
-Swift SHA-256: n/a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -22,7 +21,7 @@ GAP identifies an original predicate without a replacement assertion.
 
 Verification
 Command: deno task verify --filter scrollbar --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 No converted-window evidence is available for this suite in this checkout.
 
 Execution ownership

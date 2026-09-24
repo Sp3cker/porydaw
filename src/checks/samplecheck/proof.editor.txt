@@ -4,7 +4,6 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/samplecheck/editor.cpp
 Original SHA-256: 1ae310e3a37396448c692a91dbd51cac6ed6681ebf0b55e352ee2c488545f99b
 Swift counterpart: none identified
-Swift SHA-256: n/a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -22,7 +21,7 @@ Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, 
 
 Verification
 Command: deno task verify --filter samplecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: pending integrated run.
 
 Execution and ownership
 No Swift entry points execute these checks. Retained native execution owns this suite:

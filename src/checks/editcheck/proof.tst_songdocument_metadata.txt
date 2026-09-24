@@ -5,13 +5,9 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_metadata.cpp
 Original SHA-256: 01ec83ca4bad203c93f1c9063c73fcce5fb4471770e7477ddeeee7d31d10431a
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: 53124d302de46aa58254dbcebc98646a12e8c41e60be4b17e2c52c918d3929d7
 Additional Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: bdc3462bbab22accf93f21fa10386443e617728fe783982e6e58a3d41555dfab
 Additional Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: ad617ef213c07267de4e3b79fa8e2bf3abc2747b3fc32bb6ff588b1ccfe5adef
 Additional Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 
 Covered native implementation: src/core/songdocument.cpp, src/core/songdocument_xcmd.cpp, src/core/songdocument_timeeditor*.cpp :: SongDocument xcmd save snapshot, format-0 coercion, globals rescue, duplicate canonicalization.
 Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
@@ -442,7 +438,7 @@ Original expression:
 A060 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:269
 Disposition: RETIRED-REPRESENTATION
 Swift: S102, S046-S049 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
-Mapping/reason: C++ second convertToFormat1(&reloaded) on an already-coerced source is an uncompiled/unregistered C++-only mechanism (§7); Swift MidiFile.convertFormat0ToFormat1 is private (MidiFile.swift:459) and called only inside decode for format zero (337-339), with no public second-convert ingress. S102 independently proves source canonical bytes equal complete saved snapshot bytes.
+Mapping/reason: C++ second convertToFormat1(&reloaded) on an already-coerced source is an uncompiled/unregistered C++-only mechanism (§7); Swift MidiFile.convertFormat0ToFormat1 is private (MidiFile.swift) and called only inside decode for format zero (337-339), with no public second-convert ingress. S102 independently proves source canonical bytes equal complete saved snapshot bytes.
 Original expression:
   QCOMPARE(reloaded.write(), saved.write());
 
@@ -906,175 +902,237 @@ The Swift predicates covering the MATCHED sites above. The MidiChecks codec
 helpers are generic over cppID; each S001-S003 below is instantiated with
 cppID "editcheck/EditCheckTest::formatZeroCoercion/channel-prefix-routing".
 
-S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:1040
+S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+Anchor: function
   report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                      what: "independent format-0 provenance")
 
-S002 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:1076
+S002 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+Anchor: function
   report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                      what: "independent decoded format-0 provenance")
 
-S003 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:1078
+S003 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+Anchor: message "independent decoded chunk count"
   report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                      what: "independent decoded chunk count")
 
-S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "valid conductor tempo becomes typed state"
   report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
                      document.state.tempo,
                      cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                      what: "valid conductor tempo becomes typed state")
 
-S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:57
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
+Anchor: message "typed tempo is removed from raw chunks"
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                 cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                 message: "typed tempo is removed from raw chunks")
 
-S006 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1092
+S006 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture leaves live bytes untouched"
   report.expectEqual(liveBytes, try? document.state.file.encoded(),
-S007 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1095
+S007 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture records no history entry"
   report.expectEqual(revision, document.revision,
-S008 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1098
+S008 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture leaves the dirty flag untouched"
   report.expectEqual(dirty, document.isDirty,
-S009 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1101
+S009 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture leaves the undo cursor at the tip"
   report.expect(document.history.canUndo && !document.history.canRedo,
-S010 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1104
+S010 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture leaves the undo depth unchanged"
   report.expectEqual(historyDepth, try? coreEditHistoryCountAtTip(
       document, report: report, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot"),
       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
       what: "capture leaves the undo depth unchanged")
-S011 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1114
+S011 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "delayed selector is not saved"
   report.expect(!events.contains {
       $0.tick == base + 1 && channelFields($0)?.data0 == Xcmd.selectorController
   }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
   message: "delayed selector is not saved")
-S012 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1122
+S012 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonical selector/payload pair is saved"
   report.expectEqual(2, payload.count,
-S013 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1126
+S013 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved pair leads with the selector controller"
   report.expectEqual(Xcmd.selectorController, channelFields(payload[0])?.data0,
-S014 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1129
+S014 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved selector carries its value"
   report.expectEqual(UInt8(0x08), channelFields(payload[0])?.data1,
-S015 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1132
+S015 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved pair follows with the payload controller"
   report.expectEqual(Xcmd.payloadController, channelFields(payload[1])?.data0,
-S016 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1135
+S016 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved payload carries its value"
   report.expectEqual(UInt8(34), channelFields(payload[1])?.data1,
-S017 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:1138
+S017 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "dangling selector is not saved"
   report.expect(!events.contains {
       $0.tick == base + 3 && channelFields($0)?.data0 == Xcmd.selectorController
   }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
   message: "dangling selector is not saved")
-S018 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1153
+S018 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "converted file encodes as format 1"
   report.expectEqual([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1], encodedHeader,
-S019 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1156
+S019 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "three channel streams map to engine tracks"
   report.expectEqual(3, document.engineTracks.usedTrackCount,
-S020 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1159
+S020 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "first engine track keeps channel 1"
   report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
-S021 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1162
+S021 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "second engine track keeps channel 4"
   report.expectEqual(UInt8(4), document.engineTracks.tracks[1].channel,
-S022 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1165
+S022 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "third engine track keeps channel 7"
   report.expectEqual(UInt8(7), document.engineTracks.tracks[2].channel,
-S023 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1168
+S023 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "first engine track maps to chunk 1"
   report.expectEqual(1, document.engineTracks.tracks[0].midiChunk,
-S024 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1171
+S024 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "first track keeps its note key"
   report.expectEqual(UInt8(60), document.notes(in: 0).first?.pitch,
-S025 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1174
+S025 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "first track keeps its note duration"
   report.expectEqual(Tick(24), document.notes(in: 0).first?.duration,
-S026 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1177
+S026 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "second track keeps its note key"
   report.expectEqual(UInt8(64), document.notes(in: 1).first?.pitch,
-S027 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1180
+S027 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "third track keeps its note key"
   report.expectEqual(UInt8(67), document.notes(in: 2).first?.pitch,
-S028 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1183
+S028 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "prefixed name lands on the second track"
   report.expectEqual("Lead", document.trackName(1),
-S029 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1186
+S029 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "first track has no name"
   report.expectEqual("", document.trackName(0),
-S030 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1189
+S030 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "third track has no name"
   report.expectEqual("", document.trackName(2),
-S031 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1193
+S031 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "instrument meta lands on the Lead chunk"
   report.expect(chunks[2].events.contains {
       $0.metaType == 0x04 && $0.blob == Array("Gtr".utf8)
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "instrument meta lands on the Lead chunk")
-S032 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1197
+S032 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "prefixed marker lands on the conductor chunk"
   report.expect(chunks[0].events.contains {
       $0.metaType == 0x03 && $0.blob == [0x3A]
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "prefixed marker lands on the conductor chunk")
-S033 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1201
+S033 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "marker stays out of the channel-7 chunk"
   report.expect(!chunks[3].events.contains {
       $0.metaType == 0x03 && $0.blob == [0x3A]
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "marker stays out of the channel-7 chunk")
-S034 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1205
+S034 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "prefixed name lands on the Ambient chunk"
   report.expect(chunks[4].events.contains {
       $0.metaType == 0x03 && $0.blob == Array("Ambient".utf8)
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "prefixed name lands on the Ambient chunk")
-S035 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1209
+S035 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "channel prefix stays adjacent to its marker"
   report.expect(chunks[0].events.enumerated().contains { index, event in
       index > 0 && event.metaType == 0x03 && event.blob == [0x3A] &&
           chunks[0].events[index - 1].metaType == 0x20
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "channel prefix stays adjacent to its marker")
-S036 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1214
+S036 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "channel prefixes stay out of non-conductor chunks"
   report.expect(chunks.enumerated().allSatisfy { index, chunk in
       index == 0 || chunk.events.allSatisfy { $0.metaType != 0x20 }
   }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
   message: "channel prefixes stay out of non-conductor chunks")
-S037 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1218
+S037 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "coerced format-0 chunks close at the encoded end tick"
   report.expect(document.state.file.chunks.allSatisfy { $0.endTick == 48 },
-S038 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:1221
+S038 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "conductor chunk holds no channel events"
   report.expect(chunks[0].events.allSatisfy { !$0.isChannel },
-S039 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1235
+S039 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "converted loop start lands at tick 12"
   report.expectEqual(Tick(12), timeline.loopStartTick,
-S040 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1238
+S040 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "converted loop end lands at tick 36"
   report.expectEqual(Tick(36), timeline.loopEndTick,
-S041 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1241
+S041 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "timeline reports three used tracks"
   report.expectEqual(3, timeline.usedTrackCount,
-S042 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1244
+S042 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "timeline names the second track Lead"
   report.expectEqual("Lead", timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
-S043 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1235
+S043 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "converted loop start lands at tick 12"
   report.expectEqual(Tick(12), timeline.loopStartTick,
-S044 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:1250
+S044 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "converted chunks are tick-sorted"
   report.expect(chunksSortedByTick(document.state.file),
-S045 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1277
+S045 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "one typed tempo point survives conversion"
   report.expectEqual(1, tempos.count,
-S046 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1284
+S046 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved bytes without tempo metadata match converted live bytes"
   report.expectEqual(convertedLive, try? withoutTempos.encoded(),
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "saved bytes without tempo metadata match converted live bytes")
-S047 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1313
+S047 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved tempos stay in the conductor chunk"
   report.expect(!tempoOutsideConductor,
-S048 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1316
+S048 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved tempos lead their tick group"
   report.expect(tempoFirst,
-S049 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1319
+S049 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved tempos match the typed state"
   report.expectEqual(tempos, savedTempos,
-S050 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1322
+S050 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "live bytes survive the save"
   report.expectEqual(convertedLive, try? document.state.file.encoded(),
-S051 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1326
+S051 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "move to slot 2 succeeds"
   report.expect(document.moveTrack(0, to: 2),
-S052 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1329
+S052 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "name follows its track across the move"
   report.expectEqual("Bass", document.trackName(2),
-S053 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1322
+S053 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "live bytes survive the save"
   report.expectEqual(convertedLive, try? document.state.file.encoded(),
-S054 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1349
+S054 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "bare name wins over the marker-shaped name"
   report.expectEqual("Real", document.trackName(0),
-S055 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1353
+S055 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "marker-shaped name still opens the loop"
   report.expectEqual(Tick(0), timeline.loopStartTick,
-S056 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1357
+S056 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "rename stores the new name"
   report.expectEqual("Renamed", document.trackName(0),
-S057 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1361
+S057 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "loop start survives the rename"
   report.expectEqual(Tick(0), renamed.loopStartTick,
-S058 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1370
+S058 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "both voice lane points load"
   report.expectEqual(2, document.lanePoints(track: 0, lane: .voice).count,
-S059 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1373
+S059 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "both CC7 duplicates load at tick zero"
   report.expectEqual(2, document.lanePoints(track: 0, lane: .controller(7))
       .filter { $0.tick == 0 }.count,
-S060 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1377
+S060 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "last CC7 duplicate wins the loaded value"
   report.expectEqual(80, document.lanePoints(track: 0, lane: .controller(7))
       .last { $0.tick == 0 }?.value,
-S061 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1381
+S061 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "last voice duplicate wins the loaded value"
   report.expectEqual(9, document.lanePoints(track: 0, lane: .voice)
       .last { $0.tick == 0 }?.value,
-S062 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1385
+S062 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "clamped and exact tempo points load in order"
   report.expectEqual([
       TempoPoint(tick: 24, microsecondsPerQuarterNote: 3_000_000),
       TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000),
@@ -1083,150 +1141,193 @@ S062 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swif
   ], document.state.tempo,
   cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
   what: "clamped and exact tempo points load in order")
-S063 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1394
+S063 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "tempo map gains the default tick-zero point"
   report.expectEqual(5, timeline.tempoMap.count,
-S064 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1397
+S064 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "tempo map fronts the default tempo"
   report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute,
-S065 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1412
+S065 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "saved bytes match the live file with typed tempos inserted"
   expected.chunks[0].events.insert(contentsOf: typedTempoEvents[0..<2], at: 1)
   expected.chunks[0].events.insert(contentsOf: typedTempoEvents[2..<4], at: 4)
   report.expectEqual(snapshot.bytes, try? expected.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "saved bytes match the live file with typed tempos inserted")
-S066 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1421
+S066 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "capture leaves live bytes untouched"
   report.expectEqual(liveBytes, try? document.state.file.encoded(),
-S067 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1448
+S067 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op move collapses the duplicate lane points"
   report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
       .filter { $0.tick == 0 }.count,
-S068 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1452
+S068 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonicalizing move records one revision"
   report.expectEqual(revision + 1, document.revision,
-S069 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1455
+S069 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonicalizing move publishes one change"
   report.expectEqual(1, changedCount,
-S070 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1458
+S070 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonicalizing move advances the undo cursor to the tip"
   report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                   message: "canonicalizing move advances the undo cursor to the tip")
-S071 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1461
+S071 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonicalizing move adds one undo entry"
   report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
       document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
       what: "canonicalizing move adds one undo entry")
-S072 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1476
+S072 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo restores both duplicates"
   report.expectEqual(2, restored.count,
-S073 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1479
+S073 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo restores the first duplicate value"
   report.expectEqual(100, restored.first?.value,
-S074 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1482
+S074 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo restores the second duplicate value"
   report.expectEqual(80, restored.dropFirst().first?.value,
-S075 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1485
+S075 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo restores the baseline bytes"
   report.expectEqual(baseline, try? document.state.file.encoded(),
-S076 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1488
+S076 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo records another revision"
   report.expectEqual(canonicalRevision + 1, document.revision,
-S077 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1455
+S077 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "canonicalizing move publishes one change"
   report.expectEqual(1, changedCount,
-S078 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1496
+S078 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo returns the cursor to zero with redo available"
   report.expect(!document.history.canUndo && document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                   message: "undo returns the cursor to zero with redo available")
-S079 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1504
+S079 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "redo restores the canonical state and identity"
   report.expect(document.state == canonicalState &&
       document.history.currentIdentity == canonicalIdentity,
       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
       message: "redo restores the canonical state and identity")
-S080 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1508
+S080 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo retains the canonicalizing entry"
   report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
       document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
       what: "undo retains the canonicalizing entry")
-S081 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1517
+S081 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "redo/undo restores the exact undone state, identity and cursor"
   report.expect(document.state == undoneState &&
       document.history.currentIdentity == undoneIdentity &&
       !document.history.canUndo && document.history.canRedo,
       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
       message: "redo/undo restores the exact undone state, identity and cursor")
-S082 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1448
+S082 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op move collapses the duplicate lane points"
   report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
       .filter { $0.tick == 0 }.count,
-S083 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1544
+S083 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "lane write leaves one point at the tick"
   report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
       .filter { $0.tick == 48 }.count,
-S084 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1560
+S084 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move leaves bytes untouched"
   report.expectEqual(noOpBytes, try? document.state.file.encoded(),
-S085 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1563
+S085 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move leaves the revision untouched"
   report.expectEqual(noOpRevision, document.revision,
-S086 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1566
+S086 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move publishes no change"
   report.expectEqual(0, changedCount,
-S087 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1569
+S087 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move leaves the undo cursor at the tip"
   report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   message: "no-op lane move leaves the undo cursor at the tip")
-S088 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1572
+S088 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move adds no history entry"
   report.expectEqual(noOpUndoCount, try? coreEditHistoryCountAtTip(
       document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
       what: "no-op lane move adds no history entry")
-S089 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1578
+S089 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "move onto an occupied tick collapses to one point"
   report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
       .filter { $0.tick == 0 }.count,
-S090 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1582
+S090 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "source tick is vacated by the move"
   report.expect(document.lanePoints(track: 0, lane: .controller(7))
       .allSatisfy { $0.tick != 48 },
       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
       message: "source tick is vacated by the move")
-S091 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1588
+S091 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "applied tempo point is present"
   report.expect(document.state.tempo.contains(noOpTempo),
-S092 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1603
+S092 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate tempo apply leaves bytes untouched"
   report.expectEqual(tempoBytes, try? document.state.file.encoded(),
-S093 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1606
+S093 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate tempo apply leaves tempo points untouched"
   report.expectEqual(tempoPoints, document.state.tempo,
-S094 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1609
+S094 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate tempo apply leaves the revision untouched"
   report.expectEqual(tempoRevision, document.revision,
-S095 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1566
+S095 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "no-op lane move publishes no change"
   report.expectEqual(0, changedCount,
-S096 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1615
+S096 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate tempo apply leaves the undo cursor at the tip"
   report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   message: "duplicate tempo apply leaves the undo cursor at the tip")
-S097 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1618
+S097 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "duplicate tempo apply adds no history entry"
   report.expectEqual(tempoUndoCount, try? coreEditHistoryCountAtTip(
       document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
       what: "duplicate tempo apply adds no history entry")
-S098 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1623
+S098 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo restores the replaced tempo point"
   report.expect(document.state.tempo.contains(
       TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000)),
       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
       message: "undo restores the replaced tempo point")
-S099 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1629
+S099 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "undo-all restores the baseline bytes"
   report.expectEqual(baseline, try? document.state.file.encoded(),
-S100 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1257
+S100 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: function
   guard let file = try? MidiFile.decode(formatZeroTrackBytes()) else {
       report.fail("editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                   "format-0 fixture failed to decode")
       return
   }
-S101 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1270
+S101 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "redecoded source retains format-0 provenance"
   report.expect(file.wasFormat0,
                 cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                 message: "redecoded source retains format-0 provenance")
-S102 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1273
+S102 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift
+Anchor: message "redecoded original encodes to the exact saved bytes"
   report.expectEqual(try? file.encoded(), snapshot.bytes,
                      cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                      what: "redecoded original encodes to the exact saved bytes")
-S103 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1432
+S103 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift
+Anchor: function
   guard let point = document.lanePoints(track: 0, lane: .controller(7))
       .first(where: { $0.tick == 0 }) else {
       report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
                   "no CC7 lane point at tick zero")
       return
   }
-S104 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1538
+S104 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift
+Anchor: function
   guard let point = document.lanePoints(track: 0, lane: .controller(7))
       .first(where: { $0.tick == 48 }) else {
       report.fail("editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   "no CC7 lane point at tick 48")
       return
   }
-S105 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:83
+S105 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift
+Anchor: message "counting public undo entries restores the exact state and identity"
   report.expect(count == replayed && document.state == restoredState &&
       document.history.currentIdentity == restoredIdentity, cppID: cppID,
       message: "counting public undo entries restores the exact state and identity")
