@@ -447,7 +447,6 @@ public final class AutomationPage: EditorDrawerPage {
         }
         if let frozen, stale(frozen) {
             cancelGesture()
-            publishInteractionState()
         }
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
@@ -460,6 +459,7 @@ public final class AutomationPage: EditorDrawerPage {
         if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
             resetTapTempo()
         }
+        publishInteractionState()
         rebuildContent()
     }
 

@@ -200,6 +200,8 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     fixture.activate(fixture.volumeLane)
     let tempoIndex = AutomationCatalog.index(of: .tempo, track: 0) ?? 0
     let activeRuns = page.publishedCurveRuns.count
+    report.expect(activeRuns > 0, cppID: drawerAutomationPaintingModelID,
+                  message: "the active lane draws its own runs")
     report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                   message: "Tempo pins as a ghost under the active lane")
     report.expectEqual(["Tempo (BPM) · 2 Events"], page.ghostLabels, cppID: drawerAutomationPaintingModelID,
@@ -228,6 +230,39 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
                        what: "Tempo shares the active lane's plot origin")
     report.expectEqual(2, tempoProjection.eventCount, cppID: drawerAutomationPaintingModelID,
                        what: "Tempo keeps its own event count on the shared body")
+    let sharedMap = AutomationProjection(
+        camera: fixture.session.camera,
+        bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+        geometry: page.geometry,
+        snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                         timeline: fixture.session.timeline,
+                                         baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+        songEndTick: fixture.songEndTick)
+    if let first = tempoProjection.points.first, let last = tempoProjection.points.last {
+        report.expectEqual(sharedMap.x(first.tick), first.x, cppID: drawerAutomationPaintingModelID,
+                           what: "Tempo's first tick plots through the shared camera")
+        report.expectEqual(sharedMap.x(last.tick), last.x, cppID: drawerAutomationPaintingModelID,
+                           what: "Tempo's last tick plots through the shared camera")
+    } else {
+        report.fail(drawerAutomationPaintingModelID, "Tempo projected no shared-body probe")
+    }
+    if let last = volumeProjection.points.last {
+        report.expectEqual(sharedMap.x(last.tick), last.x, cppID: drawerAutomationPaintingModelID,
+                           what: "the active lane's last tick plots through the shared camera")
+    } else {
+        report.fail(drawerAutomationPaintingModelID, "the active lane projected no shared-body probe")
+    }
+    let volumeWidth = page.plotWidth
+    let volumeHeight = page.plotHeight
+    let volumeGrid = (0..<page.gridLines.count).map { page.gridLines[$0].x }
+    fixture.activate(.tempo)
+    report.expectEqual(volumeWidth, page.plotWidth, cppID: drawerAutomationPaintingModelID,
+                       what: "Tempo shares the active lane's plot width")
+    report.expectEqual(volumeHeight, page.plotHeight, cppID: drawerAutomationPaintingModelID,
+                       what: "Tempo shares the active lane's plot height")
+    report.expectEqual(volumeGrid, (0..<page.gridLines.count).map { page.gridLines[$0].x },
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "Tempo shares the active lane's grid centers")
     fixture.activate(fixture.panLane)
     let shortY = page.projection?.points.first(where: { $0.tick == 24 })?.y ?? -1
     let shortGrid = page.gridLines.count > 0 ? (0..<page.gridLines.count).map { page.gridLines[$0].x } : []

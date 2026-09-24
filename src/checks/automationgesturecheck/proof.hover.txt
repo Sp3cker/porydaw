@@ -5,7 +5,7 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 0134a98e5ef126a384cd7dc31020163100a3fc72219143a7a08b0e592fd569d4
+Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -33,11 +33,12 @@ Command: deno task verify:qml (same tree, same implementer run) -> run_checks PA
 Result: the converted Swift and QML suites are green on the counterpart hashes
 pinned above. This ledger was not re-run here and no per-predicate execution was
 observed beyond that report; predicate presence alone does not close any A entry.
-Note: a sibling lane is appending new hover-residual predicates to
-automationcanvasediting.swift while this ledger was written (additive hunks after
-line 371 only); every line pinned here was re-verified unchanged against the current
-content, whose hash is pinned above. Refresh that hash if the sibling lane lands more
-appends.
+Note: the review-fix hunks have landed in automationcanvasediting.swift since this
+ledger was written (diagnostics enum names, hover-model anchor unwraps, a
+selection-clear guard, and drawerAutomationMenuHintMuting plus
+drawerAutomationHoverResidual appends after line 398); every line pinned here was
+re-verified against the current content, whose hash is pinned above. The appended
+menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 
@@ -856,129 +857,129 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:192
+S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:195
 Counterpart expression:
       report.expect(fixture.page.hover?.hasPoint == true, cppID: drawerAutomationContextID,
                     message: "a hover on a node publishes the node")
 
-S002 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:194
+S002 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:197
 Counterpart expression:
       report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a node hover reads out the node's value")
 
-S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:196
+S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:199
 Counterpart expression:
-      report.expectEqual(15, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.node, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "a written node advertises node movement")
 
-S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:200
+S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:203
 Counterpart expression:
       report.expect(fixture.page.hover?.hasPoint == false, cppID: drawerAutomationContextID,
                     message: "a hover on the background publishes the tick")
 
-S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:202
+S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:205
 Counterpart expression:
       report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a background hover reads the value the lane holds there")
 
-S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:204
+S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:207
 Counterpart expression:
       report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
                     message: "the hover publications are counted")
 
-S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:206
+S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:209
 Counterpart expression:
-      report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "the background advertises sweep and ramp input")
 
-S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:209
+S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:212
 Counterpart expression:
-      report.expectEqual(18, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.pencil, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "switching tools updates stationary hover instructions")
 
-S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:212
+S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:215
 Counterpart expression:
-      report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "leaving pencil mode restores sweep instructions")
 
-S010 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:215
+S010 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:218
 Counterpart expression:
       report.expect(fixture.page.hover == nil, cppID: drawerAutomationContextID,
                     message: "leaving the plot clears the hover")
 
-S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:267
+S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:279
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "hovering the background writes nothing")
 
-S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:273
+S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:285
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "a repeated hover still writes nothing")
 
-S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:289
+S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:308
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "hovering a node writes nothing")
 
-S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:255
+S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:268
 Counterpart expression:
       report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane)
           .valueText(lane.heldValue(at: backgroundTick) ?? 64), page.hoverText,
                          cppID: drawerAutomationHoverModelID,
                          what: "a background hover reads the value the lane holds there")
 
-S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:281
+S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:300
 Counterpart expression:
       report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane).valueText(64),
                          page.hoverText, cppID: drawerAutomationHoverModelID,
                          what: "the node hover reads the node's own text")
 
-S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:295
+S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:314
 Counterpart expression:
       report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
                     message: "leaving the plot clears the hover")
 
-S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:297
+S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:316
 Counterpart expression:
       report.expectEqual("", page.hoverText, cppID: drawerAutomationHoverModelID,
                          what: "leaving the plot clears the hover text")
       report.expect(page.hover == nil, cppID: drawerAutomationHoverModelID,
                     message: "leaving the plot drops the hover")
 
-S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:304
+S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:325
 Counterpart expression:
       report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
                          cppID: drawerAutomationHoverModelID,
                          what: "an arrow hover never arms the pencil cursor")
 
-S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:317
+S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:338
 Counterpart expression:
       report.expect(!page.hoverVisible && page.hover == nil, cppID: drawerAutomationHoverModelID,
                     message: "a strong cancellation clears a live hover")
 
-S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:319
+S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:340
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "cancelling a hover changes no document or history state")
 
-S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:325
+S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:346
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "an idle cancellation is a no-op on document and history")
 
-S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:327
+S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:348
 Counterpart expression:
       report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
                     message: "an idle cancellation leaves no interaction live")
 
 S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:259
 Counterpart expression:
-      report.expect(page.hover?.tick != 24 && page.hover?.tick != 120,
+      report.expect(backgroundHover.tick != 24 && backgroundHover.tick != 120,
                     cppID: drawerAutomationHoverModelID,
                     message: "the insertion tick sits between its neighboring nodes")
 
-S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:347
+S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:375
 Counterpart expression:
       report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
                          what: "Tempo hover topology preserves the document")

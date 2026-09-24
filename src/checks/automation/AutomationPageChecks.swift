@@ -359,6 +359,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationRangeEditAndClipboard(report, suite: session, service: service)
     drawerAutomationHistoryUndoRedo(report, suite: session, service: service)
     drawerAutomationHoverModel(report, suite: session, service: service)
+    drawerAutomationMenuHintMuting(report, suite: session, service: service)
     drawerAutomationHoverResidual(report, suite: session, service: service)
     drawerAutomationContextAndPublicationDiagnostics(report, suite: session, service: service)
     drawerAutomationSweepSteppingAndRampFinish(report, suite: session, service: service)

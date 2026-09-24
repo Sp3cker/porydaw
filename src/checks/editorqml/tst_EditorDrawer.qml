@@ -1823,10 +1823,6 @@ TestCase {
         tryCompare(text, "text", instructions, 1000, "re-entry restores node instructions")
     }
 
-    // The production hover through real input: a node move shows the value
-    // label and rings exactly its node, a repeat move publishes nothing new,
-    // a background move reads the held value with no ring, leaving clears,
-    // and a menu dismissal recovers through the next pointer motion.
     function test_productionAutomationHoverThroughInput() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
         testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-hover"))
@@ -1861,6 +1857,21 @@ TestCase {
                 ++ringed
         }
         compare(ringed, 1, "exactly the hovered node carries the ring")
+        var hoveredNode = null
+        for (var h = 0; h < laneNodes.length; ++h) {
+            if (laneNodes[h].model.hovered === true)
+                hoveredNode = laneNodes[h]
+        }
+        verify(hoveredNode, "the hovered node is drawn")
+        var hoverRing = findChild(hoveredNode, "automationNodeHover")
+        verify(hoverRing, "the hovered node draws its hover ring")
+        compare(hoverRing.visible, true, "the hover ring shows on the hovered node")
+        fuzzyCompare(hoverRing.x + hoverRing.width / 2, hoveredNode.model.x, 0.01,
+                     "the hover ring centers on its node")
+        fuzzyCompare(hoverRing.y + hoverRing.height / 2, hoveredNode.model.y, 0.01,
+                     "the hover ring centers on its node vertically")
+        compare(hoverRing.width, 2 * hoveredNode.model.ringRadius,
+                "the hover ring spans twice its ring radius")
         var nodeText = label.text
         builds = bootstrap.automationHoverBuilds()
         mouseMove(input, point.x, point.y)
@@ -1904,6 +1915,13 @@ TestCase {
                 ++ringed
         }
         compare(ringed, 0, "a background hover rings no node")
+        var shownRings = 0
+        for (var w = 0; w < laneNodes.length; ++w) {
+            var bgRing = findChild(laneNodes[w], "automationNodeHover")
+            if (bgRing && bgRing.visible === true)
+                ++shownRings
+        }
+        compare(shownRings, 0, "a background hover draws no ring")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "hovering the background writes nothing")
         var backgroundGrab = grabImage(testCase.surface)
@@ -1946,20 +1964,27 @@ TestCase {
         mouseClick(input, point.x, point.y, Qt.RightButton)
         tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
                   "the right click opened the node menu")
+        var status = findChild(testCase.surface, "mouseHintStatus")
+        var hintStatusText = status ? findChild(status, "mouseHintStatusText") : null
+        verify(hintStatusText, "the production status strip is drawn")
+        tryVerify(function() { return hintStatusText.text === "" }, 2000,
+                  "the open menu mutes the underlay hint")
+        mouseMove(input, gapX, free.y)
+        tryVerify(function() { return hintStatusText.text === "" }, 2000,
+                  "motion between underlying targets stays muted")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
                   "dismissing the menu closes it")
         mouseMove(input, gapX, free.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "pointer motion after a dismissal recovers the hover")
+        tryVerify(function() { return hintStatusText.text.length > 0 }, 2000,
+                  "pointer motion after a dismissal restores the underlay hint")
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the node hover returns after a dismissal")
     }
 
-    // A pinned ghost draws its curve under the active lane through real input:
-    // the Control press pins Tempo, the plot gains ghost runs before the
-    // active runs, and a second press restores the unpinned plot.
     function test_productionAutomationGhostCurvesDrawUnderActive() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
         testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-ghost"))

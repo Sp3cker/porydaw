@@ -15,7 +15,7 @@ Additional Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift SHA-256: d651f10e23d47da379a39447f659f276580244134775262b3b6810a706be3d4d
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift SHA-256: 0134a98e5ef126a384cd7dc31020163100a3fc72219143a7a08b0e592fd569d4
+Additional Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -44,11 +44,12 @@ Command: deno task verify:qml (same tree, same implementer run) -> run_checks PA
 Result: the converted Swift and QML suites are green on the counterpart hashes
 pinned above. This ledger was not re-run here and no per-predicate execution was
 observed beyond that report; predicate presence alone does not close any A entry.
-Note: a sibling lane is appending new hover-residual predicates to
-automationcanvasediting.swift while this ledger was written (additive hunks after
-line 371 only); every line pinned here was re-verified unchanged against the current
-content, whose hash is pinned above. Refresh that hash if the sibling lane lands more
-appends.
+Note: the review-fix hunks have landed in automationcanvasediting.swift since this
+ledger was written (diagnostics enum names, hover-model anchor unwraps, a
+selection-clear guard, and drawerAutomationMenuHintMuting plus
+drawerAutomationHoverResidual appends after line 398); every line pinned here was
+re-verified against the current content, whose hash is pinned above. The appended
+menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 
@@ -1914,12 +1915,12 @@ Counterpart expression:
       report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
                          what: "a cancelled stale gesture never writes on release")
 
-S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:367
+S059 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:395
 Counterpart expression:
       report.expectEqual(afterRebuild, fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
                          what: "a stale release after a mid-gesture rebuild commits nothing")
 
-S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:369
+S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:397
 Counterpart expression:
       report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
                     message: "a stale release leaves no interaction live")

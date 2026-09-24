@@ -150,7 +150,7 @@ Original expression:
 
 A017 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:325
 Disposition: MATCHED
-Mapping/reason: S031 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml:2827, "the production Automation page attaches to its slot": the production page is mounted and identified.
+Mapping/reason: S031 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml:2852, "the production Automation page attaches to its slot": the production page is mounted and identified.
 Original expression:
   QVERIFY(automationPage)
 
@@ -198,7 +198,7 @@ Original expression:
 
 A025 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:349
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml:2827: the production page is mounted and identified.
+Mapping/reason: S031 — tst_EditorDrawer.qml:2852: the production page is mounted and identified.
 Original expression:
   QVERIFY(automationPage)
 
@@ -222,7 +222,7 @@ Original expression:
 
 A029 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:363
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S031 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -306,7 +306,7 @@ Original expression:
 
 A043 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:399
 Disposition: MATCHED
-Mapping/reason: S031 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S031 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -487,7 +487,7 @@ Swift expression:
                              cppID: drawerAutomationCursorKindID,
                              what: "releasing the drag reverts to the arrow")
 
-S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2827
+S031 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2852
 QML expression:
   verify(bootstrap.attachProductionSection(testCase.automationKind),
                  "the production Automation page attaches to its slot")

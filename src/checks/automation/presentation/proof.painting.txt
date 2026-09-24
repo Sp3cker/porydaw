@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/presentation/painting.cpp
 Original SHA-256: 159ac9525ae9956c17b2648674383eccba7e8dc64498ab9fa0c5f02964f78926
 Swift counterpart: src/checks/automation/presentation/painting.swift
-Swift SHA-256: cce7241445742f07d030d6617dd6f51afaff6c1c2e1968a8184df5bf7f0c5487
+Swift SHA-256: eebe840b54d12012b23a388e07a968200955b6279510c12405bcf31ee29bb1f2
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -14,7 +14,7 @@ MATCHED requires identified equivalent predicates and execution evidence; PARTIA
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
-Tally: MATCHED 130, PARTIAL 24, GAP 0, NATIVE 41.
+Tally: MATCHED 129, PARTIAL 32, GAP 0, NATIVE 34.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
 Execution and ownership
@@ -61,7 +61,7 @@ Original assertion inventory
 
 A001 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:119
 Disposition: MATCHED
-Mapping/reason: S075 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml:2827, "the production Automation page attaches to its slot": the production page is mounted and identified; the Swift fixture's page is a stored non-optional value, so no nullable-page ingress remains to assert.
+Mapping/reason: S075 — mountProductionAutomation, src/checks/editorqml/tst_EditorDrawer.qml:2852, "the production Automation page attaches to its slot": the production page is mounted and identified; the Swift fixture's page is a stored non-optional value, so no nullable-page ingress remains to assert.
 Original expression:
   QVERIFY(automationPage)
 
@@ -79,7 +79,7 @@ Original expression:
 
 A004 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:125
 Disposition: MATCHED
-Mapping/reason: S037 — painting.swift:155, "the Tempo row closes the selector", with S080 "the last catalog parameter is the Tempo row the selector drew" (tst_EditorDrawer.qml:4131): the trailing enumerated row resolves to the song-global Tempo row.
+Mapping/reason: S037 — painting.swift:155, "the Tempo row closes the selector", with S080 "the last catalog parameter is the Tempo row the selector drew" (tst_EditorDrawer.qml:4154): the trailing enumerated row resolves to the song-global Tempo row.
 Original expression:
   QVERIFY(tempoRow.has_value())
 
@@ -91,44 +91,44 @@ Original expression:
 
 A006 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:129
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827: the production Automation page attaches to its drawer slot, the drawn equivalent of the resolved EditorDrawer section.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852: the production Automation page attaches to its drawer slot, the drawn equivalent of the resolved EditorDrawer section.
 Original expression:
   QVERIFY(drawer)
 
 A007 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:131
 Disposition: MATCHED
-Mapping/reason: S109 — test_parameterLabelsFitGutterAtDerivedMinimum, tst_EditorDrawer.qml:2961, "the requested height is clamped to the derived minimum": the derived minimum is positive, the precondition the original asserted.
+Mapping/reason: S109 — test_parameterLabelsFitGutterAtDerivedMinimum, tst_EditorDrawer.qml:2986, "the requested height is clamped to the derived minimum": the derived minimum is positive, the precondition the original asserted.
 Original expression:
   QVERIFY(minimumHeight > 0)
 
 A008 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:134
 Disposition: MATCHED
-Mapping/reason: S109/S110 — tst_EditorDrawer.qml:2961/2966: the mounted viewport height settles at the derived minimum and stays there under further shrinking.
+Mapping/reason: S109/S110 — tst_EditorDrawer.qml:2986/2991: the mounted viewport height settles at the derived minimum and stays there under further shrinking.
 Original expression:
   QTRY_COMPARE(automationPage->automationViewportSize().height(), minimumHeight)
 
 A009 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:135
 Disposition: MATCHED
-Mapping/reason: S095 — verifyAutomationLabelsFitGutter, tst_EditorDrawer.qml:2895, "the selector exposes its gutter and clipped scroller": the gutter item exists and is findable.
+Mapping/reason: S095 — verifyAutomationLabelsFitGutter, tst_EditorDrawer.qml:2920, "the selector exposes its gutter and clipped scroller": the gutter item exists and is findable.
 Original expression:
   QVERIFY(m_gutterInput)
 
 A010 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:136
 Disposition: MATCHED
-Mapping/reason: S110 — tst_EditorDrawer.qml:2966, "further shrinking keeps the derived minimum": the gutter's own height equals the derived minimum.
+Mapping/reason: S110 — tst_EditorDrawer.qml:2991, "further shrinking keeps the derived minimum": the gutter's own height equals the derived minimum.
 Original expression:
   QTRY_COMPARE(qCeil(m_gutterInput->height()), minimumHeight)
 
 A011 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:143
 Disposition: MATCHED
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909, "the parameter tab has bounds": every catalog label's tab is found and has positive width and height.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934, "the parameter tab has bounds": every catalog label's tab is found and has positive width and height.
 Original expression:
   QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
                       tab->height() > 0.0)
 
 A012 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:146
 Disposition: MATCHED
-Mapping/reason: S098 — tst_EditorDrawer.qml:2911, "stays inside the widened gutter": each tab's mapped rect lies inside the gutter horizontally.
+Mapping/reason: S098 — tst_EditorDrawer.qml:2936, "stays inside the widened gutter": each tab's mapped rect lies inside the gutter horizontally.
 Original expression:
   QVERIFY2(!bounds.isEmpty() && bounds.left() >= gutter.left() - layout::singlePixel() &&
                        bounds.right() <= gutter.right() + layout::singlePixel(),
@@ -136,45 +136,45 @@ Original expression:
 
 A013 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:150
 Disposition: MATCHED
-Mapping/reason: S103 — tst_EditorDrawer.qml:2926, "parameter tabs do not overlap at one center": every tab center is distinct from each earlier center.
+Mapping/reason: S103 — tst_EditorDrawer.qml:2951, "parameter tabs do not overlap at one center": every tab center is distinct from each earlier center.
 Original expression:
   QVERIFY(std::abs(center.x() - bounds.center().x()) > layout::singlePixel() ||
                       std::abs(center.y() - bounds.center().y()) > layout::singlePixel())
 
 A014 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:157
 Disposition: MATCHED
-Mapping/reason: S099 — tst_EditorDrawer.qml:2914, "the parameter tab has its production Text item": the Qt Quick contentItem itself is a control internal and is not published; the drawn tab's production Text item stands for the rendered label content.
+Mapping/reason: S099 — tst_EditorDrawer.qml:2939, "the parameter tab has its production Text item": the Qt Quick contentItem itself is a control internal and is not published; the drawn tab's production Text item stands for the rendered label content.
 Original expression:
   QVERIFY2(content, "a catalog label rendered without its content item")
 
 A015 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:160
 Disposition: MATCHED
-Mapping/reason: S099 — tst_EditorDrawer.qml:2914: the tab's production Text item exists for every label.
+Mapping/reason: S099 — tst_EditorDrawer.qml:2939: the tab's production Text item exists for every label.
 Original expression:
   QVERIFY2(text, "a catalog label rendered without its Text item")
 
 A016 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:161
 Disposition: MATCHED
-Mapping/reason: S100 — tst_EditorDrawer.qml:2915, compare(text.text, labels[i]): the drawn label text is the catalog label.
+Mapping/reason: S100 — tst_EditorDrawer.qml:2940, compare(text.text, labels[i]): the drawn label text is the catalog label.
 Original expression:
   QCOMPARE(text->property("text").toString(), labels.at(index))
 
 A017 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:164
 Disposition: MATCHED
-Mapping/reason: S101 — tst_EditorDrawer.qml:2916, "the parameter label has rendered ink": the fitted text reports positive rendered content.
+Mapping/reason: S101 — tst_EditorDrawer.qml:2941, "the parameter label has rendered ink": the fitted text reports positive rendered content.
 Original expression:
   QVERIFY(contentWidth > 0.0 && contentHeight > 0.0)
 
 A018 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:165
 Disposition: MATCHED
-Mapping/reason: S102 — tst_EditorDrawer.qml:2918, "fits without clipping its rendered text": contentWidth stays within the Text width.
+Mapping/reason: S102 — tst_EditorDrawer.qml:2943, "fits without clipping its rendered text": contentWidth stays within the Text width.
 Original expression:
   QVERIFY2(contentWidth <= text->width() + 0.5,
                    "the rendered fitted Text exceeds its label width")
 
 A019 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:167
 Disposition: MATCHED
-Mapping/reason: S102 — tst_EditorDrawer.qml:2918: contentHeight stays within the Text height.
+Mapping/reason: S102 — tst_EditorDrawer.qml:2943: contentHeight stays within the Text height.
 Original expression:
   QVERIFY2(contentHeight <= text->height() + 0.5,
                    "the rendered fitted Text exceeds its label height")
@@ -199,13 +199,13 @@ Original expression:
 
 A023 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:186
 Disposition: MATCHED
-Mapping/reason: S096 — tst_EditorDrawer.qml:2902, "every catalog label has a tab": the measured tab list has one entry per label.
+Mapping/reason: S096 — tst_EditorDrawer.qml:2927, "every catalog label has a tab": the measured tab list has one entry per label.
 Original expression:
   QCOMPARE(labelBounds.size(), static_cast<std::size_t>(labels.size()))
 
 A024 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:189
 Disposition: MATCHED
-Mapping/reason: S104 — tst_EditorDrawer.qml:2932, "related controller pairs share a row": each related pair's tab centers share one y.
+Mapping/reason: S104 — tst_EditorDrawer.qml:2957, "related controller pairs share a row": each related pair's tab centers share one y.
 Original expression:
   QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
                             labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
@@ -213,7 +213,7 @@ Original expression:
 
 A025 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:196
 Disposition: MATCHED
-Mapping/reason: S103 — tst_EditorDrawer.qml:2926: the odd trailing controller keeps a distinct center, i.e. a selector row of its own.
+Mapping/reason: S103 — tst_EditorDrawer.qml:2951: the odd trailing controller keeps a distinct center, i.e. a selector row of its own.
 Original expression:
   QVERIFY2(oddBounds.center().y() > labelBounds.at(controllers.size() - 2).center().y() +
                                                     layout::singlePixel(),
@@ -221,72 +221,72 @@ Original expression:
 
 A026 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:200
 Disposition: MATCHED
-Mapping/reason: S107 — tst_EditorDrawer.qml:2940, "Tempo closes the selector below the controllers": the final controller row sits above Tempo's row.
+Mapping/reason: S107 — tst_EditorDrawer.qml:2965, "Tempo closes the selector below the controllers": the final controller row sits above Tempo's row.
 Original expression:
   QVERIFY2(oddBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
                    "the odd trailing controller no longer sits above Tempo")
 
 A027 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:204
 Disposition: MATCHED
-Mapping/reason: S107 — tst_EditorDrawer.qml:2940: Tempo is the closing drawn row; the Swift lane asserts the closing-row ordering below the last controller row (the original's comparison against the first label is the weaker form of the same contract).
+Mapping/reason: S107 — tst_EditorDrawer.qml:2965: Tempo is the closing drawn row; the Swift lane asserts the closing-row ordering below the last controller row (the original's comparison against the first label is the weaker form of the same contract).
 Original expression:
   QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
                "the song-global Tempo label no longer closes the selector grid")
 
 A028 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:206
 Disposition: MATCHED
-Mapping/reason: S105/S106 — tst_EditorDrawer.qml:2937/2938, "Tempo shares the first column's left edge"/"Tempo spans both columns": the Tempo tab spans the two-column selector grid.
+Mapping/reason: S105/S106 — tst_EditorDrawer.qml:2962/2963, "Tempo shares the first column's left edge"/"Tempo spans both columns": the Tempo tab spans the two-column selector grid.
 Original expression:
   QVERIFY2(tempoBounds.width() > labelBounds.front().width() * 1.5,
                "the song-global Tempo label no longer spans the closing selector row")
 
 A029 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:210
 Disposition: MATCHED
-Mapping/reason: S095 — tst_EditorDrawer.qml:2895: the scroller lookup resolves.
+Mapping/reason: S095 — tst_EditorDrawer.qml:2920: the scroller lookup resolves.
 Original expression:
   QVERIFY(scroller)
 
 A030 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:211
 Disposition: MATCHED
-Mapping/reason: S108 — tst_EditorDrawer.qml:2942, "the selector clips its scrolling content": scroller.clip is true.
+Mapping/reason: S108 — tst_EditorDrawer.qml:2967, "the selector clips its scrolling content": scroller.clip is true.
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
 A031 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:213
 Disposition: MATCHED
-Mapping/reason: S111 — tst_EditorDrawer.qml:2969, "the catalog scrolls at minimum height": contentHeight exceeds the scroller height.
+Mapping/reason: S111 — tst_EditorDrawer.qml:2994, "the catalog scrolls at minimum height": contentHeight exceeds the scroller height.
 Original expression:
   QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
 
 A032 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:215
 Disposition: MATCHED
-Mapping/reason: S112 — tst_EditorDrawer.qml:2973, "the first parameter is visible at the content top": the first tab lies inside the scroller viewport at contentY 0.
+Mapping/reason: S112 — tst_EditorDrawer.qml:2998, "the first parameter is visible at the content top": the first tab lies inside the scroller viewport at contentY 0.
 Original expression:
   QVERIFY2(checks::support::rectInside(labelBounds.front(), viewport),
                "the first tab is not visible at the content top")
 
 A033 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:218
 Disposition: MATCHED
-Mapping/reason: S111 — tst_EditorDrawer.qml:2969: contentHeight > height is exactly a positive maximum content offset.
+Mapping/reason: S111 — tst_EditorDrawer.qml:2994: contentHeight > height is exactly a positive maximum content offset.
 Original expression:
   QVERIFY(maximumContentY > 0.0)
 
 A034 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:221
 Disposition: MATCHED
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909 (the per-label loop reaches the last tab), with S113 "Tempo is visible at the content bottom".
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934 (the per-label loop reaches the last tab), with S113 "Tempo is visible at the content bottom".
 Original expression:
   QVERIFY(lastTab)
 
 A035 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:222
 Disposition: MATCHED
-Mapping/reason: S113 — tst_EditorDrawer.qml:2978, "Tempo is visible at the content bottom": the last tab lies inside the viewport at the maximum content offset.
+Mapping/reason: S113 — tst_EditorDrawer.qml:3003, "Tempo is visible at the content bottom": the last tab lies inside the viewport at the maximum content offset.
 Original expression:
   QTRY_VERIFY(
           checks::support::rectInside(lastTab->mapRectToScene(lastTab->boundingRect()), viewport))
 
 A036 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:233
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827: the production page is mounted and identified.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852: the production page is mounted and identified.
 Original expression:
   QVERIFY(automationPage)
 
@@ -322,7 +322,7 @@ Original expression:
 
 A042 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:245
 Disposition: MATCHED
-Mapping/reason: S043 — painting.swift:179, "switching every parameter mutates nothing", with S114 — tst_EditorDrawer.qml:4243, "switching parameters wrote nothing to the lane": the revision/identity/history snapshot and the drawn lane ticks stay fixed, the no-commit condition that leaves the serialized document unchanged.
+Mapping/reason: S043 — painting.swift:179, "switching every parameter mutates nothing", with S114 — tst_EditorDrawer.qml:4268, "switching parameters wrote nothing to the lane": the revision/identity/history snapshot and the drawn lane ticks stay fixed, the no-commit condition that leaves the serialized document unchanged.
 Original expression:
   QCOMPARE(m_document->smf().write(), before)
 
@@ -352,14 +352,14 @@ Original expression:
 
 A047 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:270
 Disposition: MATCHED
-Mapping/reason: S084/S083 — tst_EditorDrawer.qml:4162/4157, "the lane with written events drew its nodes"/"the active lane drew one marker per published node", with S045 — painting.swift:185: the drawn markers are exactly the active lane's published nodes; the node-ink role itself is theme-owned.
+Mapping/reason: S084/S083 — tst_EditorDrawer.qml:4187/4182, "the lane with written events drew its nodes"/"the active lane drew one marker per published node", with S045 — painting.swift:185: the drawn markers are exactly the active lane's published nodes; the node-ink role itself is theme-owned.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   volumeNode, QPoint{}, ccColor))
 
 A048 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:272
 Disposition: MATCHED
-Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044 — painting.swift:182, "the active projection is the switched parameter's": only the active lane's markers are published and drawn, so no marker is painted at another lane's node position.
+Mapping/reason: S083 — tst_EditorDrawer.qml:4182, with S044 — painting.swift:182, "the active projection is the switched parameter's": only the active lane's markers are published and drawn, so no marker is painted at another lane's node position.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
                                QPoint{}, ccColor))
@@ -372,14 +372,14 @@ Original expression:
 
 A050 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:276
 Disposition: MATCHED
-Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4157/4162, with S044: after the switch the LFO lane's published markers are the drawn set.
+Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4182/4187, with S044: after the switch the LFO lane's published markers are the drawn set.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   lfoNode, QPoint{}, ccColor))
 
 A051 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:278
 Disposition: MATCHED
-Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044: the superseded Volume lane publishes no marker, so none is drawn.
+Mapping/reason: S083 — tst_EditorDrawer.qml:4182, with S044: the superseded Volume lane publishes no marker, so none is drawn.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                volumeNode, QPoint{}, ccColor))
@@ -392,14 +392,14 @@ Original expression:
 
 A053 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:282
 Disposition: MATCHED
-Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4157/4162, with S044: the Pan lane's published markers are the drawn set.
+Mapping/reason: S083/S084 — tst_EditorDrawer.qml:4182/4187, with S044: the Pan lane's published markers are the drawn set.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
                                   panNode, QPoint{}, ccColor))
 
 A054 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:284
 Disposition: MATCHED
-Mapping/reason: S083 — tst_EditorDrawer.qml:4157, with S044: the superseded LFO lane publishes no marker.
+Mapping/reason: S083 — tst_EditorDrawer.qml:4182, with S044: the superseded LFO lane publishes no marker.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
                                QPoint{}, ccColor))
@@ -412,14 +412,14 @@ Original expression:
 
 A056 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:296
 Disposition: PARTIAL
-Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4164/4162 assert the active pipeline's curve and nodes on the volume lane; unproved: the Tempo lane's own active curve run in the node ink (Tempo's curve run is asserted only in its pinned-ghost form, S087).
+Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4189/4187 assert the active pipeline's curve and nodes on the volume lane; unproved: the Tempo lane's own active curve run in the node ink (Tempo's curve run is asserted only in its pinned-ghost form, S087).
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, tempoColor))
 
 A057 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:298
-Disposition: NATIVE
-Mapping/reason: Negative colour-identity probe on the retired AutomationCurves raster layer: no non-identity-colour ingress is published; the drawn curve runs themselves are asserted by S085.
+Disposition: PARTIAL
+Mapping/reason: S085 — tst_EditorDrawer.qml:4189, "the lane with written events drew its curve" observes the curve ink at the item level; unproved: the absence of any trackIdentityColor(kTrack % count) pixel inside the body QRegion on the AutomationCurves raster — no executing predicate samples that layer for the non-identity colour.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                QRegion(body), QPoint{},
@@ -427,7 +427,7 @@ Original expression:
 
 A058 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:308
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -456,33 +456,33 @@ Original expression:
   QVERIFY(volumeHandle.valid())
 
 A063 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:318
-Disposition: MATCHED
-Mapping/reason: S059 — painting.swift:226, "Tempo shares the active lane's plot origin", with S060 — painting.swift:229, "Tempo keeps its own event count on the shared body": Tempo is projected over the same shared body as a controller lane.
+Disposition: PARTIAL
+Mapping/reason: S059 — painting.swift:228, "Tempo shares the active lane's plot origin", with S060 — painting.swift:231, "Tempo keeps its own event count on the shared body", plus painting.swift:242 "Tempo's first tick plots through the shared camera", :244 "Tempo's last tick plots through the shared camera", :250 "the active lane's last tick plots through the shared camera", :259/:261 "Tempo shares the active lane's plot width/height" and :263 "Tempo shares the active lane's grid centers": the shared-body x/width/height/grid-center equalities are observed; unproved: the body rect y (top-edge) equality — no predicate compares the Tempo and volume bodies' vertical origin, so the full QCOMPARE rect identity is not closed.
 Original expression:
   QCOMPARE(tempoBody, canvas->laneBody(volumeHandle))
 
 A064 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:319
 Disposition: MATCHED
-Mapping/reason: S076 — tst_EditorDrawer.qml:4112, "the plot spans the body height", with S059: the Swift lane body is the shared AutomationPlotBounds the plot spans, and Tempo projects through its origin.
+Mapping/reason: S076 — tst_EditorDrawer.qml:4137, "the plot spans the body height", with S059: the Swift lane body is the shared AutomationPlotBounds the plot spans, and Tempo projects through its origin.
 Original expression:
   QCOMPARE(tempoBody, m_plotInput->bounds().toAlignedRect())
 
 A065 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:320
 Disposition: MATCHED
-Mapping/reason: S076 — tst_EditorDrawer.qml:4112 and S059 — painting.swift:226: the shared Tempo body is the composed, non-empty plot over which Tempo projects.
+Mapping/reason: S076 — tst_EditorDrawer.qml:4137 and S059 — painting.swift:228: the shared Tempo body is the composed, non-empty plot over which Tempo projects.
 Original expression:
   QVERIFY(!tempoBody.isEmpty())
 
 A066 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:328
 Disposition: PARTIAL
-Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4164/4162 assert the active pipeline on the volume lane; unproved: the Tempo lane's own active curve run (Tempo's curve is asserted only as the pinned ghost, S087).
+Mapping/reason: S085/S084 — tst_EditorDrawer.qml:4189/4187 assert the active pipeline on the volume lane; unproved: the Tempo lane's own active curve run (Tempo's curve is asserted only as the pinned ghost, S087).
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(tempoBody), QPoint{}, tempoColor))
 
 A067 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:337
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -513,47 +513,47 @@ Original expression:
 
 A072 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:355
 Disposition: MATCHED
-Mapping/reason: S047 — painting.swift:190, "a lane with events draws its curve", with S085 — tst_EditorDrawer.qml:4164, "the lane with written events drew its curve".
+Mapping/reason: S047 — painting.swift:190, "a lane with events draws its curve", with S085 — tst_EditorDrawer.qml:4189, "the lane with written events drew its curve".
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ink))
 
 A073 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:358
 Disposition: MATCHED
-Mapping/reason: S080 — tst_EditorDrawer.qml:4129, "the last catalog parameter is the Tempo row the selector drew": the Tempo index resolves.
+Mapping/reason: S080 — tst_EditorDrawer.qml:4154, "the last catalog parameter is the Tempo row the selector drew": the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A074 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:360
 Disposition: MATCHED
-Mapping/reason: S087 — tst_EditorDrawer.qml:1975, "the plot drew the ghost's curve", with S086 — tst_EditorDrawer.qml:1970 and S051 — painting.swift:203, "Tempo pins as a ghost under the active lane".
+Mapping/reason: S087 — tst_EditorDrawer.qml:2000, "the plot drew the ghost's curve", with S086 — tst_EditorDrawer.qml:1995 and S051 — painting.swift:205, "Tempo pins as a ghost under the active lane".
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ghostInk))
 
 A075 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:362
 Disposition: MATCHED
-Mapping/reason: S088/S089 — tst_EditorDrawer.qml:1980/1994, "pinning adds exactly the ghost runs before the active runs"/"every ghost run draws before the active runs": the pinned ghost's runs are added under the still-drawn active runs.
+Mapping/reason: S088/S089 — tst_EditorDrawer.qml:2005/2019, "pinning adds exactly the ghost runs before the active runs"/"every ghost run draws before the active runs": the pinned ghost's runs are added under the still-drawn active runs.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, ink))
 
 A076 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:365
 Disposition: MATCHED
-Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin", with S057/S058 — painting.swift:220/222: the pinned set empties and the ghost curve drops.
+Mapping/reason: S090 — tst_EditorDrawer.qml:2021, "a second Control press cleared the pin", with S057/S058 — painting.swift:222/224: the pinned set empties and the ghost curve drops.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A077 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:366
 Disposition: MATCHED
-Mapping/reason: S091 — tst_EditorDrawer.qml:1998, "unpinning restores the unpinned plot", with S058 — painting.swift:222: the ghost run is gone from the drawn and published runs.
+Mapping/reason: S091 — tst_EditorDrawer.qml:2023, "unpinning restores the unpinned plot", with S058 — painting.swift:224: the ghost run is gone from the drawn and published runs.
 Original expression:
   QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                    QRegion(body), QPoint{}, ghostInk))
 
 A078 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:375
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -583,43 +583,43 @@ Original expression:
 
 A083 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:399
 Disposition: MATCHED
-Mapping/reason: S061 — painting.swift:234, "the plot draws its time grid", with S081 — tst_EditorDrawer.qml:4139, "the page composed its time grid": before the growth the published grid lines are non-empty.
+Mapping/reason: S061 — painting.swift:269, "the plot draws its time grid", with S081 — tst_EditorDrawer.qml:4164, "the page composed its time grid": before the growth the published grid lines are non-empty.
 Original expression:
   QVERIFY(!beforeGrid.empty())
 
 A084 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:404
 Disposition: PARTIAL
-Mapping/reason: S062 — painting.swift:238, "drawer growth moves the value axis", asserts the grown body through the moved value axis, and S110/S111 (tst_EditorDrawer.qml:2961/2966) exercise the real grip resize; unproved: the lane body's own height increase.
+Mapping/reason: S062 — painting.swift:273, "drawer growth moves the value axis", asserts the grown body through the moved value axis, and S110/S111 (tst_EditorDrawer.qml:2991/2994) exercise the real grip resize; unproved: the lane body's own height increase.
 Original expression:
   QTRY_VERIFY(canvas->laneBody(volumeHandle).height() > beforeBody.height())
 
 A085 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:407
 Disposition: MATCHED
-Mapping/reason: S062 — painting.swift:238, "drawer growth moves the value axis": a lane point's projected y changes after the body grows.
+Mapping/reason: S062 — painting.swift:273, "drawer growth moves the value axis": a lane point's projected y changes after the body grows.
 Original expression:
   QVERIFY(beforeValueY != afterValueY)
 
 A086 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:415
 Disposition: MATCHED
-Mapping/reason: S063 — painting.swift:242, "drawer growth keeps every grid line's horizontal center": the grid line x set is identical before and after growth.
+Mapping/reason: S063 — painting.swift:277, "drawer growth keeps every grid line's horizontal center": the grid line x set is identical before and after growth.
 Original expression:
   QTRY_VERIFY(sameGridCenters(beforeGrid, gridCenters(afterBody)))
 
 A087 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:430
-Disposition: NATIVE
-Mapping/reason: Native AutomationGrid raster rect probe (separator-role frame at the body edge): the grown grid alignment is asserted structurally by S061/S063.
+Disposition: PARTIAL
+Mapping/reason: S063 — painting.swift:277, "drawer growth keeps every grid line's horizontal center", with S081 — tst_EditorDrawer.qml:4164, "the page composed its time grid", asserts the grown grid alignment structurally; unproved: the separator-role frame rect pixels at the afterBody top edge — no executing predicate samples the AutomationGrid raster for the top-edge frame.
 Original expression:
   QVERIFY(hasFrame(QRectF(afterBody).top()))
 
 A088 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:431
-Disposition: NATIVE
-Mapping/reason: Native AutomationGrid raster rect probe; see A087.
+Disposition: PARTIAL
+Mapping/reason: S063 — painting.swift:277 with S081 — tst_EditorDrawer.qml:4164 (see A087); unproved: the separator-role frame rect pixels at the afterBody bottom edge — no executing predicate samples the AutomationGrid raster for the bottom-edge frame.
 Original expression:
   QVERIFY(hasFrame(QRectF(afterBody).bottom()))
 
 A089 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:439
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -637,13 +637,13 @@ Original expression:
 
 A092 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:453
 Disposition: MATCHED
-Mapping/reason: S009 — painting.swift:43 (one row per catalog parameter), with S096 — tst_EditorDrawer.qml:2902: every named index resolves.
+Mapping/reason: S009 — painting.swift:43 (one row per catalog parameter), with S096 — tst_EditorDrawer.qml:2927: every named index resolves.
 Original expression:
   QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0 && modulationIndex >= 0)
 
 A093 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:471
 Disposition: MATCHED
-Mapping/reason: S029 — painting.swift:126, "the page publishes the selected inactive parameters", with S021/S022/S023 — painting.swift:99/102/102 (only covered lanes with events are selected; coverage alone never selects) and S115 — tst_EditorDrawer.qml:4245, "the explicit selection survives a parameter switch": the Swift fixture covers Pan+Tempo where the C++ covered LFO+Tempo; the selection contract is identical.
+Mapping/reason: S029 — painting.swift:126, "the page publishes the selected inactive parameters", with S021/S022/S023 — painting.swift:99/102/102 (only covered lanes with events are selected; coverage alone never selects) and S115 — tst_EditorDrawer.qml:4270, "the explicit selection survives a parameter switch": the Swift fixture covers Pan+Tempo where the C++ covered LFO+Tempo; the selection contract is identical.
 Original expression:
   QTRY_VERIFY(canvas->selectedParameters() == expectedSelected)
 
@@ -655,31 +655,31 @@ Original expression:
 
 A095 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:477
 Disposition: MATCHED
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909: the Pan row's drawn tab is found and has bounds.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934: the Pan row's drawn tab is found and has bounds.
 Original expression:
   QVERIFY(panTab)
 
 A096 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:478
 Disposition: MATCHED
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909: the LFO row's drawn tab is found and has bounds.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934: the LFO row's drawn tab is found and has bounds.
 Original expression:
   QVERIFY(lfoTab)
 
 A097 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:479
 Disposition: MATCHED
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909 with S080 — tst_EditorDrawer.qml:4129: the Tempo row's drawn tab is found.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934 with S080 — tst_EditorDrawer.qml:4154: the Tempo row's drawn tab is found.
 Original expression:
   QVERIFY(tempoTab)
 
 A098 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:483
-Disposition: NATIVE
-Mapping/reason: Qt Quick Control backgroundItem internals: the drawn tab background item has no published counterpart; the selection itself is asserted at the model level (S029).
+Disposition: PARTIAL
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934, "the parameter tab has bounds" finds the Pan tab with positive bounds, and S029 — painting.swift:126 publishes the selected inactive parameters; unproved: the Pan tab's background QQuickItem and its tabSelectedBackground fill pixels inside the tab rect — no executing predicate resolves tab.background or samples its colour.
 Original expression:
   QVERIFY(panBackground)
 
 A099 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:484
-Disposition: NATIVE
-Mapping/reason: Qt Quick Control backgroundItem internals; see A098.
+Disposition: PARTIAL
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934 finds the LFO tab (see A098); unproved: the LFO tab's background QQuickItem and its tabBackground fill pixels inside the tab rect — no executing predicate resolves tab.background or samples its colour.
 Original expression:
   QVERIFY(lfoBackground)
 
@@ -737,22 +737,22 @@ Original expression:
                "the inactive Tempo label has no visible shared-selection indicator")
 
 A108 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:522
-Disposition: NATIVE
-Mapping/reason: Negative colour-leak probe on the retired band raster (the selectionOutline role): no drawn ghost-rule colour predicate exists.
+Disposition: PARTIAL
+Mapping/reason: S029 — painting.swift:126 publishes the selected inactive parameters; unproved: the absence of selectionOutline (ghostRule) colour pixels inside the LFO tab rect — no executing predicate samples the composed band for the ghost-rule leak.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
 
 A109 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:524
-Disposition: NATIVE
-Mapping/reason: Negative colour-leak probe on the retired band raster; see A108.
+Disposition: PARTIAL
+Mapping/reason: S029 — painting.swift:126 (see A108); unproved: the absence of selectionOutline (ghostRule) colour pixels inside the Tempo tab rect — no executing predicate samples the composed band for the ghost-rule leak.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
 
 A110 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:532
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -782,13 +782,13 @@ Original expression:
 
 A115 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:553
 Disposition: MATCHED
-Mapping/reason: S069/S070 — painting.swift:271/273, "hovering a tempo node shows its readout"/"the readout text is the hovered value's own text", with S092/S093 — tst_EditorDrawer.qml:1847/1849, "the node move published its hover"/"the drawn label shows the published hover text".
+Mapping/reason: S069/S070 — painting.swift:306/308, "hovering a tempo node shows its readout"/"the readout text is the hovered value's own text", with S092/S093 — tst_EditorDrawer.qml:1843/1845, "the node move published its hover"/"the drawn label shows the published hover text".
 Original expression:
   QTRY_VERIFY((label = visibleHoverTextRecord(lane.valueText(bpm))).has_value())
 
 A116 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:554
 Disposition: MATCHED
-Mapping/reason: S072 — painting.swift:281, "the hover label stays inside the plot": the hover label rect lies inside the plot bounds.
+Mapping/reason: S072 — painting.swift:316, "the hover label stays inside the plot": the hover label rect lies inside the plot bounds.
 Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(automationPage->automationViewportSize())).contains(*label))
 
@@ -800,13 +800,13 @@ Original expression:
 
 A118 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:557
 Disposition: MATCHED
-Mapping/reason: S094 — tst_EditorDrawer.qml:1945, "the node hover paints over the background hover": a hovered node visibly repaints the composed band, the drawn equivalent of the changed capture.
+Mapping/reason: S094 — tst_EditorDrawer.qml:1963, "the node hover paints over the background hover": a hovered node visibly repaints the composed band, the drawn equivalent of the changed capture.
 Original expression:
   QVERIFY(after != before)
 
 A119 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:565
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -830,40 +830,40 @@ Original expression:
 
 A123 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:579
 Disposition: NATIVE
-Mapping/reason: Native TimelineQuickScene automationLaneTextModel: the C++ lane text model has no Swift counterpart; ghost label text is asserted by S052 — painting.swift:205.
+Mapping/reason: Native TimelineQuickScene automationLaneTextModel: the C++ lane text model has no Swift counterpart; ghost label text is asserted by S052 — painting.swift:207.
 Original expression:
   QVERIFY(ghostModel)
 
 A124 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:582
 Disposition: MATCHED
-Mapping/reason: S080 — tst_EditorDrawer.qml:4129: the Tempo index resolves.
+Mapping/reason: S080 — tst_EditorDrawer.qml:4154: the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A125 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:586
 Disposition: MATCHED
-Mapping/reason: S052 — painting.swift:205, "the ghost label names the curve and its event count", with S032 — painting.swift:133 (["Pan (PAN) · 2 Events"]): the label names the curve and its counted events, each fixture's own written points.
+Mapping/reason: S052 — painting.swift:207, "the ghost label names the curve and its event count", with S032 — painting.swift:133 (["Pan (PAN) · 2 Events"]): the label names the curve and its counted events, each fixture's own written points.
 Original expression:
   QTRY_VERIFY((label = findTextRecord(ghostModel, QStringLiteral("Tempo · 1 Event"), viewport))
                       .has_value())
 
 A126 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:588
 Disposition: PARTIAL
-Mapping/reason: S052 — painting.swift:205 asserts the ghost label text; unproved: the drawn name label's right-edge placement against the plot's right edge.
+Mapping/reason: S052 — painting.swift:207 asserts the ghost label text; unproved: the drawn name label's right-edge placement against the plot's right edge.
 Original expression:
   QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
                "the ghost name label no longer hugs the plot's right edge")
 
 A127 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:593
 Disposition: PARTIAL
-Mapping/reason: S052 — painting.swift:205 asserts the ghost label text; unproved: the drawn name label's vertical tracking of its curve's height.
+Mapping/reason: S052 — painting.swift:207 asserts the ghost label text; unproved: the drawn name label's vertical tracking of its curve's height.
 Original expression:
   QVERIFY2(std::abs(label->center().y() - curveY) <= label->height(),
                "the ghost name label no longer tracks its curve's height")
 
 A128 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:595
 Disposition: MATCHED
-Mapping/reason: S052 — painting.swift:205: the pinned label list is exactly the pinned lane's label, so no unpinned lane's name label exists.
+Mapping/reason: S052 — painting.swift:207: the pinned label list is exactly the pinned lane's label, so no unpinned lane's name label exists.
 Original expression:
   QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value())
 
@@ -877,14 +877,14 @@ Original expression:
 
 A130 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:602
 Disposition: PARTIAL
-Mapping/reason: S093 — tst_EditorDrawer.qml:1849 asserts the drawn hover label text; unproved: its horizontal tracking of the pointer.
+Mapping/reason: S093 — tst_EditorDrawer.qml:1845 asserts the drawn hover label text; unproved: its horizontal tracking of the pointer.
 Original expression:
   QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
                "the ghost hover label no longer tracks the pointer horizontally")
 
 A131 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:604
 Disposition: PARTIAL
-Mapping/reason: S093 — tst_EditorDrawer.qml:1849 asserts the drawn hover label text; unproved: the drawn label sitting above the nodeline.
+Mapping/reason: S093 — tst_EditorDrawer.qml:1845 asserts the drawn hover label text; unproved: the drawn label sitting above the nodeline.
 Original expression:
   QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline")
 
@@ -896,19 +896,19 @@ Original expression:
 
 A133 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:608
 Disposition: MATCHED
-Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin", with S057 — painting.swift:220, "the ghost unpins": the pinned set is empty after unpinning.
+Mapping/reason: S090 — tst_EditorDrawer.qml:2021, "a second Control press cleared the pin", with S057 — painting.swift:222, "the ghost unpins": the pinned set is empty after unpinning.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A134 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:609
 Disposition: MATCHED
-Mapping/reason: S034 — painting.swift:137, "unpinning drops the ghost label", with S091 — tst_EditorDrawer.qml:1998.
+Mapping/reason: S034 — painting.swift:137, "unpinning drops the ghost label", with S091 — tst_EditorDrawer.qml:2023.
 Original expression:
   QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
 
 A135 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:610
 Disposition: PARTIAL
-Mapping/reason: S074 — painting.swift:286, "leaving the plot clears the tempo hover", clears the readout on pointer leave; unproved: the hover readout clearing when its ghost is unpinned.
+Mapping/reason: S074 — painting.swift:321, "leaving the plot clears the tempo hover", clears the readout on pointer leave; unproved: the hover readout clearing when its ghost is unpinned.
 Original expression:
   QTRY_VERIFY(
           !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
@@ -922,7 +922,7 @@ Original expression:
 
 A137 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:623
 Disposition: MATCHED
-Mapping/reason: S078 — tst_EditorDrawer.qml:4123, "the active parameter's tab is drawn", with S079 — tst_EditorDrawer.qml:4124, "the active parameter reports itself selected".
+Mapping/reason: S078 — tst_EditorDrawer.qml:4148, "the active parameter's tab is drawn", with S079 — tst_EditorDrawer.qml:4149, "the active parameter reports itself selected".
 Original expression:
   QVERIFY(tab)
 
@@ -940,7 +940,7 @@ Original expression:
 
 A140 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:631
 Disposition: MATCHED
-Mapping/reason: S099 — tst_EditorDrawer.qml:2914, "the parameter tab has its production Text item".
+Mapping/reason: S099 — tst_EditorDrawer.qml:2939, "the parameter tab has its production Text item".
 Original expression:
   QVERIFY(name)
 
@@ -958,14 +958,14 @@ Original expression:
 
 A143 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:634
 Disposition: PARTIAL
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909 asserts the tab bounds; unproved: the drawn badge staying inside the tab content.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934 asserts the tab bounds; unproved: the drawn badge staying inside the tab content.
 Original expression:
   QTRY_VERIFY(
           content->boundingRect().contains(count->mapRectToItem(content, count->boundingRect())))
 
 A144 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:636
 Disposition: PARTIAL
-Mapping/reason: S097/S102 — tst_EditorDrawer.qml:2909/2918 assert the tab bounds and the fitted text; unproved: the drawn name/count horizontal separation.
+Mapping/reason: S097/S102 — tst_EditorDrawer.qml:2934/2943 assert the tab bounds and the fitted text; unproved: the drawn name/count horizontal separation.
 Original expression:
   QVERIFY(name->x() + name->width() <= count->x())
 
@@ -989,13 +989,13 @@ Original expression:
 
 A148 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:648
 Disposition: PARTIAL
-Mapping/reason: S097 — tst_EditorDrawer.qml:2909 asserts the tab bounds; unproved: the drawn tab height staying fixed across a badge change.
+Mapping/reason: S097 — tst_EditorDrawer.qml:2934 asserts the tab bounds; unproved: the drawn tab height staying fixed across a badge change.
 Original expression:
   QCOMPARE(tab->height(), height)
 
 A149 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:649
 Disposition: PARTIAL
-Mapping/reason: S102 — tst_EditorDrawer.qml:2918; unproved: the drawn name's x staying fixed when the badge appears.
+Mapping/reason: S102 — tst_EditorDrawer.qml:2943; unproved: the drawn name's x staying fixed when the badge appears.
 Original expression:
   QCOMPARE(name->x(), nameX)
 
@@ -1019,7 +1019,7 @@ Original expression:
 
 A153 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:662
 Disposition: MATCHED
-Mapping/reason: S075 — tst_EditorDrawer.qml:2827.
+Mapping/reason: S075 — tst_EditorDrawer.qml:2852.
 Original expression:
   QVERIFY(automationPage)
 
@@ -1099,19 +1099,19 @@ Original expression:
 
 A165 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:700
 Disposition: MATCHED
-Mapping/reason: S066 — painting.swift:251, "maximum, neutral and minimum stack top to bottom without overlap": the extremes and neutral are ordered without overlap.
+Mapping/reason: S066 — painting.swift:286, "maximum, neutral and minimum stack top to bottom without overlap": the extremes and neutral are ordered without overlap.
 Original expression:
   QVERIFY(!maxLabel->intersects(*minLabel))
 
 A166 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:701
 Disposition: MATCHED
-Mapping/reason: S066 — painting.swift:251: the maximum and neutral labels are ordered without overlap.
+Mapping/reason: S066 — painting.swift:286: the maximum and neutral labels are ordered without overlap.
 Original expression:
   QVERIFY(!maxLabel->intersects(*neutralLabel))
 
 A167 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:702
 Disposition: MATCHED
-Mapping/reason: S066 — painting.swift:251: the minimum and neutral labels are ordered without overlap.
+Mapping/reason: S066 — painting.swift:286: the minimum and neutral labels are ordered without overlap.
 Original expression:
   QVERIFY(!minLabel->intersects(*neutralLabel))
 
@@ -1123,7 +1123,7 @@ Original expression:
 
 A169 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:710
 Disposition: MATCHED
-Mapping/reason: S061 — painting.swift:234, "the plot draws its time grid", with S082 — tst_EditorDrawer.qml:4140, "the page composed its value axis": the composed Pan body is non-empty and carries its grid and value axis.
+Mapping/reason: S061 — painting.swift:269, "the plot draws its time grid", with S082 — tst_EditorDrawer.qml:4165, "the page composed its value axis": the composed Pan body is non-empty and carries its grid and value axis.
 Original expression:
   QVERIFY(!body.isEmpty())
 
@@ -1136,58 +1136,58 @@ Original expression:
 
 A171 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:737
 Disposition: PARTIAL
-Mapping/reason: S064 — painting.swift:244, "the centered lane keeps its three value rules"; unproved: the drawn left-edge tick rects and their exact three-count.
+Mapping/reason: S064 — painting.swift:279, "the centered lane keeps its three value rules"; unproved: the drawn left-edge tick rects and their exact three-count.
 Original expression:
   QTRY_VERIFY(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1 &&
                   edgeTickYs().size() == 3)
 
 A172 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:743
 Disposition: MATCHED
-Mapping/reason: S069 — painting.swift:271, "hovering a tempo node shows its readout", with S092 — tst_EditorDrawer.qml:1847: a hover pass publishes the readout.
+Mapping/reason: S069 — painting.swift:306, "hovering a tempo node shows its readout", with S092 — tst_EditorDrawer.qml:1843: a hover pass publishes the readout.
 Original expression:
   QTRY_VERIFY(scene->automationHoverTextModel()->rowCount() > 0)
 
 A173 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:744
 Disposition: MATCHED
-Mapping/reason: S067 — painting.swift:257, "a hover pass preserves the scale labels": the label texts are unchanged across a hover pass.
+Mapping/reason: S067 — painting.swift:292, "a hover pass preserves the scale labels": the label texts are unchanged across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport), maxLabel)
 
 A174 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:745
 Disposition: MATCHED
-Mapping/reason: S067 — painting.swift:257: the minimum label is preserved across a hover pass.
+Mapping/reason: S067 — painting.swift:292: the minimum label is preserved across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport), minLabel)
 
 A175 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:746
 Disposition: MATCHED
-Mapping/reason: S067 — painting.swift:257: the neutral label is preserved across a hover pass.
+Mapping/reason: S067 — painting.swift:292: the neutral label is preserved across a hover pass.
 Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport), neutralLabel)
 
 A176 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:747
 Disposition: PARTIAL
-Mapping/reason: S067 — painting.swift:257 preserves the labels across a hover pass; unproved: the drawn left-edge tick sitting at each label's curve height.
+Mapping/reason: S067 — painting.swift:292 preserves the labels across a hover pass; unproved: the drawn left-edge tick sitting at each label's curve height.
 Original expression:
   QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
                "a scale tick no longer sits at its label's curve height")
 
 A177 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:749
 Disposition: MATCHED
-Mapping/reason: S068 — painting.swift:261, "a hover pass appends no duplicate value rules": a hover-only pass adds no duplicate edge rules.
+Mapping/reason: S068 — painting.swift:296, "a hover pass appends no duplicate value rules": a hover-only pass adds no duplicate edge rules.
 Original expression:
   QVERIFY2(edgeTickYs().size() == 3,
                "a hover-only pass appended duplicate left-edge scale ticks")
 
 A178 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:759
 Disposition: MATCHED
-Mapping/reason: S009 — painting.swift:43 with S080 — tst_EditorDrawer.qml:4129: the Volume index resolves.
+Mapping/reason: S009 — painting.swift:43 with S080 — tst_EditorDrawer.qml:4154: the Volume index resolves.
 Original expression:
   QVERIFY(volumeIndex >= 0)
 
 A179 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:762
 Disposition: MATCHED
-Mapping/reason: S052/S032 — painting.swift:205/133: the ghost label names the curve and its event count for the pinned lane (each fixture's own counted lane).
+Mapping/reason: S052/S032 — painting.swift:207/133: the ghost label names the curve and its event count for the pinned lane (each fixture's own counted lane).
 Original expression:
   QTRY_VERIFY(
           (ghostLabel = findTextRecord(laneTextModel, QStringLiteral("Volume · 2 Events"), viewport))
@@ -1216,14 +1216,14 @@ Original expression:
 
 A183 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:772
 Disposition: PARTIAL
-Mapping/reason: S052 — painting.swift:205 asserts the ghost label; unproved: the drawn ghost label keeping to the plot's right edge so that it cannot intersect the left-edge scale labels.
+Mapping/reason: S052 — painting.swift:207 asserts the ghost label; unproved: the drawn ghost label keeping to the plot's right edge so that it cannot intersect the left-edge scale labels.
 Original expression:
   QVERIFY2(!ghostLabel->intersects(rect),
                    "the ghost label overlaps a scale label instead of keeping its side")
 
 A184 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:776
 Disposition: MATCHED
-Mapping/reason: S090 — tst_EditorDrawer.qml:1996, "a second Control press cleared the pin": the pinned set is empty.
+Mapping/reason: S090 — tst_EditorDrawer.qml:2021, "a second Control press cleared the pin": the pinned set is empty.
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
@@ -1247,7 +1247,7 @@ Original expression:
 
 A188 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:788
 Disposition: MATCHED
-Mapping/reason: S080 — tst_EditorDrawer.qml:4129: the Tempo index resolves.
+Mapping/reason: S080 — tst_EditorDrawer.qml:4154: the Tempo index resolves.
 Original expression:
   QVERIFY(tempoIndex >= 0)
 
@@ -1271,7 +1271,7 @@ Original expression:
 
 A192 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:795
 Disposition: MATCHED
-Mapping/reason: S009 — painting.swift:43 with S096 — tst_EditorDrawer.qml:2902: the Bend index resolves.
+Mapping/reason: S009 — painting.swift:43 with S096 — tst_EditorDrawer.qml:2927: the Bend index resolves.
 Original expression:
   QVERIFY(bendIndex >= 0)
 
@@ -1567,175 +1567,175 @@ Swift expression:
   report.expect(page.publishedCurveRuns.isEmpty, cppID: drawerAutomationPaintingModelID,
                     message: "an empty lane draws no curve")
 
-S051 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:203
+S051 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:205
 Swift expression:
   report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                     message: "Tempo pins as a ghost under the active lane")
 
-S052 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:205
+S052 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:207
 Swift expression:
   report.expectEqual(["Tempo (BPM) · 2 Events"], page.ghostLabels, cppID: drawerAutomationPaintingModelID,
                          what: "the ghost label names the curve and its event count")
 
-S053 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:207
+S053 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:209
 Swift expression:
   report.expect(page.publishedCurveRuns.count > activeRuns, cppID: drawerAutomationPaintingModelID,
                     message: "pinning a ghost adds its curve under the active lane")
 
-S054 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:209
+S054 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:211
 Swift expression:
   report.expect(page.publishedCurveRuns.last?.primitiveName == "automationCurve",
                     cppID: drawerAutomationPaintingModelID,
                     message: "the active lane keeps the top curve run")
 
-S055 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:212
+S055 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:214
 Swift expression:
   report.expect(page.publishedCurveRuns.dropLast(activeRuns)
           .allSatisfy { $0.primitiveName == "automationGhostCurve" },
                     cppID: drawerAutomationPaintingModelID,
                     message: "every earlier run is the pinned ghost's curve")
 
-S056 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:216
+S056 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:218
 Swift expression:
   report.expect(page.publishedCurveRuns.suffix(activeRuns)
           .allSatisfy { $0.primitiveName == "automationCurve" },
                     cppID: drawerAutomationPaintingModelID,
                     message: "the active tail keeps its own runs on top")
 
-S057 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:220
+S057 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:222
 Swift expression:
   report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                     message: "the ghost unpins")
 
-S058 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:222
+S058 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:224
 Swift expression:
   report.expectEqual(activeRuns, page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,
                          what: "unpinning drops the ghost curve")
 
-S059 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:226
+S059 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:228
 Swift expression:
   report.expectEqual(volumeProjection.points.first?.x ?? -1, tempoProjection.points.first?.x ?? -2,
                          cppID: drawerAutomationPaintingModelID,
                          what: "Tempo shares the active lane's plot origin")
 
-S060 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:229
+S060 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:231
 Swift expression:
   report.expectEqual(2, tempoProjection.eventCount, cppID: drawerAutomationPaintingModelID,
                          what: "Tempo keeps its own event count on the shared body")
 
-S061 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:234
+S061 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:269
 Swift expression:
   report.expect(!shortGrid.isEmpty, cppID: drawerAutomationPaintingModelID,
                     message: "the plot draws its time grid")
 
-S062 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:238
+S062 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:273
 Swift expression:
   report.expect(page.projection?.points.first(where: { $0.tick == 24 })?.y != shortY,
                     cppID: drawerAutomationPaintingModelID,
                     message: "drawer growth moves the value axis")
 
-S063 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:242
+S063 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:277
 Swift expression:
   report.expectEqual(shortGrid, tallGrid, cppID: drawerAutomationPaintingModelID,
                          what: "drawer growth keeps every grid line's horizontal center")
 
-S064 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:244
+S064 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:279
 Swift expression:
   report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
                          what: "the centered lane keeps its three value rules")
 
-S065 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:246
+S065 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:281
 Swift expression:
   report.expectEqual(["c_v+63", "c_v-64", "c_v+0"],
                          (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
                          cppID: drawerAutomationPaintingModelID,
                          what: "the value axis labels the centered lane's extremes and neutral")
 
-S066 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:251
+S066 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:286
 Swift expression:
   report.expect(labelTop[0] < labelTop[2] && labelTop[2] < labelTop[1],
                     cppID: drawerAutomationPaintingModelID,
                     message: "maximum, neutral and minimum stack top to bottom without overlap")
 
-S067 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:257
+S067 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:292
 Swift expression:
   report.expectEqual(labelsBefore,
                              (0..<page.valueLabels.count).map { page.valueLabels[$0].labelText },
                              cppID: drawerAutomationPaintingModelID,
                              what: "a hover pass preserves the scale labels")
 
-S068 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:261
+S068 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:296
 Swift expression:
   report.expectEqual(3, page.valueLines.count, cppID: drawerAutomationPaintingModelID,
                              what: "a hover pass appends no duplicate value rules")
 
-S069 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:271
+S069 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:306
 Swift expression:
   report.expect(page.hoverVisible, cppID: drawerAutomationPaintingModelID,
                         message: "hovering a tempo node shows its readout")
 
-S070 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:273
+S070 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:308
 Swift expression:
   report.expectEqual(page.hover?.text ?? "", page.hoverText, cppID: drawerAutomationPaintingModelID,
                              what: "the readout text is the hovered value's own text")
 
-S071 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:275
+S071 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:310
 Swift expression:
   report.expect(!page.hoverText.isEmpty, cppID: drawerAutomationPaintingModelID,
                         message: "the tempo hover names its value")
 
-S072 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:281
+S072 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:316
 Swift expression:
   report.expect(inPlot, cppID: drawerAutomationPaintingModelID,
                         message: "the hover label stays inside the plot")
 
-S073 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:283
+S073 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:318
 Swift expression:
   report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationPaintingModelID,
                              what: "hovering a tempo node writes nothing")
 
-S074 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:286
+S074 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift:321
 Swift expression:
   report.expect(!page.hoverVisible, cppID: drawerAutomationPaintingModelID,
                         message: "leaving the plot clears the tempo hover")
 
-S075 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2827
+S075 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml:2852
 QML expression:
   verify(bootstrap.attachProductionSection(testCase.automationKind),
                  "the production Automation page attaches to its slot")
 
-S076 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4112
+S076 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4137
 QML expression:
   fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
-S077 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4115
+S077 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4140
 QML expression:
   compare(testCase.automationTabItems().length, model.tabCount,
                   "every catalog parameter drew a selector tab")
 
-S078 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4123
+S078 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4148
 QML expression:
   verify(activeTab, "the active parameter's tab is drawn")
 
-S079 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4124
+S079 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4149
 QML expression:
   compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
 
-S080 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4129
+S080 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4154
 QML expression:
   compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
                   testCase.collectByNames(tempoTab, ["automationParameterTabText"], [])[0].text,
                   "the last catalog parameter is the Tempo row the selector drew")
 
-S081 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4139
+S081 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4164
 QML expression:
   verify(findChild(page, "automationGridLines"), "the page composed its time grid")
 
-S082 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4140
+S082 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4165
 QML expression:
   verify(findChild(page, "automationValueLines"), "the page composed its value axis")
 
-S083 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4157
+S083 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4182
 QML expression:
   tryVerify(function() { return testCase.automationNodeItems().length
                                          === testCase.automationModel().nodeCount }, 2000,
@@ -1743,153 +1743,153 @@ QML expression:
                     + testCase.automationNodeItems().length + " drawn of "
                     + testCase.automationModel().nodeCount + ")")
 
-S084 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4162
+S084 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4187
 QML expression:
   compare(testCase.automationNodeItems().length > 0, true,
                   "the lane with written events drew its nodes")
 
-S085 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4164
+S085 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml:4189
 QML expression:
   compare(testCase.automationCurveItems().length > 0, true,
                   "the lane with written events drew its curve")
 
-S086 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1970
+S086 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1995
 QML expression:
   verify(active > 0, "the active lane draws its curve")
 
-S087 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1975
+S087 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2000
 QML expression:
   tryVerify(function() {
               return testCase.collectByNames(page, ["automationGhostCurve"], []).length > 0
           }, 2000, "the plot drew the ghost's curve")
 
-S088 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1980
+S088 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2005
 QML expression:
   compare(drawn.length, active + ghosts,
                   "pinning adds exactly the ghost runs before the active runs")
 
-S089 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1994
+S089 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2019
 QML expression:
   verify(ordered, "every ghost run draws before the active runs")
 
-S090 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1996
+S090 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2021
 QML expression:
   tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
                     "a second Control press cleared the pin")
 
-S091 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:1998
+S091 | test_productionAutomationGhostCurvesDrawUnderActive | src/checks/editorqml/tst_EditorDrawer.qml:2023
 QML expression:
   tryVerify(function() {
               return testCase.automationCurveItems().length === active
           }, 2000, "unpinning restores the unpinned plot")
 
-S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1847
+S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1843
 QML expression:
   tryVerify(function() { return model.hoverVisible === true }, 2000,
                     "the node move published its hover")
 
-S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1849
+S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1845
 QML expression:
   tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
                     2000, "the drawn label shows the published hover text")
 
-S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1945
+S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1963
 QML expression:
   verify(changed, "the node hover paints over the background hover")
 
-S095 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2895
+S095 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2920
 QML expression:
   verify(gutter && scroller, "the selector exposes its gutter and clipped scroller")
 
-S096 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2902
+S096 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2927
 QML expression:
   compare(tabs.length, labels.length, "every catalog label has a tab")
 
-S097 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2909
+S097 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2934
 QML expression:
   verify(tab && tab.width > 0 && tab.height > 0, "the parameter tab has bounds")
 
-S098 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2911
+S098 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2936
 QML expression:
   verify(origin.x >= -0.5 && origin.x + tab.width <= gutter.width + 0.5,
                          "parameter " + labels[i] + " stays inside the widened gutter")
 
-S099 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2914
+S099 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2939
 QML expression:
   verify(text, "the parameter tab has its production Text item")
 
-S100 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2915
+S100 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2940
 QML expression:
   compare(text.text, labels[i])
 
-S101 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2916
+S101 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2941
 QML expression:
   verify(text.contentWidth > 0 && text.contentHeight > 0,
                          "the parameter label has rendered ink")
 
-S102 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2918
+S102 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2943
 QML expression:
   verify(text.contentWidth <= text.width + 0.5
                          && text.contentHeight <= text.height + 0.5,
                          labels[i] + " fits without clipping its rendered text")
 
-S103 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2926
+S103 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2951
 QML expression:
   verify(Math.abs(center.x - bounds[j].x) > 0.5
                              || Math.abs(center.y - bounds[j].y) > 0.5,
                              "parameter tabs do not overlap at one center")
 
-S104 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2932
+S104 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2957
 QML expression:
   fuzzyCompare(bounds[pair].y, bounds[pair + 1].y, 0.5,
                                "related controller pairs share a row")
 
-S105 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2937
+S105 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2962
 QML expression:
   fuzzyCompare(tempo.x, left.x, 0.01, "Tempo shares the first column's left edge")
 
-S106 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2938
+S106 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2963
 QML expression:
   fuzzyCompare(tempo.x + tempo.width, right.x + right.width, 0.01,
                            "Tempo spans both columns")
 
-S107 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2940
+S107 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2965
 QML expression:
   verify(bounds[bounds.length - 1].y > bounds[bounds.length - 2].y,
                      "Tempo closes the selector below the controllers")
 
-S108 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2942
+S108 | verifyAutomationLabelsFitGutter | src/checks/editorqml/tst_EditorDrawer.qml:2967
 QML expression:
   compare(scroller.clip, true, "the selector clips its scrolling content")
 
-S109 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2961
+S109 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2986
 QML expression:
   verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
 
-S110 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2966
+S110 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2991
 QML expression:
   fuzzyCompare(gutter.height, minimum, 0.01, "further shrinking keeps the derived minimum")
 
-S111 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2969
+S111 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2994
 QML expression:
   verify(scroller.contentHeight > scroller.height, "the catalog scrolls at minimum height")
 
-S112 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2973
+S112 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2998
 QML expression:
   verify(firstOrigin.y >= -0.5 && firstOrigin.y + first.height <= scroller.height + 0.5,
                      "the first parameter is visible at the content top")
 
-S113 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:2978
+S113 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml:3003
 QML expression:
   verify(lastOrigin.y >= -0.5 && lastOrigin.y + last.height <= scroller.height + 0.5,
                      "Tempo is visible at the content bottom")
 
-S114 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4243
+S114 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4268
 QML expression:
   compare(bootstrap.automationLaneTicks(), ticksBefore,
                   "switching parameters wrote nothing to the lane")
 
-S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4245
+S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml:4270
 QML expression:
   compare(bootstrap.automationSelectionRange(), selected,
                   "the explicit selection survives a parameter switch")

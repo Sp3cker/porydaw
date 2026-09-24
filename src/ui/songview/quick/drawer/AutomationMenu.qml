@@ -6,6 +6,7 @@ FocusScope {
     id: root
     objectName: "automationMenu"
     required property var model
+    property var hintService: pageItem ? pageItem.hintService : null
     property var pageItem: null
     property bool showing: false
     property bool childOpen: false
@@ -71,10 +72,14 @@ FocusScope {
     MouseArea {
         objectName: "automationMenuUnderlay"
         anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onPressed: mouse => {
             const p = root.pageItem ? mapToItem(root.pageItem, mouse.x, mouse.y) : Qt.point(-1, -1)
             root.model.outsideMenuPress(p.x - root.model.plotOrigin, p.y, mouse.button)
+        }
+        Shared.HoverHint {
+            source: underlay
+            hintService: root.hintService
+            scopeAllowed: root.showing
         }
     }
     Shared.QuickMenuPanel {
