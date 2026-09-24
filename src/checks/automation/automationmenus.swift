@@ -85,6 +85,10 @@ func drawerAutomationOriginalRangeMenu(_ report: CheckReport, suite: DocumentSes
     }, cppID: id, message: "the reopened submenu advertises the applied range")
     page.dismissMenu()
     report.expect(!page.menuOpen, cppID: id, message: "dismissal closes the reopened menu")
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: lane), x: 0, y: 0),
+                  cppID: id, message: "the LFO menu opens for the Escape route")
+    report.expect(page.handleEscape(), cppID: id, message: "Escape claims the open lane menu")
+    report.expect(!page.menuOpen, cppID: id, message: "Escape closes the open lane menu")
     report.expect(fixture.undo(), cppID: id, message: "one undo still reaches the preceding lane write")
     report.expect(fixture.document.lanePoints(track: 0, lane: .controller(21)).isEmpty,
                   cppID: id, message: "range picks inserted no history entries before the lane write")
