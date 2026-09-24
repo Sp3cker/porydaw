@@ -363,7 +363,7 @@ TestCase {
         var surface = testCase.selectedSurface()
         var ruler = findChild(surface, "timelineRulerInput")
         verify(ruler, "A032: the live ruler interaction exists")
-        ruler.editTimeSignatureAtCursor()
+        session.openTimeSigPromptAtCursor()
         tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },
                   5000, "the cursor action realizes the prompt")
         var prompt = findChild(surface, "timeSignaturePrompt")

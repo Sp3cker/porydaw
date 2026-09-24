@@ -1049,8 +1049,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A080 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:444
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: src/checks/rollcheck/timemenu.swift checkTimeSelectionMenuCommands asserts a typed Insert Time row after applying a time range; execution and rendered QML click for this row remain unverified.
 Source context since previous assertion:
   ;
       const int insertRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::InsertBlank);
@@ -1058,8 +1058,8 @@ Original expression:
   QVERIFY2(insertRow >= 0, "the shared time menu has no Insert Time row")
 
 A081 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:445
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: src/checks/rollcheck/timemenu.swift checkTimeSelectionMenuCommands asserts the Insert Time row enabled for a live range; execution and native fixture parity remain unverified.
 Source context since previous assertion:
   ;
 Original expression:

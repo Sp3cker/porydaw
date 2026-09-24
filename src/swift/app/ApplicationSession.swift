@@ -105,6 +105,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func openTimeSigPrompt(tick: Double) {
         guard let workspace, tick.isFinite, tick >= 0,
               tick < Double(TimeDefaults.noTick) else { return }
+        workspace.rulerMenu.cancelInsertTimePrompt()
         let session = workspace.session
         let target = TimeDefaults.tick(from: tick)
         let axis = TimeAxis(map: TimeMap(
@@ -161,17 +162,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func openTimeSigMenu(contentX: Double) {
         guard let workspace, contentX.isFinite else { return }
+        workspace.rulerMenu.cancelInsertTimePrompt()
         let chip = timeSigChipTick(contentX: contentX)
-        let tick = chip >= 0 ? Tick(chip)
-            : Tick(max(0, workspace.grid.snapTickDown(
-                workspace.session.camera.tickAtContentX(contentX))))
-        workspace.session.editCursor = tick
         cancelTimeSigPrompt()
-        timeSigMenuOpen = true
+        workspace.rulerMenu.openRuler(contentX: contentX, chipTick: chip)
+        timeSigMenuOpen = workspace.rulerMenu.isOpen
         songTabs.publishTimeSigFlags()
     }
 
     public func closeTimeSigMenu() {
+        workspace?.rulerMenu.close()
         timeSigMenuOpen = false
         songTabs.publishTimeSigFlags()
     }
@@ -222,6 +222,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
             preconditionFailure("Track headers requested without an open song")
         }
         return workspace.trackHeaders
+    }
+
+    public func rulerMenuPresenter() -> RulerMenuPresenter {
+        guard let workspace else {
+            preconditionFailure("Ruler menu requested without an open song")
+        }
+        return workspace.rulerMenu
     }
 
     /// The presented document's drawer, or the session's empty presenter while

@@ -221,10 +221,13 @@ TestCase {
         mouseClick(ruler, ruler.width * 0.5, ruler.height * 0.5, Qt.RightButton)
         tryCompare(session, "timeSigMenuOpen", true)
         var timeMenu = panel()
-        tryCompare(timeMenu, "rowCount", 1)
-        compare(timeMenu.rowItem(0).itemData.actionId, 9)
-        compare(timeMenu.rowItem(0).itemData.enabled, true)
-        clickRow(timeMenu, 0)
+        tryCompare(timeMenu, "rowCount", 9)
+        tryVerify(function() { return timeMenu.rowItem(3) !== null && timeMenu.rowItem(7) !== null }, 3000)
+        compare(timeMenu.rowItem(3).itemData.actionId, 2)
+        compare(timeMenu.rowItem(3).itemData.enabled, true)
+        compare(timeMenu.rowItem(7).itemData.actionId, 9)
+        compare(timeMenu.rowItem(7).itemData.enabled, true)
+        clickRow(timeMenu, 7)
         tryCompare(session, "timeSigMenuOpen", false)
         tryCompare(session, "timeSigPromptOpen", true)
         tryCompare(testCase, "promptOpenCount", 1)
@@ -273,4 +276,103 @@ TestCase {
         keyClick(Qt.Key_Escape)
         tryCompare(headers, "menuOpen", false)
     }
+
+    function test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var menuOwner = surface().rulerMenu
+        var y = ruler.height * 0.75
+        var startX = ruler.width * 0.28
+        var endX = ruler.width * 0.55
+        var midX = (startX + endX) / 2
+        var before = grid.appliedRevisionText
+
+        mouseClick(ruler, startX, y, Qt.RightButton)
+        var menu = panel()
+        tryVerify(function() { return menu.rowItem(3) !== null }, 3000)
+        compare(menu.rowItem(3).itemData.actionId, 2)
+        clickRow(menu, 3)
+        tryCompare(menuOwner, "isOpen", false)
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
+        tryCompare(ruler, "activeFocus", true)
+        mouseClick(ruler, startX, y, Qt.RightButton)
+        menu = panel()
+        tryVerify(function() { return menu.rowItem(5) !== null }, 3000)
+        compare(menu.rowItem(5).itemData.actionId, 4)
+        compare(menu.rowItem(5).itemData.enabled, true)
+        before = grid.appliedRevisionText
+        clickRow(menu, 5)
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
+        tryCompare(menuOwner, "isOpen", false)
+        tryVerify(function() { return findChild(surface(), "quickMenuPanelRoot") === null }, 3000)
+
+        mousePress(ruler, startX, y, Qt.LeftButton)
+        mouseMove(ruler, endX, y, -1, Qt.LeftButton)
+        mouseRelease(ruler, endX, y, Qt.LeftButton)
+        mouseClick(ruler, midX, y, Qt.RightButton)
+        menu = panel()
+        tryVerify(function() { return menu.rowItem(0) !== null }, 3000)
+        compare(menu.rowItem(0).itemData.actionId, 5)
+        compare(menu.rowItem(0).itemData.enabled, true)
+        before = grid.appliedRevisionText
+        clickRow(menu, 0)
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
+
+        var roll = control("swiftRollInput")
+        mouseClick(roll, midX, roll.height * 0.5, Qt.RightButton)
+        menu = panel()
+        tryCompare(menu, "rowCount", 9)
+        tryVerify(function() { return menu.rowItem(4) !== null && menu.rowItem(8) !== null }, 3000)
+        compare(menu.rowItem(0).itemData.actionId, 11)
+        compare(menu.rowItem(0).itemData.enabled, true)
+        compare(menu.rowItem(4).itemData.actionId, 6)
+        compare(menu.rowItem(4).itemData.enabled, true)
+        before = grid.appliedRevisionText
+        clickRow(menu, 8)
+        tryCompare(menuOwner, "isOpen", false)
+        tryCompare(roll, "activeFocus", true)
+        compare(grid.appliedRevisionText, before)
+        mouseClick(ruler, midX, y, Qt.RightButton)
+        menu = panel()
+        tryVerify(function() { return menu.rowItem(3) !== null }, 3000)
+        compare(menu.rowItem(3).itemData.actionId, 2)
+        keyClick(Qt.Key_Escape)
+        tryCompare(menuOwner, "isOpen", false)
+        tryCompare(ruler, "activeFocus", true)
+    }
+    function test_rulerInsertTimeOpensExistingPromptAndCommitsBars() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var menuOwner = surface().rulerMenu
+        var grid = surface().gridModel
+        var x = ruler.width * 0.28
+        var y = ruler.height * 0.75
+        var before = grid.appliedRevisionText
+        mouseClick(ruler, x, y, Qt.RightButton)
+        var menu = panel()
+        compare(menu.rowItem(0).itemData.enabled, true)
+        compare(menu.rowItem(0).itemData.actionId, 1)
+        clickRow(menu, 0)
+        tryCompare(menuOwner, "isOpen", false)
+        tryCompare(menuOwner, "insertTimePromptOpen", true)
+        tryVerify(function() { return findChild(surface(), "insertTimePrompt") !== null }, 3000)
+        verify(findChild(surface(), "insertTimeBars") !== null)
+        verify(findChild(surface(), "insertTimeBeats") !== null)
+        verify(findChild(surface(), "insertTimeBeatFractions") !== null)
+        compare(grid.appliedRevisionText, before)
+        tryVerify(function() { return findChild(surface(), "insertTimeCancel") !== null }, 3000)
+        mouseClick(control("insertTimeCancel"))
+        tryCompare(menuOwner, "insertTimePromptOpen", false)
+        compare(grid.appliedRevisionText, before)
+        mouseClick(ruler, x, y, Qt.RightButton)
+        menu = panel()
+        clickRow(menu, 0)
+        tryCompare(menuOwner, "insertTimePromptOpen", true)
+        tryVerify(function() { return findChild(surface(), "insertTimeAccept") !== null }, 3000)
+        mouseClick(control("insertTimeAccept"))
+        tryCompare(menuOwner, "insertTimePromptOpen", false)
+        tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
+    }
+
 }

@@ -6,7 +6,9 @@ PromptCard {
     required property var bridge
 
     objectName: "insertTimePrompt"
-    appearance: bridge.insertTimePromptAppearance
+    appearance: Object.assign({}, bridge.insertTimePromptAppearance, {
+        font: Qt.font(bridge.insertTimePromptFont)
+    })
 
     property int draftBars: bridge.insertTimePromptInitialBars
     property int draftBeats: bridge.insertTimePromptInitialBeats

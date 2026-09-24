@@ -218,8 +218,8 @@ Original expression:
 QVERIFY2(startMenu.session, qUtf8Printable(startMenu.diagnostic))
 
 A006 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:147
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/rollcheck/ruler_loop_menu.swift checkRenderedRulerMenuCommands asserts an enabled Set Loop Start row on the Swift presenter; execution and fixture-specific rendering remain for orchestrator verification.
 Source context since previous assertion:
 ;
     const int setStartRow = rulerRow(*startMenu.model, songview::RulerMenuAction::SetLoopStart);
@@ -268,8 +268,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo + 1)
 
 A011 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:156
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels asserts ruler focus restored after a rendered Set Loop Start click; execution remains for orchestrator verification.
 Source context since previous assertion:
 ;
 
@@ -352,8 +352,8 @@ Original expression:
 QVERIFY2(removeMenu.session, qUtf8Printable(removeMenu.diagnostic))
 
 A019 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:177
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/rollcheck/ruler_loop_menu.swift checkRenderedRulerMenuCommands asserts enabled Remove Loop when markers exist; execution and the exact native fixture remain unverified.
 Source context since previous assertion:
 ;
     const int removeRow = rulerRow(*removeMenu.model, songview::RulerMenuAction::RemoveLoop);
@@ -363,8 +363,8 @@ QVERIFY2(removeRow >= 0 && removeMenu.model->itemAt(removeRow)->enabled,
              "Remove loop markers stayed disabled while both markers existed")
 
 A020 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:179
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels clicks the enabled Remove Loop row and observes a document revision change; execution remains for orchestrator verification.
 Source context since previous assertion:
 ;
 
@@ -621,8 +621,8 @@ QVERIFY2(removeLoopRow >= 0 && !opened.model->itemAt(removeLoopRow)->enabled,
              "Remove loop markers was enabled while both markers were absent")
 
 A041 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:269
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/rollcheck/ruler_loop_menu.swift checkRenderedRulerMenuCommands asserts positional rows absent when a swept range is active; the complementary no-selection row set is structurally implemented, pending orchestrator execution.
 Source context since previous assertion:
 ;
 
@@ -634,8 +634,8 @@ QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::LoopFromSelection) <
              "the ruler menu exposed selection-scoped rows without an active selection")
 
 A042 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:275
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars checks the rendered standalone Insert Time row is enabled and opens the original prompt; orchestrator execution and original native popup parity remain open.
 Source context since previous assertion:
 ;
     const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
@@ -1370,8 +1370,8 @@ QVERIFY2(opened.model->itemAt(insertRow)->enabled,
              "the ruler menu rendered an enabled Insert Time row as disabled")
 
 A102 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:530
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars clicks the rendered row and observes the actual InsertTimePrompt surface; pending orchestrator execution and native popup parity.
 Source context since previous assertion:
 ;
 
@@ -1380,8 +1380,8 @@ QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
              "the Insert Time row did not receive a real click")
 
 A103 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:533
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars checks that the row closes the rendered menu while displaying InsertTimePrompt; pending orchestrator execution and native popup parity.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();

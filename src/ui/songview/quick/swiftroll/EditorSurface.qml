@@ -26,9 +26,10 @@ Item {
     property point timeSigMenuPosition: Qt.point(0, 0)
     property point gridMenuPosition: Qt.point(0, 0)
     property point headerMenuPosition: Qt.point(0, 0)
-    readonly property var rulerMenuRows: [
-        { actionId: 9, text: qsTr("Edit Time Signature"), enabled: true }
-    ]
+    readonly property var rulerMenu: applicationSession.rulerMenuPresenter()
+    property point timeSelectionMenuPosition: Qt.point(0, 0)
+    property bool timeMenuFocus: false
+    property bool insertPromptHadFocus: false
 
     function hoverRow(panel, row) { panel.highlightedRow = row }
     function activateRow(panel, row) {
@@ -40,9 +41,12 @@ Item {
             headersModel.activateHeaderMenuAction(actionId)
         } else if (panel.rowObjectNamePrefix === "gridMenuRow_") {
             gridModel.activateGridMenuRow(actionId)
-        } else if (actionId === 9 && root.applicationSession.timeSigMenuOpen) {
+        } else if (panel.rowObjectNamePrefix === "rulerMenuRow_") {
+            const targetTick = rulerMenu.targetTick()
+            const openPrompt = rulerMenu.activate(actionId)
             timeSigHost.closeTimeSigMenu()
-            rulerInput.editTimeSignatureAtCursor()
+            if (openPrompt)
+                timeSigHost.openTimeSigPrompt(targetTick)
         }
     }
 
@@ -54,11 +58,32 @@ Item {
         }
         function onTimeSigMenuOpenChanged() {
             if (!root.applicationSession.timeSigMenuOpen
-                && !root.applicationSession.timeSigPromptOpen)
+                && !root.applicationSession.timeSigPromptOpen
+                && (!root.rulerMenu || !root.rulerMenu.insertTimePromptOpen))
                 rulerInput.forceActiveFocus(Qt.OtherFocusReason)
         }
     }
-
+    Connections {
+        target: root.rulerMenu
+        function onInsertTimePromptOpenChanged() {
+            if (root.rulerMenu.insertTimePromptOpen) {
+                root.insertPromptHadFocus = true
+            } else if (root.insertPromptHadFocus) {
+                root.insertPromptHadFocus = false
+                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+            }
+        }
+    }
+    Connections {
+        target: root.rulerMenu
+        function onIsOpenChanged() {
+            if (!root.rulerMenu.isOpen && root.timeMenuFocus
+                && !root.applicationSession.timeSigPromptOpen) {
+                root.timeMenuFocus = false
+                rollInput.forceActiveFocus(Qt.OtherFocusReason)
+            }
+        }
+    }
     Connections {
         target: root.gridModel
         function onGridMenuKindChanged() {
@@ -245,9 +270,6 @@ Item {
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         activeFocusOnTab: true
-                        function editTimeSignatureAtCursor() {
-                            root.timeSigHost.openTimeSigPromptAtCursor()
-                        }
                         onDoubleClicked: (mouse) => {
                             if (mouse.button !== Qt.LeftButton)
                                 return
@@ -256,14 +278,27 @@ Item {
                                 root.timeSigHost.openTimeSigPrompt(tick)
                         }
                         onPressed: (mouse) => {
-                            if (mouse.button !== Qt.RightButton)
-                                return
-                            root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
-                            root.timeSigHost.openTimeSigMenu(mouse.x)
+                            if (mouse.button === Qt.LeftButton) {
+                                root.rulerMenu.beginSweep(mouse.x)
+                            } else if (mouse.button === Qt.RightButton) {
+                                root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
+                                root.timeMenuFocus = false
+                                root.timeSigHost.openTimeSigMenu(mouse.x)
+                            }
                         }
+                        onPositionChanged: (mouse) => {
+                            if (mouse.buttons & Qt.LeftButton)
+                                root.rulerMenu.updateSweep(mouse.x)
+                        }
+                        onReleased: (mouse) => {
+                            if (mouse.button === Qt.LeftButton)
+                                root.rulerMenu.endSweep(mouse.x)
+                        }
+                        onCanceled: root.rulerMenu.cancelSweep()
                     }
                 }
             }
+
 
             Item {
                 id: rollGutterSide
@@ -344,6 +379,7 @@ Item {
                         hoverEnabled: true
                         // The drawer returns focus here when no section stays visible.
                         activeFocusOnTab: true
+                        property bool timeMenuPressHandled: false
 
                         cursorShape: {
                             switch (root.gridModel.cursorKind) {
@@ -358,9 +394,14 @@ Item {
                         onPressed: function(mouse) {
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.beginPan(mouse.x, mouse.y)
-                            else if (mouse.button === Qt.RightButton)
-                                root.gridModel.beginRightPointer(mouse.x, mouse.y)
-                            else
+                            else if (mouse.button === Qt.RightButton) {
+                                root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
+                                root.rulerMenu.openTimeSelection(mouse.x)
+                                timeMenuPressHandled = root.rulerMenu.menuKind === 2
+                                root.timeMenuFocus = timeMenuPressHandled
+                                if (!timeMenuPressHandled)
+                                    root.gridModel.beginRightPointer(mouse.x, mouse.y)
+                            } else
                                 root.gridModel.beginPointer(mouse.x, mouse.y, mouse.modifiers)
                             mouse.accepted = true
                         }
@@ -372,8 +413,10 @@ Item {
                         onPositionChanged: function(mouse) {
                             if (mouse.buttons & Qt.MiddleButton)
                                 root.gridModel.updatePan(mouse.x, mouse.y)
-                            else if (mouse.buttons & Qt.RightButton)
-                                root.gridModel.updateRightPointer(mouse.x, mouse.y)
+                            else if (mouse.buttons & Qt.RightButton) {
+                                if (!timeMenuPressHandled)
+                                    root.gridModel.updateRightPointer(mouse.x, mouse.y)
+                            }
                             else if (mouse.buttons & Qt.LeftButton)
                                 root.gridModel.updatePointer(mouse.x, mouse.y)
                             else {
@@ -384,13 +427,19 @@ Item {
                         onReleased: function(mouse) {
                             if (mouse.button === Qt.MiddleButton)
                                 root.gridModel.endPan()
-                            else if (mouse.button === Qt.RightButton)
-                                root.gridModel.endRightPointer(mouse.x, mouse.y)
+                            else if (mouse.button === Qt.RightButton) {
+                                if (!timeMenuPressHandled)
+                                    root.gridModel.endRightPointer(mouse.x, mouse.y)
+                                timeMenuPressHandled = false
+                            }
                             else
                                 root.gridModel.endPointer(mouse.x, mouse.y)
                             mouse.accepted = true
                         }
-                        onCanceled: root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
+                        onCanceled: {
+                            timeMenuPressHandled = false
+                            root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
+                        }
                         onExited: {
                             if (pressedButtons === Qt.NoButton) {
                                 root.gridModel.clearKeyboardHover()
@@ -517,7 +566,7 @@ Item {
         id: timeSigMenuLoader
         anchors.fill: parent
         z: 10
-        active: root.applicationSession.timeSigMenuOpen
+        active: root.rulerMenu.isOpen
         sourceComponent: Component {
             Item {
                 focus: true
@@ -532,7 +581,7 @@ Item {
                 Original.QuickMenuPanel {
                     anchors.fill: parent
                     host: root
-                    menuModel: root.rulerMenuRows
+                    menuModel: root.rulerMenu.rows
                     rootLevel: true
                     rowObjectNamePrefix: "rulerMenuRow_"
                     appearance: ({
@@ -551,8 +600,12 @@ Item {
                     menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 18))
                     menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
                     menuOrigin: Qt.point(
-                        Math.max(0, Math.min(root.timeSigMenuPosition.x, width - menuWidth)),
-                        Math.max(0, Math.min(root.timeSigMenuPosition.y, height - menuHeight)))
+                        Math.max(0, Math.min(root.rulerMenu.menuKind === 2
+                                             ? root.timeSelectionMenuPosition.x : root.timeSigMenuPosition.x,
+                                             width - menuWidth)),
+                        Math.max(0, Math.min(root.rulerMenu.menuKind === 2
+                                             ? root.timeSelectionMenuPosition.y : root.timeSigMenuPosition.y,
+                                             height - menuHeight)))
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
             }
@@ -579,6 +632,27 @@ Item {
             }
         }
     }
+    Loader {
+        id: insertTimePromptLoader
+        anchors.fill: parent
+        z: 11
+        active: root.rulerMenu && root.rulerMenu.insertTimePromptOpen
+        sourceComponent: Component {
+            Item {
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: root.rulerMenu.cancelInsertTimePrompt()
+                }
+                Original.InsertTimePrompt {
+                    anchors.centerIn: parent
+                    width: implicitWidth
+                    height: implicitHeight
+                    bridge: root.rulerMenu
+                }
+            }
+        }
+    }
+
 
     // The container owns its chrome and publishes drawer-local rectangles; the
     // composition places it at the bottom and the container sizes its own height

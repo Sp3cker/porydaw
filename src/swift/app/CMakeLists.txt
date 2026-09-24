@@ -36,6 +36,7 @@ add_library(PorydawApp STATIC
     timeline/GridGeometry.swift
     timeline/GridPalette.swift
     timeline/GridTypography.swift
+    timeline/RulerMenuPresenter.swift
     timeline/TimelineSnapPolicy.swift
     commands/EditCommands.swift
     commands/EditKeyArbiter.swift

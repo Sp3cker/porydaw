@@ -5,6 +5,7 @@ import PorydawCore
 @MainActor
 func runTimemenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkTimeMenuInsertTime(report, session: session)
+    checkTimeSelectionMenuCommands(report, session: session)
 }
 
 @MainActor
@@ -46,4 +47,56 @@ private func checkTimeMenuInsertTime(_ report: CheckReport, session: DocumentSes
     _ = document.history.undoDocument()
     report.expect(coreTimeBytes(document) == before, cppID: id,
                   message: "A088: one undo restores the bytes before time insertion")
+}
+
+@MainActor
+private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timeSelectionSwiftMenuInsertAndStale"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let previousTrack = session.selectedTrack
+    if previousTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = previousTrack }
+    let previousCursor = session.editCursor
+    defer { session.editCursor = previousCursor }
+
+    let start: Tick = 72
+    let end: Tick = 96
+    guard let added = try? session.document.addNotes([
+        NewNote(track: session.selectedTrack ?? 0, tick: start + 6,
+                pitch: 30, duration: 6, velocity: 100)
+    ]), !added.isEmpty else {
+        report.fail(id, "could not seed a note in the insertion range")
+        return
+    }
+    defer { _ = session.document.history.undoDocument() }
+    let midpoint = session.camera.contentX(tick: Double((start + end) / 2))
+    automation.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: start, endTick: end),
+        scope: .tracks([session.selectedTrack ?? 0])))
+    menu.openTimeSelection(contentX: midpoint)
+    report.expect(menu.isOpen && menu.menuKind == 2
+                  && menu.rows.count == 9
+                  && menu.rows[3].actionId == 1 && menu.rows[3].enabled,
+                  cppID: id, message: "a selected interval opens an enabled Insert Time row")
+    let before = session.document.history.currentIdentity
+    _ = menu.activate(actionId: 1)
+    report.expect(!menu.isOpen && session.document.history.currentIdentity != before,
+                  cppID: id, message: "the row applies one undoable range insertion")
+    if session.document.history.currentIdentity != before {
+        _ = session.document.history.undoDocument()
+    }
+    report.expect(session.document.history.currentIdentity == before, cppID: id,
+                  message: "one undo restores the document before the menu insertion")
+
+    menu.openTimeSelection(contentX: midpoint)
+    automation.clearTimeSelection()
+    let identity = session.document.history.currentIdentity
+    _ = menu.activate(actionId: 6)
+    report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
+                  cppID: id, message: "a stale duplicate click cannot write after selection loss")
 }
