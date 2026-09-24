@@ -324,7 +324,10 @@ TestCase {
     function pageItem(kind) { return testCase.body(kind).item }
     function rollInput() { return findChild(testCase.surface, "swiftRollInput") }
     function hintStatus() { return findChild(testCase.surface, "mouseHintStatus") }
-    function editorHeight() { return testCase.hintStatus().mapToItem(testCase.surface, 0, 0).y }
+    function editorHeight() {
+        return findChild(testCase.surface, "timelineHorizontalScrollBar")
+            .mapToItem(testCase.surface, 0, 0).y
+    }
     function rollBand() { return findChild(testCase.surface, "swiftRollBand") }
 
     // ---- the shared playhead ------------------------------------------------
@@ -513,13 +516,15 @@ TestCase {
             var band = testCase.rollBand()
             var bar = testCase.bar()
             var status = testCase.hintStatus()
-            if (!presenter || !container || !band || !bar || !status)
+            var timeline = findChild(testCase.surface, "timelineHorizontalScrollBar")
+            if (!presenter || !container || !band || !bar || !status || !timeline)
                 return false
             if (container.height !== presenter.height)
                 return false
             var rollOrigin = band.mapToItem(testCase.surface, 0, 0)
             var drawerOrigin = container.mapToItem(testCase.surface, 0, 0)
             var statusOrigin = status.mapToItem(testCase.surface, 0, 0)
+            var timelineOrigin = timeline.mapToItem(testCase.surface, 0, 0)
             if (!status.visible || status.height <= 0
                 || rollOrigin.x !== 0 || rollOrigin.y !== 0
                 || drawerOrigin.x !== 0 || statusOrigin.x !== 0
@@ -527,7 +532,10 @@ TestCase {
                 || container.width !== testCase.surface.width
                 || status.width !== testCase.surface.width
                 || band.height !== drawerOrigin.y
-                || drawerOrigin.y + container.height !== statusOrigin.y
+                || drawerOrigin.y + container.height !== timelineOrigin.y
+                || timelineOrigin.y + timeline.height !== statusOrigin.y
+                || !timeline.visible || timeline.width <= 0
+                || timeline.height !== testCase.surface.headersModel.scrollbarWidth
                 || statusOrigin.y + status.height !== testCase.surface.height)
                 return false
             if (bar.visible !== presenter.barVisible)
@@ -948,12 +956,13 @@ TestCase {
         compare(testCase.presenter().plotOrigin, testCase.surface.timelineSplitX,
                 "the plot origin includes the headers and keyboard")
         compare(testCase.presenter().plotWidth,
-                testCase.surface.width - testCase.surface.timelineSplitX,
-                "the plot width is the rest of the surface")
+                testCase.surface.width - testCase.surface.timelineSplitX
+                - testCase.surface.scrollbarBreadth,
+                "the drawer plot shares the roll viewport beside the scrollbar")
         compare(testCase.rollBand().height, testCase.editorHeight(),
-                "the roll fills the editor above the persistent status strip")
+                "the roll fills the editor above the horizontal scrollbar")
         compare(testCase.rollInput().height, testCase.editorHeight() - testCase.surface.gridModel.rulerHeight,
-                "the roll input fills the editor below the ruler and above the persistent status strip")
+                "the roll input fills the editor below the ruler and above the scrollbar")
     }
 
     // Three real pages host through the production seam: chrome and stacking

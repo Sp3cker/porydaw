@@ -47,6 +47,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-grid-input", inputFileName: "tst_ShellGridInput.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-pitch-bend", inputFileName: "tst_ShellPitchBend.qml",
+              fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-grid-menu", inputFileName: "tst_ShellGridMenu.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-clipboard", inputFileName: "tst_ShellClipboard.qml",
@@ -59,6 +61,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-chrome-visuals", inputFileName: "tst_ShellChromeVisuals.qml",
               fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-transport", inputFileName: "tst_ShellTransport.qml",
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-reticle-visuals", inputFileName: "tst_ShellReticleVisuals.qml",
@@ -68,6 +72,10 @@ enum ShellQmlLane {
         Entry(name: "shell-event-list", inputFileName: "tst_ShellEventList.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-drawer-parity", inputFileName: "tst_ShellDrawerParity.qml",
+              fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
+              fixtureFiles: songs("mus_route101")),
+        Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
               fixtureFiles: songs("mus_route101")),
     ]
 
@@ -119,12 +127,50 @@ enum ShellQmlLane {
         GridInputClipProbe.registerQmlElement()
         GatedVisualsProbe.registerQmlElement()
         TabsDrawerProbe.registerQmlElement()
+        PolyphonyShellProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
         var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
-        return app.runQtQuickTests(Int32(arguments.count), &argv)
+        let status = app.runQtQuickTests(Int32(arguments.count), &argv)
+        guard status == 0, entry.name == "shell-polyphony",
+              ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] == nil
+        else { return status }
+        for profile in ["dpr1-font12", "dpr1-font16", "dpr2-font12", "dpr2-font16"] {
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            child.arguments = [entry.name, scratch, "--qt", "ShellPolyphony::test_visualProfiles"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["PORYDAW_POLYPHONY_PROFILE"] = profile
+            environment["QT_SCALE_FACTOR"] = profile.hasPrefix("dpr2") ? "2" : "1"
+            environment["QT_QPA_PLATFORM"] = "offscreen"
+            child.environment = environment
+            let output = Pipe()
+            child.standardOutput = output
+            child.standardError = output
+            do {
+                try child.run()
+            } catch {
+                return fail("polyphony \(profile): child failed to start: \(error)")
+            }
+            let log = String(decoding: output.fileHandleForReading.readDataToEndOfFile(),
+                             as: UTF8.self)
+            child.waitUntilExit()
+            print("polyphony \(profile): \(log)")
+            guard child.terminationStatus == 0 else {
+                return fail("polyphony \(profile): capture failed (\(child.terminationStatus))")
+            }
+            for state in ["narrow-vanilla", "wide-vanilla",
+                          "narrow-darkneutralhigh", "wide-darkneutralhigh"] {
+                let image = URL(fileURLWithPath: scratch)
+                    .appendingPathComponent("polyphony-\(profile)-\(state).png").path
+                guard FileManager.default.fileExists(atPath: image) else {
+                    return fail("polyphony \(profile)/\(state): capture is missing")
+                }
+            }
+        }
+        return 0
     }
 
     private static func fail(_ message: String) -> Int32 {
@@ -160,10 +206,33 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return store.synchronize()
     }
 
+    /// Widget oracle geometry for the standalone production voicegroup panel.
+    public func voicegroupReferenceJson(variant: String) -> String {
+        guard ["", "editor-square1", "editor-readonly"].contains(variant) else { return "" }
+        let fixtures = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent().appendingPathComponent("fixtures/visual")
+        let file = fixtures.appendingPathComponent("macos-dpr1-font12/voicegroupbrowser")
+            .appendingPathComponent(variant).appendingPathComponent("vanilla.json")
+        return (try? String(contentsOf: file, encoding: .utf8)) ?? ""
+    }
+
     /// Qt Quick Test's wait() pumps Qt but does not service Swift's main-actor
     /// tasks. Mirror EditorQmlBootstrap.start for real opens and the close walk.
     public func pumpMainRunLoop() {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    /// The QWidget widget baseline uses logical item coordinates for both DPRs.
+    public func transportReferenceJson(dpr: Int, fontPx: Int) -> String {
+        guard (dpr == 1 || dpr == 2), (fontPx == 12 || fontPx == 16) else { return "" }
+        let path = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures/visual/macos-dpr\(dpr)-font\(fontPx)/transportbar/vanilla.json")
+        return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
+    }
+
+    public func transportCapturePath(fontPx: Int) -> String {
+        URL(fileURLWithPath: projectRoot, isDirectory: true)
+            .appendingPathComponent("transport-font\(fontPx).png").path
     }
 
     /// The full native keymap assertions run only after QML has written the

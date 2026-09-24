@@ -37,10 +37,12 @@ public final class DocumentWorkspace {
 
     public let session: DocumentSession
     public let grid: PianoGrid
+    public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
+    public let rulerMenu: RulerMenuPresenter
     /// Drawer chrome belongs to the document: this workspace owns the presenter
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
@@ -72,6 +74,11 @@ public final class DocumentWorkspace {
         // same object.
         let grid = PianoGrid(session: session, palette: palette)
         self.grid = grid
+        let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+        self.pitchBend = pitchBend
+        grid.onPitchBendRequested = { [weak pitchBend] in
+            pitchBend?.openSelected() ?? false
+        }
         let headers = TrackHeadersPresenter(baseFontPx: grid.baseFontPx)
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
@@ -84,6 +91,7 @@ public final class DocumentWorkspace {
         let automationPage = AutomationPage(baseFontPx: grid.baseFontPx)
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
+        rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
         drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
@@ -208,6 +216,9 @@ public final class DocumentWorkspace {
     public func deactivate() {
         guard isActive else { return }
         isActive = false
+        rulerMenu.close()
+        rulerMenu.cancelInsertTimePrompt()
+        pitchBend.cancelAndClose()
         cancel(reason: GridCancelReason.hidden.rawValue)
         playhead.detach()
         lastPlayheadPresentation = nil
@@ -229,6 +240,9 @@ public final class DocumentWorkspace {
     public func teardown() {
         guard !isTornDown else { return }
         isTornDown = true
+        rulerMenu.close()
+        rulerMenu.cancelInsertTimePrompt()
+        pitchBend.cancelAndClose()
         deactivate()
         session.onChange = nil
         session.onPlayback = nil
@@ -240,6 +254,7 @@ public final class DocumentWorkspace {
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil
         trackHeaders.detach()
+        grid.onPitchBendRequested = nil
         grid.detach()
     }
 
@@ -283,6 +298,7 @@ public final class DocumentWorkspace {
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
         if documentChanged {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
+            pitchBend.documentDidChange()
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank]
@@ -297,11 +313,19 @@ public final class DocumentWorkspace {
         }
 
         if documentChanged || change.domains.contains(.selection) {
+            if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {
             grid.refreshCursorPresentation()
         }
 
+        if isActive && change.domains.contains(.bank) {
+            do {
+                try audio.updateVoicegroup(session.bankLease)
+            } catch {
+                callbacks.publicationFailed(String(describing: error))
+            }
+        }
         if change.domains.contains(.bank) {
             velocityPage.cancelSectionInteraction()
         }

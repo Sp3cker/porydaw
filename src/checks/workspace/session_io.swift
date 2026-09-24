@@ -83,6 +83,20 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
     report.expectEqual(false, session.document.isDirty,
                        cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
                        what: "opened session starts clean")
+    let openDocument = session.document
+    let documentLabel = openDocument.source.label
+    do {
+        try runBlocking {
+            try await service.open(root: projectDir + "/nonexistent_subfolder")
+        }
+        report.fail("mainwindow-routing-native/MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab",
+                    "missing replacement project should fail with a live document")
+    } catch {
+        report.expect(!session.isClosed && session.document === openDocument
+                      && session.document.source.label == documentLabel,
+                      cppID: "mainwindow-routing-native/MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab",
+                      message: "failed replacement keeps the open document session and its label")
+    }
     return (service, session)
 }
 

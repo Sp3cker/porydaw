@@ -54,6 +54,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("roll.grid_triplet", "Triplet Grid", .gridTriplet),
         Action("transport.play_pause", "Play/Pause"),
         Action("transport.stop", "Stop"),
+        Action("view.polyphony_debugger", "Polyphony Debugger"),
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
@@ -78,6 +79,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         "roll.grid_widen", "roll.grid_triplet",
     ]
     private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
+    private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
     private static let contextIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.paste",
         "roll.delete", "roll.split", "roll.join",
@@ -106,6 +108,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var timeActionIds: [String]
     @QtTracked public var tracksActionIds: [String]
     @QtTracked public var transportActionIds: [String]
+    @QtTracked public var viewActionIds: [String]
     @QtTracked public var windowActionIds: [String]
     @QtTracked public var contextActionIds: [String]
 
@@ -114,6 +117,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
     @QtTracked public var songLabels: [String] = []
+    @QtTracked public var polyphonyVisible = false
     @QtTracked public var statusText = "Ready"
     private var closePending = false
     private var closing = false
@@ -129,6 +133,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         timeActionIds = Self.timeIds
         tracksActionIds = Self.tracksIds
         transportActionIds = Self.transportIds
+        viewActionIds = Self.viewIds
         windowActionIds = Self.windowIds
         contextActionIds = Self.contextIds
     }
@@ -152,7 +157,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     public func actionEnabled(id: String) -> Bool {
-        guard sceneActive, let action = Self.byId[id] else { return false }
+        guard let action = Self.byId[id] else { return false }
+        if id == "view.polyphony_debugger" { return true }
+        guard sceneActive else { return false }
         if let command = action.command {
             return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
         }
@@ -192,6 +199,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "edit.redo": session.requestRedo()
         case "transport.play_pause": session.playPause()
         case "transport.stop": session.stop()
+        case "view.polyphony_debugger":
+            polyphonyVisible.toggle()
+            session.polyphony.setVisible(showing: polyphonyVisible)
         default: break
         }
     }

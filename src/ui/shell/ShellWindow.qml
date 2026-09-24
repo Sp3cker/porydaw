@@ -42,6 +42,7 @@ ApplicationWindow {
         source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
     }
     FontLoader {
+        id: monoFont
         source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
     }
     FontMetrics {
@@ -73,6 +74,7 @@ ApplicationWindow {
             Qt.application.organization = "sp3cker"
             Qt.application.domain = ""
         }
+        transportBar.restoreOutputVolume()
         appearanceStore.active = true
     }
 
@@ -339,12 +341,33 @@ ApplicationWindow {
                 onObjectRemoved: (index, object) => transportMenu.removeItem(object)
             }
         }
+        Menu {
+            id: viewMenu
+            objectName: "shellViewMenu"
+            title: qsTr("&View")
+            Instantiator {
+                model: shell.viewActionIds
+                delegate: MenuItem {
+                    required property string modelData
+                    objectName: "shellAction_" + modelData
+                    text: root.nativeMenuText(modelData)
+                    checkable: true
+                    checked: shell.polyphonyVisible
+                    onTriggered: shell.activate(modelData)
+                }
+                onObjectAdded: (index, object) => viewMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => viewMenu.removeItem(object)
+            }
+        }
     }
 
     Loader {
         id: editorScene
         objectName: "shellSceneLoader"
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: polyDock.visible ? polyDock.left : parent.right
         active: shell.sceneActive
         focus: true
         onActiveFocusChanged: {
@@ -368,6 +391,59 @@ ApplicationWindow {
                 shell.sceneDestroyed()
         }
     }
+    Item {
+        id: polyDock
+        objectName: "shellPolyphonyDock"
+        visible: shell.polyphonyVisible
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        width: Math.min(root.bodyFontPx * 32, parent.width * 0.48)
+        z: 2
+        Rectangle {
+            anchors.fill: parent
+            color: root.colors.windowBackground
+            border.color: root.colors.outline
+        }
+        Row {
+            id: polyTitle
+            width: parent.width
+            height: Math.ceil(bodyMetrics.height * 1.8)
+            Text {
+                width: parent.width - polyClose.width
+                height: parent.height
+                leftPadding: root.bodyFontPx / 2
+                text: qsTr("Polyphony Debugger")
+                color: root.colors.windowText
+                font: Qt.font({family: root.font.family,
+                               pixelSize: root.font.pixelSize, weight: Font.Bold})
+                verticalAlignment: Text.AlignVCenter
+            }
+            Button {
+                id: polyClose
+                objectName: "shellPolyphonyClose"
+                height: parent.height
+                text: qsTr("×")
+                onClicked: shell.activate("view.polyphony_debugger")
+            }
+        }
+        PolyphonyPanel {
+            id: polyPanel
+            anchors.top: polyTitle.bottom
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            presenter: shell.session.polyphony
+            colors: root.colors
+            applicationFont: root.font
+        }
+        Timer {
+            running: polyDock.visible && shell.session.songOpen
+            repeat: true
+            interval: 100
+            onTriggered: shell.session.polyphony.poll()
+        }
+    }
 
     Text {
         anchors.centerIn: parent
@@ -376,6 +452,20 @@ ApplicationWindow {
         font: root.font
         color: shell.session.palette.windowText
         horizontalAlignment: Text.AlignHCenter
+    }
+    header: TransportBar {
+        id: transportBar
+        width: root.width
+        songAvailable: shell.session.songOpen
+        baseFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize))
+        presenter: shell.session.transportBarPresenter()
+        colors: root.colors
+        toolbarFont: Qt.font({ family: root.font.family, pixelSize: baseFontPx,
+                               hintingPreference: Font.PreferNoHinting,
+                               features: { "tnum": 1 } })
+        clockFont: Qt.font({ family: monoFont.name, pixelSize: baseFontPx + 2,
+                             hintingPreference: Font.PreferNoHinting,
+                             features: { "tnum": 1 } })
     }
     footer: Rectangle {
         implicitHeight: Math.ceil(bodyMetrics.height * 1.5)

@@ -12,10 +12,12 @@ add_library(PorydawApp STATIC
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift
+    audio/PolyphonyPanelPresenter.swift
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
     ApplicationSession.swift
+    transport/TransportBarPresenter.swift
     SongTabsController.swift
     eventlist/EventListModel.swift
     eventlist/EventListProjection.swift
@@ -26,13 +28,20 @@ add_library(PorydawApp STATIC
     songlist/SongListPresenter.swift
     voicelist/VoiceListSemantics.swift
     voicelist/VoiceListController.swift
+    voicelist/VoiceEditorController.swift
+    voicelist/VoicegroupCatalog.swift
     MouseHints.swift
     QListModelSync.swift
     roll/PianoGrid.swift
     roll/GridGesture.swift
     roll/GridScene.swift
     roll/NoteCommands.swift
+    pitchbend/PitchBendGeometry.swift
+    pitchbend/PitchBendKernel.swift
+    pitchbend/PitchBendScene.swift
+    pitchbend/PitchBendPresenter.swift
     timeline/EditorCamera.swift
+    timeline/TimelineScrollbar.swift
     timeline/DocumentProjectionCache.swift
     timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
@@ -40,6 +49,7 @@ add_library(PorydawApp STATIC
     timeline/GridGeometry.swift
     timeline/GridPalette.swift
     timeline/GridTypography.swift
+    timeline/RulerMenuPresenter.swift
     timeline/TimelineSnapPolicy.swift
     commands/EditCommands.swift
     commands/EditKeyArbiter.swift

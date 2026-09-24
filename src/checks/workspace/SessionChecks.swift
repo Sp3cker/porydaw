@@ -12,10 +12,12 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
         report.expect(passed, cppID: cppID, message: message)
     }
     runEditorCameraChecks(report)
+    runTimelineScrollbarChecks(report)
     runEditorDrawerChecks(report)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
+    runTransportBarChecks(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
                     "missing --swiftcore fixture root")
@@ -62,6 +64,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runPresentationChecks(report, session: session)
     runTimeSignaturePromptChecks(report, session: session)
     runTimemenuChecks(report, session: session)
+    runPitchBendChecks(report)
     runRulerLoopMenuChecks(report, session: session)
     runSharedPlayheadChecks(report, session: session, service: service)
     runPlayheadFeatureChecks(report, suite: session, service: service)

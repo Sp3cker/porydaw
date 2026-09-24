@@ -11,6 +11,8 @@ func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerLoopSetAndUndo(report, session: session)
     checkRulerSignatureRemoval(report, session: session)
     checkRulerInsertTime(report, session: session)
+    checkRenderedRulerMenuCommands(report, session: session)
+    checkRulerInsertTimePrompt(report, session: session)
 }
 
 @MainActor
@@ -140,4 +142,120 @@ private func checkRulerInsertTime(_ report: CheckReport, session: DocumentSessio
     _ = document.history.undoDocument()
     report.expect(coreTimeBytes(document) == before, cppID: id,
                   message: "A109: one undo restores the song before ruler insertion")
+}
+
+@MainActor
+private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rulerMenuSwiftRowsAndTwoStepUndo"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let previousTrack = session.selectedTrack
+    if previousTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = previousTrack }
+    let previousCursor = session.editCursor
+    defer { session.editCursor = previousCursor }
+
+    let start: Tick = session.timeline.loopStartTick == 72 ? 48 : 72
+    let end: Tick = session.timeline.loopEndTick == 96 ? 120 : 96
+    let atStart = session.camera.contentX(tick: Double(start))
+    let atEnd = session.camera.contentX(tick: Double(end))
+    menu.openRuler(contentX: atStart)
+    report.expect(menu.isOpen && menu.rows.count > 0
+                  && (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 && menu.rows[$0].enabled }),
+                  cppID: id, message: "the ruler opens a typed, enabled Set Loop Start row")
+    _ = menu.activate(actionId: 2)
+    let writtenStart = session.timeline.loopStartTick
+    report.expect(!menu.isOpen && writtenStart == Tick(grid.snapTickDown(Double(start))),
+                  cppID: id, message: "the clicked start row closes and writes the loop marker")
+
+    menu.openRuler(contentX: atEnd)
+    _ = menu.activate(actionId: 3)
+    let writtenEnd = session.timeline.loopEndTick
+    report.expect(writtenEnd == Tick(grid.snapTickDown(Double(end))), cppID: id,
+                  message: "the clicked end row writes a second undoable marker")
+
+    menu.openRuler(contentX: atEnd)
+    report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 4 && menu.rows[$0].enabled }),
+                  cppID: id, message: "Remove Loop becomes enabled when a marker exists")
+    _ = menu.activate(actionId: 4)
+    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
+                  && session.timeline.loopEndTick == TimeDefaults.noTick, cppID: id,
+                  message: "Remove Loop clears both marker events")
+    _ = session.document.history.undoDocument()
+    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
+                  && session.timeline.loopEndTick == writtenEnd, cppID: id,
+                  message: "the first undo restores only the end marker")
+    _ = session.document.history.undoDocument()
+    report.expect(session.timeline.loopStartTick == writtenStart
+                  && session.timeline.loopEndTick == writtenEnd, cppID: id,
+                  message: "the second undo restores both markers")
+    _ = session.document.history.undoDocument()
+    _ = session.document.history.undoDocument()
+
+    menu.beginSweep(contentX: atStart)
+    menu.updateSweep(contentX: atEnd)
+    menu.endSweep(contentX: atEnd)
+    menu.openRuler(contentX: session.camera.contentX(tick: Double((start + end) / 2)))
+    report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
+                  && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
+                  message: "a swept range replaces positional rows with selection rows")
+    automation.clearTimeSelection()
+    let identity = session.document.history.currentIdentity
+    _ = menu.activate(actionId: 5)
+    report.expect(identity == session.document.history.currentIdentity && !menu.isOpen,
+                  cppID: id, message: "a stale selection click dismisses without a document write")
+}
+
+@MainActor
+private func checkRulerInsertTimePrompt(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::rulerInsertTimePromptWholeSong"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let previousCursor = session.editCursor
+    defer { session.editCursor = previousCursor }
+    guard let note = session.document.notes(in: 0).first else {
+        report.fail(id, "the ruler check fixture needs a note on track zero")
+        return
+    }
+    let before = coreTimeBytes(session.document)
+    let priorIdentity = session.document.history.currentIdentity
+    let axis = TimeAxis(map: TimeMap(
+        ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
+        timeSigs: session.document.timeSignatures.map {
+            TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                         denomPow2: $0.denominatorPower)
+        }))
+    let segment = axis.segmentAt(0)
+    let barTicks = Tick(segment.beatTicks) * Tick(segment.beatsPerBar)
+    session.editCursor = 0
+    menu.openRuler(contentX: session.camera.contentX(tick: 0))
+    _ = menu.activate(actionId: 1)
+    report.expect(menu.insertTimePromptOpen && !menu.isOpen
+                  && menu.insertTimePromptMaximumBeats == Int(segment.beatsPerBar - 1)
+                  && session.document.history.currentIdentity == priorIdentity,
+                  cppID: id, message: "A042: choosing Insert Time opens the bar/beat form without inserting")
+    menu.acceptInsertTimePrompt(bars: 1, beats: 0, fractions: 0)
+    report.expect(!menu.insertTimePromptOpen
+                  && session.document.notes(in: 0).contains {
+                      $0.pitch == note.pitch && $0.velocity == note.velocity
+                          && $0.tick == note.tick + barTicks
+                  }
+                  && session.document.history.currentIdentity != priorIdentity,
+                  cppID: id, message: "the accepted bar shifts whole-song events by the local signature length")
+    _ = session.document.history.undoDocument()
+    report.expect(coreTimeBytes(session.document) == before, cppID: id,
+                  message: "one undo restores the song before prompted insertion")
+    menu.openRuler(contentX: session.camera.contentX(tick: 0))
+    _ = menu.activate(actionId: 1)
+    menu.cancelInsertTimePrompt()
+    report.expect(!menu.insertTimePromptOpen && coreTimeBytes(session.document) == before,
+                  cppID: id, message: "cancelling the prompt never writes time")
 }

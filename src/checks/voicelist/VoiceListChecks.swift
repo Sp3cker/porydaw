@@ -230,6 +230,16 @@ private func voiceListRowRendering(_ report: CheckReport) {
                        what: "a blank row publishes no type")
     report.expectEqual("", list.rows[12].adsr, cppID: cppID,
                        what: "a blank row publishes no ADSR text")
+
+    var minted = voiceListFixtureSlots()
+    minted[13] = BankSlotView(
+        kind: BankSlotKind.editable,
+        voice: BankVoice(macro: BankVoiceMacro.directSound,
+                         symbol: "DirectSoundSynth_RuntimeMinted"),
+        isSynth: true)
+    list.bindBank(slots: minted, loadName: "test_vg")
+    report.expectEqual("Synth (Golden Sun)", list.rows[13].typeName, cppID: cppID,
+                       what: "a loader-confirmed minted synth works before catalog persistence")
 }
 
 /// The loading overlay fills the stable rows with "NNN  Loading..." and

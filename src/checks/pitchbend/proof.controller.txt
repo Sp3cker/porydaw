@@ -304,8 +304,8 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A023 | PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14 | src/checks/pitchbend/controller.cpp:104
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls asserts a one-step BENDR increase using the same DragInput, but the oracle uses a pointer scrub.
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:

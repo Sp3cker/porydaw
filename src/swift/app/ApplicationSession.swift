@@ -39,6 +39,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The open songs. Constructed with the session and never nil: the surface
     /// binds the strip before the first open and after the last close.
     @QtTracked public var songTabs: SongTabsController
+    @QtTracked public var polyphony: PolyphonyPanelPresenter
 
     private var projectRoot = ""
     private var labels: [String] = []
@@ -55,6 +56,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let playhead: SharedPlayheadPresenter
     private let playheadGuides: PlayheadGuidesPresenter
     private let eventList: EventListPresenter
+    private let transportBar: TransportBarPresenter
+    private let voiceList = VoiceListController()
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -67,9 +70,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var isDisposed = false
     private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
-    /// The project and song a close-all walk is switching to, when the walk was
-    /// started by a project open rather than by the host's close.
-    private var pendingProjectSwitch: (path: String, label: String?)?
+    private var pendingProjectSwitch: ProjectSwitchCandidate?
+
+    /// A fully read project waiting to replace the open one: everything that can
+    /// fail is read before any live tab is released.
+    private struct ProjectSwitchCandidate {
+        let path: String
+        let label: String?
+        let service: ProjectService
+        let labels: [String]
+        let voicegroupArgs: [String]
+        let voicegroupCatalog: VoicegroupCatalog
+    }
 
     public required init() {
         let palette = GridPalette()
@@ -79,12 +91,49 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playhead = SharedPlayheadPresenter()
         playheadGuides = PlayheadGuidesPresenter()
         eventList = EventListPresenter()
+        transportBar = TransportBarPresenter()
+        polyphony = PolyphonyPanelPresenter()
         do {
             audio = try NativeAudio()
         } catch {
             lastSaveError = String(describing: error)
         }
+        polyphony.attach(audio: audio)
+        polyphony.onJump = { [weak self] tick, track, key, dpr in
+            guard let session = self?.workspace?.session else { return }
+            session.selectPrimaryTrack(track)
+            if let note = session.document.notes(in: track).last(where: {
+                $0.tick <= tick && Int($0.pitch) == key
+                    && UInt64(tick) < UInt64($0.tick) + UInt64($0.duration)
+            }) {
+                session.setSelectedNotes([note.id])
+                _ = session.mutateCamera { $0.ensureKeyVisible(key) }
+            }
+            session.editCursor = tick
+            _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
+        }
+        voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
+            guard (0..<128).contains(voice), (0..<128).contains(key),
+                  (0..<128).contains(velocity) else { return }
+            self?.audio?.previewVoice(program: UInt8(voice), key: UInt8(key),
+                                      velocity: UInt8(velocity))
+        }
+        voiceList.onVoicegroupChangeRequested = { [weak self] arg in
+            guard let self, let session = self.selectedDocument else { return }
+            Task { [weak self, weak session] in
+                guard let session else { return }
+                do {
+                    try await session.selectVoicegroup(arg)
+                } catch {
+                    self?.lastSaveError = String(describing: error)
+                }
+                if self?.selectedDocument === session {
+                    self?.voiceList.refresh(from: session)
+                }
+            }
+        }
         songTabs.attach(app: self)
+        transportBar.attach(session: self)
     }
 
     public func componentComplete() {}
@@ -105,6 +154,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public func openTimeSigPrompt(tick: Double) {
         guard let workspace, tick.isFinite, tick >= 0,
               tick < Double(TimeDefaults.noTick) else { return }
+        workspace.rulerMenu.cancelInsertTimePrompt()
         let session = workspace.session
         let target = TimeDefaults.tick(from: tick)
         let axis = TimeAxis(map: TimeMap(
@@ -161,17 +211,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func openTimeSigMenu(contentX: Double) {
         guard let workspace, contentX.isFinite else { return }
+        workspace.rulerMenu.cancelInsertTimePrompt()
         let chip = timeSigChipTick(contentX: contentX)
-        let tick = chip >= 0 ? Tick(chip)
-            : Tick(max(0, workspace.grid.snapTickDown(
-                workspace.session.camera.tickAtContentX(contentX))))
-        workspace.session.editCursor = tick
         cancelTimeSigPrompt()
-        timeSigMenuOpen = true
+        workspace.rulerMenu.openRuler(contentX: contentX, chipTick: chip)
+        timeSigMenuOpen = workspace.rulerMenu.isOpen
         songTabs.publishTimeSigFlags()
     }
 
     public func closeTimeSigMenu() {
+        workspace?.rulerMenu.close()
         timeSigMenuOpen = false
         songTabs.publishTimeSigFlags()
     }
@@ -204,6 +253,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// same state through the presenter accessors below.
     @QtIgnored
     public var selectedDocument: DocumentSession? { workspace?.session }
+    @QtIgnored
+    internal var transportAudio: NativeAudio? { audio }
+    public func voiceListController() -> VoiceListController { voiceList }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -217,11 +269,23 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.grid
     }
 
+    public func pitchBendPresenter() -> PitchBendPresenter {
+        guard let workspace else { preconditionFailure("Pitch Bend requested without an open song") }
+        return workspace.pitchBend
+    }
+
     public func trackHeadersPresenter() -> TrackHeadersPresenter {
         guard let workspace else {
             preconditionFailure("Track headers requested without an open song")
         }
         return workspace.trackHeaders
+    }
+
+    public func rulerMenuPresenter() -> RulerMenuPresenter {
+        guard let workspace else {
+            preconditionFailure("Ruler menu requested without an open song")
+        }
+        return workspace.rulerMenu
     }
 
     /// The presented document's drawer, or the session's empty presenter while
@@ -263,6 +327,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// bound and returns to that empty presentation whenever the document is
     /// deactivated.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
+    public func transportBarPresenter() -> TransportBarPresenter { transportBar }
 
     public func playheadGuidesPresenter() -> PlayheadGuidesPresenter { playheadGuides }
 
@@ -380,6 +445,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         isDisposed = true
+        if let pending = pendingProjectSwitch {
+            pendingProjectSwitch = nil
+            Task { await pending.service.close() }
+        }
         mouseHints.setWindowActive(active: false)
         activeReplacementTask?.cancel()
         // Cancel while the scene exists: every tab's resize session and every
@@ -410,6 +479,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// Never earlier: the QML surface binds to every tab's grid, pages and
     /// workspace until the scene is really gone.
     private func releaseDocumentPresentation() {
+        polyphony.setVisible(showing: false)
+        polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
         audio?.unload()
         songOpen = false
@@ -436,9 +507,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     // MARK: - Project and song opens
 
-    /// Starts a project replacement without exposing async/throws through Qt.
-    /// Every open tab is asked to close first — the same Save/Discard/Cancel
-    /// question the strip asks — and the switch runs once the strip is empty.
     public func openProject(path: String) {
         requestProjectSwitch(path: path, label: nil)
     }
@@ -478,7 +546,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// and the surface read.
     @QtIgnored
     func tabsDidChange() {
+        polyphony.setContext(session: workspace?.session)
         refreshDocumentState()
+        refreshVoicegroupDock()
         // The selected workspace's grid owns command availability; switching
         // tabs swaps it, so the window's Edit-menu enabled states must refresh.
         gridCommandAvailabilityChanged()
@@ -547,18 +617,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// The close-all walk's verdict. A walk this session started for a project
-    /// open continues that switch; any other walk answers the host: a completed
-    /// walk closes its window, a refusal cancels it.
     @QtIgnored
     func closeAllResolved(closed: Bool) {
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
+                Task { await pending.service.close() }
                 closeCancelled()
                 return
             }
-            startProjectSwitch(path: pending.path, label: pending.label)
+            activeReplacementTask = Task { [weak self] in
+                await self?.finishProjectSwitch(pending)
+            }
             return
         }
         if closed { allTabsClosed() } else { closeCancelled() }
@@ -577,6 +647,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private func tabStateChanged() {
         songTabs.refreshDirty()
         refreshDocumentState()
+        refreshVoicegroupDock()
+    }
+
+    private func refreshVoicegroupDock() {
+        if let session = selectedDocument {
+            voiceList.refresh(from: session)
+        } else {
+            voiceList.bindBank(slots: nil)
+        }
     }
 
     /// Retires one tab: releases the workspace's presenters and closes its
@@ -617,30 +696,39 @@ public final class ApplicationSession: QmlInstantiableStatus {
         await awaitTabCloses()
     }
 
-    /// Starts a project switch: every tab is asked to close first, and the switch
-    /// runs once the strip is empty. A refusal cancels the switch.
     private func requestProjectSwitch(path: String, label: String?) {
-        // A close-all walk already running for an earlier open is generic: the
-        // latest request wins, and the in-flight walk resolves into it.
-        guard songTabs.tabCount > 0 else {
-            pendingProjectSwitch = nil
-            startProjectSwitch(path: path, label: label)
-            return
-        }
-        pendingProjectSwitch = (path: path, label: label)
-        songTabs.startCloseAll()
+        startProjectSwitch(path: path, label: label)
     }
 
-    /// Runs a queued project switch. The session is held weakly until the switch
-    /// actually starts, so a queued open that is superseded by the host's teardown
-    /// abandons the switch instead of keeping the session alive past it.
     private func startProjectSwitch(path: String, label: String?) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
             guard let self else { return }
-            guard await self.replaceProject(path: path) else { return }
-            if let label { await self.openTab(label: label, at: nil) }
+            self.lastSaveError = ""
+            let service = ProjectService()
+            do {
+                try await service.open(root: path)
+                let labels = try await service.songLabels()
+                let voicegroupArgs = try await service.voicegroupArgs()
+                let voicegroupCatalog = try await service.voicegroupCatalog()
+                guard !self.isDisposed, !Task.isCancelled else {
+                    await service.close()
+                    return
+                }
+                let candidate = ProjectSwitchCandidate(
+                    path: path, label: label, service: service, labels: labels,
+                    voicegroupArgs: voicegroupArgs, voicegroupCatalog: voicegroupCatalog)
+                if self.songTabs.tabCount == 0 {
+                    await self.finishProjectSwitch(candidate)
+                } else {
+                    self.pendingProjectSwitch = candidate
+                    self.songTabs.startProjectSwitchCloseAll()
+                }
+            } catch {
+                await service.close()
+                self.failOpen(String(describing: error))
+            }
         }
     }
 
@@ -793,28 +881,27 @@ public final class ApplicationSession: QmlInstantiableStatus {
         playhead.refreshImmediate()
     }
 
-    private func replaceProject(path: String) async -> Bool {
-        lastSaveError = ""
-        let service = ProjectService()
-        do {
-            try await service.open(root: path)
-            let newLabels = try await service.songLabels()
-            await releaseTabs()
-            await catalogService?.close()
-            guard !isDisposed, !Task.isCancelled else {
-                await service.close()
-                return false
-            }
-            catalogService = service
-            projectRoot = path
-            labels = newLabels
-            projectOpen = true
-            return true
-        } catch {
-            await service.close()
-            failOpen(String(describing: error))
-            return false
+    private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+        await releaseTabs()
+        await catalogService?.close()
+        guard !isDisposed, !Task.isCancelled else {
+            await candidate.service.close()
+            return
         }
+        catalogService = candidate.service
+        projectRoot = candidate.path
+        labels = candidate.labels
+        let catalog = candidate.voicegroupCatalog
+        voiceList.setVoicegroupChoices(candidate.voicegroupArgs)
+        voiceList.sampleChoices = catalog.samples
+        voiceList.waveSymbols = catalog.waves
+        voiceList.drumkitSymbols = catalog.drumkits
+        voiceList.keysplitTables = catalog.keysplits
+        voiceList.synthSymbols = Set(catalog.synths)
+        voiceList.adsrDefaults = catalog.defaults
+        voiceList.catalogRevision += 1
+        projectOpen = true
+        if let label = candidate.label { await openTab(label: label, at: nil) }
     }
 
     /// Republishes the flags the window and the strip read: the song is open

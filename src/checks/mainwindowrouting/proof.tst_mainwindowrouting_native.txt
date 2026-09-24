@@ -893,16 +893,16 @@ Original expression:
                  checks::async_wait::Result::Ready)
 
 A076 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:318
-Disposition: GAP
-Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
+Disposition: MATCHED
+Mapping/reason: S186 in test_liveTabCleanBeforeFailedProjectOpen compares the selected tab ID after the production project-open failure, and S190 keeps the open DocumentSession; both executed (shell-open-failure and swiftcore evidence).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_workspace->selectedSongTab(), old)
 
 A077 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:319
-Disposition: GAP
-Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
+Disposition: MATCHED
+Mapping/reason: S187 in test_liveTabCleanBeforeFailedProjectOpen compares the original two-tab count after the production project-open failure; executed (shell-open-failure evidence).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -917,16 +917,16 @@ Original expression:
         QCOMPARE(window.m_workspace->projectState().snapshot.root(), session->fixture->root())
 
 A079 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:321
-Disposition: GAP
-Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
+Disposition: MATCHED
+Mapping/reason: S188 in test_liveTabCleanBeforeFailedProjectOpen asserts the selected document stays open and ready after the failure, with the background tab and grid still live; executed (shell-open-failure evidence).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(waitForTabReady(*window.m_workspace, old))
 
 A080 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:322
-Disposition: GAP
-Mapping/reason: Parity divergence awaiting swift-project-store: C++ failed project open preserves live tabs; Swift closes tabs (SongTabsController.startCloseAll) before replaceProject can fail; GAP.
+Disposition: MATCHED
+Mapping/reason: S189 in test_liveTabCleanBeforeFailedProjectOpen compares the selected document caption after the failure, and S190 in sessionOpenAndRecovery compares the loaded document source label and identity; both executed (shell-open-failure and swiftcore evidence).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2071,6 +2071,33 @@ Anchor: message "self-cancelling bank merge is removed so undo reaches the prece
     report.expect(cancelling.state.config.priority == 0,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
         message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
+
+S186 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "failed project replacement preserves the selected tab"
+        compare(tabs.selectedId, selectedId,
+                "failed project replacement preserves the selected tab")
+
+S187 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "failed project replacement preserves the open tab count"
+        compare(tabs.tabCount, tabCount,
+                "failed project replacement preserves the open tab count")
+
+S188 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "failed project replacement keeps the selected document ready"
+        compare(selectedPage.songOpen, true,
+                "failed project replacement keeps the selected document ready")
+
+S189 | test_liveTabCleanBeforeFailedProjectOpen | src/checks/editorqml/tst_ShellOpenFailure.qml
+Anchor: message "failed project replacement preserves the document label"
+        compare(selectedPage.title, label,
+                "failed project replacement preserves the document label")
+
+S190 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
+Anchor: message "failed replacement keeps the open document session and its label"
+        report.expect(!session.isClosed && session.document === openDocument
+                      && session.document.source.label == documentLabel,
+                      cppID: "mainwindow-routing-native/MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab",
+                      message: "failed replacement keeps the open document session and its label")
 
 No shared Swift fixture files carrying report.expect predicates are part of this
 counterpart: the session_fixtures.swift/session_support.swift staging helpers

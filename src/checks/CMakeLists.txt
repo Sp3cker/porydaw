@@ -66,6 +66,7 @@ if(APPLE)
         playback/tst_loop.swift
         playback/tst_prime.swift
         polyphony/polyphonyengine.swift
+        polyphony/PolyphonyPanelChecks.swift
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
         keyboard/tst_velocityaxis.swift
@@ -110,6 +111,7 @@ if(APPLE)
         rollcheck/static/camera.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
+        scrollbar/ScrollbarChecks.swift
         rollcheck/pencil.swift
         rollcheck/resize.swift
         rollcheck/scale_editing.swift
@@ -123,6 +125,7 @@ if(APPLE)
         rollcheck/remap.swift
         rollcheck/presentation.swift
         rollcheck/time_signature_prompt.swift
+        rollcheck/pitch_bend.swift
         rollcheck/timemenu.swift
         rollcheck/ruler_loop_menu.swift
         nativegraphics/tst_playhead_quick.swift
@@ -205,6 +208,7 @@ if(APPLE)
         projectstore/BankLeasesChecks.swift
         projectstore/ExportChecks.swift
         workspace/session_support.swift
+        workspace/transport_checks.swift
         workspace/session_fixtures.swift
         workspace/session_editor_semantics.swift
         workspace/session_time_routing.swift
@@ -407,6 +411,7 @@ if(APPLE)
         editorqml/ShellQmlTests.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
+        editorqml/PolyphonyShellProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"

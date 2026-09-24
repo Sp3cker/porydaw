@@ -239,10 +239,12 @@ qt_add_resources(porydaw_app "drawer_shared_qml"
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
         src/ui/songview/quick/EventListPage.qml
-        src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/RulerToolTip.qml
+        src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/HoverHint.qml
+        src/ui/songview/quick/TimelineScrollbar.qml
         src/ui/songview/quick/HintProfiles.qml
         src/ui/songview/quick/QuickMenuPanel.qml
         src/ui/songview/quick/AutomationTabs.qml
@@ -263,6 +265,27 @@ qt_add_resources(porydaw_app "drawer_qml"
         src/ui/songview/quick/drawer/AutomationMenu.qml
 )
 
+qt_add_resources(porydaw_app "voicegroup_dock_qml"
+    PREFIX "/porydaw/docks"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/docks"
+    FILES
+        src/ui/songview/quick/docks/VoicegroupPanel.qml
+        src/ui/songview/quick/docks/VoiceEditor.qml
+)
+
+qt_add_resources(porydaw_app "voicegroup_type_icons"
+    PREFIX "/porydaw/voiceicons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/waveform.svg
+        resources/wave-square.svg
+        resources/wave-triangle.svg
+        resources/wave-sine.svg
+        resources/waveform-path.svg
+        resources/piano-keyboard.svg
+        resources/drum.svg
+)
+
 qt_add_resources(porydaw_app "drawer_icons"
     PREFIX "/icons"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
@@ -271,6 +294,14 @@ qt_add_resources(porydaw_app "drawer_icons"
         resources/velocity_labels.svg
         resources/automation.svg
         resources/flat-music.svg
+)
+
+qt_add_resources(porydaw_app "transport_icons"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/transport-play.svg
+        resources/transport-pause.svg
 )
 
 qt_add_resources(porydaw_app "drawer_cursors"
@@ -334,6 +365,11 @@ target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 set(shell_qml
     src/ui/shell/PorydawApplication.qml
     src/ui/shell/ShellWindow.qml
+    src/ui/shell/TransportBar.qml
+    src/ui/shell/TransportButton.qml
+    src/ui/shell/TransportOutputDial.qml
+    src/ui/shell/PolyphonyPanel.qml
+    src/ui/shell/PolyphonyChannelGroup.qml
 )
 set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)
