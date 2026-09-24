@@ -193,9 +193,9 @@ public enum VelocityGesturePolicy {
         return updates
     }
 
-    /// The commit payload in frozen order: every previewed value, once.
+    /// The commit payload in note order: every previewed value, once.
     public static func updates(_ gesture: VelocityGestureState) -> [NoteVelocity] {
-        gesture.notes.compactMap { note in
+        gesture.notes.sorted { $0.noteID.rawValue < $1.noteID.rawValue }.compactMap { note in
             guard let velocity = gesture.preview[note.noteID],
                   velocity != note.velocity
             else { return nil }

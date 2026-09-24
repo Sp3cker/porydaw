@@ -3,6 +3,7 @@ import PorydawCore
 private let velocityResolutionID = "velocity-model/VelocityModelTest::resolvesVoiceKinds"
 private let velocityLevelsID = "velocity-model/VelocityModelTest::levelsCanonicalizeAndMove"
 
+@MainActor
 internal func runVelocityMapOracleChecks(_ report: CheckReport) {
     for kind in 0..<8 {
         let map = VelocityMap(voiceKind: VoiceKind(rawValue: kind) ?? .invalid)
@@ -54,5 +55,7 @@ internal func runVelocityMapOracleChecks(_ report: CheckReport) {
             }
         }
     }
+    runVelocityAxisParityChecks(report)
+    runVelocityGestureParityChecks(report)
 
 }
