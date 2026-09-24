@@ -7,6 +7,9 @@ private let noteEditsBasicID = "editcheck/EditCheckTest::noteEditingBasic"
 @MainActor
 func runNoteEditsSuite(_ report: CheckReport) {
     adoptionAndPairing(report)
+    lifecycleFixturePairing(report)
+    interleavedFixturePairing(report)
+    unterminatedPairingStress(report)
     noteIdentityContracts(report)
     insertionAndCollision(report)
     movementAndResize(report)
@@ -67,6 +70,124 @@ private func adoptionAndPairing(_ report: CheckReport) {
     report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                   cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                   message: "note-end status is retained during adoption")
+}
+
+@MainActor
+private func lifecycleFixturePairing(_ report: CheckReport) {
+    let cppID = "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering"
+    guard let path = CheckEnvironment.fixturePath("test_midis/smf/valid/note_lifecycle.mid") else {
+        report.fail(cppID, "missing --swiftcore fixture root")
+        return
+    }
+    do {
+        let source = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
+        let document = SongDocument(file: try MidiFile.decode(source.encoded()))
+        guard let track = document.engineTracks.tracks.firstIndex(where: { $0.midiChunk == 1 })
+        else {
+            report.fail(cppID, "note-lifecycle chunk has no engine track")
+            return
+        }
+        let notes = document.notes(in: track)
+        report.expectEqual(4, notes.count, cppID: cppID, what: "fixture pairing count")
+        report.expectEqual([2, 4, 6, 8], notes.map(\.onIndex), cppID: cppID,
+                           what: "fixture note-on event indices")
+        report.expectEqual([3, 5, 7, 9], notes.map(\.endIndex), cppID: cppID,
+                           what: "fixture note-end event indices")
+        report.expectEqual([Tick(24), 24, 0, 24], notes.map(\.duration), cppID: cppID,
+                           what: "fixture note durations")
+        report.expectEqual([UInt8(0x3C), 0x3C, 0x3E, 0x40], notes.map(\.pitch),
+                           cppID: cppID, what: "fixture note keys")
+        report.expectEqual([UInt8(0x64), 0x6E, 0x50, 0x60], notes.map(\.velocity),
+                           cppID: cppID, what: "fixture note velocities")
+        report.expectEqual([UInt8](repeating: 0, count: 4), notes.map(\.channel),
+                           cppID: cppID, what: "fixture note channels")
+    } catch {
+        report.fail(cppID, "fixture decode or reparse failed: \(error)")
+    }
+}
+
+@MainActor
+private func interleavedFixturePairing(_ report: CheckReport) {
+    let cppID = "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly"
+    let events: [MidiEvent] = [
+        .channel(status: 0x90, data0: 60, data1: 100),
+        .channel(status: 0x90, data0: 62, data1: 80),
+        .channel(status: 0x91, data0: 60, data1: 70),
+        .channel(tick: 5, status: 0x90, data0: 62, data1: 0),
+        .channel(tick: 7, status: 0x81, data0: 60, data1: 0),
+        .channel(tick: 10, status: 0x90, data0: 60, data1: 90),
+        .channel(tick: 20, status: 0x80, data0: 60, data1: 0),
+        .channel(tick: 30, status: 0x90, data0: 64, data1: 50),
+        .channel(tick: 31, status: 0x90, data0: 0x83, data1: 60),
+        .channel(tick: 33, status: 0x80, data0: 0x03, data1: 0),
+        .channel(tick: 39, status: 0x80, data0: 0x83, data1: 0),
+    ]
+    do {
+        let file = MidiFile(division: 24, chunks: [
+            MidiChunk(endTick: 40),
+            MidiChunk(events: events, endTick: 40),
+        ])
+        let document = SongDocument(file: try MidiFile.decode(file.encoded()))
+        guard let track = document.engineTracks.tracks.firstIndex(where: { $0.midiChunk == 1 })
+        else {
+            report.fail(cppID, "interleaved chunk has no engine track")
+            return
+        }
+        let notes = document.notes(in: track)
+        report.expectEqual(5, notes.count, cppID: cppID, what: "interleaved pairing count")
+        report.expectEqual([0, 1, 5, 7, 8], notes.map(\.onIndex), cppID: cppID,
+                           what: "interleaved note-on indices")
+        report.expectEqual([6, 3, 6, nil, 10], notes.map(\.endIndex), cppID: cppID,
+                           what: "interleaved note-end indices")
+        report.expectEqual([Tick(20), 5, 10, 0, 8], notes.map(\.duration), cppID: cppID,
+                           what: "interleaved durations")
+        report.expectEqual([UInt8(60), 62, 60, 64, 0x83], notes.map(\.pitch),
+                           cppID: cppID, what: "interleaved keys")
+        report.expectEqual([UInt8(100), 80, 90, 50, 60], notes.map(\.velocity),
+                           cppID: cppID, what: "interleaved velocities")
+        report.expectEqual([UInt8](repeating: 0, count: 5), notes.map(\.channel),
+                           cppID: cppID, what: "interleaved channels")
+        report.expectEqual([false, false, false, true, false], notes.map(\.isUnterminated),
+                           cppID: cppID, what: "unterminated note visibility")
+    } catch {
+        report.fail(cppID, "interleaved fixture encode or reparse failed: \(error)")
+    }
+}
+
+@MainActor
+private func unterminatedPairingStress(_ report: CheckReport) {
+    let cppID = "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear"
+    let noteCount = 300_000
+    var events: [MidiEvent] = []
+    events.reserveCapacity(noteCount)
+    for index in 0..<noteCount {
+        events.append(.channel(tick: Tick(index), status: 0x90, data0: 60, data1: 100))
+    }
+    let file = MidiFile(division: 24, chunks: [
+        MidiChunk(endTick: Tick(noteCount)),
+        MidiChunk(events: events, endTick: Tick(noteCount)),
+    ])
+    do {
+        let parsed = try MidiFile.decode(file.encoded())
+        let start = ProcessInfo.processInfo.systemUptime
+        let document = SongDocument(file: parsed)
+        let notes = document.notes(in: 0)
+        let milliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1_000
+        report.expectEqual(noteCount, notes.count, cppID: cppID,
+                           what: "unterminated note pairing count")
+        report.expectEqual(0, notes.first?.onIndex, cppID: cppID,
+                           what: "first unterminated note index")
+        report.expectEqual(noteCount - 1, notes.last?.onIndex, cppID: cppID,
+                           what: "last unterminated note index")
+        report.expectEqual(true, notes.first?.isUnterminated, cppID: cppID,
+                           what: "first note has no end")
+        report.expectEqual(true, notes.last?.isUnterminated, cppID: cppID,
+                           what: "last note has no end")
+        report.expect(milliseconds <= 10_000, cppID: cppID,
+                      message: "pairing \(noteCount) unterminated notes took \(milliseconds) ms")
+    } catch {
+        report.fail(cppID, "stress fixture encode or reparse failed: \(error)")
+    }
 }
 
 @MainActor

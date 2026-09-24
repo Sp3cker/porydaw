@@ -4,12 +4,12 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midismf.cpp
 Original SHA-256: 8020c4710e4f59b87aac42d18cd70d595cf81260c9c12dfd64581a7361efe5c3
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
+Swift SHA-256: b6da19e467b226ad8c2e9d1956095bf7f57691640f791152a4b6ec2ff7a8a26d
 Additional covering Swift files:
 src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
+Swift SHA-256: c921bfbc5b1d6dfaa763e7611eb3baa263dfa4caf7e53aa721d8390b21dcb2d2
 src/checks/editcheck/EventChecks.swift
-Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+Swift SHA-256: 401aa1ae13ed0ed92d2cb26b33029f4b6ec90ef99d0dd61894ba165a00002705
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -25,12 +25,21 @@ GAP identifies an original predicate without a replacement assertion.
 
 Verification
 Command: deno task verify --filter smfcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: not runnable. src/checks/midi/tst_midismf.cpp appears in no CMake
+target (src/checks/CMakeLists.txt lists only midi/tst_midiexport.cpp) and in no
+check catalog or registry, so the original is uncompiled and unregistered; its
+remaining GAP sites are native-only obligations with no executing lane.
 Swift pairing command: deno task verify --filter swiftcore --verbose
-The swiftcore lane executes runMidiCodecSuite (fixture and synthetic codec
-cases with the cppIDs below), runMusicalSemanticsSuite (per-CC oracle rows),
-runNoteEditsSuite (document pairing predicates), and runMidiImportSuite
-(import-analysis predicates).
+Result: controller-observed run 2026-09-24 — build OK; SwiftCoreTest::midiCodec,
+::noteEdits, and ::midiImport PASS. The overall suite failed only on five
+peer-owned clipboard projectSession assertions (A028-A034) from another slice;
+this reconciliation did not re-run the lane. The cited predicates execute in
+that lane: runMidiCodecSuite (fixture and synthetic codec cases with the cppIDs
+below, plus tempoConversionProjection and engineMappingProjection),
+runMusicalSemanticsSuite (per-CC oracle rows), runNoteEditsSuite (document
+pairing predicates plus lifecycleFixturePairing, interleavedFixturePairing, and
+unterminatedPairingStress), and runMidiImportSuite (import-analysis predicates
+plus importSmfReportRows).
 
 Execution ownership
 runMidiCodecSuite calls compareFixture for the five checked-in fixtures
@@ -47,10 +56,16 @@ The automation-burst expectation list is generated from the same channel/group
 field formulas, so S013 covers every conductor, group, and note event.
 runMusicalSemanticsSuite emits per-CC oracle rows consumed through
 coreMidiExpectOracleValue/Text. NoteChecks.swift adoptionAndPairing and
-movementAndResize emit the document-pairing predicates. EventChecks.swift
-importAnalysis emits the shared-selector and 0x4B predicates. MidiTimeline
-projection, SongDocument pairing/mapping/tempo observations, analyzeForImport
-rows, and all scratch/scaffolding stay C++-only.
+movementAndResize emit the document-pairing predicates; lifecycleFixturePairing,
+interleavedFixturePairing, and unterminatedPairingStress emit the fixture pairing
+predicates (S081-S101). EventChecks.swift importAnalysis emits the
+shared-selector and 0x4B predicates, and importSmfReportRows emits the per-row
+import-report predicates (S102-S110). runMidiCodecSuite also calls
+tempoConversionProjection and engineMappingProjection (S035-S080), the Swift
+MidiTimeline projections with SongDocument tempo and mapping observations.
+QTemporaryDir scratch staging, loadDocumentFromSmf disk staging, the by-pointer
+ccRow/engineTrackForChunk lookups, and the C++-only mid2agb compile path have no
+Swift counterparts and stay unproved where their sites remain GAP or PARTIAL.
 
 Fixture, sequence and row constraints
 Five checked-in fixtures under src/checks/fixtures/decompproject/test_midis/smf/:
@@ -65,13 +80,19 @@ songM2-style project-song rows are not used here. Data rows, guards
 (QTemporaryDir scratch, loadDocumentFromSmf, engineTrackForChunk), and helper
 bodies (expectTempoProjection, invoked for raw and projected timelines;
 analyzeChannelTrack; ccRow/xcmdRow) at the reference revision remain
-authoritative.
+authoritative. The Swift counterparts reconstruct the same fixtures, traffic,
+and rows in memory: MidiChecks.swift tempoConversionProjection and
+engineMappingProjection, NoteChecks.swift lifecycleFixturePairing,
+interleavedFixturePairing, and unterminatedPairingStress, and EventChecks.swift
+importSmfReportRows. Pairing, projection, and report-row observables are
+therefore asserted, while scratch/disk staging and by-pointer lookup guards stay
+unproved at the sites marked GAP or PARTIAL.
 
 Original assertion inventory and source sequence
 
 A001 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:133
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S037 asserts the tick-one tempo sample position 230 (MidiChecks.swift:604) inside assertTempoProjection, executed for the raw and document-projected timelines under the same test cppID.
 Source context since previous assertion:
   #include "checks/midi/tst_midismf.h"
 
@@ -210,8 +231,8 @@ Original expression:
   QCOMPARE(qulonglong(event.samplePos), qulonglong(230))
 
 A002 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:135
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S036 asserts the tick-one tempo BPM sequence (MidiChecks.swift:601): 150 then 100 for the raw timeline and 100 for the document-projected timeline under the same test cppID, matching the same-tick first/last expectation.
 Source context since previous assertion:
   ;
               const int bpm = event.data0 | (event.data1 << 7);
@@ -220,8 +241,8 @@ Original expression:
   QCOMPARE(bpm, expectedTick1Tempos == 2 && tick1Tempos == 1 ? 150 : 100)
 
 A003 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:138
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S040 asserts the single note-on sample position 505 (MidiChecks.swift:611) under the same test cppID.
 Source context since previous assertion:
   ;
           } else if (event.type == 0x9) {
@@ -231,8 +252,8 @@ Original expression:
   QCOMPARE(qulonglong(event.samplePos), qulonglong(505))
 
 A004 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:139
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S039 asserts the note-on tick 2 (MidiChecks.swift:609) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -240,8 +261,8 @@ Original expression:
   QCOMPARE(event.tick, uint32_t(2))
 
 A005 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:140
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S041 asserts the note-on engine track 0 (MidiChecks.swift:613) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -249,8 +270,8 @@ Original expression:
   QCOMPARE(int(event.track), 0)
 
 A006 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:142
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S042 filters timeline events by type 0x8 and asserts the note-off tick list [Tick(4)] (MidiChecks.swift:616), so every note-off event carries type 0x8, under the same test cppID.
 Source context since previous assertion:
   ;
           } else {
@@ -259,8 +280,8 @@ Original expression:
   QCOMPARE(event.type, uint8_t(0x8))
 
 A007 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:143
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S042 asserts the note-off tick 4 (MidiChecks.swift:616) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -268,8 +289,8 @@ Original expression:
   QCOMPARE(event.tick, uint32_t(4))
 
 A008 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:144
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S043 asserts the note-off engine track 0 (MidiChecks.swift:618) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -277,8 +298,8 @@ Original expression:
   QCOMPARE(int(event.track), 0)
 
 A009 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:147
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S038 asserts exactly one scheduled note-on (MidiChecks.swift:608) under the same test cppID.
 Source context since previous assertion:
   ;
           }
@@ -288,8 +309,8 @@ Original expression:
   QCOMPARE(noteOns, 1)
 
 A010 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:148
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S035 asserts the tick-one tempo event count (MidiChecks.swift:599): 2 for the raw timeline and 1 for the document-projected timeline under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -297,8 +318,8 @@ Original expression:
   QCOMPARE(tick1Tempos, expectedTick1Tempos)
 
 A011 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:152
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S044 asserts the sampleForTick table for ticks [0, 1, 2, 3, 9] equals [0, 230, 505, 781, 2435] (MidiChecks.swift:623) under the same test cppID.
 Source context since previous assertion:
   ;
       const Tick expectedTicks[] = {0, 1, 2, 3, 9};
@@ -310,8 +331,8 @@ Original expression:
                    qulonglong(expectedSamples[i]))
 
 A012 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:156
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S045 asserts tickForSample inversion within 0.5 / 229.6875 + 1e-12 for the same sample table (MidiChecks.swift:625) under the same test cppID.
 Source context since previous assertion:
   ;
           // Quantization contributes at most half a sample, not half a tick.
@@ -324,8 +345,8 @@ Original expression:
                                   .arg(qlonglong(expectedTicks[i]))))
 
 A013 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:162
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S046 asserts the timeline has a loop (MidiChecks.swift:629) under the same test cppID.
 Source context since previous assertion:
   ;
       }
@@ -335,8 +356,8 @@ Original expression:
   QVERIFY(timeline.hasLoop())
 
 A014 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:163
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S047 asserts loopStartTick 3 (MidiChecks.swift:630) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -344,8 +365,8 @@ Original expression:
   QCOMPARE(qulonglong(timeline.loopStartTick), qulonglong(3))
 
 A015 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:164
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S048 asserts loopEndTick 9 (MidiChecks.swift:632) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -353,8 +374,8 @@ Original expression:
   QCOMPARE(qulonglong(timeline.loopEndTick), qulonglong(9))
 
 A016 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:165
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S049 asserts loopStartSample 781 (MidiChecks.swift:634) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -362,8 +383,8 @@ Original expression:
   QCOMPARE(qulonglong(timeline.loopStartSample), qulonglong(781))
 
 A017 | (helper) expectTempoProjection | src/checks/midi/tst_midismf.cpp:166
-Disposition: GAP
-Mapping/reason: No Swift MidiTimeline/sample-projection predicate established. Swift codec predicates observe bytes only; sample positions, tick inversion, loop points, and tempo scheduling below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S050 asserts loopEndSample 2435 (MidiChecks.swift:636) under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2116,7 +2137,7 @@ Original expression:
 
 A196 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:489
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: QTemporaryDir scratch guard with no Swift counterpart: the Swift fixture-pairing predicate stages its bytes in memory (checked-in fixture decode or in-memory chunk construction) and never creates a temporary directory, so this staging precondition stays unproved.
 Source context since previous assertion:
   ;
 
@@ -2127,7 +2148,7 @@ Original expression:
 
 A197 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:491
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Disk staging guard with no Swift counterpart: the Swift predicate adopts through SongDocument(file:) without writing or loading a scratch MIDI file, so this load success guard stays unproved.
 Source context since previous assertion:
   ;
       auto document = SongDocument{};
@@ -2139,7 +2160,7 @@ Original expression:
 
 A198 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:495
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Engine-track lookup guard; the Swift predicate reports a failure when the chunk has no engine track, so the lookup outcome is observed only through that guard and not through an independent assertion.
 Source context since previous assertion:
   ;
       const int engineTrack = engineTrackForChunk(document, 1);
@@ -2148,8 +2169,8 @@ Original expression:
   QVERIFY2(engineTrack >= 0, "note-lifecycle chunk has no engine track")
 
 A199 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:497
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S081 in src/checks/editcheck/NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:91) asserts the note_lifecycle.mid fixture pairs exactly 4 notes under the same test cppID.
 Source context since previous assertion:
   ;
       const std::vector<DocNote> notes = document.notesForTrack(engineTrack);
@@ -2158,8 +2179,8 @@ Original expression:
   QVERIFY2(notes.size() == 4, "note-lifecycle pairing count changed")
 
 A200 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:499
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S082 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:92) asserts the adopted note-on index sequence [2, 4, 6, 8] on the same note_lifecycle.mid fixture under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2168,8 +2189,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[0].onIndex), qulonglong(2))
 
 A201 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:500
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S083 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:94) asserts the adopted note-end index sequence [3, 5, 7, 9] on the same note_lifecycle.mid fixture under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2177,8 +2198,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[0].endIndex), qulonglong(3))
 
 A202 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:501
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S084 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:96) asserts the adopted duration sequence [Tick(24), 24, 0, 24] on the same note_lifecycle.mid fixture under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2186,8 +2207,8 @@ Original expression:
   QCOMPARE(quint32(notes[0].duration), quint32(24))
 
 A203 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S085 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:98) asserts the adopted key sequence [UInt8(0x3C), 0x3C, 0x3E, 0x40] on the same note_lifecycle.mid fixture under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2195,8 +2216,8 @@ Original expression:
   QCOMPARE(int(notes[0].key), 0x3C)
 
 A204 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:503
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S086 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:100) asserts the adopted velocity sequence [UInt8(0x64), 0x6E, 0x50, 0x60] on the same note_lifecycle.mid fixture under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2204,8 +2225,8 @@ Original expression:
   QCOMPARE(int(notes[0].velocity), 0x64)
 
 A205 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:504
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S087 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:102) asserts the adopted channel sequence [0, 0, 0, 0] on the same note_lifecycle.mid fixture under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2213,8 +2234,8 @@ Original expression:
   QCOMPARE(int(notes[0].channel), 0)
 
 A206 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:505
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S082 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:92) asserts the adopted note-on index sequence [2, 4, 6, 8] on the same note_lifecycle.mid fixture under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2222,8 +2243,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[1].onIndex), qulonglong(4))
 
 A207 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:506
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S083 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:94) asserts the adopted note-end index sequence [3, 5, 7, 9] on the same note_lifecycle.mid fixture under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2231,8 +2252,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[1].endIndex), qulonglong(5))
 
 A208 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:507
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S084 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:96) asserts the adopted duration sequence [Tick(24), 24, 0, 24] on the same note_lifecycle.mid fixture under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2240,8 +2261,8 @@ Original expression:
   QCOMPARE(quint32(notes[1].duration), quint32(24))
 
 A209 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:508
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S085 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:98) asserts the adopted key sequence [UInt8(0x3C), 0x3C, 0x3E, 0x40] on the same note_lifecycle.mid fixture under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2249,8 +2270,8 @@ Original expression:
   QCOMPARE(int(notes[1].key), 0x3C)
 
 A210 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:509
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S086 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:100) asserts the adopted velocity sequence [UInt8(0x64), 0x6E, 0x50, 0x60] on the same note_lifecycle.mid fixture under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2258,8 +2279,8 @@ Original expression:
   QCOMPARE(int(notes[1].velocity), 0x6E)
 
 A211 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:510
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S087 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:102) asserts the adopted channel sequence [0, 0, 0, 0] on the same note_lifecycle.mid fixture under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2267,8 +2288,8 @@ Original expression:
   QCOMPARE(int(notes[1].channel), 0)
 
 A212 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:511
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S082 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:92) asserts the adopted note-on index sequence [2, 4, 6, 8] on the same note_lifecycle.mid fixture under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2276,8 +2297,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[2].onIndex), qulonglong(6))
 
 A213 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:512
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S083 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:94) asserts the adopted note-end index sequence [3, 5, 7, 9] on the same note_lifecycle.mid fixture under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2285,8 +2306,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[2].endIndex), qulonglong(7))
 
 A214 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:513
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S084 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:96) asserts the adopted duration sequence [Tick(24), 24, 0, 24] on the same note_lifecycle.mid fixture under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2294,8 +2315,8 @@ Original expression:
   QCOMPARE(quint32(notes[2].duration), quint32(0))
 
 A215 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:514
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S085 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:98) asserts the adopted key sequence [UInt8(0x3C), 0x3C, 0x3E, 0x40] on the same note_lifecycle.mid fixture under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2303,8 +2324,8 @@ Original expression:
   QCOMPARE(int(notes[2].key), 0x3E)
 
 A216 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:515
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S086 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:100) asserts the adopted velocity sequence [UInt8(0x64), 0x6E, 0x50, 0x60] on the same note_lifecycle.mid fixture under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2312,8 +2333,8 @@ Original expression:
   QCOMPARE(int(notes[2].velocity), 0x50)
 
 A217 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:516
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S087 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:102) asserts the adopted channel sequence [0, 0, 0, 0] on the same note_lifecycle.mid fixture under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2321,8 +2342,8 @@ Original expression:
   QCOMPARE(int(notes[2].channel), 0)
 
 A218 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:517
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S082 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:92) asserts the adopted note-on index sequence [2, 4, 6, 8] on the same note_lifecycle.mid fixture under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2330,8 +2351,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[3].onIndex), qulonglong(8))
 
 A219 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:518
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S083 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:94) asserts the adopted note-end index sequence [3, 5, 7, 9] on the same note_lifecycle.mid fixture under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2339,8 +2360,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[3].endIndex), qulonglong(9))
 
 A220 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:519
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S084 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:96) asserts the adopted duration sequence [Tick(24), 24, 0, 24] on the same note_lifecycle.mid fixture under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2348,8 +2369,8 @@ Original expression:
   QCOMPARE(quint32(notes[3].duration), quint32(24))
 
 A221 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:520
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S085 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:98) asserts the adopted key sequence [UInt8(0x3C), 0x3C, 0x3E, 0x40] on the same note_lifecycle.mid fixture under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2357,8 +2378,8 @@ Original expression:
   QCOMPARE(int(notes[3].key), 0x40)
 
 A222 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:521
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S086 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:100) asserts the adopted velocity sequence [UInt8(0x64), 0x6E, 0x50, 0x60] on the same note_lifecycle.mid fixture under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2366,8 +2387,8 @@ Original expression:
   QCOMPARE(int(notes[3].velocity), 0x60)
 
 A223 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:522
-Disposition: PARTIAL
-Mapping/reason: Related predicate S020 in NoteChecks.swift adoptionAndPairing (same test cppID) proves note-end retention through document adoption; the exact pairing count and onIndex/endIndex/duration/key/velocity/channel fields on the lifecycle fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S087 in NoteChecks.swift lifecycleFixturePairing (NoteChecks.swift:102) asserts the adopted channel sequence [0, 0, 0, 0] on the same note_lifecycle.mid fixture under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2386,7 +2407,7 @@ Original expression:
 
 A225 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:549
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: QTemporaryDir scratch guard with no Swift counterpart: the Swift fixture-pairing predicate stages its bytes in memory (checked-in fixture decode or in-memory chunk construction) and never creates a temporary directory, so this staging precondition stays unproved.
 Source context since previous assertion:
   ;
   }
@@ -2419,7 +2440,7 @@ Original expression:
 
 A226 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:552
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Disk staging guard with no Swift counterpart: the Swift predicate adopts through SongDocument(file:) without writing or loading a scratch MIDI file, so this load success guard stays unproved.
 Source context since previous assertion:
   ;
       auto document = SongDocument{};
@@ -2432,7 +2453,7 @@ Original expression:
 
 A227 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:556
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Engine-track lookup guard; the Swift predicate reports a failure when the chunk has no engine track, so the lookup outcome is observed only through that guard and not through an independent assertion.
 Source context since previous assertion:
   ;
       const int engineTrack = engineTrackForChunk(document, 1);
@@ -2441,8 +2462,8 @@ Original expression:
   QVERIFY2(engineTrack >= 0, "interleaved pairing chunk has no engine track")
 
 A228 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:558
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S088 in src/checks/editcheck/NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:137) reconstructs the same 11-event interleaved channel chunk and asserts exactly 5 paired notes under the same test cppID.
 Source context since previous assertion:
   ;
       const std::vector<DocNote> notes = document.notesForTrack(engineTrack);
@@ -2451,8 +2472,8 @@ Original expression:
   QVERIFY2(notes.size() == 5, "interleaved note pairing count changed")
 
 A229 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:560
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S089 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:138) asserts the adopted note-on index sequence [0, 1, 5, 7, 8] on the same interleaved channel chunk under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2461,8 +2482,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[0].onIndex), qulonglong(0))
 
 A230 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:561
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S090 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:140) asserts the adopted note-end index sequence [6, 3, 6, nil, 10], nil being the unterminated note, under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2470,8 +2491,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[0].endIndex), qulonglong(6))
 
 A231 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:562
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S091 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:142) asserts the adopted duration sequence [Tick(20), 5, 10, 0, 8] under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2479,8 +2500,8 @@ Original expression:
   QCOMPARE(quint32(notes[0].duration), quint32(20))
 
 A232 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:563
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S092 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:144) asserts the adopted key sequence [UInt8(60), 62, 60, 64, 0x83] under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2488,8 +2509,8 @@ Original expression:
   QCOMPARE(int(notes[0].key), 60)
 
 A233 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:564
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S093 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:146) asserts the adopted velocity sequence [UInt8(100), 80, 90, 50, 60] under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2497,8 +2518,8 @@ Original expression:
   QCOMPARE(int(notes[0].velocity), 100)
 
 A234 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:565
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S094 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:148) asserts the adopted channel sequence [0, 0, 0, 0, 0] under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2506,8 +2527,8 @@ Original expression:
   QCOMPARE(int(notes[0].channel), 0)
 
 A235 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:566
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S089 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:138) asserts the adopted note-on index sequence [0, 1, 5, 7, 8] on the same interleaved channel chunk under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2515,8 +2536,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[1].onIndex), qulonglong(1))
 
 A236 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:567
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S090 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:140) asserts the adopted note-end index sequence [6, 3, 6, nil, 10], nil being the unterminated note, under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2524,8 +2545,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[1].endIndex), qulonglong(3))
 
 A237 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:568
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S091 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:142) asserts the adopted duration sequence [Tick(20), 5, 10, 0, 8] under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2533,8 +2554,8 @@ Original expression:
   QCOMPARE(quint32(notes[1].duration), quint32(5))
 
 A238 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:569
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S092 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:144) asserts the adopted key sequence [UInt8(60), 62, 60, 64, 0x83] under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2542,8 +2563,8 @@ Original expression:
   QCOMPARE(int(notes[1].key), 62)
 
 A239 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:570
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S093 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:146) asserts the adopted velocity sequence [UInt8(100), 80, 90, 50, 60] under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2551,8 +2572,8 @@ Original expression:
   QCOMPARE(int(notes[1].velocity), 80)
 
 A240 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:571
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S094 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:148) asserts the adopted channel sequence [0, 0, 0, 0, 0] under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2560,8 +2581,8 @@ Original expression:
   QCOMPARE(int(notes[1].channel), 0)
 
 A241 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:572
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S089 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:138) asserts the adopted note-on index sequence [0, 1, 5, 7, 8] on the same interleaved channel chunk under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2569,8 +2590,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[2].onIndex), qulonglong(5))
 
 A242 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:573
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S090 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:140) asserts the adopted note-end index sequence [6, 3, 6, nil, 10], nil being the unterminated note, under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2578,8 +2599,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[2].endIndex), qulonglong(6))
 
 A243 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:574
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S091 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:142) asserts the adopted duration sequence [Tick(20), 5, 10, 0, 8] under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2587,8 +2608,8 @@ Original expression:
   QCOMPARE(quint32(notes[2].duration), quint32(10))
 
 A244 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:575
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S092 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:144) asserts the adopted key sequence [UInt8(60), 62, 60, 64, 0x83] under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2596,8 +2617,8 @@ Original expression:
   QCOMPARE(int(notes[2].key), 60)
 
 A245 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:576
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S093 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:146) asserts the adopted velocity sequence [UInt8(100), 80, 90, 50, 60] under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2605,8 +2626,8 @@ Original expression:
   QCOMPARE(int(notes[2].velocity), 90)
 
 A246 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:577
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S094 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:148) asserts the adopted channel sequence [0, 0, 0, 0, 0] under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2614,8 +2635,8 @@ Original expression:
   QCOMPARE(int(notes[2].channel), 0)
 
 A247 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:578
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S089 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:138) asserts the adopted note-on index sequence [0, 1, 5, 7, 8] on the same interleaved channel chunk under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2623,8 +2644,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[3].onIndex), qulonglong(7))
 
 A248 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:579
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S095 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:150) asserts the unterminated-flag sequence [false, false, false, true, false], so the fourth adopted note has no end, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2632,8 +2653,8 @@ Original expression:
   QVERIFY(notes[3].unterminated())
 
 A249 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:580
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S091 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:142) asserts the adopted duration sequence [Tick(20), 5, 10, 0, 8] under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2641,8 +2662,8 @@ Original expression:
   QCOMPARE(quint32(notes[3].duration), quint32(0))
 
 A250 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:581
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S092 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:144) asserts the adopted key sequence [UInt8(60), 62, 60, 64, 0x83] under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2650,8 +2671,8 @@ Original expression:
   QCOMPARE(int(notes[3].key), 64)
 
 A251 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:582
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S093 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:146) asserts the adopted velocity sequence [UInt8(100), 80, 90, 50, 60] under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2659,8 +2680,8 @@ Original expression:
   QCOMPARE(int(notes[3].velocity), 50)
 
 A252 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:583
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S094 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:148) asserts the adopted channel sequence [0, 0, 0, 0, 0] under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2668,8 +2689,8 @@ Original expression:
   QCOMPARE(int(notes[3].channel), 0)
 
 A253 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:584
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S089 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:138) asserts the adopted note-on index sequence [0, 1, 5, 7, 8] on the same interleaved channel chunk under the same test cppID; this site on-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2677,8 +2698,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[4].onIndex), qulonglong(8))
 
 A254 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:585
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S090 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:140) asserts the adopted note-end index sequence [6, 3, 6, nil, 10], nil being the unterminated note, under the same test cppID; this site end-index is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2686,8 +2707,8 @@ Original expression:
   QCOMPARE(qulonglong(notes[4].endIndex), qulonglong(10))
 
 A255 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:586
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S091 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:142) asserts the adopted duration sequence [Tick(20), 5, 10, 0, 8] under the same test cppID; this site duration is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2695,8 +2716,8 @@ Original expression:
   QCOMPARE(quint32(notes[4].duration), quint32(8))
 
 A256 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:587
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S092 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:144) asserts the adopted key sequence [UInt8(60), 62, 60, 64, 0x83] under the same test cppID; this site key is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2704,8 +2725,8 @@ Original expression:
   QCOMPARE(int(notes[4].key), 0x83)
 
 A257 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:588
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S093 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:146) asserts the adopted velocity sequence [UInt8(100), 80, 90, 50, 60] under the same test cppID; this site velocity is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2713,8 +2734,8 @@ Original expression:
   QCOMPARE(int(notes[4].velocity), 60)
 
 A258 | MidiSmfTest::complexInterleavedNotesPairExactly | src/checks/midi/tst_midismf.cpp:589
-Disposition: PARTIAL
-Mapping/reason: Related predicates S017, S018 in NoteChecks.swift adoptionAndPairing (same test cppID) prove projection of all note-ons and first-following-matching-end pairing; the exact per-note indices, durations, keys, velocities, channels, and unterminated flags on the interleaved fixture are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S094 in NoteChecks.swift interleavedFixturePairing (NoteChecks.swift:148) asserts the adopted channel sequence [0, 0, 0, 0, 0] under the same test cppID; this site channel is the corresponding element of that asserted sequence.
 Source context since previous assertion:
   ;
 
@@ -2723,7 +2744,7 @@ Original expression:
 
 A259 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:607
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: QTemporaryDir scratch guard with no Swift counterpart: the Swift fixture-pairing predicate stages its bytes in memory (checked-in fixture decode or in-memory chunk construction) and never creates a temporary directory, so this staging precondition stays unproved.
 Source context since previous assertion:
   ;
   }
@@ -2749,7 +2770,7 @@ Original expression:
 
 A260 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:610
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Disk staging guard with no Swift counterpart: the Swift predicate adopts through SongDocument(file:) without writing or loading a scratch MIDI file, so this load success guard stays unproved.
 Source context since previous assertion:
   ;
       auto document = SongDocument{};
@@ -2762,7 +2783,7 @@ Original expression:
 
 A261 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:614
 Disposition: GAP
-Mapping/reason: Scratch/load/lookup guard with no Swift counterpart; the Swift suite reports fixture I/O failure (S025, S026) instead of asserting these guards.
+Mapping/reason: Engine-track lookup guard; the Swift predicate reports a failure when the chunk has no engine track, so the lookup outcome is observed only through that guard and not through an independent assertion.
 Source context since previous assertion:
   ;
       const int engineTrack = engineTrackForChunk(document, 1);
@@ -2771,8 +2792,8 @@ Original expression:
   QVERIFY2(engineTrack >= 0, "unterminated-note chunk has no engine track")
 
 A262 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:620
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S022 in NoteChecks.swift (same test cppID) prove unterminated notes are preserved, including across moves; the 300000-note scale, this fixture's exact count and ends, and any timing behavior are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S096 in src/checks/editcheck/NoteChecks.swift unterminatedPairingStress (NoteChecks.swift:176) builds the same 300000 note-on chunk and asserts the pairing count equals 300000 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2785,8 +2806,8 @@ Original expression:
   QVERIFY2(notes.size() == size_t(kNoteOns), "unterminated note pairing count changed")
 
 A263 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:621
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S022 in NoteChecks.swift (same test cppID) prove unterminated notes are preserved, including across moves; the 300000-note scale, this fixture's exact count and ends, and any timing behavior are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S099 (NoteChecks.swift:182) asserts the first paired note is unterminated and S097 (NoteChecks.swift:178) pins its index 0, both under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2794,8 +2815,8 @@ Original expression:
   QVERIFY(notes.front().unterminated())
 
 A264 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:622
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S022 in NoteChecks.swift (same test cppID) prove unterminated notes are preserved, including across moves; the 300000-note scale, this fixture's exact count and ends, and any timing behavior are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S100 (NoteChecks.swift:184) asserts the last paired note is unterminated and S098 (NoteChecks.swift:180) pins its index noteCount - 1, both under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2803,8 +2824,8 @@ Original expression:
   QVERIFY(notes.back().unterminated())
 
 A265 | MidiSmfTest::unterminatedNotePairingStaysLinear | src/checks/midi/tst_midismf.cpp:623
-Disposition: GAP
-Mapping/reason: No Swift timing predicate established. The 10 s linearity bound on pairing 300000 unterminated note-ons is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S101 (NoteChecks.swift:186) measures the same 300000-note pairing and fails when the elapsed time exceeds 10_000 ms under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2874,8 +2895,8 @@ Original expression:
   QCOMPARE(qulonglong(smf.tracks[1].endTick), qulonglong(CoreTimeDefaults::kMaxTick))
 
 A270 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:675
-Disposition: GAP
-Mapping/reason: No Swift case observes these synthetic tempo bytes. The Swift canonical-byte predicates run on fixture and constructed codec cases only; the write/re-read behavior below is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S051 (MidiChecks.swift:575) re-decodes the encoded tempo fixture and asserts full MidiFile equality with the constructed source under the same test cppID, matching the original write/re-read semantic comparison.
 Source context since previous assertion:
   ;
   }
@@ -2904,8 +2925,8 @@ Original expression:
   QVERIFY2(semanticReparseMatches(smf, error), qPrintable(error))
 
 A271 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:679
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Swift PlaybackTimeline.build(file:sampleRate:) at MidiChecks.swift:576 returns a non-optional value, so the original nullable-heap timeline guard has no failure branch to assert (spec 2.1). Ingress proof: src/checks/midi/tst_midismf.cpp is in no CMake target and no check catalog entry; the usable timeline is asserted by S035-S050 on the same fixture.
 Source context since previous assertion:
   ;
       const auto sourceBytes = smf.write();
@@ -2917,7 +2938,7 @@ Original expression:
 
 A272 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:684
 Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Mapping/reason: QTemporaryDir scratch guard with no Swift counterpart: the Swift projection decodes the fixture in memory and never creates a temporary directory, so this staging precondition stays unproved.
 Source context since previous assertion:
   ;
       // The raw read path schedules every same-tick FF 51 it parsed.
@@ -2930,7 +2951,7 @@ Original expression:
 
 A273 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:686
 Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Mapping/reason: Disk staging guard with no Swift counterpart: the Swift projection never writes a scratch MIDI file and never calls a document load operation, so this write-and-load success guard stays unproved.
 Source context since previous assertion:
   ;
       auto document = SongDocument{};
@@ -2941,8 +2962,8 @@ Original expression:
                qPrintable(error))
 
 A274 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:689
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S052 (MidiChecks.swift:580) asserts document.state.tempo equals the single-element tempo list [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)] under the same test cppID; this site field (list length, tick, or microseconds per quarter note) is part of that asserted value.
 Source context since previous assertion:
   ;
 
@@ -2951,8 +2972,8 @@ Original expression:
                "duplicate same-tick tempo events did not collapse last-wins")
 
 A275 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:691
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S052 (MidiChecks.swift:580) asserts document.state.tempo equals the single-element tempo list [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)] under the same test cppID; this site field (list length, tick, or microseconds per quarter note) is part of that asserted value.
 Source context since previous assertion:
   ;
 
@@ -2960,8 +2981,8 @@ Original expression:
   QCOMPARE(qulonglong(document.tempoPoints().front().tick), qulonglong(1))
 
 A276 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:692
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S052 (MidiChecks.swift:580) asserts document.state.tempo equals the single-element tempo list [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)] under the same test cppID; this site field (list length, tick, or microseconds per quarter note) is part of that asserted value.
 Source context since previous assertion:
   ;
 
@@ -2969,8 +2990,8 @@ Original expression:
   QCOMPARE(document.tempoPoints().front().microsecondsPerQuarterNote, uint32_t(600000))
 
 A277 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:693
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S053 (MidiChecks.swift:583) asserts the document engine track that carries the voice chunk maps MIDI chunk 1 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -2978,8 +2999,8 @@ Original expression:
   QCOMPARE(document.smfTrackFor(0), 1)
 
 A278 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:694
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S047 and S048 (MidiChecks.swift:630 and :632) assert the loop markers of the document-projected timeline, loopStartTick 3 and loopEndTick 9, in assertTempoProjection invoked at MidiChecks.swift:586 under the same test cppID; this site is the corresponding loop marker.
 Source context since previous assertion:
   ;
 
@@ -2987,8 +3008,8 @@ Original expression:
   QCOMPARE(qulonglong(document.loopTick(false)), qulonglong(3))
 
 A279 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:695
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S047 and S048 (MidiChecks.swift:630 and :632) assert the loop markers of the document-projected timeline, loopStartTick 3 and loopEndTick 9, in assertTempoProjection invoked at MidiChecks.swift:586 under the same test cppID; this site is the corresponding loop marker.
 Source context since previous assertion:
   ;
 
@@ -2996,8 +3017,8 @@ Original expression:
   QCOMPARE(qulonglong(document.loopTick(true)), qulonglong(9))
 
 A280 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:698
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: PlaybackTimeline.build(state:sampleRate:) at MidiChecks.swift:585 returns a non-optional value, so the original nullable projection guard has no failure branch to assert (spec 2.1). Ingress proof: the C++ original is in no CMake target and no check catalog entry; the projected timeline is asserted by S035-S050 on the same document.
 Source context since previous assertion:
   ;
 
@@ -3007,8 +3028,8 @@ Original expression:
   QVERIFY(projected)
 
 A281 | MidiSmfTest::tempoConversionSchedulesExactSamples | src/checks/midi/tst_midismf.cpp:701
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S054 (MidiChecks.swift:587) asserts the encoded source MIDI bytes are unchanged after both projections under the same test cppID.
 Source context since previous assertion:
   ;
       // Last-wins: the document's typed tempo stream schedules one.
@@ -3018,8 +3039,8 @@ Original expression:
   QCOMPARE(smf.write(), sourceBytes)
 
 A282 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:749
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: PlaybackTimeline.build(file:sampleRate:) at MidiChecks.swift:669 returns a non-optional value, so the original nullable pointer guard has no failure branch to assert (spec 2.1). Ingress proof: src/checks/midi/tst_midismf.cpp is in no CMake target and no check catalog entry; the usable timeline is asserted by S055-S065 on the same 20-chunk fixture.
 Source context since previous assertion:
   ;
   }
@@ -3074,8 +3095,8 @@ Original expression:
   QVERIFY(playback)
 
 A283 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:750
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S055 (MidiChecks.swift:673) asserts the raw timeline maps exactly 16 tracks under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3083,8 +3104,8 @@ Original expression:
   QCOMPARE(playback->usedTrackCount, 16)
 
 A284 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:751
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S056 (MidiChecks.swift:675) asserts the raw timeline drops exactly 1 track under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3092,8 +3113,8 @@ Original expression:
   QCOMPARE(playback->droppedTracks, 1)
 
 A285 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:754
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S065 (MidiChecks.swift:695) asserts every one of the first 16 raw tracks is used, which includes the pressure-only engine 0, under the same test cppID.
 Source context since previous assertion:
   ;
       // The pressure-only chunk claims engine 0 while playing nothing, so
@@ -3103,8 +3124,8 @@ Original expression:
   QVERIFY(playback->tracks[0].used)
 
 A286 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:755
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S063 (MidiChecks.swift:690) asserts the first 16 raw timeline track names, whose first element is the empty name for engine 0, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3112,8 +3133,8 @@ Original expression:
   QCOMPARE(playback->tracks[0].name, QString())
 
 A287 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:756
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S064 (MidiChecks.swift:692) asserts the first 16 raw timeline note counts, whose first element is 0 for engine 0, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3121,8 +3142,8 @@ Original expression:
   QCOMPARE(playback->tracks[0].noteCount, 0)
 
 A288 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:757
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S063 (MidiChecks.swift:690) asserts the first 16 raw timeline track names; element 1 is Alpha under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3130,8 +3151,8 @@ Original expression:
   QCOMPARE(playback->tracks[1].name, QStringLiteral("Alpha"))
 
 A289 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:758
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S064 (MidiChecks.swift:692) asserts the first 16 raw timeline note counts; element 1 is 1 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3139,8 +3160,8 @@ Original expression:
   QCOMPARE(playback->tracks[1].noteCount, 1)
 
 A290 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:759
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S063 (MidiChecks.swift:690) asserts the first 16 raw timeline track names; element 2 is Beta under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3148,8 +3169,8 @@ Original expression:
   QCOMPARE(playback->tracks[2].name, QStringLiteral("Beta"))
 
 A291 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:760
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S063 (MidiChecks.swift:690) asserts the first 16 raw timeline track names; element 3 is T5 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3157,8 +3178,8 @@ Original expression:
   QCOMPARE(playback->tracks[3].name, QStringLiteral("T5"))
 
 A292 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:761
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S063 (MidiChecks.swift:690) asserts the first 16 raw timeline track names; element 15 is T17 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3166,8 +3187,8 @@ Original expression:
   QCOMPARE(playback->tracks[15].name, QStringLiteral("T17"))
 
 A293 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:763
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S065 (MidiChecks.swift:695) asserts every raw timeline track in engines 1 through 15 is used under the same test cppID.
 Source context since previous assertion:
   ;
       for (int engine = 1; engine < 16; ++engine)
@@ -3177,8 +3198,8 @@ Original expression:
                    qPrintable(QStringLiteral("engine %1 unused").arg(engine)))
 
 A294 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:779
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: PARTIAL
+Mapping/reason: Swift S069 (MidiChecks.swift:707) asserts the unexpected-key guard for every mapped note-on event. Unproved: the original guard ran over every non-tempo, non-program event, including note-offs, which the Swift predicate does not iterate.
 Source context since previous assertion:
   ;
 
@@ -3201,8 +3222,8 @@ Original expression:
                    qPrintable(QStringLiteral("unexpected note key %1").arg(int(event.data0))))
 
 A295 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:781
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: PARTIAL
+Mapping/reason: Swift S070 (MidiChecks.swift:709) asserts engine routing for every mapped note-on, keys 60/61/62-74 to engines 1/2/3-15. Unproved: engine routing for note-off events, which the original loop also asserted.
 Source context since previous assertion:
   ;
 
@@ -3210,8 +3231,8 @@ Original expression:
   QCOMPARE(int(event.track), expectedTrack)
 
 A296 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:783
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S068 (MidiChecks.swift:702) asserts 15 mapped note-on events under the same test cppID.
 Source context since previous assertion:
   ;
       }
@@ -3220,8 +3241,8 @@ Original expression:
   QCOMPARE(noteOns, 15)
 
 A297 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:785
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S066 (MidiChecks.swift:697) asserts the raw timeline exposes exactly 2 other events for the pressure chunk under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3230,8 +3251,8 @@ Original expression:
   QVERIFY2(playback->otherEvents.size() == 2, "pressure chunk visibility changed")
 
 A298 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:787
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S067 (MidiChecks.swift:699) asserts both other events map to engine 0 under the same test cppID.
 Source context since previous assertion:
   ;
       for (const OtherEvent &event : playback->otherEvents)
@@ -3241,7 +3262,7 @@ Original expression:
 
 A299 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:790
 Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Mapping/reason: QTemporaryDir scratch guard with no Swift counterpart: engineMappingProjection builds the fixture in memory and never creates a temporary directory, so this staging precondition stays unproved.
 Source context since previous assertion:
   ;
 
@@ -3252,7 +3273,7 @@ Original expression:
 
 A300 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:793
 Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Mapping/reason: Disk staging guard with no Swift counterpart: the Swift mapping predicate constructs MidiFile and SongDocument in memory and never writes or loads a scratch MIDI file, so this staging guard stays unproved.
 Source context since previous assertion:
   ;
       auto document = SongDocument{};
@@ -3264,8 +3285,8 @@ Original expression:
                qPrintable(error))
 
 A301 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:796
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: PARTIAL
+Mapping/reason: Swift S071 (MidiChecks.swift:713) iterates engines 0 through 15 and asserts each chunk mapping, which establishes at least 16 engine tracks. Unproved: the exact engine-track count, since no explicit count predicate exists and an out-of-range index would trap rather than assert.
 Source context since previous assertion:
   ;
 
@@ -3273,8 +3294,8 @@ Original expression:
   QCOMPARE(document.engineTrackCount(), 16)
 
 A302 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:798
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S071 (MidiChecks.swift:713) asserts each engine track maps MIDI chunk engine + 2 under the same test cppID.
 Source context since previous assertion:
   ;
       for (int engine = 0; engine < 16; ++engine) {
@@ -3283,8 +3304,8 @@ Original expression:
   QCOMPARE(document.smfTrackFor(engine), engine + 2)
 
 A303 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:800
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S072 (MidiChecks.swift:716) asserts each engine channel under the same test cppID, with channel 0 for engine 0 and channel 1 for engines 1 and 2.
 Source context since previous assertion:
   ;
           const int expectedChannel = engine == 0 ? 0 : engine <= 2 ? 1 : engine - 1;
@@ -3293,8 +3314,8 @@ Original expression:
   QCOMPARE(int(document.channelFor(engine)), expectedChannel)
 
 A304 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:801
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S073 (MidiChecks.swift:718) asserts each document track name equals the same names array that S063 pins to the raw timeline under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3302,8 +3323,8 @@ Original expression:
   QCOMPARE(document.trackName(engine), playback->tracks[engine].name)
 
 A305 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:805
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: PlaybackTimeline.build(state:sampleRate:) at MidiChecks.swift:671 returns a non-optional value, so the original nullable projection guard has no failure branch to assert (spec 2.1). Ingress proof: the C++ original is in no CMake target and no check catalog entry; the projected timeline is asserted by S057, S058, and S078.
 Source context since previous assertion:
   ;
       }
@@ -3314,8 +3335,8 @@ Original expression:
   QVERIFY(projected)
 
 A306 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:806
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S057 (MidiChecks.swift:677) asserts the document-projected timeline maps exactly 16 tracks under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3323,8 +3344,8 @@ Original expression:
   QCOMPARE(projected->usedTrackCount, 16)
 
 A307 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:807
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S058 (MidiChecks.swift:679) asserts the document-projected timeline drops exactly 1 track under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3332,8 +3353,8 @@ Original expression:
   QCOMPARE(projected->droppedTracks, 1)
 
 A308 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:809
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S078 (MidiChecks.swift:731) asserts the first 16 projected tracks equal the raw tracks, which includes their names, under the same test cppID.
 Source context since previous assertion:
   ;
       for (int engine = 0; engine < 16; ++engine) {
@@ -3342,8 +3363,8 @@ Original expression:
   QCOMPARE(projected->tracks[engine].name, playback->tracks[engine].name)
 
 A309 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:810
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S078 (MidiChecks.swift:731) asserts the first 16 projected tracks equal the raw tracks, which includes their used flags, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3351,8 +3372,8 @@ Original expression:
   QCOMPARE(projected->tracks[engine].used, playback->tracks[engine].used)
 
 A310 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:811
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S078 (MidiChecks.swift:731) asserts the first 16 projected tracks equal the raw tracks, which includes their note counts, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3360,8 +3381,8 @@ Original expression:
   QCOMPARE(projected->tracks[engine].noteCount, playback->tracks[engine].noteCount)
 
 A311 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:815
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S059 (MidiChecks.swift:681) asserts the import analysis maps 16 tracks under the same test cppID.
 Source context since previous assertion:
   ;
       }
@@ -3372,8 +3393,8 @@ Original expression:
   QCOMPARE(analysis.mappedTracks, 16)
 
 A312 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:816
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S060 (MidiChecks.swift:683) asserts the import analysis drops 1 track under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3381,8 +3402,8 @@ Original expression:
   QCOMPARE(analysis.droppedTracks, 1)
 
 A313 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:817
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S061 (MidiChecks.swift:685) asserts the import analysis has exactly 16 mapped-track rows under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3390,8 +3411,8 @@ Original expression:
   QVERIFY2(analysis.tracks.size() == 16, "analysis mapped-track count changed")
 
 A314 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:818
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S062 (MidiChecks.swift:687) asserts the import analysis peak concurrent notes is 15 under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3399,8 +3420,8 @@ Original expression:
   QCOMPARE(analysis.peakConcurrentNotes, 15)
 
 A315 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:821
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S074 (MidiChecks.swift:721) asserts each import row chunk equals engine + 2, the same value S071 asserts for the document side, under the same test cppID.
 Source context since previous assertion:
   ;
       for (int engine = 0; engine < 16; ++engine) {
@@ -3410,8 +3431,8 @@ Original expression:
   QCOMPARE(info.smfTrack, document.smfTrackFor(engine))
 
 A316 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:822
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S075 (MidiChecks.swift:723) asserts each import row name equals the same names array that S073 pins to the document track names under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3419,8 +3440,8 @@ Original expression:
   QCOMPARE(info.name, document.trackName(engine))
 
 A317 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:823
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S076 (MidiChecks.swift:725) asserts each import row note count is 0 for engine 0 and 1 otherwise under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3428,8 +3449,8 @@ Original expression:
   QCOMPARE(info.noteCount, engine == 0 ? 0 : 1)
 
 A318 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:827
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S079 (MidiChecks.swift:733) asserts the encoded source bytes are unchanged after every projection and analysis under the same test cppID.
 Source context since previous assertion:
   ;
       }
@@ -3440,8 +3461,8 @@ Original expression:
   QCOMPARE(smf.write(), sourceBytes)
 
 A319 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:828
-Disposition: GAP
-Mapping/reason: No Swift case observes the synthetic 20-chunk mapping bytes through a write/re-read cycle. The Swift mapping codec case asserts one-shot decode only; the reparse behavior below is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S080 (MidiChecks.swift:735) re-decodes the encoded 20-chunk mapping fixture and asserts full MidiFile equality with the constructed source under the same test cppID, matching the original write/re-read semantic comparison.
 Source context since previous assertion:
   ;
 
@@ -3449,8 +3470,8 @@ Original expression:
   QVERIFY2(semanticReparseMatches(smf, error), qPrintable(error))
 
 A320 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:829
-Disposition: GAP
-Mapping/reason: No Swift predicate loads or projects this fixture through SongDocument/MidiTimeline with these assertions. Scratch setup, document load, engine-track mapping, tempo collapse, loop ticks, track names, channels, note counts, and write-identity below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S077 (MidiChecks.swift:729) asserts the document preserves the mapping fixture MIDI content, document.state.file equalling the decoded source file, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3458,8 +3479,8 @@ Original expression:
   QVERIFY(sameSmf(document.smf(), smf))
 
 A321 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:845
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S102 (EventChecks.swift:354) asserts the ordinary-controller histogram is empty for the importReportSummarizesCompleteEchoPairs row under cppID smfcheck/MidiSmfTest::importReportSummarizesCompleteEchoPairs.
 Source context since previous assertion:
   ;
   }
@@ -3482,8 +3503,8 @@ Original expression:
   QCOMPARE(analysis.ccs.size(), qsizetype{0})
 
 A322 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:847
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S110 (EventChecks.swift:378) asserts no ordinary-controller row falls in controllers 29 to 31 for the same row and traffic under the same test cppID.
 Source context since previous assertion:
   ;
       for (const ImportCcUsage &usage : analysis.ccs)
@@ -3492,8 +3513,8 @@ Original expression:
   QVERIFY2(usage.cc < 29 || usage.cc > 31, "XCMD plumbing leaked into the CC histogram")
 
 A323 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:849
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram holds exactly 2 rows for the complete echo-pair row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3502,8 +3523,8 @@ Original expression:
   QCOMPARE(analysis.xcmds.size(), qsizetype{2})
 
 A324 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:850
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts each expected XCMD row label for the complete echo-pair row, Echo volume then Echo length, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3511,8 +3532,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo volume"))
 
 A325 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:851
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts each expected XCMD row point count, 1 for each completed echo pair on this row, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3520,8 +3541,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].count, uint32_t{1})
 
 A326 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:852
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts each expected XCMD row label for the complete echo-pair row, Echo volume then Echo length, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3529,8 +3550,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported)
 
 A327 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:853
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts each expected XCMD row point count, 1 for each completed echo pair on this row, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3538,8 +3559,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].label, QStringLiteral("Echo length"))
 
 A328 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:854
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts each expected XCMD row support verdict, supported for both completed echo pairs on this row, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3547,8 +3568,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].count, uint32_t{1})
 
 A329 | MidiSmfTest::importReportSummarizesCompleteEchoPairs | src/checks/midi/tst_midismf.cpp:855
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts each expected XCMD row support verdict, supported for both completed echo pairs on this row, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3556,8 +3577,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].support, ImportSupport::Supported)
 
 A330 | MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector | src/checks/midi/tst_midismf.cpp:868
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram holds exactly 1 row for the shared-selector row under the same test cppID.
 Source context since previous assertion:
   ;
   }
@@ -3577,8 +3598,8 @@ Original expression:
   QCOMPARE(analysis.xcmds.size(), qsizetype{1})
 
 A331 | MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector | src/checks/midi/tst_midismf.cpp:869
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts the expected XCMD row label, Echo volume, for the shared-selector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3587,7 +3608,7 @@ Original expression:
 
 A332 | MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector | src/checks/midi/tst_midismf.cpp:870
 Disposition: MATCHED
-Mapping/reason: Swift S023 asserts xcmd count == 2 for the same logical shared-selector traffic (selector 0x08 with payloads 0x10, 0x20) under the same test cppID.
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts the Echo volume XCMD row point count is 2 for the importReportCountsEveryPayloadOfSharedSelector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3595,8 +3616,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].count, uint32_t{2})
 
 A333 | MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector | src/checks/midi/tst_midismf.cpp:871
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts the Echo volume XCMD row support verdict is supported for the shared-selector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3604,8 +3625,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported)
 
 A334 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:886
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram holds exactly 2 rows for the supported-plus-unknown row under the same test cppID.
 Source context since previous assertion:
   ;
   }
@@ -3627,8 +3648,8 @@ Original expression:
   QCOMPARE(analysis.xcmds.size(), qsizetype{2})
 
 A335 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:887
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts each expected XCMD row label on the supported-plus-unknown row, Echo volume then Unknown XCMD selector 0x2a, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3636,8 +3657,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo volume"))
 
 A336 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:888
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts each expected XCMD row point count, 1 per row on the supported-plus-unknown traffic, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3645,8 +3666,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].count, uint32_t{1})
 
 A337 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:889
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts each expected XCMD row support verdict on the supported-plus-unknown row, supported for Echo volume and notExported for Unknown XCMD selector 0x2a, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3654,8 +3675,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].support, ImportSupport::Supported)
 
 A338 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:890
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts each expected XCMD row label on the supported-plus-unknown row, Echo volume then Unknown XCMD selector 0x2a, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3663,8 +3684,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].label, QStringLiteral("Unknown XCMD selector 0x2a"))
 
 A339 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:891
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts each expected XCMD row point count, 1 per row on the supported-plus-unknown traffic, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3672,8 +3693,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].count, uint32_t{1})
 
 A340 | MidiSmfTest::importReportKeepsSupportedAndUnknownSelectorsApart | src/checks/midi/tst_midismf.cpp:892
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts each expected XCMD row support verdict on the supported-plus-unknown row, supported for Echo volume and notExported for Unknown XCMD selector 0x2a, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3681,8 +3702,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[1].support, ImportSupport::NotExported)
 
 A341 | MidiSmfTest::importReportFlagsDanglingSelectorForReview | src/checks/midi/tst_midismf.cpp:904
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram holds exactly 1 row for the dangling-selector row under the same test cppID.
 Source context since previous assertion:
   ;
   }
@@ -3701,8 +3722,8 @@ Original expression:
   QCOMPARE(analysis.xcmds.size(), qsizetype{1})
 
 A342 | MidiSmfTest::importReportFlagsDanglingSelectorForReview | src/checks/midi/tst_midismf.cpp:905
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts the expected XCMD row label, Echo length, for the dangling-selector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3710,8 +3731,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].label, QStringLiteral("Echo length"))
 
 A343 | MidiSmfTest::importReportFlagsDanglingSelectorForReview | src/checks/midi/tst_midismf.cpp:906
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts the expected XCMD row point count, 1, for the dangling-selector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3719,8 +3740,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].count, uint32_t{1})
 
 A344 | MidiSmfTest::importReportFlagsDanglingSelectorForReview | src/checks/midi/tst_midismf.cpp:907
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts the XCMD row support verdict is needsReview for the dangling-selector row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3728,8 +3749,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview)
 
 A345 | MidiSmfTest::importReportFlagsDanglingSelectorForReview | src/checks/midi/tst_midismf.cpp:909
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts the dangling row XCMD support is needsReview on a histogram S103 pins to one row, so no row claims support, under the same test cppID.
 Source context since previous assertion:
   ;
       for (const ImportXcmdUsage &usage : analysis.xcmds)
@@ -3738,8 +3759,8 @@ Original expression:
   QVERIFY(usage.support != ImportSupport::Supported)
 
 A346 | MidiSmfTest::importReportFlagsStrayPayloadForReview | src/checks/midi/tst_midismf.cpp:921
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram holds exactly 1 row for the stray-payload row under the same test cppID.
 Source context since previous assertion:
   ;
   }
@@ -3758,8 +3779,8 @@ Original expression:
   QCOMPARE(analysis.xcmds.size(), qsizetype{1})
 
 A347 | MidiSmfTest::importReportFlagsStrayPayloadForReview | src/checks/midi/tst_midismf.cpp:922
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S107 (EventChecks.swift:371) asserts the expected XCMD row label, XCMD payload without a selector, for the stray-payload row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3767,8 +3788,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].label, QStringLiteral("XCMD payload without a selector"))
 
 A348 | MidiSmfTest::importReportFlagsStrayPayloadForReview | src/checks/midi/tst_midismf.cpp:923
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S108 (EventChecks.swift:373) asserts the expected XCMD row point count, 1, for the stray-payload row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3776,8 +3797,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].count, uint32_t{1})
 
 A349 | MidiSmfTest::importReportFlagsStrayPayloadForReview | src/checks/midi/tst_midismf.cpp:924
-Disposition: GAP
-Mapping/reason: No Swift predicate runs analyzeForImport on this traffic. Swift importAnalysis (S023, S024) uses a different composite fixture; the row sizes, labels, counts, and support verdicts below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S109 (EventChecks.swift:375) asserts the XCMD row support verdict is needsReview for the stray-payload row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3785,8 +3806,8 @@ Original expression:
   QCOMPARE(analysis.xcmds[0].support, ImportSupport::NeedsReview)
 
 A350 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:941
-Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S102 (EventChecks.swift:354) asserts the ordinary-controller histogram holds exactly 6 rows for the importReportVerdictsOrdinaryControllers row under the same test cppID.
 Source context since previous assertion:
   ;
   }
@@ -3810,8 +3831,8 @@ Original expression:
   QCOMPARE(analysis.ccs.size(), qsizetype{6})
 
 A351 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:942
-Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the XCMD histogram is empty for the ordinary-controller row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3820,7 +3841,7 @@ Original expression:
 
 A352 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:945
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
 
@@ -3830,8 +3851,8 @@ Original expression:
   QVERIFY(modt)
 
 A353 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:946
-Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S105 (EventChecks.swift:363) asserts the 0x16 ordinary-controller row point count is 1 for the ordinary-controller row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3839,8 +3860,8 @@ Original expression:
   QCOMPARE(modt->count, 1)
 
 A354 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:947
-Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 assert the same underlying per-CC export classification through the independent oracle (ccExport rows); the ImportAnalysis row derivation (row presence and point counts) itself is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts each expected ordinary-controller row support verdict under the same test cppID, supported for the mapped lane, execute, and label CCs of this traffic.
 Source context since previous assertion:
   ;
 
@@ -3849,7 +3870,7 @@ Original expression:
 
 A355 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:949
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
       const auto *tune = ccRow(analysis, 0x18);
@@ -3858,8 +3879,8 @@ Original expression:
   QVERIFY(tune)
 
 A356 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:950
-Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 assert the same underlying per-CC export classification through the independent oracle (ccExport rows); the ImportAnalysis row derivation (row presence and point counts) itself is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts each expected ordinary-controller row support verdict under the same test cppID, supported for the mapped lane, execute, and label CCs of this traffic.
 Source context since previous assertion:
   ;
 
@@ -3868,7 +3889,7 @@ Original expression:
 
 A357 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:952
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
       const auto *lfodl = ccRow(analysis, 0x1A);
@@ -3877,8 +3898,8 @@ Original expression:
   QVERIFY(lfodl)
 
 A358 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:953
-Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 assert the same underlying per-CC export classification through the independent oracle (ccExport rows); the ImportAnalysis row derivation (row presence and point counts) itself is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts each expected ordinary-controller row support verdict under the same test cppID, supported for the mapped lane, execute, and label CCs of this traffic.
 Source context since previous assertion:
   ;
 
@@ -3887,7 +3908,7 @@ Original expression:
 
 A359 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:955
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
       const auto *memacc = ccRow(analysis, 0x0C);
@@ -3896,8 +3917,8 @@ Original expression:
   QVERIFY(memacc)
 
 A360 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:956
-Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 assert the same underlying per-CC export classification through the independent oracle (ccExport rows); the ImportAnalysis row derivation (row presence and point counts) itself is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts each expected ordinary-controller row support verdict under the same test cppID, supported for the mapped lane, execute, and label CCs of this traffic.
 Source context since previous assertion:
   ;
 
@@ -3906,7 +3927,7 @@ Original expression:
 
 A361 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:958
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
       const auto *label = ccRow(analysis, 0x11);
@@ -3915,8 +3936,8 @@ Original expression:
   QVERIFY(label)
 
 A362 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:959
-Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 assert the same underlying per-CC export classification through the independent oracle (ccExport rows); the ImportAnalysis row derivation (row presence and point counts) itself is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts each expected ordinary-controller row support verdict under the same test cppID, supported for the mapped lane, execute, and label CCs of this traffic.
 Source context since previous assertion:
   ;
 
@@ -3925,7 +3946,7 @@ Original expression:
 
 A363 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:961
 Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Mapping/reason: The by-CC row pointer lookup guard has no independent Swift assertion: importSmfReportRows compares the ordered ordinary-controller histogram (S102 size, S104 controller number, S105 count, S106 support) and skips with guard analysis.controllers.indices.contains(index) else break at EventChecks.swift:359 instead of asserting row presence.
 Source context since previous assertion:
   ;
       const auto *unmapped = ccRow(analysis, 0x4B);
@@ -3935,7 +3956,7 @@ Original expression:
 
 A364 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:962
 Disposition: MATCHED
-Mapping/reason: Swift S024 asserts controller 0x4B is not exported under the same test cppID.
+Mapping/reason: Swift S106 (EventChecks.swift:365) asserts the 0x4B ordinary-controller row support verdict is notExported for the ordinary-controller row under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3943,8 +3964,8 @@ Original expression:
   QCOMPARE(unmapped->support, ImportSupport::NotExported)
 
 A365 | MidiSmfTest::importReportVerdictsOrdinaryControllers | src/checks/midi/tst_midismf.cpp:963
-Disposition: GAP
-Mapping/reason: Report-size assertion or row-lookup guard with no Swift counterpart on this traffic; the sizes and lookups below are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S103 (EventChecks.swift:356) asserts the ordinary-controller row XCMD histogram is empty, so no Echo volume XCMD row exists, under the same test cppID.
 Source context since previous assertion:
   ;
 
@@ -3965,146 +3986,451 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:833
+S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:1023
       report.expectEqual(expectedValid, swift.valid, cppID: cppID,
                          what: "independent Swift validity (error=\(swift.error))")
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:836
+S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:1026
           report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
                         message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:842
+S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:1032
               report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
                                  what: "independent canonical byte vector")
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:849
+S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:1039
           report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                              what: "independent format-0 provenance")
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:872
+S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1062
                   report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
                                 cppID: cppID,
                                 message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:878
+S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1068
               report.expect(last.tick <= chunk.endTick, cppID: cppID,
                             message: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:883
+S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1073
       report.expectEqual(expected.division, file.division, cppID: cppID,
                          what: "independent decoded division")
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:885
+S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1075
       report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                          what: "independent decoded format-0 provenance")
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:887
+S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1077
       report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                          what: "independent decoded chunk count")
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:890
+S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1080
           report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
                              what: "independent decoded chunk=\(index) end tick")
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:892
+S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1082
           report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
                              cppID: cppID, what: "independent decoded chunk=\(index) event count")
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:899
+S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1089
               report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:902
+S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1092
           report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
                              cppID: cppID,
                              what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
 
-S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:561
+S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:750
   coreMidiExpectOracleValue(Int64(m4aExportSupport(controller).rawValue), .ccExport, Int64(cc),
                             row: "cc-\(cc)-export", cppID: m4aSemanticsID, report: report)
 
-S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1238
+S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1428
       report.expectEqual(independent, actual, cppID: cppID,
                          what: "row=\(row) independent expected value")
 
-S016 | coreMidiExpectOracleText | src/checks/midi/MidiChecks.swift:1246
+S016 | coreMidiExpectOracleText | src/checks/midi/MidiChecks.swift:1437
       report.expectEqual(independent, actual, cppID: cppID,
                          what: "row=\(row) independent expected text")
 
-S017 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:39
+S017 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
       report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S018 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:42
+S018 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:48
       report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "first following matching ends pair exactly")
 
-S019 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
+S019 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
       report.expect(notes[2].isUnterminated,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "unterminated note is preserved")
 
-S020 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:64
+S020 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:70
       report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")
 
-S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:177
+S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:301
           report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                       "unterminated fixture was not projected")
 
-S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:182
+S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:306
       report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "moving an unterminated note does not invent an end")
 
-S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:289
+S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:294
       report.expectEqual(2, analysis.xcmd.first?.count,
                          cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                          what: "import counts logical XCMD points")
 
-S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:292
+S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:297
       report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
                          cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                          what: "unknown controller is not exported")
 
 
-S025 | compareFixture | src/checks/midi/MidiChecks.swift:801
+S025 | compareFixture | src/checks/midi/MidiChecks.swift:991
           report.fail(cppID, "missing --swiftcore fixture root")
 
-S026 | compareFixture | src/checks/midi/MidiChecks.swift:820
+S026 | compareFixture | src/checks/midi/MidiChecks.swift:1010
           report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
 
-S027 | compareCodecCase | src/checks/midi/MidiChecks.swift:845
+S027 | compareCodecCase | src/checks/midi/MidiChecks.swift:1035
         report.expect(swift.encoded.count > 9 &&
                       swift.encoded[8] == 0 && swift.encoded[9] == 1,
                       cppID: cppID,
                       message: "independent encoded format word is 1")
 
-S028 | compareCodecCase | src/checks/midi/MidiChecks.swift:854
+S028 | compareCodecCase | src/checks/midi/MidiChecks.swift:1044
             report.expect(reparsed.valid, cppID: cppID,
                           message: "independent semantic reparse validity (error=\(reparsed.error))")
 
-S029 | compareCodecCase | src/checks/midi/MidiChecks.swift:857
+S029 | compareCodecCase | src/checks/midi/MidiChecks.swift:1047
                 report.expectEqual(file.division, reread.division, cppID: cppID,
                                    what: "independent semantic reparse division")
 
-S030 | compareCodecCase | src/checks/midi/MidiChecks.swift:859
+S030 | compareCodecCase | src/checks/midi/MidiChecks.swift:1049
                 report.expectEqual(file.chunks, reread.chunks, cppID: cppID,
                                    what: "independent semantic reparse chunks")
 
-S031 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:510
+S031 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:511
         report.pass(justInsideID, row: "independent Swift validity")
 
-S032 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:511
+S032 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:512
         report.expectEqual(2, file.chunks.count, cppID: justInsideID,
                            what: "independent decoded chunk count")
 
-S033 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:513
+S033 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:514
         report.expectEqual(TimeDefaults.maxTick, file.chunks.last?.endTick,
                            cppID: justInsideID,
                            what: "independent decoded chunk=1 end tick")
 
-S034 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:517
-        report.fail(justInsideID, "just-inside tick rejected: \(error)")
+S034 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:518
+          report.fail(justInsideID, "just-inside tick rejected: \(error)")
+
+S035 | assertTempoProjection | src/checks/midi/MidiChecks.swift:599
+      report.expectEqual(tempoValues.count, tickOneTempos.count, cppID: cppID,
+                         what: "tick-one tempo event count")
+
+S036 | assertTempoProjection | src/checks/midi/MidiChecks.swift:601
+      report.expectEqual(tempoValues, tickOneTempos.map {
+          Int($0.data0) | Int($0.data1) << 7
+      }, cppID: cppID, what: "tick-one tempo sequence in BPM")
+
+S037 | assertTempoProjection | src/checks/midi/MidiChecks.swift:604
+      report.expectEqual([UInt64](repeating: 230, count: tempoValues.count),
+                         tickOneTempos.map(\.sample), cppID: cppID,
+                         what: "tick-one tempo sample positions")
+
+S038 | assertTempoProjection | src/checks/midi/MidiChecks.swift:608
+      report.expectEqual(1, noteOns.count, cppID: cppID, what: "one scheduled note-on")
+
+S039 | assertTempoProjection | src/checks/midi/MidiChecks.swift:609
+      report.expectEqual([Tick(2)], noteOns.map(\.tick), cppID: cppID,
+                         what: "note-on tick")
+
+S040 | assertTempoProjection | src/checks/midi/MidiChecks.swift:611
+      report.expectEqual([UInt64(505)], noteOns.map(\.sample), cppID: cppID,
+                         what: "note-on sample")
+
+S041 | assertTempoProjection | src/checks/midi/MidiChecks.swift:613
+      report.expectEqual([UInt8(0)], noteOns.map(\.track), cppID: cppID,
+                         what: "note-on engine track")
+
+S042 | assertTempoProjection | src/checks/midi/MidiChecks.swift:616
+      report.expectEqual([Tick(4)], noteOffs.map(\.tick), cppID: cppID,
+                         what: "note-off tick")
+
+S043 | assertTempoProjection | src/checks/midi/MidiChecks.swift:618
+      report.expectEqual([UInt8(0)], noteOffs.map(\.track), cppID: cppID,
+                         what: "note-off engine track")
+
+S044 | assertTempoProjection | src/checks/midi/MidiChecks.swift:623
+      report.expectEqual(sample, timeline.sample(for: tick), cppID: cppID,
+                         what: "sample for tick \(tick)")
+
+S045 | assertTempoProjection | src/checks/midi/MidiChecks.swift:625
+      report.expect(abs(timeline.tick(for: sample) - Double(tick))
+          <= 0.5 / 229.6875 + 1e-12, cppID: cppID,
+          message: "sample \(sample) inverts to tick \(tick)")
+
+S046 | assertTempoProjection | src/checks/midi/MidiChecks.swift:629
+      report.expect(timeline.hasLoop, cppID: cppID, message: "start/end mark a loop")
+
+S047 | assertTempoProjection | src/checks/midi/MidiChecks.swift:630
+      report.expectEqual(Tick(3), timeline.loopStartTick, cppID: cppID,
+                         what: "loop start tick")
+
+S048 | assertTempoProjection | src/checks/midi/MidiChecks.swift:632
+      report.expectEqual(Tick(9), timeline.loopEndTick, cppID: cppID,
+                         what: "loop end tick")
+
+S049 | assertTempoProjection | src/checks/midi/MidiChecks.swift:634
+      report.expectEqual(UInt64(781), timeline.loopStartSample, cppID: cppID,
+                         what: "loop start sample")
+
+S050 | assertTempoProjection | src/checks/midi/MidiChecks.swift:636
+      report.expectEqual(UInt64(2435), timeline.loopEndSample, cppID: cppID,
+                         what: "loop end sample")
+
+S051 | tempoConversionProjection | src/checks/midi/MidiChecks.swift:575
+      report.expectEqual(source, file, cppID: cppID, what: "tempo fixture semantic reparse")
+
+S052 | tempoConversionProjection | src/checks/midi/MidiChecks.swift:580
+      report.expectEqual([TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)],
+                         document.state.tempo, cppID: cppID,
+                         what: "document collapses duplicate tempo last-wins")
+
+S053 | tempoConversionProjection | src/checks/midi/MidiChecks.swift:583
+      report.expectEqual(1, document.engineTracks.tracks.first?.midiChunk, cppID: cppID,
+                         what: "document maps voice chunk")
+
+S054 | tempoConversionProjection | src/checks/midi/MidiChecks.swift:587
+      report.expectEqual(bytes, try file.encoded(), cppID: cppID,
+                         what: "projections do not mutate source MIDI bytes")
+
+S055 | engineMappingProjection | src/checks/midi/MidiChecks.swift:673
+      report.expectEqual(16, raw.usedTrackCount, cppID: cppID,
+                         what: "raw timeline mapped-track count")
+
+S056 | engineMappingProjection | src/checks/midi/MidiChecks.swift:675
+      report.expectEqual(1, raw.droppedTracks, cppID: cppID,
+                         what: "raw timeline dropped-track count")
+
+S057 | engineMappingProjection | src/checks/midi/MidiChecks.swift:677
+      report.expectEqual(16, projected.usedTrackCount, cppID: cppID,
+                         what: "document timeline mapped-track count")
+
+S058 | engineMappingProjection | src/checks/midi/MidiChecks.swift:679
+      report.expectEqual(1, projected.droppedTracks, cppID: cppID,
+                         what: "document timeline dropped-track count")
+
+S059 | engineMappingProjection | src/checks/midi/MidiChecks.swift:681
+      report.expectEqual(16, analysis.mappedTracks, cppID: cppID,
+                         what: "import mapped-track count")
+
+S060 | engineMappingProjection | src/checks/midi/MidiChecks.swift:683
+      report.expectEqual(1, analysis.droppedTracks, cppID: cppID,
+                         what: "import dropped-track count")
+
+S061 | engineMappingProjection | src/checks/midi/MidiChecks.swift:685
+      report.expectEqual(16, analysis.tracks.count, cppID: cppID,
+                         what: "import mapped-track rows")
+
+S062 | engineMappingProjection | src/checks/midi/MidiChecks.swift:687
+      report.expectEqual(15, analysis.peakConcurrentNotes, cppID: cppID,
+                         what: "concurrent playback notes")
+
+S063 | engineMappingProjection | src/checks/midi/MidiChecks.swift:690
+      report.expectEqual(names, Array(raw.tracks.prefix(16).map(\.name)),
+                         cppID: cppID, what: "raw timeline track names")
+
+S064 | engineMappingProjection | src/checks/midi/MidiChecks.swift:692
+      report.expectEqual([0] + [Int](repeating: 1, count: 15),
+                         Array(raw.tracks.prefix(16).map(\.noteCount)),
+                         cppID: cppID, what: "raw timeline note counts")
+
+S065 | engineMappingProjection | src/checks/midi/MidiChecks.swift:695
+      report.expect(raw.tracks.prefix(16).allSatisfy(\.used),
+                    cppID: cppID, message: "pressure-only engine track remains used")
+
+S066 | engineMappingProjection | src/checks/midi/MidiChecks.swift:697
+      report.expectEqual(2, raw.otherEvents.count, cppID: cppID,
+                         what: "pressure events remain visible")
+
+S067 | engineMappingProjection | src/checks/midi/MidiChecks.swift:699
+      report.expectEqual([0, 0], raw.otherEvents.map(\.track), cppID: cppID,
+                         what: "pressure events map to engine zero")
+
+S068 | engineMappingProjection | src/checks/midi/MidiChecks.swift:702
+      report.expectEqual(15, noteOns.count, cppID: cppID,
+                         what: "mapped note-on event count")
+
+S069 | engineMappingProjection | src/checks/midi/MidiChecks.swift:707
+      report.expect(expected >= 0, cppID: cppID,
+                    message: "unexpected note key \(event.data0)")
+
+S070 | engineMappingProjection | src/checks/midi/MidiChecks.swift:709
+      report.expectEqual(expected, Int(event.track), cppID: cppID,
+                         what: "engine routing for note key \(event.data0)")
+
+S071 | engineMappingProjection | src/checks/midi/MidiChecks.swift:713
+      report.expectEqual(engine + 2, document.engineTracks.tracks[engine].midiChunk,
+                         cppID: cppID, what: "document chunk for engine \(engine)")
+
+S072 | engineMappingProjection | src/checks/midi/MidiChecks.swift:716
+      report.expectEqual(expectedChannel, Int(document.engineTracks.tracks[engine].channel),
+                         cppID: cppID, what: "document channel for engine \(engine)")
+
+S073 | engineMappingProjection | src/checks/midi/MidiChecks.swift:718
+      report.expectEqual(names[engine], document.trackName(engine),
+                         cppID: cppID, what: "document name for engine \(engine)")
+
+S074 | engineMappingProjection | src/checks/midi/MidiChecks.swift:721
+      report.expectEqual(engine + 2, analysis.tracks[engine].chunk,
+                         cppID: cppID, what: "import chunk for engine \(engine)")
+
+S075 | engineMappingProjection | src/checks/midi/MidiChecks.swift:723
+      report.expectEqual(names[engine], analysis.tracks[engine].name,
+                         cppID: cppID, what: "import name for engine \(engine)")
+
+S076 | engineMappingProjection | src/checks/midi/MidiChecks.swift:725
+      report.expectEqual(engine == 0 ? 0 : 1, analysis.tracks[engine].noteCount,
+                         cppID: cppID, what: "import note count for engine \(engine)")
+
+S077 | engineMappingProjection | src/checks/midi/MidiChecks.swift:729
+      report.expectEqual(file, document.state.file, cppID: cppID,
+                         what: "document preserves mapping fixture MIDI content")
+
+S078 | engineMappingProjection | src/checks/midi/MidiChecks.swift:731
+      report.expectEqual(Array(raw.tracks.prefix(16)), Array(projected.tracks.prefix(16)),
+                         cppID: cppID, what: "document timeline agrees with raw tracks")
+
+S079 | engineMappingProjection | src/checks/midi/MidiChecks.swift:733
+      report.expectEqual(bytes, try file.encoded(), cppID: cppID,
+                         what: "mapping projections do not mutate MIDI bytes")
+
+S080 | engineMappingProjection | src/checks/midi/MidiChecks.swift:735
+      report.expectEqual(file, try MidiFile.decode(file.encoded()), cppID: cppID,
+                         what: "mapping fixture semantic reparse")
+
+S081 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:91
+      report.expectEqual(4, notes.count, cppID: cppID, what: "fixture pairing count")
+
+S082 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:92
+      report.expectEqual([2, 4, 6, 8], notes.map(\.onIndex), cppID: cppID,
+                         what: "fixture note-on event indices")
+
+S083 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:94
+      report.expectEqual([3, 5, 7, 9], notes.map(\.endIndex), cppID: cppID,
+                         what: "fixture note-end event indices")
+
+S084 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:96
+      report.expectEqual([Tick(24), 24, 0, 24], notes.map(\.duration), cppID: cppID,
+                         what: "fixture note durations")
+
+S085 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:98
+      report.expectEqual([UInt8(0x3C), 0x3C, 0x3E, 0x40], notes.map(\.pitch),
+                         cppID: cppID, what: "fixture note keys")
+
+S086 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:100
+      report.expectEqual([UInt8(0x64), 0x6E, 0x50, 0x60], notes.map(\.velocity),
+                         cppID: cppID, what: "fixture note velocities")
+
+S087 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift:102
+      report.expectEqual([UInt8](repeating: 0, count: 4), notes.map(\.channel),
+                         cppID: cppID, what: "fixture note channels")
+
+S088 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:137
+      report.expectEqual(5, notes.count, cppID: cppID, what: "interleaved pairing count")
+
+S089 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:138
+      report.expectEqual([0, 1, 5, 7, 8], notes.map(\.onIndex), cppID: cppID,
+                         what: "interleaved note-on indices")
+
+S090 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:140
+      report.expectEqual([6, 3, 6, nil, 10], notes.map(\.endIndex), cppID: cppID,
+                         what: "interleaved note-end indices")
+
+S091 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:142
+      report.expectEqual([Tick(20), 5, 10, 0, 8], notes.map(\.duration), cppID: cppID,
+                         what: "interleaved durations")
+
+S092 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:144
+      report.expectEqual([UInt8(60), 62, 60, 64, 0x83], notes.map(\.pitch),
+                         cppID: cppID, what: "interleaved keys")
+
+S093 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:146
+      report.expectEqual([UInt8(100), 80, 90, 50, 60], notes.map(\.velocity),
+                         cppID: cppID, what: "interleaved velocities")
+
+S094 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:148
+      report.expectEqual([UInt8](repeating: 0, count: 5), notes.map(\.channel),
+                         cppID: cppID, what: "interleaved channels")
+
+S095 | interleavedFixturePairing | src/checks/editcheck/NoteChecks.swift:150
+      report.expectEqual([false, false, false, true, false], notes.map(\.isUnterminated),
+                         cppID: cppID, what: "unterminated note visibility")
+
+S096 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:176
+      report.expectEqual(noteCount, notes.count, cppID: cppID,
+                         what: "unterminated note pairing count")
+
+S097 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:178
+      report.expectEqual(0, notes.first?.onIndex, cppID: cppID,
+                         what: "first unterminated note index")
+
+S098 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:180
+      report.expectEqual(noteCount - 1, notes.last?.onIndex, cppID: cppID,
+                         what: "last unterminated note index")
+
+S099 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:182
+      report.expectEqual(true, notes.first?.isUnterminated, cppID: cppID,
+                         what: "first note has no end")
+
+S100 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:184
+      report.expectEqual(true, notes.last?.isUnterminated, cppID: cppID,
+                         what: "last note has no end")
+
+S101 | unterminatedPairingStress | src/checks/editcheck/NoteChecks.swift:186
+      report.expect(milliseconds <= 10_000, cppID: cppID,
+                    message: "pairing \(noteCount) unterminated notes took \(milliseconds) ms")
+
+S102 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:354
+      report.expectEqual(row.controllers.count, analysis.controllers.count,
+                         cppID: cppID, what: "ordinary controller histogram size")
+
+S103 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:356
+      report.expectEqual(row.xcmd.count, analysis.xcmd.count,
+                         cppID: cppID, what: "XCMD histogram size")
+
+S104 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:361
+      report.expectEqual(expected.0, actual.controller, cppID: cppID,
+                         what: "ordinary controller \(index) number")
+
+S105 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:363
+      report.expectEqual(expected.1, actual.count, cppID: cppID,
+                         what: "ordinary controller \(index) count")
+
+S106 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:365
+      report.expectEqual(expected.2, actual.support, cppID: cppID,
+                         what: "ordinary controller \(index) support")
+
+S107 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:371
+      report.expectEqual(expected.0, actual.label, cppID: cppID,
+                         what: "XCMD \(index) label")
+
+S108 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:373
+      report.expectEqual(expected.1, actual.count, cppID: cppID,
+                         what: "XCMD \(index) count")
+
+S109 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:375
+      report.expectEqual(expected.2, actual.support, cppID: cppID,
+                         what: "XCMD \(index) support")
+
+S110 | importSmfReportRows | src/checks/editcheck/EventChecks.swift:378
+      report.expect(analysis.controllers.allSatisfy {
+          $0.controller < 29 || $0.controller > 31
+      }, cppID: cppID, message: "XCMD plumbing stays out of ordinary controllers")

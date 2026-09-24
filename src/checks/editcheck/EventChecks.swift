@@ -44,6 +44,7 @@ func runXcmdEditsSuite(_ report: CheckReport) {
 
 func runMidiImportSuite(_ report: CheckReport) {
     importAnalysis(report)
+    importSmfReportRows(report)
     importTransforms(report)
 }
 
@@ -302,6 +303,82 @@ private func importAnalysis(_ report: CheckReport) {
     report.expect(analysis.tracks[0].notesBeforeProgram,
                   cppID: "onboardcheck/OnboardingTest::importAnalysis",
                   message: "notes before instrument are reported")
+}
+
+private func importSmfReportRows(_ report: CheckReport) {
+    let rows: [(name: String, events: [MidiEvent],
+                controllers: [(UInt8, Int, ImportSupport)],
+                xcmd: [(String, Int, ImportSupport)])] = [
+        ("importReportSummarizesCompleteEchoPairs", [
+            .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x40),
+            .channel(tick: 10, status: 0xB0, data0: 0x1E, data1: 0x09),
+            .channel(tick: 10, status: 0xB0, data0: 0x1D, data1: 0x33),
+        ], [], [("Echo volume", 1, .supported), ("Echo length", 1, .supported)]),
+        ("importReportCountsEveryPayloadOfSharedSelector", [
+            .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x10),
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x20),
+        ], [], [("Echo volume", 2, .supported)]),
+        ("importReportKeepsSupportedAndUnknownSelectorsApart", [
+            .channel(status: 0xB0, data0: 0x1E, data1: 0x08),
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x40),
+            .channel(tick: 10, status: 0xB0, data0: 0x1E, data1: 0x2A),
+            .channel(tick: 10, status: 0xB0, data0: 0x1D, data1: 0x7F),
+        ], [], [("Echo volume", 1, .supported),
+                ("Unknown XCMD selector 0x2a", 1, .notExported)]),
+        ("importReportFlagsDanglingSelectorForReview", [
+            .channel(tick: 4, status: 0xB0, data0: 0x1E, data1: 0x09),
+        ], [], [("Echo length", 1, .needsReview)]),
+        ("importReportFlagsStrayPayloadForReview", [
+            .channel(status: 0xB0, data0: 0x1D, data1: 0x40),
+        ], [], [("XCMD payload without a selector", 1, .needsReview)]),
+        ("importReportVerdictsOrdinaryControllers", [
+            .channel(status: 0xB0, data0: 0x16, data1: 3),
+            .channel(status: 0xB0, data0: 0x18, data1: 20),
+            .channel(status: 0xB0, data0: 0x1A, data1: 5),
+            .channel(status: 0xB0, data0: 0x0C, data1: 7),
+            .channel(status: 0xB0, data0: 0x11, data1: 2),
+            .channel(status: 0xB0, data0: 0x4B, data1: 40),
+        ], [(0x0C, 1, .supported), (0x11, 1, .supported),
+            (0x16, 1, .supported), (0x18, 1, .supported),
+            (0x1A, 1, .supported), (0x4B, 1, .notExported)], []),
+    ]
+    for row in rows {
+        let cppID = "smfcheck/MidiSmfTest::\(row.name)"
+        let file = MidiFile(division: 24, chunks: [
+            MidiChunk(),
+            MidiChunk(events: row.events, endTick: row.events.last?.tick ?? 0),
+        ])
+        let analysis = MidiImport.analyze(file)
+        report.expectEqual(row.controllers.count, analysis.controllers.count,
+                           cppID: cppID, what: "ordinary controller histogram size")
+        report.expectEqual(row.xcmd.count, analysis.xcmd.count,
+                           cppID: cppID, what: "XCMD histogram size")
+        for (index, expected) in row.controllers.enumerated() {
+            guard analysis.controllers.indices.contains(index) else { break }
+            let actual = analysis.controllers[index]
+            report.expectEqual(expected.0, actual.controller, cppID: cppID,
+                               what: "ordinary controller \(index) number")
+            report.expectEqual(expected.1, actual.count, cppID: cppID,
+                               what: "ordinary controller \(index) count")
+            report.expectEqual(expected.2, actual.support, cppID: cppID,
+                               what: "ordinary controller \(index) support")
+        }
+        for (index, expected) in row.xcmd.enumerated() {
+            guard analysis.xcmd.indices.contains(index) else { break }
+            let actual = analysis.xcmd[index]
+            report.expectEqual(expected.0, actual.label, cppID: cppID,
+                               what: "XCMD \(index) label")
+            report.expectEqual(expected.1, actual.count, cppID: cppID,
+                               what: "XCMD \(index) count")
+            report.expectEqual(expected.2, actual.support, cppID: cppID,
+                               what: "XCMD \(index) support")
+        }
+        report.expect(analysis.controllers.allSatisfy {
+            $0.controller < 29 || $0.controller > 31
+        }, cppID: cppID, message: "XCMD plumbing stays out of ordinary controllers")
+    }
 }
 
 private func importTransforms(_ report: CheckReport) {

@@ -92,7 +92,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
     let report = CheckReport(callback: callback, context: context)
     switch suite {
     case 1:
-        runMidiCodecSuite(report)
+        let boxedMidi = ReportBox(report)
+        MainActor.assumeIsolated {
+            runMidiCodecSuite(boxedMidi.report)
+        }
     case 2:
         runMusicalSemanticsSuite(report)
     case 3:

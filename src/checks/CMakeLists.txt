@@ -106,6 +106,7 @@ if(APPLE)
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift
         editcheck/TimeCorpusChecks.swift
+        editcheck/SelectionChecks.swift
         rollcheck/static/camera.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift

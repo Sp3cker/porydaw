@@ -382,7 +382,7 @@ public struct AutomationRowStack: Equatable, Sendable {
         var rows: [AutomationRow] = [AutomationRow(
             parameter: .tempo, eventCount: tempoTicks.count,
             coversNodes: coversTempo,
-            coversLane: coversTempo && range != nil && selection?.scope == .lanes,
+            coversLane: coversTempo,
             selectionHasEvents: coversTempo && hasEvents(tempoTicks))]
 
         if let track = primaryTrack, track >= 0, track < TrackLimits.hardwareCapacity {

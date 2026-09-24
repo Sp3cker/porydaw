@@ -368,6 +368,16 @@ TestCase {
         var pastedSummary = replacementGrid.noteSummary
         var pastedCursor = replacementGrid.editCursorTick
         var pastedDirty = session.documentDirty
+        verify(clipProbe.writeClipJson("not json at all"), "invalid custom-MIME bytes are staged")
+        compare(clipProbe.readClipJson(), "not json at all", "native clipboard retains invalid bytes")
+        compare(clipProbe.clipSummary(), "[]", "the production decoder rejects invalid custom MIME")
+        keySequence(StandardKey.Paste)
+        compare(replacementGrid.noteSummary, pastedSummary,
+                "invalid custom MIME cannot change pasted notes")
+        compare(replacementGrid.editCursorTick, pastedCursor,
+                "invalid custom MIME cannot advance the cursor")
+        compare(session.documentDirty, pastedDirty,
+                "invalid custom MIME cannot change dirty state")
 
         var emptyPayload = JSON.stringify({
             format: 1, ticksPerBeat: replacementTpb, span: 48, wholeLane: false,

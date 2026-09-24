@@ -4,7 +4,7 @@ Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/midi/tst_midiroundtrip.cpp
 Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
+Swift SHA-256: b6da19e467b226ad8c2e9d1956095bf7f57691640f791152a4b6ec2ff7a8a26d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -20,8 +20,14 @@ GAP identifies an original predicate without a replacement assertion.
 
 Verification
 Command: deno task verify --filter roundtrip --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: not runnable. src/checks/midi/tst_midiroundtrip.cpp appears in no CMake
+target and in no check catalog or registry, so the original is uncompiled and
+unregistered; its remaining PARTIAL/GAP sites have no executing native lane.
 Swift pairing command: deno task verify --filter swiftcore --verbose
+Result: controller-observed run 2026-09-24 — SwiftCoreTest::midiCodec PASS,
+which executes runMidiCodecSuite and therefore runMidiExportEquivalence
+(called at src/checks/midi/MidiChecks.swift:283). This reconciliation did not
+re-run the lane.
 The swiftcore lane executes runMidiCodecSuite (per-song codec rows) and
 runMidiExportEquivalence (per-song mid2agb assembly comparison plus the XCMD
 traffic predicates) with the same song fixtures and the same mid2agb binary.
@@ -487,63 +493,63 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift counterpart execution sites
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:833
+S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:1023
       report.expectEqual(expectedValid, swift.valid, cppID: cppID,
                          what: "independent Swift validity (error=\(swift.error))")
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:836
+S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:1026
           report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
                         message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:842
+S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:1032
               report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
                                  what: "independent canonical byte vector")
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:849
+S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:1039
           report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                              what: "independent format-0 provenance")
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:872
+S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1062
                   report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
                                 cppID: cppID,
                                 message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:878
+S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1068
               report.expect(last.tick <= chunk.endTick, cppID: cppID,
                             what: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:883
+S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1073
       report.expectEqual(expected.division, file.division, cppID: cppID,
                          what: "independent decoded division")
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:885
+S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1075
       report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                          what: "independent decoded format-0 provenance")
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:887
+S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1077
       report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                          what: "independent decoded chunk count")
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:890
+S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1080
           report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
                              what: "independent decoded chunk=\(index) end tick")
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:892
+S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1082
           report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
                              cppID: cppID, what: "independent decoded chunk=\(index) event count")
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:899
+S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1089
               report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:902
+S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:1092
           report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
                              cppID: cppID,
                              what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
 
-S014 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:766
+S014 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:956
               report.pass(song.cppID, row: "mid2agb assembly matches Swift encoding")
 
-S015 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:768
+S015 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:958
               report.fail(
                   song.cppID,
                   "mid2agb assembly mismatch or compile failure " +
@@ -552,38 +558,38 @@ S015 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:768
                       "originalCompile=\(native.originalCompileFailureBits & bit), " +
                       "encodedCompile=\(native.encodedCompileFailureBits & bit))")
 
-S016 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:778
+S016 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:968
       report.expectEqual(Int32(0), native.xcmdCompileFailed, cppID: xcmdConverterID,
                          what: "mid2agb compiles Swift XCMD traffic")
 
-S017 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:780
+S017 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:970
       report.expectEqual(Int32(1), native.xiecvCount, cppID: xcmdConverterID,
                          what: "one xIECV command")
 
-S018 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:782
+S018 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:972
       report.expectEqual(Int32(1), native.xieclCount, cppID: xcmdConverterID,
                          what: "one xIECL command")
 
-S019 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:784
+S019 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:974
       report.expectEqual(Int32(1), native.xiecv64Count, cppID: xcmdConverterID,
                          what: "xIECV carries value 64")
 
-S020 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:786
+S020 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:976
       report.expectEqual(Int32(1), native.xiecl51Count, cppID: xcmdConverterID,
                          what: "xIECL carries value 51")
 
-S021 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:788
+S021 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:978
       report.expectEqual(Int32(0), native.unknown127Count, cppID: xcmdConverterID,
                          what: "unknown selector emits no echo command")
 
-S022 | compareFixture | src/checks/midi/MidiChecks.swift:801
+S022 | compareFixture | src/checks/midi/MidiChecks.swift:991
           report.fail(cppID, "missing --swiftcore fixture root")
 
-S023 | compareFixture | src/checks/midi/MidiChecks.swift:820
+S023 | compareFixture | src/checks/midi/MidiChecks.swift:1010
           report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
 
-S024 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:735
+S024 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:925
           report.fail(xcmdConverterID, "missing --swiftcore fixture root")
 
-S025 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:759
+S025 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:949
           report.fail(xcmdConverterID, "Swift XCMD fixture write failed: \(error)")
