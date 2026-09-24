@@ -66,6 +66,7 @@ if(APPLE)
         playback/tst_loop.swift
         playback/tst_prime.swift
         polyphony/polyphonyengine.swift
+        polyphony/PolyphonyPanelChecks.swift
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
         keyboard/tst_velocityaxis.swift
@@ -406,6 +407,7 @@ if(APPLE)
         editorqml/ShellQmlTests.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
+        editorqml/PolyphonyShellProbe.swift
         editorqml/TabsDrawerProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"

@@ -12,6 +12,7 @@ add_library(PorydawApp STATIC
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift
+    audio/PolyphonyPanelPresenter.swift
     audio/AudioAudition.swift
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift

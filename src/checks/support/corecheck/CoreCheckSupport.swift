@@ -198,6 +198,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runThemeColorChecks(boxedTheme.report)
         }
+        let boxedPolyphony = ReportBox(report)
+        MainActor.assumeIsolated {
+            runPolyphonyPanelChecks(boxedPolyphony.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }
