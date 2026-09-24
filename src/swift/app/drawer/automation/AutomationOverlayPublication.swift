@@ -179,6 +179,7 @@ extension AutomationPage {
         menuChildRowCount = children.count
         let open = menu != nil
         if menuOpen != open { menuOpen = open }
+        publishHoverHintProfile()
         publishInteractionState()
     }
 

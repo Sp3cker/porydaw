@@ -773,6 +773,204 @@ func coreAutomationPanUndoRegression(_ report: CheckReport, suite: DocumentSessi
                        what: "only a second undo removes the preceding Pan sweep")
 }
 
+let drawerAutomationContractParityID = "swiftcore/AutomationPage::gestureContractParity"
+
+@MainActor
+func drawerAutomationGestureContractParity(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let emptyLane = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
+    let emptyFacts = emptyLane.facts(emptyLane.panLane)
+    report.expectEqual(["0:64"], emptyLane.laneValues(emptyFacts.displayPoints),
+                       cppID: drawerAutomationContractParityID,
+                       what: "an empty lane displays its projected engine node")
+    report.expect(emptyFacts.snapshot.leadInValue == nil, cppID: drawerAutomationContractParityID,
+                  message: "an empty lane carries no written lead-in")
+    let emptyModulationFacts = emptyLane.facts(emptyLane.modulationLane)
+    report.expectEqual(0, emptyModulationFacts.snapshot.leadInValue ?? -1,
+                       cppID: drawerAutomationContractParityID,
+                       what: "an unwritten Modulation lane leads in on its engine default")
+    let metadata = AutomationParameterMetadata(parameter: emptyLane.panLane)
+    report.expectEqual("Pan (PAN)", AutomationCatalog.title(emptyLane.panLane),
+                       cppID: drawerAutomationContractParityID, what: "the catalog titles a CC lane")
+    report.expectEqual("Tempo (BPM)", AutomationCatalog.title(.tempo),
+                       cppID: drawerAutomationContractParityID, what: "the catalog titles Tempo")
+    report.expectEqual("Pitch bend (BEND)", AutomationCatalog.title(emptyLane.bendLane),
+                       cppID: drawerAutomationContractParityID, what: "the catalog titles bend")
+    report.expectEqual(0, metadata.minimum, cppID: drawerAutomationContractParityID,
+                       what: "a CC lane bottoms at zero")
+    report.expectEqual(127, metadata.maximum, cppID: drawerAutomationContractParityID,
+                       what: "a CC lane tops at 127")
+    report.expectEqual("150", AutomationParameterMetadata(parameter: .tempo).valueText(150),
+                       cppID: drawerAutomationContractParityID, what: "Tempo formats raw BPM")
+    report.expectEqual("c_v+0", metadata.valueText(64), cppID: drawerAutomationContractParityID,
+                       what: "the neutral value formats through its own metadata")
+    let band = AutomationTimeSelection(range: TimeRange(startTick: 50, endTick: 100), scope: .lanes,
+                                       lanes: [emptyLane.panLane])
+    report.expectEqual(Tick(50), band.range.startTick, cppID: drawerAutomationContractParityID,
+                       what: "a band publishes its active tick range")
+    report.expect(band.covers(emptyLane.panLane, usedTracks: [0]), cppID: drawerAutomationContractParityID,
+                  message: "a band covers its own lane")
+    report.expect(!band.covers(.tempo, usedTracks: [0]), cppID: drawerAutomationContractParityID,
+                  message: "a CC band excludes Tempo")
+    let tempoBand = AutomationTimeSelection(range: TimeRange(startTick: 50, endTick: 100),
+                                            scope: .lanes, lanes: [.tempo], tempo: true)
+    report.expect(tempoBand.coversTempo(usedTracks: [0]), cppID: drawerAutomationContractParityID,
+                  message: "a Tempo band covers Tempo")
+    report.expect(!tempoBand.covers(emptyLane.panLane, usedTracks: [0]),
+                  cppID: drawerAutomationContractParityID,
+                  message: "a Tempo band excludes CC lanes")
+    let sameTick = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     pan: [(96, 10), (96, 20)])
+    report.expectEqual(["96:10", "96:20"], sameTick.values(sameTick.panLane),
+                       cppID: drawerAutomationContractParityID,
+                       what: "same-tick CC writes keep their order")
+    let moved = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 60), (48, 80)])
+    var moveFacts = moved.facts(moved.panLane)
+    guard let firstHop = AutomationNodeResolver.moves([.init(moveFacts, [
+        AutomationNodeMove(parameter: moved.panLane, sourceTick: 24, tick: 96, value: 60),
+    ])]) else {
+        report.fail(drawerAutomationContractParityID, "the first hop resolved no plan")
+        return
+    }
+    let moveBefore = moved.snapshot
+    report.expect(AutomationCommit.apply(firstHop, in: moved.document),
+                  cppID: drawerAutomationContractParityID, message: "the first hop commits")
+    report.expectEqual(["48:80", "96:60"], moved.values(moved.panLane),
+                       cppID: drawerAutomationContractParityID,
+                       what: "a move onto a free tick keeps every occupant in order")
+    moveFacts = moved.facts(moved.panLane)
+    guard let secondHop = AutomationNodeResolver.moves([.init(moveFacts, [
+        AutomationNodeMove(parameter: moved.panLane, sourceTick: 48, tick: 96, value: 80),
+    ])]) else {
+        report.fail(drawerAutomationContractParityID, "the second hop resolved no plan")
+        return
+    }
+    report.expect(AutomationCommit.apply(secondHop, in: moved.document),
+                  cppID: drawerAutomationContractParityID, message: "the second hop commits")
+    report.expectEqual(["96:80"], moved.values(moved.panLane),
+                       cppID: drawerAutomationContractParityID,
+                       what: "a move onto an occupied tick evicts its occupant")
+    report.expectEqual(moveBefore.revision + 2, moved.document.revision,
+                       cppID: drawerAutomationContractParityID, what: "two hops are two revisions")
+    report.expect(moved.undo(), cppID: drawerAutomationContractParityID, message: "the hops are undoable")
+    report.expectEqual(["48:80", "96:60"], moved.values(moved.panLane),
+                       cppID: drawerAutomationContractParityID, what: "one undo restores the evicted occupant")
+    let unknownFacts = moved.facts(moved.panLane)
+    report.expect(AutomationNodeResolver.moves([.init(unknownFacts, [
+        AutomationNodeMove(parameter: moved.panLane, sourceTick: 9999, tick: 100, value: 60),
+    ])]) == nil, cppID: drawerAutomationContractParityID,
+                  message: "a move from an unknown tick resolves to nothing")
+    report.expectEqual(moved.snapshot, drawerAutomationAutomationDocumentSnapshot(moved.document),
+                       cppID: drawerAutomationContractParityID,
+                       what: "an unresolvable move leaves document and history untouched")
+    let deleteFacts = moved.facts(moved.panLane)
+    guard let deletePlan = AutomationNodeResolver.deletions(revision: deleteFacts.revision, [.init(
+        parameter: moved.panLane, snapshot: deleteFacts.snapshot, ticks: [48, 48, 96])]) else {
+        report.fail(drawerAutomationContractParityID, "the batch delete resolved no plan")
+        return
+    }
+    report.expect(!deletePlan.isEmpty, cppID: drawerAutomationContractParityID,
+                  message: "a batch delete over repeated ticks resolves its removals")
+    report.expect(AutomationCommit.apply(deletePlan, in: moved.document),
+                  cppID: drawerAutomationContractParityID, message: "the batch delete commits")
+    report.expect(moved.values(moved.panLane).isEmpty, cppID: drawerAutomationContractParityID,
+                  message: "a batch delete empties the lane's raw events")
+    let unknownDeleteFacts = moved.facts(moved.panLane)
+    report.expect(AutomationNodeResolver.deletions(revision: unknownDeleteFacts.revision, [.init(
+        parameter: moved.panLane, snapshot: unknownDeleteFacts.snapshot, ticks: [9999])]) == nil,
+                  cppID: drawerAutomationContractParityID,
+                  message: "a delete of an unknown tick resolves to nothing")
+    let tempo = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  tempo: [(0, 500_000), (96, 400_000)])
+    let tempoFacts = tempo.facts(.tempo)
+    let preservedUs = tempo.document.state.tempo.first(where: { $0.tick == 0 })?
+        .microsecondsPerQuarterNote ?? 0
+    guard let tempoPlan = AutomationNodeResolver.moves([.init(tempoFacts, [
+        AutomationNodeMove(parameter: .tempo, sourceTick: 0, tick: 48, value: 120),
+    ])]) else {
+        report.fail(drawerAutomationContractParityID, "the tempo move resolved no plan")
+        return
+    }
+    let tempoBefore = tempo.snapshot
+    report.expect(AutomationCommit.apply(tempoPlan, in: tempo.document),
+                  cppID: drawerAutomationContractParityID, message: "the tempo move commits")
+    report.expectEqual(preservedUs, tempo.document.state.tempo.first(where: { $0.tick == 48 })?
+        .microsecondsPerQuarterNote ?? 0, cppID: drawerAutomationContractParityID,
+                       what: "an unchanged-value tempo move preserves its microseconds")
+    report.expectEqual(tempoBefore.revision + 1, tempo.document.revision,
+                       cppID: drawerAutomationContractParityID, what: "one tempo move is one revision")
+    report.expect(tempo.undo(), cppID: drawerAutomationContractParityID, message: "the tempo move is undoable")
+    let fractional = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                       tempo: [(0, 499_999)])
+    let fractionalFacts = fractional.facts(.tempo)
+    guard let fractionalPlan = AutomationNodeResolver.moves([.init(fractionalFacts, [
+        AutomationNodeMove(parameter: .tempo, sourceTick: 0, tick: 96, value: 120),
+    ])]) else {
+        report.fail(drawerAutomationContractParityID, "the fractional tempo drag resolved no plan")
+        return
+    }
+    let fractionalBefore = fractional.snapshot
+    report.expect(AutomationCommit.apply(fractionalPlan, in: fractional.document),
+                  cppID: drawerAutomationContractParityID, message: "a fractional tempo drag commits one edit")
+    report.expectEqual(fractionalBefore.revision + 1, fractional.document.revision,
+                       cppID: drawerAutomationContractParityID, what: "one fractional drag is one revision")
+    report.expect(fractional.undo(), cppID: drawerAutomationContractParityID,
+                  message: "the fractional drag is undoable")
+    let vertical = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     pan: [(24, 60), (48, 80)])
+    let verticalFacts = vertical.facts(vertical.panLane)
+    var verticalDrag = AutomationNodeDragTransaction.single(
+        facts: verticalFacts, source: verticalFacts.snapshot.sources[0], press: (100, 100),
+        deleteOnStationary: false)
+    _ = verticalDrag.update(AutomationPointDrag.Update(phase: .dragging, effectiveX: 100,
+                                                       effectiveY: 160, axisLock: .value),
+                            mapped: AutomationLanePoint(tick: 60, value: 20))
+    report.expectEqual(Tick(24), verticalDrag.targets[0].current.tick,
+                       cppID: drawerAutomationContractParityID,
+                       what: "a value lock keeps the original tick")
+    let lanes = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 60)], modulation: [(48, 10)],
+                                                  tempo: [(0, 500_000)])
+    lanes.activate(lanes.panLane)
+    lanes.page.selectRange(from: 0, to: 96, lanes: [lanes.panLane, lanes.modulationLane])
+    let lanesBefore = lanes.snapshot
+    report.expectEqual(TimeRange(startTick: 0, endTick: 96), lanes.page.selection?.range,
+                       cppID: drawerAutomationContractParityID,
+                       what: "a right-drag band publishes its shared time selection")
+    report.expect(lanes.page.consumeSelectionCommand(command: .delete),
+                  cppID: drawerAutomationContractParityID, message: "the mixed delete consumes its selection")
+    report.expect(lanes.values(lanes.panLane).isEmpty && lanes.values(lanes.modulationLane).isEmpty,
+                  cppID: drawerAutomationContractParityID,
+                  message: "a mixed delete clears every covered lane")
+    report.expectEqual(["0:120"], lanes.tempoValues, cppID: drawerAutomationContractParityID,
+                       what: "a CC range edit preserves Tempo")
+    report.expectEqual(lanesBefore.revision + 1, lanes.document.revision,
+                       cppID: drawerAutomationContractParityID, what: "one mixed delete is one revision")
+    report.expect(lanes.undo(), cppID: drawerAutomationContractParityID, message: "the mixed delete is undoable")
+    report.expectEqual(["24:60"], lanes.values(lanes.panLane), cppID: drawerAutomationContractParityID,
+                       what: "one undo restores the mixed delete's lanes")
+    report.expectEqual(["48:10"], lanes.values(lanes.modulationLane), cppID: drawerAutomationContractParityID,
+                       what: "one undo restores the covered modulation lane")
+    let cancel = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 60)])
+    cancel.activate(cancel.panLane)
+    let cancelRevision = cancel.snapshot
+    _ = cancel.page.pointerPress(x: cancel.x(24), y: cancel.y(cancel.panLane, 60), surface: 1,
+                                 button: AutomationQtButton.left)
+    _ = cancel.page.pointerMove(x: cancel.x(24) + 24, y: cancel.y(cancel.panLane, 60) - 12,
+                                buttons: AutomationQtButton.left)
+    cancel.page.cancelSectionInteraction()
+    report.expect(!cancel.page.interactionActive, cppID: drawerAutomationContractParityID,
+                  message: "an escape leaves no interaction live")
+    report.expectEqual(cancelRevision, cancel.snapshot, cppID: drawerAutomationContractParityID,
+                       what: "an escape writes nothing")
+    report.expect(cancel.drag(cancel.panLane, from: (24, 60), to: 70,
+                              modifiers: AutomationQtModifier.alt),
+                  cppID: drawerAutomationContractParityID, message: "input recovers after a cancellation")
+    report.expectEqual(["24:70"], cancel.values(cancel.panLane), cppID: drawerAutomationContractParityID,
+                       what: "the recovered drag commits its move")
+}
+
 @MainActor
 func drawerAutomationPencilStrokeFilters(_ report: CheckReport, suite: DocumentSession,
                                          service: ProjectService) {

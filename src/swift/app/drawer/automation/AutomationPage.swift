@@ -445,7 +445,9 @@ public final class AutomationPage: EditorDrawerPage {
             facts.revision != revision
                 || (facts.parameter.track != nil && facts.parameter.track != activeTrack())
         }
-        if let frozen, stale(frozen) { cancelGesture() }
+        if let frozen, stale(frozen) {
+            cancelGesture()
+        }
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
         if let live = menu,
@@ -457,6 +459,7 @@ public final class AutomationPage: EditorDrawerPage {
         if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
             resetTapTempo()
         }
+        publishInteractionState()
         rebuildContent()
     }
 

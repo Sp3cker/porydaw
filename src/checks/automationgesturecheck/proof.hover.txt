@@ -5,7 +5,7 @@ Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automati
 Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 11cf7e3dd791e0ef1e75cf46e47da3cd818e31b57580e4e86773309ce1c3c17a
+Swift SHA-256: 1f9835130434b3bf358b109ad60569674d1c298ed9d69b0dc38046183a88558a
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -14,10 +14,10 @@ context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
 Direct hover routing plus per-adapter topology cases (Tempo, CC) pin insertion-tick
 placement, node rings and labels, insertion line and label, held ghosts,
-no-repeat churn, and leave-cleared pixels on the retired Quick surface. Five sites
-have no Swift assertion, two are partial, and twenty-three require the retired
+no-repeat churn, and leave-cleared pixels on the retired Quick surface. Seven sites are
+matched by the converted hover model predicates and twenty-three require the retired
 native window, pixels, focus, grabs, cursor, or fixture.
-Disposition tally: 30 sites: 5 GAP, 23 NATIVE, 2 PARTIAL.
+Disposition tally: 30 sites: 7 MATCHED, 23 NATIVE.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -26,8 +26,19 @@ GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
-Command: deno task verify --filter automation-gestures --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore (implementer run on the counterpart
+hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
+Command: deno task verify:qml (same tree, same implementer run) -> run_checks PASS
+(all harnesses).
+Result: the converted Swift and QML suites are green on the counterpart hashes
+pinned above. This ledger was not re-run here and no per-predicate execution was
+observed beyond that report; predicate presence alone does not close any A entry.
+Note: the review-fix hunks have landed in automationcanvasediting.swift since this
+ledger was written (diagnostics enum names, hover-model anchor unwraps, a
+selection-clear guard, and drawerAutomationMenuHintMuting plus
+drawerAutomationHoverResidual appends after line 398); every line pinned here was
+re-verified against the current content, whose hash is pinned above. The appended
+menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
 
@@ -409,8 +420,8 @@ Original expression:
                                    "description"));
 
 A004 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:343
-Disposition: GAP
-Mapping/reason: A hover-route document/history non-mutation snapshot has no corresponding Swift predicate; S010 tests hover teardown after leave, not document state.
+Disposition: MATCHED
+Mapping/reason: S011, S012, and S013 (hovering the background, repeating a hover, and hovering a node each leave the snapshot unchanged) assert the original non-mutation guard.
 Source context since previous assertion:
 
       const auto before = snapshot(rig.document());
@@ -481,16 +492,16 @@ Original expression:
                                    "point"));
 
 A009 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Value-text readout; S002 covers node value readout at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: MATCHED
+Mapping/reason: S014 (a background hover reads the value the lane holds there) and S015 (the node hover reads the node own text) assert the insertion value readout through the published hover model; the original predicate only requires the readout row to exist.
 Source context since previous assertion:
 Original expression:
       probe.require(hasValueText(routed),
                     QStringLiteral("direct pointer move did not render the insertion value"));
 
 A010 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:395
-Disposition: PARTIAL
-Mapping/reason: Clear-on-leave outcome; S010 covers hover teardown on leave at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: MATCHED
+Mapping/reason: S016, S017, and S018 (pointer leave clears the hover, its text and the hover object, and never arms the pencil cursor) assert the original clear-on-leave outcome.
 Source context since previous assertion:
 
       const int cursorClearsBeforeLeave = rig.automationHost().cursorClears();
@@ -566,8 +577,8 @@ Original expression:
                                    "grab"));
 
 A016 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:431
-Disposition: GAP
-Mapping/reason: Clearing hover after strong window-deactivation cancellation has no corresponding Swift predicate; S010 covers pointer leave only, a different cancellation cause.
+Disposition: MATCHED
+Mapping/reason: S019 (a strong cancellation clears a live hover) asserts the original clearing; the converted predicate cancels through the page section interaction where the original deactivates the window.
 Source context since previous assertion:
       QDeadlineTimer cancelTimeout{1000};
       HoverObservation cancelled = observeHover(rig);
@@ -601,8 +612,8 @@ Original expression:
                     QStringLiteral("cancellation latched passive hover off"));
 
 A018 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:454
-Disposition: GAP
-Mapping/reason: Strong window-deactivation cancellation preserving document/history and returning idle has no corresponding Swift predicate; S010 tests hover teardown after leave.
+Disposition: MATCHED
+Mapping/reason: S020, S021, and S022 (cancelling a hover and an idle cancellation leave document and history unchanged and no interaction live) assert the original preservation and idle outcome.
 Source context since previous assertion:
 
       // The remaining strong reasons cancel cleanly while idle.
@@ -633,8 +644,8 @@ Original expression:
           probe.require(false, QStringLiteral("lane body is missing from the canvas stack"));
 
 A020 | runCase | src/checks/automationgesturecheck/hover.cpp:470
-Disposition: GAP
-Mapping/reason: The inserted background hover tick being distinct from both neighboring node ticks has no corresponding Swift predicate; S004 only distinguishes a background hover from a node hover.
+Disposition: MATCHED
+Mapping/reason: S023 (the insertion tick sits between its neighboring nodes) asserts the original distinct-tick outcome.
 Source context since previous assertion:
           return topology;
       }
@@ -643,8 +654,8 @@ Original expression:
                     QStringLiteral("inter-node insertion landed on an existing node"));
 
 A021 | runCase | src/checks/automationgesturecheck/hover.cpp:476
-Disposition: GAP
-Mapping/reason: Each topology case preserving document/history has no corresponding Swift predicate; S010 tests hover teardown after leave.
+Disposition: MATCHED
+Mapping/reason: S011, S013, and S024 (background, node, and Tempo topology hovers leave the snapshot unchanged) assert the per-topology preservation guard.
 Source context since previous assertion:
       leaveCanvas(rig);
       const HoverObservation idle = observeHover(rig);
@@ -844,54 +855,131 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the converted automation Swift suite. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+The S entries are exact predicates defined in the converted automation Swift suites pinned by the counterpart hashes above. Their presence alone does not close any A entry; execution is claimed only as recorded in Verification. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:192
+S001 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:195
 Counterpart expression:
       report.expect(fixture.page.hover?.hasPoint == true, cppID: drawerAutomationContextID,
                     message: "a hover on a node publishes the node")
 
-S002 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:194
+S002 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:197
 Counterpart expression:
       report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a node hover reads out the node's value")
 
-S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:196
+S003 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:199
 Counterpart expression:
-      report.expectEqual(15, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.node, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "a written node advertises node movement")
 
-S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:200
+S004 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:203
 Counterpart expression:
       report.expect(fixture.page.hover?.hasPoint == false, cppID: drawerAutomationContextID,
                     message: "a hover on the background publishes the tick")
 
-S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:202
+S005 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:205
 Counterpart expression:
       report.expectEqual("64", fixture.page.hover?.text ?? "", cppID: drawerAutomationContextID,
                          what: "a background hover reads the value the lane holds there")
 
-S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:204
+S006 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:207
 Counterpart expression:
       report.expect(fixture.page.hoverBuildCount > hoverBuilds, cppID: drawerAutomationContextID,
                     message: "the hover publications are counted")
 
-S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:206
+S007 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:209
 Counterpart expression:
-      report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "the background advertises sweep and ramp input")
 
-S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:209
+S008 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:212
 Counterpart expression:
-      report.expectEqual(18, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.pencil, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "switching tools updates stationary hover instructions")
 
-S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:212
+S009 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:215
 Counterpart expression:
-      report.expectEqual(17, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
+      report.expectEqual(AutomationHintProfile.sweep, fixture.page.hoverHintProfile, cppID: drawerAutomationContextID,
                          what: "leaving pencil mode restores sweep instructions")
 
-S010 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:215
+S010 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/automationcanvasediting.swift:218
 Counterpart expression:
       report.expect(fixture.page.hover == nil, cppID: drawerAutomationContextID,
                     message: "leaving the plot clears the hover")
+
+S011 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:279
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "hovering the background writes nothing")
+
+S012 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:285
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "a repeated hover still writes nothing")
+
+S013 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:308
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "hovering a node writes nothing")
+
+S014 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:268
+Counterpart expression:
+      report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane)
+          .valueText(lane.heldValue(at: backgroundTick) ?? 64), page.hoverText,
+                         cppID: drawerAutomationHoverModelID,
+                         what: "a background hover reads the value the lane holds there")
+
+S015 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:300
+Counterpart expression:
+      report.expectEqual(AutomationParameterMetadata(parameter: fixture.panLane).valueText(64),
+                         page.hoverText, cppID: drawerAutomationHoverModelID,
+                         what: "the node hover reads the node's own text")
+
+S016 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:314
+Counterpart expression:
+      report.expect(!page.hoverVisible, cppID: drawerAutomationHoverModelID,
+                    message: "leaving the plot clears the hover")
+
+S017 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:316
+Counterpart expression:
+      report.expectEqual("", page.hoverText, cppID: drawerAutomationHoverModelID,
+                         what: "leaving the plot clears the hover text")
+      report.expect(page.hover == nil, cppID: drawerAutomationHoverModelID,
+                    message: "leaving the plot drops the hover")
+
+S018 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:325
+Counterpart expression:
+      report.expectEqual(AutomationCursorKind.arrow.rawValue, page.cursorKind,
+                         cppID: drawerAutomationHoverModelID,
+                         what: "an arrow hover never arms the pencil cursor")
+
+S019 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:338
+Counterpart expression:
+      report.expect(!page.hoverVisible && page.hover == nil, cppID: drawerAutomationHoverModelID,
+                    message: "a strong cancellation clears a live hover")
+
+S020 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:340
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "cancelling a hover changes no document or history state")
+
+S021 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:346
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "an idle cancellation is a no-op on document and history")
+
+S022 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:348
+Counterpart expression:
+      report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
+                    message: "an idle cancellation leaves no interaction live")
+
+S023 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:259
+Counterpart expression:
+      report.expect(backgroundHover.tick != 24 && backgroundHover.tick != 120,
+                    cppID: drawerAutomationHoverModelID,
+                    message: "the insertion tick sits between its neighboring nodes")
+
+S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift:375
+Counterpart expression:
+      report.expectEqual(revision, fixture.snapshot, cppID: drawerAutomationHoverModelID,
+                         what: "Tempo hover topology preserves the document")

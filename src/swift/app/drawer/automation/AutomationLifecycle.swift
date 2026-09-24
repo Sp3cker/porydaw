@@ -104,7 +104,9 @@ extension AutomationPage {
     ) {
         let pencilMode = pencilModeOverride ?? isPencilMode
         let profile: Int
-        if let hover {
+        if menu != nil {
+            profile = AutomationHintProfile.empty
+        } else if let hover {
             let target = targetOverride ?? hover.hintTarget
             switch (!pencilMode || hover.nodeMarkersVisible, target) {
             case (true, .originPhantom):

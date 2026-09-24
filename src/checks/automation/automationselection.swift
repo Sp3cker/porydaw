@@ -31,6 +31,13 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                        what: "undo restores secondary CC lane")
     report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
                        what: "undo restores secondary Tempo lane")
+    let redone = (try? drawerAutomationRunBlocking { try await fixture.session.redo() }) ?? false
+    report.expect(redone, cppID: id, message: "the heterogeneous drag is redoable")
+    report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+                       what: "redo restores the committed Tempo stream")
+    report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "redo restores the committed secondary CC lane")
+    report.expect(fixture.undo(), cppID: id, message: "a second undo parks the drag again")
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the drag records exactly one history entry")
 
