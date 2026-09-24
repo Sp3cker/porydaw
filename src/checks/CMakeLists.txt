@@ -128,6 +128,7 @@ if(APPLE)
         nativegraphics/tst_playhead_quick.swift
         nativegraphics/PlayheadFeatureChecks.swift
         eventviews/EventListPlayheadChecks.swift
+        eventviews/EventListPageChecks.swift
         songlist/songlist_checks.swift
         songlist/songlist_service.swift
         voicelist/VoiceListChecks.swift

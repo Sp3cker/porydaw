@@ -12,6 +12,7 @@ public enum EventListEventType: Int, Equatable, Sendable {
     case bend = 6
     case sysEx0 = 7
     case sysEx7 = 8
+    case tempo = 9
     case meta = 10
     case endOfTrack = -1
 }
@@ -23,17 +24,19 @@ public struct EventListRow: Equatable, Sendable {
     public let eventIndex: Int?
     public let tick: Tick
     public let event: MidiEvent?
+    public let tempo: TempoPoint?
     public let kind: EventListEventType
 
     public var typeKind: Int { kind.rawValue }
-    public var isEndOfTrack: Bool { event == nil }
+    public var isEndOfTrack: Bool { event == nil && tempo == nil }
 
     init(index: Int, eventIndex: Int?, tick: Tick, event: MidiEvent?,
-         kind: EventListEventType) {
+         tempo: TempoPoint? = nil, kind: EventListEventType) {
         self.index = index
         self.eventIndex = eventIndex
         self.tick = tick
         self.event = event
+        self.tempo = tempo
         self.kind = kind
     }
 }
@@ -48,6 +51,8 @@ public struct EventListModel: Equatable, Sendable {
     public static let columnCount = 7
 
     public private(set) var chunk: MidiChunk = MidiChunk()
+    public private(set) var tempos: [TempoPoint] = []
+    public private(set) var filterMask = 127
     public private(set) var rows: [EventListRow] = []
     public private(set) var currentRow = -1
     public private(set) var playRow = -1
@@ -60,19 +65,25 @@ public struct EventListModel: Equatable, Sendable {
     public init() {}
 
     /// Creates an attached model over `chunk`.
-    public init(chunk: MidiChunk) {
+    public init(chunk: MidiChunk, tempos: [TempoPoint] = [], filterMask: Int = 127) {
         self.chunk = chunk
+        self.tempos = tempos
+        self.filterMask = filterMask
         hasSource = true
-        rows = Self.makeRows(for: chunk)
+        rows = Self.makeRows(for: chunk, tempos: tempos, filterMask: filterMask)
     }
 
     /// Replaces the source chunk and clears focus unless explicitly preserved.
-    public mutating func setSource(_ chunk: MidiChunk?, preservingCurrentRow: Bool = false) {
+    public mutating func setSource(_ chunk: MidiChunk?, tempos: [TempoPoint] = [],
+                                   filterMask: Int = 127,
+                                   preservingCurrentRow: Bool = false) {
         let oldCurrent = currentRow
+        self.tempos = tempos
+        self.filterMask = filterMask
         if let chunk {
             self.chunk = chunk
             hasSource = true
-            rows = Self.makeRows(for: chunk)
+            rows = Self.makeRows(for: chunk, tempos: tempos, filterMask: filterMask)
         } else {
             self.chunk = MidiChunk()
             hasSource = false
@@ -119,10 +130,10 @@ public struct EventListModel: Equatable, Sendable {
         if tick >= Double(chunk.endTick) { return rows.count - 1 }
 
         var lower = 0
-        var upper = chunk.events.count
+        var upper = rows.count - 1
         while lower < upper {
             let middle = lower + (upper - lower) / 2
-            if Double(chunk.events[middle].tick) <= tick {
+            if Double(rows[middle].tick) <= tick {
                 lower = middle + 1
             } else {
                 upper = middle
@@ -133,9 +144,9 @@ public struct EventListModel: Equatable, Sendable {
         // The native model only treats an event row as an exact focused tick;
         // the EOT sentinel is intentionally not a sibling-snap candidate.
         if tick >= 0, rows.indices.contains(currentRow),
-           let focused = rows[currentRow].event,
+           rows[currentRow].event != nil,
            result != currentRow,
-           abs(Double(focused.tick) - tick) < 0.5 {
+           abs(Double(rows[currentRow].tick) - tick) < 0.5 {
             result = currentRow
         }
         return result
@@ -175,6 +186,7 @@ public struct EventListModel: Equatable, Sendable {
         }
         let item = rows[row]
         if item.isEndOfTrack { return column == 0 }
+        if item.tempo != nil { return column == 0 || column == 1 || column == 5 }
         guard let event = item.event else { return false }
         switch column {
         case 0, 1:
@@ -208,6 +220,7 @@ public struct EventListModel: Equatable, Sendable {
             return value <= UInt64(TimeDefaults.maxTick)
         case 1:
             guard let value = Int(trimmed) else { return false }
+            if rows[row].tempo != nil { return (0...10).contains(value) }
             switch value {
             case EventListEventType.noteOff.rawValue,
                  EventListEventType.noteOn.rawValue,
@@ -230,20 +243,66 @@ public struct EventListModel: Equatable, Sendable {
             guard let value = Int(trimmed) else { return false }
             return (0...127).contains(value)
         case 5:
-            return !trimmed.isEmpty
+            if rows[row].tempo != nil {
+                return Int(trimmed).map { (20...255).contains($0) } ?? false
+            }
+            return Self.parseBlob(trimmed) != nil
         default:
             return false
         }
     }
 
-    private static func makeRows(for chunk: MidiChunk) -> [EventListRow] {
+    private static func makeRows(for chunk: MidiChunk, tempos: [TempoPoint],
+                                 filterMask: Int) -> [EventListRow] {
         var result: [EventListRow] = []
-        result.reserveCapacity(chunk.events.count + 1)
+        result.reserveCapacity(chunk.events.count + tempos.count + 1)
         for (index, event) in chunk.events.enumerated() {
-            result.append(EventListRow(index: index, eventIndex: index, tick: event.tick,
-                                       event: event, kind: eventType(for: event)))
+            let kind = eventType(for: event)
+            let bit: Int
+            switch kind {
+            case .noteOff, .noteOn: bit = 1
+            case .cc: bit = 2
+            case .program: bit = 4
+            case .bend: bit = 8
+            case .polyTouch, .channelTouch: bit = 16
+            case .sysEx0, .sysEx7: bit = 32
+            default: bit = 64
+            }
+            guard event.metaType != 0x51, filterMask & bit != 0 else { continue }
+            result.append(EventListRow(index: result.count, eventIndex: index, tick: event.tick,
+                                       event: event, kind: kind))
         }
-        result.append(EventListRow(index: chunk.events.count, eventIndex: nil,
+        if filterMask & 64 != 0, !tempos.isEmpty {
+            let orderedTempos = tempos.sorted { $0.tick < $1.tick }
+            var merged: [EventListRow] = []
+            merged.reserveCapacity(result.count + orderedTempos.count)
+            var nextTempo = 0
+            for eventRow in result {
+                while nextTempo < orderedTempos.count
+                    && orderedTempos[nextTempo].tick <= eventRow.tick {
+                    let tempo = orderedTempos[nextTempo]
+                    merged.append(EventListRow(index: merged.count, eventIndex: nil,
+                                               tick: tempo.tick, event: nil,
+                                               tempo: tempo, kind: .tempo))
+                    nextTempo += 1
+                }
+                merged.append(eventRow)
+            }
+            while nextTempo < orderedTempos.count {
+                let tempo = orderedTempos[nextTempo]
+                merged.append(EventListRow(index: merged.count, eventIndex: nil,
+                                           tick: tempo.tick, event: nil,
+                                           tempo: tempo, kind: .tempo))
+                nextTempo += 1
+            }
+            result = merged
+        }
+        for index in result.indices {
+            let row = result[index]
+            result[index] = EventListRow(index: index, eventIndex: row.eventIndex, tick: row.tick,
+                                         event: row.event, tempo: row.tempo, kind: row.kind)
+        }
+        result.append(EventListRow(index: result.count, eventIndex: nil,
                                    tick: chunk.endTick, event: nil, kind: .endOfTrack))
         return result
     }

@@ -18,6 +18,10 @@ add_library(PorydawApp STATIC
     ApplicationSession.swift
     SongTabsController.swift
     eventlist/EventListModel.swift
+    eventlist/EventListProjection.swift
+    eventlist/EventListSelection.swift
+    eventlist/EventListEditing.swift
+    eventlist/EventListMenus.swift
     eventlist/EventListPresenter.swift
     songlist/SongListPresenter.swift
     voicelist/VoiceListSemantics.swift

@@ -43,6 +43,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("roll.mute_tracks", "Mute Selected Tracks", .muteTracks),
         Action("roll.solo_tracks", "Solo Selected Tracks", .soloTracks),
         Action("automation.pencil_mode", "Toggle Pencil Mode", .pencilMode),
+        Action("eventlist.move_up", "Move Event Up (Same Tick)", .moveEventUp),
+        Action("eventlist.move_down", "Move Event Down (Same Tick)", .moveEventDown),
         Action("roll.split", "Split Notes", .split),
         Action("roll.join", "Join Notes", .join),
         Action("roll.lengthen_note", "Lengthen Notes", .lengthenNote),
@@ -195,16 +197,33 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     public func routeEditorKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
+        routeEditorKey(key: key, modifiers: modifiers, autoRepeat: autoRepeat, eventList: false)
+    }
+
+    public func routeEventListKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
+        routeEditorKey(key: key, modifiers: modifiers, autoRepeat: autoRepeat, eventList: true)
+    }
+
+    private func routeEditorKey(key: Int, modifiers: Int, autoRepeat: Bool,
+                                eventList: Bool) -> Bool {
         guard sceneActive, session.songOpen else { return false }
-        if key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() { return true }
+        if !eventList && key == 0x0100_0000 && !autoRepeat && session.handleGridEscape() {
+            return true
+        }
         for action in Self.actions {
             guard let command = action.command,
                   keybindings.scope(action.id) == .editorRouted,
                   keybindings.matches(key, modifiers, action.id) else { continue }
-            let decision = session.routeGridKey(command: command.rawValue, autoRepeat: autoRepeat)
+            let decision = eventList
+                ? session.routeEventListCommand(command: command.rawValue, autoRepeat: autoRepeat)
+                : session.routeGridKey(command: command.rawValue, autoRepeat: autoRepeat)
             if decision == EditKeyDecision.decline.rawValue { return false }
             if decision == EditKeyDecision.execute.rawValue {
-                session.performGridCommand(command: command.rawValue)
+                if eventList {
+                    session.performEventListCommand(command: command.rawValue)
+                } else {
+                    session.performGridCommand(command: command.rawValue)
+                }
             }
             return true
         }

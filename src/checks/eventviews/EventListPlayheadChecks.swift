@@ -132,6 +132,7 @@ internal func runEventListPlayheadChecks(_ report: CheckReport, session suite: D
     followScroll(report, suite: suite, service: service)
     eventListRowsAndEditContract(report)
     eventListRemapAnchorAndProjection(report, suite: suite, service: service)
+    runEventListPageChecks(report, session: suite, service: service)
 }
 
 @MainActor

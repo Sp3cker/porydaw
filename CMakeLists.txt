@@ -238,6 +238,9 @@ qt_add_resources(porydaw_app "drawer_shared_qml"
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
+        src/ui/songview/quick/EventListPage.qml
+        src/ui/songview/quick/TimelineScrollbar.qml
+        src/ui/songview/quick/RulerToolTip.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/HoverHint.qml
         src/ui/songview/quick/HintProfiles.qml

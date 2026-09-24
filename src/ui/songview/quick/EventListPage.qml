@@ -1,7 +1,7 @@
 import QtQuick
-import Porydaw.Ui
+import Qt.labs.qmlmodels
 
-Item {
+FocusScope {
     id: page
 
     anchors.fill: parent
@@ -10,11 +10,12 @@ Item {
     // The controller owns document state, selection semantics, editing commits,
     // menus, and legal reorder bounds. This renderer owns only the rendered
     // table's local focus, pointer, and scroll geometry.
-    readonly property var controller: eventListController
+    required property QtObject presenter
+    readonly property QtObject controller: presenter
     readonly property var appearance: controller ? controller.appearance : ({})
     readonly property var headerLabels: controller ? controller.headerLabels : []
-    // This makes selectedRowsChanged invalidate bindings; membership stays O(1).
-    readonly property var selectedRows: controller ? controller.selectedRows : []
+    // Revision invalidates membership bindings without copying selection into QML.
+    readonly property int selectionRevision: controller ? controller.selectionRevision : 0
 
 
     readonly property int columnCount: 7
@@ -24,7 +25,7 @@ Item {
     property int currentColumn: 0
     // Bound by TimelineCanvas to its sibling TimelineInputItem.activeFocus.
     // Window-wide shortcuts must only operate while that input owns navigation.
-    property bool navigationInputActive: false
+    property bool navigationInputActive: activeFocus
 
     readonly property int editingRow: controller ? controller.editingRow : -1
     readonly property int editingColumn: controller ? controller.editingColumn : -1
@@ -38,7 +39,9 @@ Item {
                                              && !editing && !controller.menuOpen
 
     readonly property font bodyFont: appearanceValue("bodyFont", controlFont)
-    readonly property font tableFont: appearanceValue("tableFont", bodyFont)
+    readonly property font tableFont: appearanceValue("tableFont", Qt.font({
+        family: "monospace", pixelSize: bodyFont.pixelSize
+    }))
     readonly property font headerFont: appearanceValue("headerFont", bodyFont)
     readonly property font controlFont: appearanceValue("controlFont", Qt.application.font)
 
@@ -91,6 +94,11 @@ Item {
                                                        + 2 * headerHorizontalPadding)
 
     signal navigationFocusRequested()
+    onNavigationFocusRequested: forceActiveFocus(Qt.OtherFocusReason)
+    Component.onCompleted: {
+        controller.setVisible(visible)
+        publishTableRows()
+    }
 
     FontMetrics {
         id: tableMetrics
@@ -117,14 +125,14 @@ Item {
     }
 
     function rowIsSelected(row) {
-        const selectionRevision = selectedRows
+        const revision = selectionRevision
         return controller && controller.isSelected(row)
     }
 
     function persistedColumnWidth(column) {
-        const widths = controller ? controller.columnWidths : []
-        const candidate = widths && column < widths.length ? Number(widths[column])
-                                                           : defaultColumnWidths[column]
+        const revision = controller ? controller.columnWidthsRevision : 0
+        const candidate = controller ? Number(controller.savedColumnWidth(column))
+                                     : defaultColumnWidths[column]
         return Math.max(minimumColumnWidth(column), candidate)
     }
 
@@ -170,7 +178,8 @@ Item {
 
         currentColumn = cell.column
         if (cell.column === 1) {
-            controller.openTypeMenu(cell.mapToItem(null, cell.width / 2, cell.height))
+            const position = cell.mapToItem(page, cell.width / 2, cell.height)
+            controller.openTypeMenu(position.x, position.y)
             return
         }
 
@@ -591,7 +600,8 @@ Item {
 
                 if (mouse.button === Qt.RightButton) {
                     page.controller.focusRow(cell.row)
-                    page.controller.openRowMenu(cell.mapToItem(null, mouse.x, mouse.y))
+                    const position = cell.mapToItem(page, mouse.x, mouse.y)
+                    page.controller.openRowMenu(position.x, position.y)
                 } else if (moved) {
                     if (gap >= 0)
                         page.controller.commitDrop(cell.row, gap)
@@ -677,7 +687,10 @@ Item {
             toolTip: qsTr("The MIDI file chunk shown (follows the selected track)")
             showArrow: true
             enabled: page.controller && page.controller.visible
-            onTriggered: page.controller.openChunkMenu(mapToItem(null, width / 2, height))
+            onTriggered: {
+                const position = mapToItem(page, width / 2, height)
+                page.controller.openChunkMenu(position.x, position.y)
+            }
         }
 
         ToolbarButton {
@@ -691,7 +704,10 @@ Item {
             toolTip: qsTr("Which event types are shown")
             showArrow: true
             enabled: page.controller && page.controller.visible
-            onTriggered: page.controller.openFilterMenu(mapToItem(null, width / 2, height))
+            onTriggered: {
+                const position = mapToItem(page, width / 2, height)
+                page.controller.openFilterMenu(position.x, position.y)
+            }
         }
 
         ToolbarButton {
@@ -958,7 +974,16 @@ Item {
             anchors.rightMargin: page.scrollbarBreadth
             height: Math.max(0, parent.height - page.scrollbarBreadth)
             clip: true
-            model: page.controller ? page.controller.model : null
+            model: TableModel {
+                id: tableRows
+                TableModelColumn { display: "c0" }
+                TableModelColumn { display: "c1" }
+                TableModelColumn { display: "c2" }
+                TableModelColumn { display: "c3" }
+                TableModelColumn { display: "c4" }
+                TableModelColumn { display: "c5" }
+                TableModelColumn { display: "c6" }
+            }
             reuseItems: !page.editing
             interactive: !page.draggingRows
             boundsBehavior: Flickable.StopAtBounds
@@ -972,7 +997,15 @@ Item {
             rowHeightProvider: function(row) {
                 return page.rowHeight
             }
-            delegate: EventCell {}
+            delegate: EventCell {
+                display: page.controller.cellDisplay(row, column)
+                edit: page.controller.cellEdit(row, column)
+                tickString: page.controller.tickString(row)
+                cellFont: column === 0 || (column >= 2 && column <= 4)
+                          ? page.tableFont : page.bodyFont
+                alignment: page.controller.headerAlignment(column)
+                rowKind: page.controller.rowKind(row)
+            }
 
             onWidthChanged: page.requestTableLayout()
         }
@@ -1162,6 +1195,11 @@ Item {
         onActivated: page.controller.selectAll()
     }
     Shortcut {
+        sequence: "Delete"
+        enabled: page.navigationEnabled
+        onActivated: page.controller.deleteSelected()
+    }
+    Shortcut {
         sequence: "F2"
         enabled: page.navigationEnabled
         onActivated: page.editCurrentCell()
@@ -1175,6 +1213,78 @@ Item {
         sequence: "Enter"
         enabled: page.navigationEnabled
         onActivated: page.editCurrentCell()
+    }
+
+    // QListModel is one-dimensional; the existing TableView remains the
+    // seven-column renderer while Swift owns the cell values and row policy.
+    function publishTableRows() {
+        tableRows.clear()
+        for (let row = 0; row < controller.rowCount; ++row)
+            tableRows.appendRow({c0: row, c1: row, c2: row, c3: row,
+                                 c4: row, c5: row, c6: row})
+    }
+
+    Connections {
+        target: page.controller
+        function onTableRevisionChanged() { page.publishTableRows() }
+    }
+
+    Loader {
+        anchors.fill: parent
+        z: 10
+        active: page.controller.menuOpen
+        sourceComponent: Component {
+            Item {
+                focus: true
+                Keys.onEscapePressed: (event) => {
+                    page.controller.dismissMenu()
+                    event.accepted = true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: page.controller.dismissMenu()
+                }
+                QuickMenuPanel {
+                    anchors.fill: parent
+                    host: page
+                    rootLevel: true
+                    menuModel: page.controller.menuItems
+                    rowObjectNamePrefix: "eventListMenuRow_"
+                    appearance: ({
+                        background: page.buttonBackground,
+                        outline: page.buttonOutline,
+                        text: page.buttonText,
+                        hoverBackground: page.buttonHoverBackground,
+                        hoverText: page.buttonText,
+                        disabledText: page.tableSecondaryText,
+                        font: page.controlFont
+                    })
+                    rowHeight: page.rowHeight
+                    checkX: page.cellHorizontalPadding / 2
+                    checkWidth: page.cellHorizontalPadding
+                    textX: page.cellHorizontalPadding * 2
+                    textRight: menuWidth - page.cellHorizontalPadding
+                    menuWidth: Math.min(parent.width, headerMetrics.advanceWidth(
+                                            qsTr("Channel aftertouch")) * 2)
+                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    menuOrigin: Qt.point(
+                        Math.max(0, Math.min(page.controller.menuX, width - menuWidth)),
+                        Math.max(0, Math.min(page.controller.menuY, height - menuHeight)))
+                }
+                Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
+            }
+        }
+    }
+
+    function hoverRow(panel, row) { panel.highlightedRow = row }
+    function activateRow(panel, row) {
+        const item = panel.rowItem(row)
+        if (item && item.active)
+            controller.activateMenuAction(item.itemData.actionId)
+    }
+    onVisibleChanged: {
+        if (controller)
+            controller.setVisible(visible)
     }
 
     Connections {

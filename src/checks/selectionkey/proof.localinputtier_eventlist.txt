@@ -215,11 +215,8 @@ Original expression:
   QCOMPARE(controller->currentRow(), 0)
 
 A008 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the Select-All row coverage below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift asserts Select All selects every visible row; live keyboard shortcut delivery and check execution remain unproved.
 Source context since previous assertion:
   ;
 
@@ -275,11 +272,8 @@ Original expression:
                "the event-list input did not reacquire native Quick-window focus")
 
 A012 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:121
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the adjacent-row swap below is pure page state a presenter-level
-Swift check could in principle assert, but none does. Original predicate and
-setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift asserts adjacent same-tick raw rows swap; its drag path does not establish the original Alt+Up key delivery or execution.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({unrelatedNote.noteId});
@@ -459,11 +453,8 @@ Original expression:
                "the event-list input did not acquire native Quick-window focus for Delete")
 
 A023 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:198
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the two-victim staging selection below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift selects and asserts exactly two raw-event victims by Ctrl-click semantics; live pointer delivery and execution remain unproved.
 Source context since previous assertion:
   ;
       controller->selectRow(victimRows.front(), Qt::NoModifier);
@@ -475,11 +466,8 @@ Original expression:
                "the two victim rows were not both selected")
 
 A024 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:207
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the post-Delete row count below is pure page state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift asserts two rows disappear after event-list Delete; native key delivery and check execution remain unproved.
 Source context since previous assertion:
   ;
       view.selectionModel().setNoteSelection({protectedNote->id});
@@ -492,11 +480,8 @@ Original expression:
   QCOMPARE(model->rowCount(), rowsBeforeDelete - 2)
 
 A025 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:208
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the post-Delete event count below is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift asserts raw document event count decreases by exactly two; live key delivery and execution remain unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -520,11 +505,8 @@ Original expression:
   QCOMPARE(victimRowsRemaining, 0)
 
 A027 | SelectionLocalInputTierTest::eventListKeepsRowLocalKeys | src/checks/selectionkey/localinputtier_eventlist.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the protected-note survival below is pure document state a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: EventListPageChecks.swift asserts the unrelated selected note keeps its identity, tick, pitch, and duration after raw-row Delete; live key delivery and execution remain unproved.
 Source context since previous assertion:
   ;
       const std::optional<DocNote> survivor = selectionkey::noteById(document, protectedNote->id);
