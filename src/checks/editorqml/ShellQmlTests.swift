@@ -45,6 +45,8 @@ enum ShellQmlLane {
     private static let entries = [
         Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-typography", inputFileName: "tst_Typography.qml",
+              fixtureFiles: songs("mus_route101")),
     ]
 
     private static var manifestLine: String {

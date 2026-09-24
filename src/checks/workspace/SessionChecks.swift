@@ -13,6 +13,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     }
     runEditorCameraChecks(report)
     runEditorDrawerChecks(report)
+    runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {

@@ -17,16 +17,20 @@ MATCHED means a corresponding Swift predicate was identified and would execute;
 PARTIAL means a related Swift predicate exists with a stated unproved condition;
 GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. No Swift counterpart file covering
-this harness or its suites was identified, so no MATCHED or PARTIAL disposition
-is claimed anywhere in this file.
+presenter-level Swift check cannot establish. The three init sites below are
+native-only harness preconditions with no Swift counterpart; the value
+contracts of the suites they launch are covered by the Swift/QML predicates
+inventoried in proof.tst_themelayout_font.txt and
+proof.tst_themelayout_scale.txt.
 
 Verification
-Command: deno task verify --filter themecheck --verbose
 Command: deno task verify --filter fontcheck --verbose
-Command: deno task verify --filter darkbasecheck --verbose
-Command: deno task verify --filter editor-layout-12 --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Command: deno task verify:shell --filter shell-typography --verbose
+Result: fontcheck PASS (0.13s), swiftcore PASS (20.87s) and shell-typography
+PASS (0.88s) on the current worktree; the themecheck/darkbasecheck/editor-layout
+lanes still execute until Main deletes them; source hashes pin the tree
+inspected here.
 The editor-layout-16 and editor-layout-18 lanes execute the same file with
 different base font sizes.
 
@@ -38,9 +42,11 @@ editor-layout-{12,16,18} lanes. ThemeLayoutTest::init,
 ThemeLayoutFontTest::init, and ThemeLayoutDarkBaseTest::init save the
 application font, palette, and stylesheet after applying the vanilla theme (or,
 for the dark-base suite, after the poison palette plus application init); the
-matching cleanup() methods restore them. No Swift entry point executes any of
-this. The suite declarations live in src/checks/themelayout/tst_themelayout.h;
-no shared Swift fixture file exists.
+matching cleanup() methods restore them. Value counterparts for the font and
+scale suites now execute in Swift (TypographyLayoutChecks.swift) and the
+shell-typography QML entry; these three init sites remain native-only until
+Main deletes the harness. The suite declarations live in
+src/checks/themelayout/tst_themelayout.h; no shared Swift fixture file exists.
 
 Fixture, sequence and row constraints
 Each init() site executes before every test method of its suite, so A001 fans
@@ -57,7 +63,10 @@ A001 | ThemeLayoutTest::init | src/checks/themelayout/themelayoutcheck.cpp:44
 Disposition: NATIVE
 Mapping/reason: Native harness precondition: the shared QApplication instance
 must exist before the vanilla theme apply and the font/palette/stylesheet
-save. No Swift counterpart establishes the native application object.
+save. No QWidget/QApplication layer exists in the Swift shell, whose owners
+need no application object. Value behavior at the lane base is covered by the
+font/scale suites (proof.tst_themelayout_font.txt S001-S035,
+proof.tst_themelayout_scale.txt S001-S005).
 Source context since previous assertion:
   #include "checks/themelayout/tst_themelayout.h"
 
@@ -109,7 +118,10 @@ A002 | ThemeLayoutFontTest::init | src/checks/themelayout/themelayoutcheck.cpp:6
 Disposition: NATIVE
 Mapping/reason: Native harness precondition for the fontcheck lane, same
 obligation as A001: the shared QApplication instance must exist before the
-vanilla theme apply and the font/palette/stylesheet save.
+vanilla theme apply and the font/palette/stylesheet save. No
+QWidget/QApplication layer exists in the Swift shell; no Swift counterpart
+establishes the native application object. Value behavior is covered by the
+font suite (proof.tst_themelayout_font.txt S001-S035).
 Source context since previous assertion:
   ;
       themes::apply(*m_application, themes::vanilla());
@@ -142,7 +154,9 @@ A003 | ThemeLayoutDarkBaseTest::init | src/checks/themelayout/themelayoutcheck.c
 Disposition: NATIVE
 Mapping/reason: Native harness precondition for the darkbasecheck lane: the
 shared QApplication instance must exist before the font/palette/stylesheet
-save (the poison palette is applied by the lane runner before init).
+save (the poison palette is applied by the lane runner before init). No
+QWidget/QApplication layer exists in the Swift shell; no Swift counterpart
+establishes the native application object.
 Source context since previous assertion:
   ;
       themes::apply(*m_application, themes::vanilla());

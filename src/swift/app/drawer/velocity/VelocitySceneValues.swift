@@ -97,7 +97,7 @@ enum VelocityScene {
             return ["family": "Atkinson Hyperlegible Next",
                     "pixelSize": Int(baseFontPx),
                     "weight": emphasized ? 600 : 400,
-                    "letterSpacing": 0.0]
+                    "letterSpacing": 0.0, "features": ["tnum": 1]]
         }
         return typography.fontMap(emphasized ? .bold : .keyLabel)
     }

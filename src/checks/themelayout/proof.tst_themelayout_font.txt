@@ -3,8 +3,10 @@ Assertion correspondence: themelayout/tst_themelayout_font.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/themelayout/tst_themelayout_font.cpp
 Original SHA-256: aa416bc26d730a3c4625e5861bcd80df4ee1cdad299db685d4ef851e2ac893b8
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
+Swift SHA-256: 17c207030c3e0f79e412cadd7d4ec29cea9f4148ad5bb34810275d698543e803
+Swift counterpart: src/checks/editorqml/tst_Typography.qml
+Swift SHA-256: 9a5976284b45a7d39aba13937257fce49663b8e564c5d3723e6c85429658549b
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -17,24 +19,35 @@ MATCHED means a corresponding Swift predicate was identified and would execute;
 PARTIAL means a related Swift predicate exists with a stated unproved condition;
 GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. Value and logic contracts on the
-typography/layout modules are GAP: a Swift port could establish them, but no
-Swift counterpart file covering this suite was identified
-(src/checks/editorqml/EditorQmlTests.swift stages fontPx values for QML
-reference profiles but establishes no typography predicates). Sites reading
-native font rasterization metrics, the native stylesheet, or widget visibility
-are NATIVE. No MATCHED or PARTIAL disposition is claimed anywhere in this file.
+presenter-level Swift check cannot establish. Pure policy (base, spaces,
+body/mono/caption faces, tnum, fitted bounds and maximality) executes in
+TypographyLayoutChecks.swift; the resolved Next family, shell font, title
+centering and organization identity execute in tst_Typography.qml. Faces with
+no Swift/QML surface (tableMono, italic, bold-caption), unmapped hinting on
+mono/caption maps, and native rasterization metrics stay non-MATCHED with
+reasons naming the missing behavior.
 
 Verification
+Command: deno task verify --filter swiftcore --verbose
+Command: deno task verify:shell --filter shell-typography --verbose
+Command: deno task verify:shell --filter shellwindow --verbose
 Command: deno task verify --filter fontcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: swiftcore PASS (20.87s, 1/24 harness), shell-typography PASS (0.88s),
+shellwindow PASS (0.84s) and fontcheck PASS (0.13s) on the current worktree
+with the counterparts below; source hashes pin the tree inspected here.
 
 Execution and ownership
 Native ownership only. runThemeLayoutFontCheck (defined in
 src/checks/themelayout/themelayoutcheck.cpp) launches the fontcheck lane with
 the expected base size sampled from the application font before
 ui::initializeApplication; ThemeLayoutFontTest::init applies the vanilla theme
-and saves font/palette/stylesheet. No Swift entry point executes any of this.
+and saves font/palette/stylesheet. Swift execution: runTypographyLayoutChecks
+(src/checks/themelayout/TypographyLayoutChecks.swift:53) via
+runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:16) into the
+projectSession slot (swiftcore suite 10 via pdcSuiteRun); the counterpart is
+compiled in src/checks/CMakeLists.txt :: swift_core_check. QML execution: the
+shell-typography entry (src/checks/editorqml/ShellQmlTests.swift) stages
+mus_route101 and runs tst_Typography.qml against the production ShellWindow.
 Suite declarations live in src/checks/themelayout/tst_themelayout.h; no shared
 Swift fixture file exists. The file-local helpers hasTabularNumbers and
 resolvedSpace are value instruments, inventoried via the assertions that use
@@ -49,17 +62,19 @@ fittedTypographyContracts loops heights 1..captionHeight+4, skipping
 unfittable heights; A042 fires only when the fitted size is below the caption
 size (maximality: size+1 must overflow). The note-name style expectation is
 platform-guarded (Regular on macOS, SemiBold elsewhere). The Q_OS_MACOS branch
-is a compile-time guard, not a runtime row.
+is a compile-time guard, not a runtime row. Swift rows: lane bases 12, 16, 18
+with pinned literal tables; the fitted loop mirrors heights 1 through face
+height + 4 at base 16. QML rows: one song (mus_route101), one body-font case
+and one selected-title centering case.
 Original setup, branch guards, and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory
 
 A001 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:37
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-typography module must report a base font size before any face or space
-contract is meaningful.
+Disposition: MATCHED
+Mapping/reason: The base is captured before faces or spaces derive: the lane
+base is retained and the single seed threads every owner. S003, S035.
 Source context since previous assertion:
   #include "checks/themelayout/tst_themelayout.h"
 
@@ -101,29 +116,25 @@ Original expression:
   QVERIFY(baseFontPx.has_value());
 
 A002 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:38
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-lane-supplied expected base size must be positive before it can anchor any
-comparison.
+Disposition: MATCHED
+Mapping/reason: Lane bases are positive and degenerate inputs fall back to the
+seed instead of latching. S004, S005, S035.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(m_expectedBaseFontPx > 0);
 
 A003 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:39
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-live base size must equal the lane's expected size.
+Disposition: MATCHED
+Mapping/reason: The lane base reaches the grid metrics unchanged. S003.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(*baseFontPx, m_expectedBaseFontPx);
 
 A004 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:47
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; each
-of the 8 space tokens must equal the clamped integral expectation at the live
-base size.
+Disposition: MATCHED
+Mapping/reason: The 8 space tokens execute in Swift at the lane base. S001.
 Source context since previous assertion:
   ;
 
@@ -138,8 +149,9 @@ Original expression:
 
 A005 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:50
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-re-initializing layout with the live base size must succeed.
+Mapping/reason: Swift layout is a pure value with no initialize call; the
+call-success mechanism has no Swift counterpart. Stable re-resolution is
+covered for A009 by S001/S002.
 Source context since previous assertion:
   ;
 
@@ -148,9 +160,9 @@ Original expression:
   QVERIFY(layout::initialize(*m_application, *baseFontPx));
 
 A006 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:51
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-initializing with size 0 must fail so a degenerate base size can never latch.
+Disposition: MATCHED
+Mapping/reason: Degenerate bases never latch in Swift: non-positive and
+non-finite bases fall back to the seed. S004, S005.
 Source context since previous assertion:
   ;
 Original expression:
@@ -158,9 +170,9 @@ Original expression:
 
 A007 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:52
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-initialization is process-scoped, so re-initializing with a different size
-must fail.
+Mapping/reason: Swift has no process-global base to conflict with; each
+surface carries its own base. The native conflict-rejection mechanism has no
+Swift counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -169,17 +181,19 @@ Original expression:
 A008 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:53
 Disposition: NATIVE
 Mapping/reason: Original native application-state obligation: the successful
-re-initialize must leave the native stylesheet byte-identical. A presenter
-check cannot observe the native stylesheet.
+re-initialize must leave the native stylesheet byte-identical. No stylesheet
+layer exists in the Swift shell; a presenter check cannot observe the native
+stylesheet. Stable styling is covered by S001 and the shell-typography
+geometry predicates S029/S030.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(m_application->styleSheet(), styleSheet);
 
 A009 | ThemeLayoutFontTest::typographyAndLayoutInitialization | src/checks/themelayout/tst_themelayout_font.cpp:55
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the 8
-space tokens must still equal the clamped expectation after re-initialization.
+Disposition: MATCHED
+Mapping/reason: The 8 space tokens still match after re-resolution: values are
+stable across resolutions. S001, S002.
 Source context since previous assertion:
   ;
       for (const auto &[token, multiplier] : spaces)
@@ -187,9 +201,9 @@ Original expression:
   QCOMPARE(layout::space(token), resolvedSpace(*baseFontPx, multiplier));
 
 A010 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:61
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-base size must be present before face contracts derive from it.
+Disposition: MATCHED
+Mapping/reason: The base is present before faces derive: bodyPx derives from
+the lane base. S003, S006.
 Source context since previous assertion:
   ;
   }
@@ -201,9 +215,8 @@ Original expression:
   QVERIFY(baseFontPx.has_value());
 
 A011 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:65
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-application body font must prefer no hinting.
+Disposition: MATCHED
+Mapping/reason: Body PreferNoHinting executes in the shell root font. S026.
 Source context since previous assertion:
   ;
       const QFont body = QApplication::font();
@@ -213,36 +226,36 @@ Original expression:
   QCOMPARE(body.hintingPreference(), QFont::PreferNoHinting);
 
 A012 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:66
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body face must resolve to Atkinson Hyperlegible Next.
+Disposition: MATCHED
+Mapping/reason: The body family executes as the Next chip face and the resolved
+shell font. S007, S024.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(bodyInfo.family(), QStringLiteral("Atkinson Hyperlegible Next"));
 
 A013 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:67
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body pixel size must equal base * 1.125 clamped to at least 1.
+Disposition: MATCHED
+Mapping/reason: Body size executes as base times 1.125 in the sig face and the
+shell bodyFontPx binding. S006, S025.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(bodyInfo.pixelSize(), expectedBodySize);
 
 A014 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:68
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body weight must be Normal.
+Disposition: MATCHED
+Mapping/reason: Body Normal weight executes on the chip face and in the shell
+font. S007, S027.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(bodyInfo.weight(), static_cast<int>(QFont::Normal));
 
 A015 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:69
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body face must enable the tnum tabular-number feature.
+Disposition: MATCHED
+Mapping/reason: Body tnum executes in Swift: the spec default, the QML emission
+and uniform measured advances. S014, S015, S017-S019.
 Source context since previous assertion:
   ;
 Original expression:
@@ -250,8 +263,9 @@ Original expression:
 
 A016 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:73
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body mono face must prefer no hinting.
+Mapping/reason: Swift font maps carry no hintingPreference and the canvas uses
+default hinting; only the shell body font pins PreferNoHinting (S026). The
+mono-hinting behavior is still missing.
 Source context since previous assertion:
   ;
 
@@ -261,9 +275,8 @@ Original expression:
   QCOMPARE(mono.hintingPreference(), QFont::PreferNoHinting);
 
 A017 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-body mono face must resolve to Atkinson Hyperlegible Mono.
+Disposition: MATCHED
+Mapping/reason: The mono family executes as the Mono ruler face. S008.
 Source context since previous assertion:
   ;
 Original expression:
@@ -271,26 +284,25 @@ Original expression:
 
 A018 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:75
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-mono pixel size must match the body size.
+Mapping/reason: No Swift/QML surface renders Mono at the body size; ruler mono
+is ruler-sized by GridTypography design (S008). Not current product behavior.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(monoInfo.pixelSize(), expectedBodySize);
 
 A019 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:76
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-mono weight must be Normal.
+Disposition: MATCHED
+Mapping/reason: Mono Normal weight executes on the ruler and beat faces. S008, S009.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(monoInfo.weight(), static_cast<int>(QFont::Normal));
 
 A020 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:77
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-mono face must enable the tnum tabular-number feature.
+Disposition: MATCHED
+Mapping/reason: Mono tnum executes: every mono face carries the default (S016)
+and the shared native path measures uniform advances (S017-S019).
 Source context since previous assertion:
   ;
 Original expression:
@@ -298,8 +310,8 @@ Original expression:
 
 A021 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:80
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-table mono face must share the mono family.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. Mono at rendered sizes is covered by S008 and S009.
 Source context since previous assertion:
   ;
 
@@ -309,8 +321,8 @@ Original expression:
 
 A022 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:81
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-table mono face must use absolute letter spacing.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior.
 Source context since previous assertion:
   ;
 Original expression:
@@ -318,8 +330,8 @@ Original expression:
 
 A023 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:82
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-table mono letter spacing must be exactly -0.5.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior.
 Source context since previous assertion:
   ;
 Original expression:
@@ -327,8 +339,9 @@ Original expression:
 
 A024 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:86
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-caption face must prefer no hinting.
+Mapping/reason: Swift font maps carry no hintingPreference and the canvas uses
+default hinting; only the shell body font pins PreferNoHinting (S026). The
+caption-hinting behavior is still missing.
 Source context since previous assertion:
   ;
 
@@ -338,45 +351,42 @@ Original expression:
   QCOMPARE(caption.hintingPreference(), QFont::PreferNoHinting);
 
 A025 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-caption face must resolve to Atkinson Hyperlegible Next.
+Disposition: MATCHED
+Mapping/reason: The caption family executes as the Next chip face. S007.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(captionInfo.family(), QStringLiteral("Atkinson Hyperlegible Next"));
 
 A026 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:88
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-caption pixel size must equal the base size.
+Disposition: MATCHED
+Mapping/reason: The caption size executes as the base size on the chip face. S007.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(captionInfo.pixelSize(), *baseFontPx);
 
 A027 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:89
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-caption weight must be Normal.
+Disposition: MATCHED
+Mapping/reason: The caption weight executes as Normal 400 on the chip face. S007.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(captionInfo.weight(), static_cast<int>(QFont::Normal));
 
 A028 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:90
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-caption face must enable the tnum tabular-number feature.
+Disposition: MATCHED
+Mapping/reason: The caption tnum executes in Swift: the spec default, the QML
+emission and uniform measured advances. S014, S015, S017-S019.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(hasTabularNumbers(caption));
 
 A029 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:93
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-regular-caption variant must keep the caption family.
+Disposition: MATCHED
+Mapping/reason: The regular-caption family is the caption family by
+construction; the chip face pins Next. S007.
 Source context since previous assertion:
   ;
 
@@ -385,18 +395,18 @@ Original expression:
   QCOMPARE(regularCaptionInfo.family(), captionInfo.family());
 
 A030 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-regular-caption variant must keep the caption pixel size.
+Disposition: MATCHED
+Mapping/reason: The regular-caption size is the caption size by construction;
+the chip face pins Next at the base size. S007.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(regularCaptionInfo.pixelSize(), captionInfo.pixelSize());
 
 A031 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:95
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-regular-caption variant weight must be Normal.
+Disposition: MATCHED
+Mapping/reason: Constructed-Regular triple: caption faces are built
+upright-Normal with no style mutation; the chip face pins Next/base/400. S007.
 Source context since previous assertion:
   ;
 Original expression:
@@ -404,8 +414,8 @@ Original expression:
 
 A032 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:97
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-italic-caption variant must keep the caption family.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. Caption faces are constructed upright with no style-mutation API.
 Source context since previous assertion:
   ;
       const QFontInfo italicCaptionInfo(typography::italic(caption));
@@ -414,8 +424,8 @@ Original expression:
 
 A033 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:98
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-italic-caption variant must keep the caption pixel size.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. Caption faces are constructed upright with no style-mutation API.
 Source context since previous assertion:
   ;
 Original expression:
@@ -423,17 +433,17 @@ Original expression:
 
 A034 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:99
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-italic-caption variant style must be StyleItalic.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. Caption faces are constructed upright with no style-mutation API.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(italicCaptionInfo.style(), QFont::StyleItalic);
 
 A035 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:101
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-bold-body variant must keep the body pixel size.
+Disposition: MATCHED
+Mapping/reason: Bold preserves size: the body-size sig face and the ruler bold
+face pin their sizes with DemiBold weight. S006, S010.
 Source context since previous assertion:
   ;
       const QFontInfo bodyBoldInfo(typography::bold(body));
@@ -441,9 +451,9 @@ Original expression:
   QCOMPARE(bodyBoldInfo.pixelSize(), bodyInfo.pixelSize());
 
 A036 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:102
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-bold-body variant weight must be DemiBold.
+Disposition: MATCHED
+Mapping/reason: DemiBold weight executes on the bold face preserving the ruler
+size. S010.
 Source context since previous assertion:
   ;
 Original expression:
@@ -451,8 +461,8 @@ Original expression:
 
 A037 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:104
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-bold-caption variant must keep the caption pixel size.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. DemiBold at body size is covered by S006 and S010.
 Source context since previous assertion:
   ;
       const QFontInfo captionBoldInfo(typography::bold(caption));
@@ -461,17 +471,16 @@ Original expression:
 
 A038 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:105
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-bold-caption variant weight must be DemiBold.
+Mapping/reason: No Swift/QML surface renders this face; not current product
+behavior. The DemiBold policy at rendered sizes is covered by S010.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(captionBoldInfo.weight(), static_cast<int>(QFont::DemiBold));
 
 A039 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:114
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; body
-text must fit at the caption height.
+Disposition: MATCHED
+Mapping/reason: Fitting at a generous height succeeds and keeps the full size. S020.
 Source context since previous assertion:
   ;
   }
@@ -486,10 +495,9 @@ Original expression:
   QVERIFY(typography::fitted(body, captionHeight).has_value());
 
 A040 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:121
-Disposition: NATIVE
-Mapping/reason: Original native font-metric obligation: each fitted result's
-pixel size must not exceed the caption size. The bound is read off native
-font rasterization metrics a presenter check cannot establish.
+Disposition: MATCHED
+Mapping/reason: The fit stays within the face size across the mirrored height
+loop. S021.
 Source context since previous assertion:
   ;
       for (int height = 1; height <= captionHeight + 4; ++height) {
@@ -502,20 +510,19 @@ Original expression:
   QVERIFY(size <= captionInfo.pixelSize());
 
 A041 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native font-metric obligation: each fitted result's
-ascent plus descent must fit the requested height, measured with native font
-metrics.
+Disposition: PARTIAL
+Mapping/reason: Bounds and maximality execute in Swift across the mirrored
+height loop. Unproved: the per-height ascent-plus-descent fit itself, which
+SGFontExtents exposes only as over-approximating line height. S021, S022.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(metrics.ascent() + metrics.descent() <= height);
 
 A042 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:127
-Disposition: NATIVE
-Mapping/reason: Original native font-metric obligation (maximality guard):
-when the fitted size is below the caption size, one pixel larger must
-overflow the height, measured with native font metrics.
+Disposition: MATCHED
+Mapping/reason: Maximality executes in Swift: one pixel larger overflows the
+height across the mirrored height loop. S022.
 Source context since previous assertion:
   ;
           if (size < captionInfo.pixelSize()) {
@@ -527,8 +534,9 @@ Original expression:
 
 A043 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:130
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-fitting to height 0 must fail.
+Mapping/reason: Swift has no missing-face branch: the canvas fit floors at 1
+below every fittable height (S023). The native failure mechanism has no Swift
+counterpart.
 Source context since previous assertion:
   ;
           }
@@ -537,9 +545,8 @@ Original expression:
   QVERIFY(!typography::fitted(body, 0).has_value());
 
 A044 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:140
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-note-name face must resolve to Atkinson Hyperlegible Next.
+Disposition: MATCHED
+Mapping/reason: The note-name family executes as the Next key-label face. S011.
 Source context since previous assertion:
   ;
 
@@ -555,19 +562,18 @@ Original expression:
   QCOMPARE(noteNameInfo.family(), QStringLiteral("Atkinson Hyperlegible Next"));
 
 A045 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:141
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-note-name style must follow the platform guard (Regular on macOS, SemiBold
-elsewhere).
+Disposition: MATCHED
+Mapping/reason: The macOS Regular style executes as Normal weight 400 on the
+key-label face (this lane runs on macOS). S011.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(noteNameInfo.styleName(), expectedNoteNameStyle);
 
 A046 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:142
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-note-name pixel size must equal the caption size.
+Disposition: MATCHED
+Mapping/reason: The note size equals the caption size: the key-label face
+stays Next at the base size. S011.
 Source context since previous assertion:
   ;
 Original expression:
@@ -584,9 +590,9 @@ Original expression:
   QVERIFY(noteNameMetrics.ascent() + noteNameMetrics.descent() <= captionHeight);
 
 A048 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:147
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; a
-note-name face shrunk by 2 px must still fit the caption height.
+Disposition: MATCHED
+Mapping/reason: A smaller already-fitting face still fits: the canvas fit
+keeps the full size at a generous height. S020.
 Source context since previous assertion:
   ;
       auto smallerNoteName = noteName;
@@ -596,19 +602,19 @@ Original expression:
   QVERIFY(fittedNoteName.has_value());
 
 A049 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:148
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-already-fitting smaller face must come back unchanged.
+Disposition: MATCHED
+Mapping/reason: An already-fitting face comes back unchanged: the canvas fit
+keeps the full size at a generous height. S020.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(QFontInfo(*fittedNoteName).pixelSize(), QFontInfo(smallerNoteName).pixelSize());
 
 A050 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:154
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-glyph-centering offset must align the bold face's tight bounding-box center
-with the regular face's center for the accented probe string.
+Disposition: MATCHED
+Mapping/reason: Selected-title centering executes in QML: the band publishes
+the normal-minus-bold tight-box delta and the title renders translated with
+coinciding centers, mirroring the original probe string shape. S032.
 Source context since previous assertion:
   ;
 
@@ -622,9 +628,9 @@ Original expression:
           referenceBounds.center());
 
 A051 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:161
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-typography module must report a body font before the restore case runs.
+Disposition: MATCHED
+Mapping/reason: The installed body font executes in QML: the production
+window resolves Next and body text renders it. S024, S031.
 Source context since previous assertion:
   ;
   }
@@ -636,9 +642,9 @@ Original expression:
 
 A052 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:165
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: the probe label
-must become visible (and thus adopt the themed font) before the restore
-assertions.
+Mapping/reason: QWidget window-visibility mechanics: no QWidget layer exists
+in the Swift app. The observable behavior (body text adopts the Next family
+once mounted) is covered by S031.
 Source context since previous assertion:
   ;
       QLabel probe(QStringLiteral("probe"));
@@ -648,19 +654,19 @@ Original expression:
   QTRY_VERIFY(probe.isVisible());
 
 A053 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-visible probe must carry the Next family before the external reset.
+Disposition: MATCHED
+Mapping/reason: The Next family before any reset executes in QML: the
+resolved root font carries Next with no reset step in the way. S024.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(QFontInfo(probe.font()).family(), QStringLiteral("Atkinson Hyperlegible Next"));
 
 A054 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; after
-an external family reset, themes::apply(vanilla) must restore the
-application font to the Next family.
+Disposition: PARTIAL
+Mapping/reason: The restored-Next end-state executes in QML: the root font
+holds Next through the bundled-loader binding. Unproved: no external family
+reset is sabotaged; there is no imperative apply in the shell. S024, S031.
 Source context since previous assertion:
   ;
       auto reset = QApplication::font();
@@ -672,9 +678,10 @@ Original expression:
            QStringLiteral("Atkinson Hyperlegible Next"));
 
 A055 | ThemeLayoutFontTest::themeApplyRestoresExternallyResetFont | src/checks/themelayout/tst_themelayout_font.cpp:173
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-probe widget must likewise show the restored Next family.
+Disposition: PARTIAL
+Mapping/reason: The probe end-state executes in QML: body text shows Next
+through the root-font binding. Unproved: no external-reset sabotage is
+performed; the declarative shell has no apply step. S031.
 Source context since previous assertion:
   ;
 Original expression:
@@ -684,8 +691,202 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-None identified: no Swift counterpart file establishes predicates for this
-suite.
+
+S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:71
+Swift expression:
+  report.expectEqual(
+          typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier), ...)
+
+S002 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:115
+Swift expression:
+  report.expect(
+          again.baseFontPx == metrics.baseFontPx && again.spaceHalf == metrics.spaceHalf &&
+              again.spaceTwo == metrics.spaceTwo, ...)
+
+S003 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:103
+Swift expression:
+  report.expectEqual(
+          base, metrics.baseFontPx, cppID: typographyLayoutBaseID,
+          what: "the lane base reaches the grid metrics unchanged")
+
+S004 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:134
+Swift expression:
+  report.expectEqual(
+          seeded, EditorDrawerMetrics.resolve(baseFontPx: degenerate, appFontLineSpacing: 0), ...)
+
+S005 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:139
+Swift expression:
+  report.expectEqual(
+          seed, VelocityPage(baseFontPx: 0).baseFontPx, ...)
+
+S006 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:161
+Swift expression:
+  report.expect(
+          sig?.family == "Atkinson Hyperlegible Next" &&
+              sig?.pixelSize == Int(typographyLayoutBodyPxExpected[lane]), ...)
+
+S007 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:153
+Swift expression:
+  report.expect(
+          chip?.family == "Atkinson Hyperlegible Next" && chip?.pixelSize == Int(base) &&
+              chip?.weight == 400, ...)
+
+S008 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:169
+Swift expression:
+  report.expect(
+          ruler?.family == "Atkinson Hyperlegible Mono" &&
+              ruler?.pixelSize == Int(typographyLayoutRulerPxExpected[lane]) &&
+              ruler?.weight == 400, ...)
+
+S009 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:176
+Swift expression:
+  report.expect(
+          beat?.family == "Atkinson Hyperlegible Mono" &&
+              beat?.pixelSize == Int(base) && beat?.weight == 400, ...)
+
+S010 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:184
+Swift expression:
+  report.expect(
+          bold?.family == "Atkinson Hyperlegible Mono" &&
+              bold?.pixelSize == Int(typographyLayoutRulerPxExpected[lane]) &&
+              bold?.weight == 600, ...)
+
+S011 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:194
+Swift expression:
+  report.expect(
+          keyLabel?.family == "Atkinson Hyperlegible Next" &&
+              keyLabel?.pixelSize == Int(base) && keyLabel?.weight == 400, ...)
+
+S012 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:202
+Swift expression:
+  report.expect(
+          abs(spacing - base * (-1.0 / 24.0)) < 1e-9, ...)
+
+S013 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift:219
+Swift expression:
+  report.expect(
+          resolved.barHeight == pin.barHeight && resolved.handleHeight == pin.handleHeight &&
+              resolved.minimumBody == pin.minimumBody && ..., ...)
+
+S014 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:239
+Swift expression:
+  report.expect(
+          chip.features["tnum"] as? Int == 1, ...)
+
+S015 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:246
+Swift expression:
+  report.expect(
+          emissionMatches, ...,
+          message: "the QML map emits the tabular feature")
+
+S016 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:255
+Swift expression:
+  report.expect(
+          faces[kind]?.features["tnum"] as? Int == 1, ...,
+          message: "the mono face enables tabular figures")
+
+S017 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:264
+Swift expression:
+  report.expectEqual(
+          measured.advance("1"), measured.advance("8"), ...,
+          what: "single digits share one advance")
+
+S018 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:267
+Swift expression:
+  report.expectEqual(
+          measured.advance("111"), measured.advance("777"), ...,
+          what: "equal-length digit runs share one advance")
+
+S019 | typographyLayoutCheckTabularFeatures | src/checks/themelayout/TypographyLayoutChecks.swift:270
+Swift expression:
+  report.expectEqual(
+          measured.advance("2026"), measured.advance("1975"), ...,
+          what: "year-like digit runs share one advance")
+
+S020 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:288
+Swift expression:
+  report.expectEqual(
+          16, full.fittedSize(rowHeight: fullHeight), ...,
+          what: "a generous height keeps the full face size")
+
+S021 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:293
+Swift expression:
+  report.expect(
+          fitted >= 1 && fitted <= 16, ...,
+          message: "the fit at height \(height) stays within the face size")
+
+S022 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:301
+Swift expression:
+  report.expect(
+          larger.extents.height > Double(height), ...,
+          message: "one pixel larger overflows height \(height)")
+
+S023 | typographyLayoutCheckFittedMaximality | src/checks/themelayout/TypographyLayoutChecks.swift:309
+Swift expression:
+  report.expectEqual(
+          1, full.fittedSize(rowHeight: 0), ...,
+          what: "a zero height floors at the minimum size")
+
+S024 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:118
+QML expression:
+  tryVerify(function() {
+      return shell.font.family === "Atkinson Hyperlegible Next"
+  }, 5000, "the resolved base font carries the bundled Next family")
+
+S025 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:121
+QML expression:
+  compare(shell.font.pixelSize, shell.bodyFontPx,
+          "the base font resolves to the threaded body size")
+
+S026 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:123
+QML expression:
+  compare(shell.font.hintingPreference, Font.PreferNoHinting,
+          "the base font prefers no hinting")
+
+S027 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:125
+QML expression:
+  compare(shell.font.weight, Font.Normal, "the base font keeps Normal weight")
+
+S028 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:126
+QML expression:
+  compare(shell.font.features["tnum"], 1, "the base font enables tabular figures")
+
+S029 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:128
+QML expression:
+  compare(shell.width, shell.bodyFontPx * 72,
+          "window width threads the body size into geometry")
+
+S030 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:130
+QML expression:
+  compare(shell.height, shell.bodyFontPx * 48,
+          "window height threads the body size into geometry")
+
+S031 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:137
+QML expression:
+  compare(label.font.family, "Atkinson Hyperlegible Next",
+          "body text shows the restored Next family")
+
+S032 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml:153
+QML expression:
+  tryVerify(function() { ... centersClose(displayed, reference) ... }, 5000,
+      "the bold title stays centered on the regular title")
+
+S033 | test_selectedTitleCentering | src/checks/editorqml/tst_Typography.qml:185
+QML expression:
+  compare(row.titleFont.features["tnum"], 1,
+          "the title map emits tabular figures")
+
+S034 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml:113
+QML expression:
+  compare(Qt.application.organization, "sp3cker",
+          "the shell keeps the production organization identity")
+
+S035 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyLayoutChecks.swift:124
+Swift expression:
+  report.expectEqual(13.0, seed, ...) // grid, velocity and automation seeds agree
 
 Shared helper
-None: no Swift fixture file carries expects for this suite.
+Suite entry runTypographyLayoutChecks wires the scale, base-propagation,
+face-contract, tabular-feature and fitted-maximality checks into
+runProjectSessionSuite; the shell-typography QML entry observes the
+production window. No shared fixture file carries expects for this suite.
