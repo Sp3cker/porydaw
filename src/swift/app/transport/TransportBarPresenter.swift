@@ -18,6 +18,11 @@ public final class TransportBarPresenter {
     @QtTracked public var outputVolume = 100
     @QtTracked public var tempo = TimeDefaults.tempoBPM
     @QtTracked public var keySignature = "C"
+    @QtTracked public var scaleRoot = ScaleID.defaultRoot
+    @QtTracked public var scaleType = ScaleID.defaultScale.rawValue
+    @QtTracked public var scaleHighlight = false
+    @QtTracked public var scaleFold = false
+    @QtTracked public var scaleNames = ScaleID.displayOrder.map(\.displayName)
     @QtTracked public var followPlayhead = true
     @QtTracked public var resonanceSuppression = false
     @QtIgnored private weak var keyDocument: SongDocument?
@@ -32,6 +37,11 @@ public final class TransportBarPresenter {
     }
 
     public func refresh() {
+        let scale = session?.selectedDocument?.scaleProjection ?? ScaleProjection()
+        scaleRoot = scale.root
+        scaleType = scale.scale.rawValue
+        scaleHighlight = scale.highlight
+        scaleFold = scale.fold
         guard let session, session.songOpen, let document = session.selectedDocument,
               let audio = session.transportAudio, audio.songLoaded else {
             state = 0
@@ -39,6 +49,7 @@ public final class TransportBarPresenter {
             measureText = "1:1"
             loopBounds = ""
             keySignature = "C"
+            // Scale remains available on a document even when audio failed to bind.
             masterVolume = 127
             if let audio = self.session?.transportAudio {
                 outputVolume = audio.outputVolume
@@ -72,6 +83,31 @@ public final class TransportBarPresenter {
             keyRevision = document.document.revision
         }
         keySignature = keyEvents.last { $0.tick <= tick }?.label ?? "C"
+    }
+
+    public func setScaleRoot(root: Int) {
+        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
+        document.setScale(root: root)
+        refresh()
+    }
+
+    public func setScaleType(type: Int) {
+        guard session?.songOpen == true, let document = session?.selectedDocument,
+              let scale = ScaleID(rawValue: type) else { return }
+        document.setScale(type: scale)
+        refresh()
+    }
+
+    public func setScaleHighlight(enabled: Bool) {
+        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
+        document.setScale(highlight: enabled)
+        refresh()
+    }
+
+    public func setScaleFold(enabled: Bool) {
+        guard session?.songOpen == true, let document = session?.selectedDocument else { return }
+        document.setScale(fold: enabled)
+        refresh()
     }
 
     public func play() {

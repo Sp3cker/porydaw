@@ -116,8 +116,8 @@ Original expression:
   QFAIL("Off projection hides a pitch")
 
 A003 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:57
-Disposition: PARTIAL
-Mapping/reason: Executed related S003 in geometry.swift constructs another chromatic projection, but cannot perform the original root/scale transition; that condition remains unproved after the green run. Feature not yet ported: Swift roll scale projection UI (no production Fold view accepts a root/scale transition).
+Disposition: MATCHED
+Mapping/reason: Executed S003 in geometry.swift changes root to D and type to Dorian on the live DocumentSession with Fold Off, then verifies all 128 rows remain visible; swiftcore green. The source widget assertion is a document/model invariant, independent of widget rendering.
 Source context since previous assertion:
   ;
           // A2. Drift the root/scale; Off must stay chromatic.
@@ -669,9 +669,11 @@ Anchor: message "A002 Off hides no pitch"
                   cppID: id, message: "A002 Off hides no pitch")
 
 S003 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
-Anchor: message "A003 related chromatic construction remains 128 rows"
-  report.expect(PitchProjection().visibleRowCount == chromatic.visibleRowCount, cppID: id,
-                  message: "A003 related chromatic construction remains 128 rows")
+Anchor: message "A003 Off remains chromatic after root and type change"
+  report.expect(session.camera.projection.visibleRowCount == 128
+                  && (0..<128).allSatisfy {
+                      session.camera.projection.row(forPitch: $0) != PitchProjection.hiddenRow
+                  }, cppID: id, message: "A003 Off remains chromatic after root and type change")
 
 S004 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift
 Anchor: message "A004 folded row count equals distinct selected-track pitches"

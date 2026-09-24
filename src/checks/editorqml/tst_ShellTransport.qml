@@ -212,6 +212,45 @@ TestCase {
                 "application output preference survives a fresh shell session")
     }
 
+    function test_scaleControlsFollowSelectedTab() {
+        var bar = openShell()
+        var root = findChild(bar, "transportScaleRoot")
+        var type = findChild(bar, "transportScaleType")
+        var highlight = findChild(bar, "transportScaleHighlight")
+        var fold = findChild(bar, "transportScaleFold")
+        verify(root && type && highlight && fold, "scale selector is mounted")
+        verify(!root.enabled && !type.enabled && !highlight.enabled && !fold.enabled,
+               "scale selector is unavailable before a song opens")
+        bar = openSong()
+        compare(root.currentIndex, 0, "new tab opens with C root")
+        compare(type.currentIndex, 0, "new tab opens with Major scale")
+        mouseClick(highlight, highlight.width / 2, highlight.height / 2)
+        compare(bar.presenter.scaleHighlight, true, "Highlight toggle edits the selected tab")
+        mouseClick(fold, fold.width / 2, fold.height / 2)
+        compare(bar.presenter.scaleFold, true, "Fold toggle edits the selected tab")
+        bar.presenter.setScaleRoot(9)
+        bar.presenter.setScaleType(2)
+        tryCompare(root, "currentIndex", 9, 3000)
+        tryCompare(type, "currentIndex", 2, 3000)
+        var session = shell.shellPresenter.session
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 && bar.presenter.scaleRoot === 0
+        }, 30000), "second tab restores independent default scale")
+        compare(bar.presenter.scaleFold, false, "second tab does not inherit Fold")
+        session.openSong("mus_route101")
+        verify(waitForNative(function() {
+            return bar.presenter.scaleRoot === 9 && bar.presenter.scaleType === 2
+        }, 5000), "first tab restores its root and type")
+        compare(bar.presenter.scaleHighlight, true, "first tab restores Highlight")
+        tryCompare(root, "currentIndex", 9, 3000,
+                   "mounted root selector follows the restored tab")
+        tryCompare(type, "currentIndex", 2, 3000,
+                   "mounted scale selector follows the restored tab")
+        compare(highlight.checked, true, "mounted Highlight control follows the restored tab")
+        compare(bar.presenter.scaleFold, true, "first tab restores Fold")
+    }
+
     function test_visualReferenceProfiles_data() {
         return [ { tag: "font12", fontPx: 12 }, { tag: "font16", fontPx: 16 } ]
     }
@@ -222,7 +261,8 @@ TestCase {
         bar.baseFontPx = data.fontPx
         var actionRegions = ["transport.go-to-start", "transport.play", "transport.pause",
                              "transport.stop", "transport.loop", "transport.follow-playhead",
-                             "transport.resonance"]
+                             "transport.resonance", "transportScaleRoot", "transportScaleType",
+                             "transportScaleHighlight", "transportScaleFold"]
         wait(50)
         for (var dpr = 1; dpr <= 2; ++dpr) {
             var baseline = JSON.parse(bootstrap.transportReferenceJson(dpr, data.fontPx))

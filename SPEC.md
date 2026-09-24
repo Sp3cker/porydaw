@@ -280,6 +280,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   volume, and a **polyphony meter** fed by the engine's overflow-debug counters
   showing DirectSound channel usage against the project's `maxChans` (dropped/stolen
   notes flash a warning — the #1 mystery for newcomers).
+  Its scale controls choose a root and scale type per song tab. Highlight tints
+  matching piano-roll rows; Fold shows only MIDI pitches occupied by the selected
+  track, including off-scale notes. Switching tracks recomputes the Fold rows
+  without resetting the tab's scale choices. Folded arrow edits advance by scale
+  degree; Shift+Up/Down keeps the exact octave.
 - **Polyphony dock** (View → Polyphony Debugger, hidden by default): the full
   overflow debugger, mirroring the poryaaaa plugin's Polyphony tab. A live
   channel-usage grid (real PCM/CGB channels plus the shadow pool of lost sounds), a

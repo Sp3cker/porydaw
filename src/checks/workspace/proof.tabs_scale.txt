@@ -4,6 +4,8 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/workspace/tabs_scale.cpp
 Original SHA-256: 894f94698b3406b5de8a2188e78ad8984253105cea29a061f86c0590561a933f
 Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml
+Swift counterpart: src/checks/rollcheck/scale_editing.swift
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
@@ -33,21 +35,20 @@ WorkspaceTabsTest harness declared in
 src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target
 (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and
 is unregistered in src/checks/checkcatalog.cpp, so no site below executes
-natively and no site carries NATIVE. Every GAP site here is the unported
-transport scale selector (root/type/highlight/fold) and its per-tab routing;
-the retired sites are the fixture, widget-handle and old-track-precondition
-plumbing.
+natively and no site carries NATIVE. The mounted ShellTransport QML case
+executes first-tab defaults and root/type/Highlight restoration on a second-tab
+switch. The Swift Fold check executes selected-track state preservation.
+Remaining GAP rows include untested combinations, track-delete undo, and
+widget-specific histories.
 WorkspaceTabsTest::scaleRouting drives the transport scale widgets across two tabs: per-tab root/id/highlight/fold state, widget reflection on selection, track-switch persistence, and delete/undo scale retention.
-tabs_scale.cpp contributes 54 sites: 0 MATCHED, 0 PARTIAL, 45 GAP, 9 RETIRED-REPRESENTATION. The paired
-counterpart drives the disjoint DocumentSession/ProjectService/bank-history
-suite; it never opens a MainWindow, workspace tab, transport, scale control,
-or editor-codec flow, so no workspace-flow predicate is matched here.
-Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
-PARTIAL.
+tabs_scale.cpp contributes 54 sites: 6 MATCHED, 0 PARTIAL, 38 GAP, 10 RETIRED-REPRESENTATION. The paired
+Swift workspace session suite does not mount this flow; S186 exercises the
+actual mounted QML toolbar, and S187 covers Swift session track selection.
+Unproved original inputs remain GAP or PARTIAL.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task verify:shell --verbose; deno task verify --filter swiftcore
+Result: verify:shell 16/16 ok (18.79s); swiftcore 1/31 ok (35.15s, 30 skipped); both PASS.
 
 Execution and ownership
 No native execution remains: the QtTest suites declared in
@@ -56,11 +57,10 @@ would run against a real MainWindow with the Null audio backend and a staged
 fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
 carries no assertion sites), but the harness is compiled into no CMake target
 and is unregistered in src/checks/checkcatalog.cpp, so each native site was
-reconciled to GAP (unported scale selector behavior) or
-RETIRED-REPRESENTATION (fixture plumbing). On the Swift side, pdcSuiteRun in
-src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
-runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
-workspace, tab, transport, scale control, or editor-codec flow. The 185
+reconciled to executed Swift/QML counterparts, remaining GAP predicates, or
+RETIRED-REPRESENTATION (fixture plumbing). SwiftCoreCheck runs the Fold
+session probe; the shell-transport QML lane opens the production workspace,
+mounts the transport controls, and selects both song tabs. The original 185
 paired predicates are split across SessionChecks.swift (both suite entry
 points and their shared-state checks) and the session_*/bank_* counterparts
 (session_editor_semantics.swift, session_io.swift,
@@ -77,8 +77,8 @@ No _data rows. selectData asserts the combo data lookup before setting the index
 Original assertion inventory
 
 A001 | (anonymous)::selectData | src/checks/workspace/tabs_scale.cpp:21
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Native QComboBox findData lookup is a test-fixture guard tied to QWidget itemData storage. QML ComboBox binds scale display order directly and routes its current index to the Swift presenter; no native itemData lookup survives.
 Source context since previous assertion:
   #include "checks/workspace/tst_workspacesessions.h"
 
@@ -184,16 +184,16 @@ Original expression:
   QVERIFY(fold)
 
 A010 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:47
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 in mounted ShellTransport QML compares the new first tab root combo index to default C (0); verify:shell shell-transport green.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(first->view().scaleRoot(), 0)
 
 A011 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:48
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 in mounted ShellTransport QML compares the new first tab scale combo index to Major (0); verify:shell shell-transport green.
 Source context since previous assertion:
   ;
 Original expression:
@@ -216,8 +216,8 @@ Original expression:
   QVERIFY(!first->view().scaleFold())
 
 A014 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:51
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 opens a second tab after assigning A root in the first and awaits the toolbar scaleRoot returning to default C (0); verify:shell green.
 Source context since previous assertion:
   ;
 Original expression:
@@ -422,8 +422,8 @@ Original expression:
   QVERIFY(view.scaleHighlight() && view.scaleFold())
 
 A035 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:112
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 in mounted ShellTransport QML changes the first tab to root A (9), switches to a second song, then reopens the first and verifies presenter root 9; verify:shell green.
 Source context since previous assertion:
   ;
 
@@ -432,16 +432,16 @@ Original expression:
   QCOMPARE(root->currentData().toInt(), firstRoot)
 
 A036 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:113
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 sets Dorian (ScaleID raw value and display index 2), switches tabs, and verifies the mounted scale ComboBox returns to Dorian index 2; verify:shell green.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(scale->currentData().toInt(), static_cast<int>(firstScale))
 
 A037 | WorkspaceTabsTest::scaleRouting | src/checks/workspace/tabs_scale.cpp:114
-Disposition: GAP
-Mapping/reason: feature not yet ported: scale selector. No Swift/QML transport root/type/highlight/fold selector or per-tab scale-routing predicate exists (src/ui/transportbar.cpp owns transportScaleRoot/transportScaleType/transportScaleHighlight/transportScaleFold and is compiled into no target; src/swift/core/MusicalScale.swift exposes ScaleID as a domain type only); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Executed S186 clicks the mounted Highlight button on tab one and confirms its checked presenter state remains true after switching away and back; verify:shell green.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1729,3 +1729,13 @@ Anchor: message "self-cancelling bank merge is removed so undo reaches the prece
   report.expect(cancelling.state.config.priority == 0,
           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
           message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
+
+S186 | test_scaleControlsFollowSelectedTab | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: function
+Counterpart expression:
+  Mounted transport root/type combos and Highlight/Fold buttons start with defaults, mutate the first song, reset for a second song, and restore the first song's root/type/highlight/fold on tab switch.
+
+S187 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "track selection keeps per-tab Fold and Highlight settings"
+    report.expect(session.scaleProjection.fold && session.scaleProjection.highlight == priorHighlight,
+                  cppID: id, message: "track selection keeps per-tab Fold and Highlight settings")

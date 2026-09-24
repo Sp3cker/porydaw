@@ -42,6 +42,7 @@ add_library(PorydawApp STATIC
     pitchbend/PitchBendScene.swift
     pitchbend/PitchBendPresenter.swift
     timeline/EditorCamera.swift
+    timeline/ScaleProjection.swift
     timeline/TimelineScrollbar.swift
     timeline/DocumentProjectionCache.swift
     timeline/PlayheadGuides.swift

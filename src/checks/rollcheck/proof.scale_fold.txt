@@ -3,7 +3,7 @@ Assertion correspondence: rollcheck/scale_fold.cpp
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_fold.cpp
 Original SHA-256: b5966041383cd6f7cf9c970f08f47567438ae3760b1eeb02ce22fa857eacaa02
-Swift counterpart: none identified
+Swift counterpart: src/checks/rollcheck/scale_editing.swift (runFoldScaleIntegrationChecks)
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Status and evidence
@@ -13,20 +13,18 @@ loops, and guards between assertions verbatim. MATCHED identifies an equivalent
 Swift predicate with execution; PARTIAL a related predicate with an explicit
 unproved condition; NATIVE a retained native-window/rendering/input or harness
 obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. No same-dir Swift counterpart exists
-and no Swift file covering this suite was identified, so this file lists no S
-predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
-or claims whole-case equivalence.
-Four slots cover Fold occupancy, track scope, undo lifecycle, and root
-invariance. Occupancy/row-set/camera-hold sites are document/model observations
-and therefore GAP; the two free-pitch probe guards are NATIVE fixture preconditions.
+predicate without a replacement assertion. The Swift rollcheck now covers live Fold occupancy, selected-track scope,
+root/camera invariance, and MIDI restoration through S001-S008. Native widget
+event delivery and untested undo/redo transitions remain GAP; fixture-only
+free-pitch probe guards are retired as representation-specific. No disposition
+claims whole-case or pixel equivalence.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task verify --filter swiftcore
+Result: swiftcore 1/31 ok (35.15s, 30 skipped); full verify 31/31 ok; verify:shell 16/16 ok; verify:qml 1/1 ok; verify:qml-roll 1/1 ok.
 
 Execution and ownership
-No Swift entry point executes these checks. The original slots run under
+SwiftCoreCheck runs runScaleEditingChecks and its live Fold integration through the swiftcore harness. The original slots run under
 PianoRollTest (checks/rollcheck/tst_pianoroll.h): scaleFoldOccupancy,
 scaleFoldTrackScope, scaleFoldUndoLifecycle, scaleFoldRootInvariant. Each slot
 builds on the per-slot PianoRollFixture (checks/rollcheck/rollcheck.h,
@@ -45,8 +43,8 @@ and closes with the undo-index plus smf restoration guards.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:48
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_fold.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: This is a fixture search guard for a free off-scale pitch, not user-visible Fold behavior. Swift constructs a deterministic occupied C-sharp fixture instead; no free-pitch search survives the representation change.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -99,8 +97,8 @@ Original expression:
   QFAIL("no free off-scale pitch for the Fold occupancy probe")
 
 A002 | PianoRollTest::scaleFoldOccupancy | src/checks/rollcheck/scale_fold.cpp:53
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S001 in scale_editing.swift adds a distant-tick C-sharp note to the live document, enables Fold, then confirms the exact selected-track occupied row set includes C-sharp; swiftcore green.
 Source context since previous assertion:
   ;
           } else {
@@ -136,8 +134,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A005 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:105
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/scale_fold.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: This is a native test fixture free-pitch search failure, not user-visible cross-track behavior. The Swift check uses deterministic off-scale C-sharp notes and does not retain the search.
 Source context since previous assertion:
   ;
   }
@@ -184,8 +182,8 @@ Original expression:
   QFAIL("no off-scale pitch for the cross-scaleTrack Fold probe")
 
 A006 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:110
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S008 in scale_editing.swift inserts an occupied C-sharp octave on the other track and confirms the selected-track Fold projection leaves its row hidden; swiftcore green.
 Source context since previous assertion:
   ;
           } else {
@@ -196,8 +194,8 @@ Original expression:
   QFAIL("Fold created a row from another scaleTrack's note")
 
 A007 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:114
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed S001 verifies the live Fold projection includes a selected-track occupied off-scale pitch. The original predicate edits a formerly free pitch while Fold is already on; that transition remains untested.
 Source context since previous assertion:
   ;
               doc.undoStack()->undo();
@@ -207,8 +205,8 @@ Original expression:
   QFAIL("Fold did not add the selected scaleTrack's occupied pitch")
 
 A008 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:118
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S008 checks the other track's C-sharp octave stays hidden while the selected track's C-sharp row is occupied and visible; swiftcore green.
 Source context since previous assertion:
   ;
               if (base + 12 < 128) {
@@ -218,8 +216,8 @@ Original expression:
   QFAIL("Fold added a same-class octave from another scaleTrack")
 
 A009 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:131
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed S003 in scale_editing.swift selects a provisioned second track and verifies Fold plus the prior Highlight value persist. The original case begins with Highlight off, whereas this fixture begins with it on.
 Source context since previous assertion:
   ;
                   doc.undoStack()->undo();
@@ -238,8 +236,8 @@ Original expression:
   QFAIL("selected-track change altered Fold or enabled Highlight")
 
 A010 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:141
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S002 in scale_editing.swift provisions a second track, selects it with Fold enabled, and compares live visible row count to its occupied pitches; swiftcore green.
 Source context since previous assertion:
   ;
           bool incomingOccupancy[128] = {};
@@ -255,8 +253,8 @@ Original expression:
   QFAIL("Fold did not rebuild for the incoming selected track")
 
 A011 | PianoRollTest::scaleFoldTrackScope | src/checks/rollcheck/scale_fold.cpp:144
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S002 in scale_editing.swift checks every pitch 0-127 against the newly selected alternate track's note set while Fold is enabled; swiftcore green.
 Source context since previous assertion:
   ;
           for (int pitch = 0; pitch < 128; pitch++) {
@@ -382,8 +380,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A019 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:239
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S004 in scale_editing.swift changes the root while Fold is enabled, asserting the live projection and history identity do not change; swiftcore green.
 Source context since previous assertion:
   ;
   }
@@ -416,8 +414,8 @@ Original expression:
   QFAIL("Fold root change rebuilt occupied-pitch geometry")
 
 A020 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:241
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S004 compares scrollY before and after changing root while Fold is enabled in the live DocumentSession; swiftcore green.
 Source context since previous assertion:
   ;
           if (std::abs(view.camera().scrollY() - scrollBefore) > 1e-9)
@@ -425,8 +423,8 @@ Original expression:
   QFAIL("Fold root change moved the camera")
 
 A021 | PianoRollTest::scaleFoldRootInvariant | src/checks/rollcheck/scale_fold.cpp:244
-Disposition: GAP
-Mapping/reason: feature not yet ported: Swift roll scale-fold UI; no equivalent Swift predicate has been established for this document/model observation, and the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S004 compares the entire production PitchProjection after changing Fold root, preserving exactly the occupied-pitch rows; swiftcore green.
 Source context since previous assertion:
   ;
           for (int pitch = 0; pitch < 128; pitch++) {
@@ -463,3 +461,54 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   ;
   }
+
+Swift assertion predicates
+
+S001 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold shows only selected-track occupied pitches, including C-sharp"
+    report.expect(projection.visibleRowCount == occupied.count
+                  && (0..<128).allSatisfy { key in
+                      (projection.row(forPitch: key) != PitchProjection.hiddenRow)
+                          == occupied.contains(UInt8(key))
+                  }, cppID: id, message: "Fold shows only selected-track occupied pitches, including C-sharp")
+
+S002 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold follows the selected track, not all song tracks"
+    report.expect(session.camera.projection.visibleRowCount == otherPitches.count
+                  && (0..<128).allSatisfy { key in
+                      (session.camera.projection.row(forPitch: key)
+                       != PitchProjection.hiddenRow) == otherPitches.contains(UInt8(key))
+                  }, cppID: id, message: "Fold follows the selected track, not all song tracks")
+
+S003 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "track selection keeps per-tab Fold and Highlight settings"
+    report.expect(session.scaleProjection.fold && session.scaleProjection.highlight == priorHighlight,
+                  cppID: id, message: "track selection keeps per-tab Fold and Highlight settings")
+
+S004 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "changing Fold root keeps occupied rows, scroll, and history"
+    report.expect(session.camera.projection == beforeRoot.projection
+                  && session.camera.snapshot.scrollY == beforeRoot.snapshot.scrollY
+                  && document.history.currentIdentity == beforeRootIdentity,
+                  cppID: id, message: "changing Fold root keeps occupied rows, scroll, and history")
+
+S005 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "scale editing leaves the fixture MIDI unchanged"
+        report.expect(bytes != nil && (try? document.state.file.encoded()) == bytes,
+                      cppID: id, message: "scale editing leaves the fixture MIDI unchanged")
+
+S006 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold updates occupancy after editing notes"
+    report.expect(session.camera.projection.row(forPitch: 64) != PitchProjection.hiddenRow,
+                  cppID: id, message: "Fold updates occupancy after editing notes")
+
+S007 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold reclamps the live vertical scrollbar range"
+    report.expect(session.camera.snapshot.scrollY >= 0
+                  && session.camera.snapshot.scrollY <= session.camera.snapshot.maxVScroll,
+                  cppID: id, message: "Fold reclamps the live vertical scrollbar range")
+
+S008 | runFoldScaleIntegrationChecks | src/checks/rollcheck/scale_editing.swift
+Anchor: message "Fold excludes another track's C-sharp octave"
+    report.expect(projection.row(forPitch: foreignPitch) == PitchProjection.hiddenRow,
+                  cppID: id, message: "Fold excludes another track's C-sharp octave")
