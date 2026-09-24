@@ -127,3 +127,46 @@ func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSe
     report.expectEqual(before, fixture.snapshot, cppID: switchID,
                        what: "releasing after the switch commits nothing")
 }
+
+@MainActor
+func drawerAutomationViewStatePreservation(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let id = "automation/AutomationEditingTest::viewStateSwitchPreservesAutomationState"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    volume: [(24, 70)],
+                                                    tempo: [(0, 500_000), (384, 428_571)])
+    fixture.activate(fixture.volumeLane)
+    let page = fixture.page
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.volumeLane), x: 0, y: 0)
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
+                  cppID: id, message: "the lane takes the 0-64 range")
+    let before = fixture.snapshot
+    let cursorBefore = fixture.session.editCursor
+    page.detach()
+    page.attach(session: fixture.session, palette: GridPalette())
+    report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
+                       what: "the active parameter survives a page switch")
+    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                       what: "the lane range survives a page switch")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "a page switch writes nothing")
+    report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                       what: "a page switch moves no cursor")
+    report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: id,
+                       what: "the untouched stream survives a page switch")
+
+    let resizeID = "automation/AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState"
+    let drawer = EditorDrawerPresenter()
+    drawer.configureLayout(hostWidth: 1200, hostHeight: 800, gutterWidth: 160,
+                           fontPx: 13, appFontLineSpacing: 15)
+    let resizeBefore = fixture.snapshot
+    drawer.setSectionBodyHeight(kind: 0, height: 300)
+    drawer.applyResize(kind: 0, delta: 40)
+    drawer.endResize(kind: 0)
+    report.expectEqual(resizeBefore, fixture.snapshot, cppID: resizeID,
+                       what: "a section resize writes nothing")
+    report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: resizeID,
+                       what: "a section resize moves no cursor")
+    report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: resizeID,
+                       what: "a section resize leaves the streams alone")
+}

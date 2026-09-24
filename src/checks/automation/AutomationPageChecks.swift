@@ -384,6 +384,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationDetailThresholdPrecedence(report, suite: session, service: service)
     drawerAutomationTempoBendClickRestore(report, suite: session, service: service)
     drawerAutomationMiddlePanIsolation(report, suite: session, service: service)
+    drawerAutomationViewStatePreservation(report, suite: session, service: service)
     drawerAutomationOriginalClearMenus(report, suite: session, service: service)
     drawerAutomationOriginalRangeMenu(report, suite: session, service: service)
     drawerAutomationLegacyResolverRows(report, camera: session.camera.snapshot)
