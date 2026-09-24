@@ -8,7 +8,11 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
+Additional Swift SHA-256: 9559522bab026f298f201dbaa9db58af6f2b9a148d26879f219592ba95c93235
+Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
+Additional Swift SHA-256: 0377880eedfe6537c922ab8b81f4d2f41d1550f1c996b652a1fd3ee861fc8a80
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -25,14 +29,35 @@ Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
 drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
 drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
-(drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
-and gesture state live in the paired Swift sources. Their helper expectations execute
-on every call and are inventoried below.
+paired checks. This file's own methods are executed by the click-selection cases in
+velocity/VelocityClickSelectionChecks.swift — drawerVelocityBandExpandContract,
+drawerVelocityPressCancelRestores, drawerVelocityBandCancelRestores and
+drawerVelocityPrimaryTrackSwitchCancels — called from runVelocityPageChecks
+(velocity/VelocityPageChecks.swift:184-190) and reported under
+swiftcore/VelocityClickSelection::clickSelection with the shared
+swiftcore/VelocityPage::gestureTransactions and ::cancellationPaths ids. Shared setup
+lives in swiftcore/VelocityPageChecks.swift (drawerVelocityVelocityPageFixture,
+drawerVelocityVelocityFixture); per-case document and gesture state live in the paired
+Swift sources. Their helper expectations execute on every call and are inventoried below.
+
+Native check status
+src/checks/velocity/velocityselection.cpp is uncompiled in every target
+(src/checks/CMakeLists.txt lists only the velocity Swift sources) and unregistered in
+src/checks/checkcatalog.cpp; the live counterpart is the swiftcore lane. The
+RETIRED-REPRESENTATION entries below rest on that no-ingress proof together with the
+named replacement predicates.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore (swiftcore lane) and deno task verify:qml
+(drawer QML surface)
+Result: provided by the controller for this settled tree, not re-run by this
+reconciliation: swiftcore harness PASS (1/14 ok, the 13 sibling harnesses skipped by
+the filter), and verify:qml editorqml-drawer PASS (1/1 ok). Structure only below:
+deno task proof check validates metadata, entries and the Tally line, never source
+freshness, execution or parity.
+
+Tally: MATCHED 36 / PARTIAL 16 / GAP 4 / RETIRED-REPRESENTATION 12 (site dispositions
+below; deno task proof:edit keeps this line reconciled as entries change)
 
 Fixture, sequence and row constraints
 Data rows: primaryTrackSwitchCancelsDrag_data: production-route.
@@ -40,6 +65,15 @@ Cases run on the shared VelocityEditingTest in-memory fixture: three notes resol
 in SMF event order (quiet stacked duplicate, loud stacked duplicate, tick-60 later
 note); assertions read the documentVelocity/timelineVelocity/noteSelectionIs helpers.
 See proof.tst_velocityediting.txt for the init-site inventory.
+The click-selection case functions of this file run on a second synthetic fixture
+(drawerVelocityVelocityFixture): one track whose three notes are tick 0 pitch 60
+velocity 100, tick 24 pitch 67 velocity 64 and tick 96 pitch 72 velocity 32, attached
+to a DocumentSession over the suite's real bank lease with selectedTrack 0. Those
+fixtures carry different velocities (100/64/32, not 20/70/70) and no stacked
+duplicates, so velocity sites below match on the per-note captured-equality loops
+rather than the legacy constants; the primary-track switch is driven by assigning
+session.selectedTrack and calling page.refreshFromDocument(), whose captured-track
+mismatch cancels the live gesture (VelocityPage.swift:360-364).
 primaryTrackSwitchCancelsDrag (data row production-route: a mid-gesture track switch
 cancels the drag without mutation, previews cleared, axis back to Intrinsic),
 pointerUngrabCancelsProvisionalSelection, bandSelectionExpandsAndContracts, and
@@ -73,7 +107,7 @@ Original assertion inventory
 
 A001 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:21
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No Swift predicate observes adding a track: the Swift case runs on the single-track synthetic fixture (drawerVelocityVelocityFixture) and switches session.selectedTrack rather than creating a track. Open assertion obligation; no equivalent predicate is indexed below.
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -101,7 +135,7 @@ Original expression:
 
 A002 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:22
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No Swift predicate reads the added track program or channel count in any velocity case; the Swift case never creates the second track whose program this site stages, it switches session.selectedTrack instead. Open assertion obligation.
 Source context since previous assertion:
 ;
 
@@ -109,8 +143,8 @@ Original expression:
   QTRY_COMPARE(view.currentProgram(1), 2)
 
 A003 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:31
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S105 (src/checks/velocity/VelocityClickSelectionChecks.swift:290) asserts page.frozenPreview[notes[0].id] != nil after the press and move, so a live drag publishes a preview for the pressed note under cppID swiftcore/VelocityClickSelection::clickSelection.
 Source context since previous assertion:
 ;
     selectDragPair();
@@ -126,8 +160,8 @@ Original expression:
   QVERIFY(view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A004 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:32
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S106 (src/checks/velocity/VelocityClickSelectionChecks.swift:291) asserts page.frozenPreview[notes[2].id] != nil after the press and move, so the live drag previews its second selected target as well.
 Source context since previous assertion:
 ;
 
@@ -135,8 +169,8 @@ Original expression:
   QVERIFY(view.previewVelocity(m_later.noteId).has_value())
 
 A005 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:33
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S107 (src/checks/velocity/VelocityClickSelectionChecks.swift:292) asserts page.hasGesture && page.interactionActive, the page report the legacy gestureActive() made.
 Source context since previous assertion:
 ;
 
@@ -144,8 +178,8 @@ Original expression:
   QVERIFY(m_area->gestureActive())
 
 A006 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:40
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S110 (src/checks/velocity/VelocityClickSelectionChecks.swift:297) asserts drawerVelocityDocumentSnapshot(document) == baseline after the primary-track switch, comparing document.revision as well as the history identity under cppID swiftcore/VelocityPage::cancellationPaths.
 Source context since previous assertion:
 ;
 
@@ -159,8 +193,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A007 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S108 (src/checks/velocity/VelocityClickSelectionChecks.swift:295) asserts !page.hasGesture after session.selectedTrack changes and refreshFromDocument runs, the Swift cancel-on-track-change path (VelocityPage.swift:360-364).
 Source context since previous assertion:
 ;
 
@@ -168,8 +202,8 @@ Original expression:
   QTRY_VERIFY(!m_area->gestureActive())
 
 A008 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S109 (src/checks/velocity/VelocityClickSelectionChecks.swift:296) asserts page.frozenPreview.isEmpty after the switch, so the pressed note preview is cleared.
 Source context since previous assertion:
 ;
 
@@ -177,8 +211,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A009 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S109 (src/checks/velocity/VelocityClickSelectionChecks.swift:296) asserts page.frozenPreview.isEmpty after the switch, so every selected target preview is cleared.
 Source context since previous assertion:
 ;
 
@@ -186,8 +220,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
 
 A010 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S032 (src/checks/velocity/tst_velocityediting.swift:145) asserts the page presents the intrinsic ruler through page.axisMode in the PSG detent scenario and S115 (src/checks/drawerpresentation/velocity.swift:89) asserts the intrinsic mode of a PSG model; unproved: the presented axis mode after a primary-track switch cancels the live drag, which no Swift predicate reads.
 Source context since previous assertion:
 ;
 
@@ -195,8 +229,8 @@ Original expression:
   QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
 
 A011 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S116 (src/checks/drawerpresentation/velocity.swift:94) asserts an intrinsic map publishes five level rows and S033 (src/checks/velocity/tst_velocityediting.swift:148) asserts the level graduations are drawn for an enabled detent set, both in other scenarios; unproved: the presented axis graduation count after the primary-track switch.
 Source context since previous assertion:
 ;
 
@@ -204,8 +238,8 @@ Original expression:
   QCOMPARE(m_area->axis().graduationCount(), 5)
 
 A012 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S112 (src/checks/velocity/VelocityClickSelectionChecks.swift:300) asserts the post-release snapshot still equals baseline (revision, history identity, undo/redo reachability) after the inert release that follows the switch.
 Source context since previous assertion:
 ;
 
@@ -215,8 +249,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A013 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S112 (src/checks/velocity/VelocityClickSelectionChecks.swift:300) compares revision and history identity before and after the release, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter equivalent to QUndoStack::count().
 Source context since previous assertion:
 ;
 
@@ -224,8 +258,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A014 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift:302) asserts captured[i] == document.note(i)?.velocity for every note, so the cancelled drag left each note at its pre-press velocity; the Swift fixture publishes 100/64/32 where the legacy fixture published 20/70/70.
 Source context since previous assertion:
 ;
 
@@ -233,8 +267,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A015 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:51
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift:302) asserts every note still equals the velocity captured before the press; the Swift fixture second note publishes 64 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -242,8 +276,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A016 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:52
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S113 (src/checks/velocity/VelocityClickSelectionChecks.swift:302) asserts every note still equals its captured velocity after the cancelled drag; the Swift fixture later note publishes 32 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -251,8 +285,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A017 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S114 (src/checks/velocity/VelocityClickSelectionChecks.swift:304) asserts page.frozenPreview.isEmpty after the release that follows the switch, clearing the pressed note preview.
 Source context since previous assertion:
 ;
 
@@ -260,8 +294,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A018 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S114 (src/checks/velocity/VelocityClickSelectionChecks.swift:304) asserts page.frozenPreview.isEmpty after that release, clearing the later note preview as well.
 Source context since previous assertion:
 ;
 
@@ -269,8 +303,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
 
 A019 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S087 (src/checks/velocity/VelocityClickSelectionChecks.swift:203) is the press-time latch guard (report.fail unless selectedNoteOrder == [notes[2].id, notes[0].id]), the same pre-press selection-latch observable with the Swift fixture ordered pair.
 Source context since previous assertion:
 ;
 }
@@ -283,8 +317,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A020 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S088 (src/checks/velocity/VelocityClickSelectionChecks.swift:214) asserts selectedNoteOrder == [notes[1].id] straight after the press, so the press provisionally selects only the pressed note.
 Source context since previous assertion:
 ;
 
@@ -298,8 +332,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A021 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:68
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The legacy check is uncompiled in every target and unregistered in src/checks/checkcatalog.cpp, so this site executes nowhere; the QQuickWindow grabber identity is Qt item bookkeeping the Swift lane cannot observe, because it drives VelocityPage.pointerPress/Move/Release directly and production forwards the QML MouseArea onCanceled ungrab to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml:240,420). The consumer-visible effect is asserted by S089 (src/checks/velocity/VelocityClickSelectionChecks.swift:215 page.hasGesture).
 Source context since previous assertion:
 ;
 
@@ -308,8 +342,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A022 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Same Qt grabber-identity representation as A021 (uncompiled and unregistered legacy file, no Swift-domain grabber object). The grab precondition has no Swift observation: the lane calls cancelSectionInteraction directly, and the held-gesture effect is asserted by S089 (src/checks/velocity/VelocityClickSelectionChecks.swift:215).
 Source context since previous assertion:
 ;
 
@@ -319,8 +353,8 @@ Original expression:
   QVERIFY(grabber)
 
 A023 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Same representation retirement: the grab ending is Qt item bookkeeping. The production ungrab path is the QML onCanceled handler calling page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml:240,420); the consumer-visible effect is asserted by S090 (src/checks/velocity/VelocityClickSelectionChecks.swift:217 !page.hasGesture && frozenPreview.isEmpty).
 Source context since previous assertion:
 ;
     grabber->ungrabMouse();
@@ -329,8 +363,8 @@ Original expression:
   QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
 
 A024 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S091 (src/checks/velocity/VelocityClickSelectionChecks.swift:218) asserts selectedNoteOrder == [notes[2].id, notes[0].id] after cancelSectionInteraction, so the cancellation restores the press-time selection membership and insertion order.
 Source context since previous assertion:
 ;
 
@@ -339,8 +373,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A025 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S092 (src/checks/velocity/VelocityClickSelectionChecks.swift:219) asserts drawerVelocityDocumentSnapshot(document) == baseline after the cancellation, which includes document.revision, under cppID swiftcore/VelocityPage::cancellationPaths.
 Source context since previous assertion:
 ;
 
@@ -348,8 +382,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A026 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S092 (src/checks/velocity/VelocityClickSelectionChecks.swift:219) compares revision, history identity and undo/redo reachability before and after the cancellation, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter.
 Source context since previous assertion:
 ;
 
@@ -357,8 +391,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A027 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts captured[i] == document.note(i)?.velocity for every note after the cancellation; the Swift fixture low note publishes 100 where the legacy fixture published 20.
 Source context since previous assertion:
 ;
 
@@ -366,8 +400,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A028 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every note still equals its captured velocity after the cancellation; the Swift fixture second note publishes 64 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -375,8 +409,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A029 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:81
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every note still equals its captured velocity after the cancellation; the Swift fixture later note publishes 32 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -384,8 +418,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A030 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S094 (src/checks/velocity/VelocityClickSelectionChecks.swift:222) asserts the ordered press-time selection survives the release synthesized after the cancellation, so the late release cannot revive the discarded provisional selection.
 Source context since previous assertion:
 ;
 
@@ -397,8 +431,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A031 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 (src/checks/velocity/VelocityClickSelectionChecks.swift:221) asserts the post-cancellation pointerRelease returns false (inert, and a release is the only path a gesture has to the document) and S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every velocity still equals its captured value; unproved: the post-release revision comparison itself, which this case does not read.
 Source context since previous assertion:
 ;
 
@@ -406,8 +440,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A032 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 (src/checks/velocity/VelocityClickSelectionChecks.swift:221) proves the post-cancellation release is inert and S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) proves no velocity moved; unproved: history depth after that release, since the case compares no post-release snapshot and Swift has no public undo-stack counter.
 Source context since previous assertion:
 ;
 
@@ -415,8 +449,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A033 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every note still equals its captured velocity after the late release; the Swift fixture low note publishes 100 where the legacy fixture published 20.
 Source context since previous assertion:
 ;
 
@@ -424,8 +458,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A034 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every note still equals its captured velocity after the late release; the Swift fixture second note publishes 64 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -433,8 +467,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A035 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S095 (src/checks/velocity/VelocityClickSelectionChecks.swift:224) asserts every note still equals its captured velocity after the late release; the Swift fixture later note publishes 32 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -442,8 +476,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A036 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S079 (src/checks/velocity/VelocityClickSelectionChecks.swift:162) is the latch guard (report.fail unless selectedNoteOrder == [notes[2].id]), the same single-note press-time selection observable.
 Source context since previous assertion:
 ;
 }
@@ -456,8 +490,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A037 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S080 (src/checks/velocity/VelocityClickSelectionChecks.swift:171) asserts the case band-geometry precondition (contractedX splits the published handles with the covered pair left of it); unproved: the legacy fixture positive horizontal margin between the quiet and later nodes.
 Source context since previous assertion:
 ;
 
@@ -473,8 +507,8 @@ Original expression:
   QVERIFY(horizontalMargin > 0.0)
 
 A038 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S080 (src/checks/velocity/VelocityClickSelectionChecks.swift:171) asserts the sibling case band-geometry precondition (a horizontal split of the published handles); unproved: a vertical band margin, which the Swift case does not compute because its band spans a fixed y extent.
 Source context since previous assertion:
 ;
 
@@ -482,8 +516,8 @@ Original expression:
   QVERIFY(verticalMargin > 0.0)
 
 A039 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: m_velocityInput->bounds() is legacy QQuickItem geometry; the file is uncompiled and unregistered and the Swift lane has no QQuickItem, because production forwards the plot MouseArea (src/ui/songview/quick/drawer/VelocityPage.qml:403-421) to the page pointer seam. The consumer-visible effect (the band press lands on the surface) is asserted by S081 (src/checks/velocity/VelocityClickSelectionChecks.swift:178, a band press is consumed) and S082 (src/checks/velocity/VelocityClickSelectionChecks.swift:179, hasGesture).
 Source context since previous assertion:
 ;
 
@@ -498,7 +532,7 @@ Original expression:
 
 A040 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:115
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: The intermediate band extent is unobserved: the Swift case issues the expanded move but asserts nothing about the preview it produces, and no predicate covers the intermediate selection preview. The contracted resolution that follows is asserted by S083 (src/checks/velocity/VelocityClickSelectionChecks.swift:183) but does not prove this site. Open assertion obligation.
 Source context since previous assertion:
 ;
 
@@ -507,7 +541,7 @@ Original expression:
 
 A041 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:116
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: No predicate covers the intermediate selection preview at the contracted band end: the case observes only the final resolved selection (S083, src/checks/velocity/VelocityClickSelectionChecks.swift:183), so the intermediate preview this site guards remains unproved. Open assertion obligation.
 Source context since previous assertion:
 ;
 
@@ -515,8 +549,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(contractedEnd))
 
 A042 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::startDragDistance() is the Qt application-global drag threshold, which the Swift lane never consults: the lane seeds the page dragDistance through configureBody(dragDistance: 10) (src/checks/velocity/VelocityPageChecks.swift:123-124) and the moves far exceed it. The threshold behavior (arming only beyond the activation distance) is asserted by S049 and S050 (src/checks/velocity/velocitydetentdragging.swift:52,55) for the Swift policy; the legacy global itself is representation-only.
 Source context since previous assertion:
 ;
 
@@ -525,8 +559,8 @@ Original expression:
           QApplication::startDragDistance())
 
 A043 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt grabber-identity bookkeeping as in A021 (uncompiled and unregistered legacy file, no Swift-domain grabber); the consumer-visible effect (the band press holds a live gesture) is asserted by S082 (src/checks/velocity/VelocityClickSelectionChecks.swift:179).
 Source context since previous assertion:
 ;
 
@@ -537,8 +571,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A044 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S083 (src/checks/velocity/VelocityClickSelectionChecks.swift:183) asserts fixture.session.selectedNotes == Set([notes[0].id, notes[1].id]) after the expand-then-contract drag: the contracted band keeps the covered pair and excludes the note covered only by the abandoned extent.
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(expandedEnd));
@@ -552,8 +586,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A045 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S085 (src/checks/velocity/VelocityClickSelectionChecks.swift:185) asserts drawerVelocityDocumentSnapshot(document) == baseline after the band release, including revision and history identity, under cppID swiftcore/VelocityPage::gestureTransactions.
 Source context since previous assertion:
 ;
 
@@ -561,8 +595,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A046 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S085 (src/checks/velocity/VelocityClickSelectionChecks.swift:185) compares the full snapshot (revision, identity, canUndo/canRedo) after the band release, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter.
 Source context since previous assertion:
 ;
 
@@ -570,8 +604,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A047 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts captured[i] == document.note(i)?.velocity for every note after the band release; the Swift fixture low note publishes 100 where the legacy fixture published 20.
 Source context since previous assertion:
 ;
 
@@ -579,8 +613,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A048 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts every note still equals its captured velocity after the band release; the Swift fixture second note publishes 64 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -588,8 +622,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A049 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts every note still equals its captured velocity after the band release; the Swift fixture later note publishes 32 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -597,8 +631,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A050 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts the document velocities are unchanged after the band release; unproved: the playback-timeline projection of those values, because the Swift case reads the document only and builds no PlaybackTimeline, so the legacy timelineVelocity helper has no counterpart here.
 Source context since previous assertion:
 ;
 
@@ -606,8 +640,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
 
 A051 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts the document velocity of every note after the band release; unproved: the playback-timeline projection for this note, since the Swift case reads the document only and builds no PlaybackTimeline.
 Source context since previous assertion:
 ;
 
@@ -615,8 +649,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), 70)
 
 A052 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift:187) asserts the document velocity of every note after the band release; unproved: the playback-timeline projection for this note, since the Swift case reads the document only and builds no PlaybackTimeline.
 Source context since previous assertion:
 ;
 
@@ -624,8 +658,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), 70)
 
 A053 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S096 (src/checks/velocity/VelocityClickSelectionChecks.swift:240) is the latch guard (report.fail unless selectedNoteOrder == [notes[2].id, notes[0].id]), the same press-time selection-latch observable with the Swift fixture ordered pair.
 Source context since previous assertion:
 ;
 }
@@ -638,8 +672,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A054 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S080 (src/checks/velocity/VelocityClickSelectionChecks.swift:171) asserts the sibling band case geometry precondition (a horizontal split of the published handles); unproved: this case positive horizontal margin, because the cancelled-band case presses the target handle directly and computes no margins.
 Source context since previous assertion:
 ;
 
@@ -655,8 +689,8 @@ Original expression:
   QVERIFY(horizontalMargin > 0.0)
 
 A055 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S080 (src/checks/velocity/VelocityClickSelectionChecks.swift:171) asserts the sibling band case horizontal geometry precondition; unproved: this case vertical margin, which no Swift predicate computes for the cancelled band.
 Source context since previous assertion:
 ;
 
@@ -664,8 +698,8 @@ Original expression:
   QVERIFY(verticalMargin > 0.0)
 
 A056 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: m_velocityInput->bounds() is legacy QQuickItem geometry (the file is uncompiled and unregistered, and the Swift lane drives the page pointer seam directly, src/ui/songview/quick/drawer/VelocityPage.qml:403-421). The consumer-visible effect (the band press lands and holds a gesture) is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift:251).
 Source context since previous assertion:
 ;
 
@@ -678,8 +712,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(bandStart))
 
 A057 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Same QQuickItem-geometry retirement as A056; this case cancels the band, so the expanded extent has no asserted effect and no replacing predicate is claimed for the containment itself.
 Source context since previous assertion:
 ;
 
@@ -687,8 +721,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(expandedEnd))
 
 A058 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::startDragDistance() is the Qt application-global drag threshold the Swift lane never consults; the lane seeds the page dragDistance through configureBody(dragDistance: 10) (src/checks/velocity/VelocityPageChecks.swift:123-124). The threshold behavior (arming only beyond the activation distance) is asserted by S049 and S050 (src/checks/velocity/velocitydetentdragging.swift:52,55); the legacy global itself is representation-only.
 Source context since previous assertion:
 ;
 
@@ -697,8 +731,8 @@ Original expression:
           QApplication::startDragDistance())
 
 A059 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt grabber-identity bookkeeping as in A021 (uncompiled and unregistered legacy file, no Swift-domain grabber); the consumer-visible effect (the band press holds a live gesture) is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift:251).
 Source context since previous assertion:
 ;
 
@@ -709,8 +743,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A060 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Same Qt grabber-identity representation as A059; the grab precondition has no Swift observation because the ungrab is forwarded to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml:420), and the held-gesture effect is asserted by S097 (src/checks/velocity/VelocityClickSelectionChecks.swift:251).
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(expandedEnd));
@@ -721,8 +755,8 @@ Original expression:
   QVERIFY(grabber)
 
 A061 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Same representation retirement as A059: the grab ending is Qt item bookkeeping, forwarded in production from the QML onCanceled handler to page.pageModel.cancelSectionInteraction() (src/ui/songview/quick/drawer/VelocityPage.qml:420); the consumer-visible effect is asserted by S098 (src/checks/velocity/VelocityClickSelectionChecks.swift:254 !page.hasGesture).
 Source context since previous assertion:
 ;
     grabber->ungrabMouse();
@@ -731,8 +765,8 @@ Original expression:
   QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
 
 A062 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S099 (src/checks/velocity/VelocityClickSelectionChecks.swift:255) asserts selectedNoteOrder == [notes[2].id, notes[0].id] after the cancelled band, restoring the press-time selection membership and insertion order.
 Source context since previous assertion:
 ;
 
@@ -740,8 +774,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A063 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S102 (src/checks/velocity/VelocityClickSelectionChecks.swift:260) asserts the restored ordered selection survives the post-cancellation move and release, so later window-level input cannot replace it.
 Source context since previous assertion:
 ;
 
@@ -754,8 +788,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A064 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S101 (src/checks/velocity/VelocityClickSelectionChecks.swift:259) asserts the post-cancellation release returns false (no band starts) and S103 (src/checks/velocity/VelocityClickSelectionChecks.swift:262) asserts every velocity still equals its captured value; unproved: the post-release revision comparison itself, which this case does not read.
 Source context since previous assertion:
 ;
 
@@ -763,8 +797,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A065 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S101 (src/checks/velocity/VelocityClickSelectionChecks.swift:259) proves no band starts after the cancellation and S103 (src/checks/velocity/VelocityClickSelectionChecks.swift:262) proves no velocity moved; unproved: history depth after that input, since no post-release snapshot is compared and Swift has no public undo-stack counter.
 Source context since previous assertion:
 ;
 
@@ -772,8 +806,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A066 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift:262) asserts captured[i] == document.note(i)?.velocity for every note after the cancelled band; the Swift fixture low note publishes 100 where the legacy fixture published 20.
 Source context since previous assertion:
 ;
 
@@ -781,8 +815,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A067 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift:262) asserts every note still equals its captured velocity after the cancelled band; the Swift fixture second note publishes 64 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -790,8 +824,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A068 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping: S103 (src/checks/velocity/VelocityClickSelectionChecks.swift:262) asserts every note still equals its captured velocity after the cancelled band; the Swift fixture later note publishes 32 where the legacy fixture published 70.
 Source context since previous assertion:
 ;
 
@@ -1094,40 +1128,156 @@ S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdra
   report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                 message: "the published hit radius is font-relative and positive")
 
-S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:195
+S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:224
   report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity is unavailable with no selection")
 
-S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:209
+S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:238
   report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity becomes available with a selection")
 
-S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:213
+S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:242
   report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
                      what: "the existing command row asks its owner for the prompt")
 
-S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:215
+S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:244
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "the command commits no value before prompt acceptance")
 
-S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:220
+S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:249
   report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
                      what: "the command routes every execution through the same owner")
 
-S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:222
+S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:251
   report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                 message: "the routed command opened the page's captured prompt")
 
-S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:225
+S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:254
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "cancelling the routed prompt still commits nothing")
 
-S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:229
+S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:258
   report.expectEqual(EditNotesOperation.setVelocity.rawValue,
                      row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity on the notes arm")
 
-S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:232
+S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:261
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:162
+  guard fixture.session.selectedNoteOrder == [notes[2].id] else {
+
+S080 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:171
+  guard contractedX > second.x, contractedX < third.x, first.x < contractedX else {
+
+S081 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:178
+  report.expect(pressed, cppID: drawerVelocityClickSelectionID, message: "a band press is consumed")
+
+S082 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:179
+  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band press holds a live gesture")
+
+S083 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:183
+  report.expect(fixture.session.selectedNotes == Set([notes[0].id, notes[1].id]), cppID: drawerVelocityClickSelectionID, message: "the contracted band keeps the covered pair and drops the later note")
+
+S084 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:184
+  report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band release ends the gesture")
+
+S085 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:185
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a band selection writes nothing")
+
+S086 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift:187
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a band selection leaves every velocity captured")
+
+S087 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:203
+  guard fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id] else {
+
+S088 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:214
+  report.expect(fixture.session.selectedNoteOrder == [notes[1].id], cppID: drawerVelocityClickSelectionID, message: "pressing another node provisionally selects it")
+
+S089 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:215
+  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a provisional press holds a live gesture")
+
+S090 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:217
+  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "cancelling clears the provisional gesture")
+
+S091 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:218
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "cancelling restores selection membership and insertion order")
+
+S092 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:219
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
+
+S093 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:221
+  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after cancellation is inert")
+
+S094 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:222
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a late release cannot revive the discarded selection")
+
+S095 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:224
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled press leaves every velocity captured")
+
+S096 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:240
+  guard fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id] else {
+
+S097 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:251
+  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band press holds a live gesture")
+
+S098 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:254
+  report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "cancelling clears the live band")
+
+S099 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:255
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a cancelled band restores selection membership and insertion order")
+
+S100 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:256
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
+
+S101 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:259
+  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "input after cancellation starts no band")
+
+S102 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:260
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "input after cancellation cannot replace the restored selection")
+
+S103 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift:262
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled band leaves every velocity captured")
+
+S104 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:278
+  guard fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id] else {
+
+S105 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:290
+  report.expect(page.frozenPreview[notes[0].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews the pressed note")
+
+S106 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:291
+  report.expect(page.frozenPreview[notes[2].id] != nil, cppID: drawerVelocityClickSelectionID, message: "a live drag previews every selected target")
+
+S107 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:292
+  report.expect(page.hasGesture && page.interactionActive, cppID: drawerVelocityClickSelectionID, message: "a live drag reports an active gesture")
+
+S108 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:295
+  report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
+
+S109 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:296
+  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track switch clears every preview")
+
+S110 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:297
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a primary-track switch writes nothing at all")
+
+S111 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:299
+  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after the switch is inert")
+
+S112 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:300
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a late release still writes nothing")
+
+S113 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:302
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled drag leaves every velocity captured")
+
+S114 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift:304
+  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a late release previews nothing")
+
+S115 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:89
+  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, square.mode.rawValue, cppID: drawerVelocityPsgID,
+                     what: "a PSG voice uses the intrinsic level ruler")
+
+S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift:94
+  report.expectEqual(5, wave.graduations.count, cppID: drawerVelocityPsgID,
+                     what: "Programmable Wave publishes five volume levels")

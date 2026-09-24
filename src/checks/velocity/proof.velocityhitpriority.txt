@@ -8,7 +8,11 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
+Additional Swift SHA-256: 9559522bab026f298f201dbaa9db58af6f2b9a148d26879f219592ba95c93235
+Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
+Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,16 +27,23 @@ This inventory does not authorize removing native checks. Unresolved entries rem
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
-drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
+drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift),
+drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift), and the
+hit-priority cases drawerVelocityStackedHitPriority, drawerVelocityStemPressKeepsSelection,
+drawerVelocityMovedNodeNoClickThrough and drawerVelocityRightPressPreservesGroup
+(velocity/VelocityClickSelectionChecks.swift, cppID swiftcore/VelocityHitPriority::hitPriority,
+called from runVelocityPageChecks) execute the paired checks. Shared setup lives in
+swiftcore/VelocityPageChecks.swift
 (drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
 and gesture state live in the paired Swift sources. Their helper expectations execute
 on every call and are inventoried below.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore
+Result: PASS — swiftcore harness 1/14 ok (13 sibling harnesses skipped by the filter). Provided by the controller handoff for this tree; not re-run by the ledger writer.
+Command: deno task verify:qml
+Result: PASS — editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not re-run by the ledger writer.
+Tally: MATCHED 55, PARTIAL 10, GAP 0.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -46,6 +57,17 @@ selectedStemWinsAtStackedStem, movedNodeDoesNotClickThrough, and
 rightPressPreservesSelectedGroup press node points and must preserve selection,
 revision, undo depth, and every fixture velocity. No data rows.
 Methods in file order: selectedCircleWinsOverStem, unselectedCircleWinsOverSelectedStem, selectedStemWinsAtStackedStem, movedNodeDoesNotClickThrough, rightPressPreservesSelectedGroup.
+Ported execution fixture (VelocityClickSelectionChecks.swift): drawerVelocityVelocityFixture
+stages a three-note track (ticks 0/24/96, pitches 60/67/72, velocities 100/64/32, pinned by the
+fixture-facts predicate S129) over the suite's real bank lease. The hit-priority cases add one
+overlap note (tick 12, pitch 61, velocity of the target note) and drive the production
+VelocityPage with pointerPress/pointerMove/pointerRelease, setSelectedNotes and
+refreshFromDocument. Selection membership and order replace noteSelectionIs; the document
+snapshot (revision, history identity, undo/redo reachability) replaces the revision and
+undo-depth pair; the "captured" velocity comparisons assert the clicks leave every document
+value at its fixture level. Consumed-press and page.hasGesture predicates replace the mouse
+grabber check where the port asserts them. The original's timelineVelocity samples have no
+Swift-side counterpart: the ported predicates read document values only.
 Exact original source anchors:
 src/checks/velocity/velocityhitpriority.cpp:24 | m_tab->document().addNote(0, kOverlapTick, kOverlapKey, kOverlapDuration, kQuietVelocity);
 src/checks/velocity/velocityhitpriority.cpp:30 | m_tab->view().selectionModel().setNoteSelection({overlap.noteId});
@@ -74,8 +96,8 @@ src/checks/velocity/velocityhitpriority.cpp:148 | mouseRelease(Qt::RightButton, 
 Original assertion inventory
 
 A001 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:27
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The added overlap note resolves by identity after insertion; the case fails if the insert or the resolution fails (S080, S081).
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -108,8 +130,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A002 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:28
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the added note document value against the press target (S086); it samples no published timeline velocity, so the timeline publication of the added note stays unproved.
 Source context since previous assertion:
 ;
 
@@ -117,8 +139,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A003 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:31
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The press-time latch of the overlap selection is asserted before the press (S130), and the selection order then survives press and release (S089, S090).
 Source context since previous assertion:
 ;
 
@@ -128,8 +150,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A004 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:37
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The press on the selected circle is consumed and holds a live page gesture, the Swift analogue of the band owning the mouse grab (S087, S088).
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -142,8 +164,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A005 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:38
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Pressing the selected circle keeps exactly that selection over the stem column (S089).
 Source context since previous assertion:
 ;
 
@@ -151,8 +173,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A006 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The circle-over-stem click leaves the document snapshot (revision, history identity, undo/redo reachability) at its baseline (S091).
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kOverlapTick)));
@@ -162,8 +184,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A007 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: No history entry: the same snapshot predicate keeps the history identity and undo/redo reachability unchanged (S091).
 Source context since previous assertion:
 ;
 
@@ -171,8 +193,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A008 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The overlap keeps the value it was created with, the same equality the original compares to kQuietVelocity, and no hit-priority click changes it (S086, S095).
 Source context since previous assertion:
 ;
 
@@ -180,8 +202,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A009 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both hit-priority clicks (S096); the captured levels are pinned by the fixture-facts predicate (S129).
 Source context since previous assertion:
 ;
 
@@ -189,8 +211,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A010 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both hit-priority clicks (S096, S129).
 Source context since previous assertion:
 ;
 
@@ -198,8 +220,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A011 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both hit-priority clicks (S096, S129).
 Source context since previous assertion:
 ;
 
@@ -207,8 +229,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A012 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing the selected circle keeps exactly that selection (S090).
 Source context since previous assertion:
 ;
 
@@ -216,8 +238,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A013 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The added overlap note resolves by identity after insertion; the case fails if the insert or the resolution fails (S080, S081).
 Source context since previous assertion:
 ;
 }
@@ -232,8 +254,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A014 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the added note document value (S086) instead of the published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -241,8 +263,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A015 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The press-time latch of the stem note is asserted before the press (S131), and the press then re-points the selection to the winning circle (S092).
 Source context since previous assertion:
 ;
 
@@ -252,8 +274,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A016 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The second press is asserted as consumed and holding a live page gesture (S132, S133), the Swift analogue of the band owning the mouse grab.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -266,8 +288,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A017 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: An unselected circle wins over a selected stem: the press re-points the selection to the overlap note (S092).
 Source context since previous assertion:
 ;
 
@@ -275,8 +297,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A018 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The reselect click leaves the document snapshot at its baseline: no revision, identity or undo/redo change (S094).
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kOverlapTick)));
@@ -286,8 +308,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A019 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: No history entry: the same snapshot predicate keeps the history identity and undo/redo reachability unchanged (S094).
 Source context since previous assertion:
 ;
 
@@ -295,8 +317,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A020 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The overlap keeps the value it was created with across both clicks (S086, S095).
 Source context since previous assertion:
 ;
 
@@ -304,8 +326,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A021 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both clicks (S096, S129).
 Source context since previous assertion:
 ;
 
@@ -313,8 +335,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A022 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both clicks (S096, S129).
 Source context since previous assertion:
 ;
 
@@ -322,8 +344,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A023 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across both clicks (S096, S129).
 Source context since previous assertion:
 ;
 
@@ -331,8 +353,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A024 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing the winning circle keeps exactly that selection (S093).
 Source context since previous assertion:
 ;
 
@@ -340,8 +362,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A025 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:84
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The ported case stages the overlap note through the public note-add path and fails if it does not resolve (S080, S081).
 Source context since previous assertion:
 ;
 }
@@ -357,8 +379,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A026 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:85
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case neither re-levels the loud duplicate nor samples a timeline velocity; it asserts the document values stay captured (S107).
 Source context since previous assertion:
 ;
 
@@ -366,8 +388,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kQuietVelocity))
 
 A027 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the added note document value (S086) instead of the published timeline velocity; the re-leveled stacked pair publication stays unproved.
 Source context since previous assertion:
 ;
 
@@ -375,8 +397,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A028 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The press-time latch of the selected stem is asserted before the press, and the selection order survives the press (S098, S104).
 Source context since previous assertion:
 ;
 
@@ -386,8 +408,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A029 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stem-only press is consumed and holds a live page gesture (S102, S103).
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -400,8 +422,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A030 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A stem-only press keeps exactly the selected stem (S104).
 Source context since previous assertion:
 ;
 
@@ -409,8 +431,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A031 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The stem-only click leaves the document snapshot at its baseline (S106).
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kStemOnlyTick)));
@@ -420,8 +442,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A032 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: No history entry: the same snapshot predicate keeps the history identity and undo/redo reachability unchanged (S106).
 Source context since previous assertion:
 ;
 
@@ -429,8 +451,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A033 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The overlap keeps the value it was created with and the stem click changes no document velocity (S086, S107).
 Source context since previous assertion:
 ;
 
@@ -438,8 +460,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A034 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across the stem click (S107, S129).
 Source context since previous assertion:
 ;
 
@@ -447,8 +469,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A035 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The loud duplicate stays at its captured level: the value the case itself established, re-leveled in the original and the fixture level in Swift (S107, S129).
 Source context since previous assertion:
 ;
 
@@ -456,8 +478,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kQuietVelocity))
 
 A036 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level across the stem click (S107, S129).
 Source context since previous assertion:
 ;
 
@@ -465,8 +487,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A037 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing the stem keeps exactly that selection (S105).
 Source context since previous assertion:
 ;
 
@@ -474,8 +496,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A038 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The case asserts the selection is empty before the press, failing if it did not clear (S109).
 Source context since previous assertion:
 ;
 }
@@ -487,8 +509,8 @@ Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A039 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Pressing a node holds a live page gesture (S112).
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -501,8 +523,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A040 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Pressing the node selects exactly that note (S111).
 Source context since previous assertion:
 ;
 
@@ -510,8 +532,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A041 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A same-level held move previews the pressed node: the preview lookup must be non-nil, since the predicate falls back to 0 (S114).
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(nodePoint(kLoudVelocity, 12)));
@@ -520,8 +542,8 @@ Original expression:
   QTRY_VERIFY(m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A042 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The frozen preview for the pressed note resolves to the captured velocity (S114).
 Source context since previous assertion:
 ;
     const std::optional<uint8_t> preview = m_tab->view().previewVelocity(m_later.noteId);
@@ -530,8 +552,8 @@ Original expression:
   QVERIFY(preview.has_value())
 
 A043 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The preview equals the pressed note own captured velocity, the Swift analogue of comparing the dragged preview to its fixture level (S114, S129).
 Source context since previous assertion:
 ;
 
@@ -539,8 +561,8 @@ Original expression:
   QCOMPARE(int(*preview), int(kLoudVelocity))
 
 A044 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing ends the gesture and clears the frozen preview (S115).
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kLoudVelocity, 12)));
@@ -550,8 +572,8 @@ Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A045 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The same-level move and release leave the document snapshot at its baseline (S116).
 Source context since previous assertion:
 ;
 
@@ -559,8 +581,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A046 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: No history entry: the same snapshot predicate keeps the history identity and undo/redo reachability unchanged (S116).
 Source context since previous assertion:
 ;
 
@@ -568,8 +590,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A047 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the move and release (S118, S129).
 Source context since previous assertion:
 ;
 
@@ -577,8 +599,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A048 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the move and release (S118, S129).
 Source context since previous assertion:
 ;
 
@@ -586,8 +608,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A049 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the move and release (S118, S129).
 Source context since previous assertion:
 ;
 
@@ -595,8 +617,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A050 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -604,8 +626,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A051 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -613,8 +635,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A052 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -622,8 +644,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A053 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing over another column does not click through: the selection stays on the pressed note (S117).
 Source context since previous assertion:
 ;
 
@@ -631,8 +653,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A054 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The press-time group selection is asserted before the press (S120).
 Source context since previous assertion:
 ;
 }
@@ -645,8 +667,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A055 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: A secondary press on the group is consumed and holds a live page gesture (S122, S123).
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -659,8 +681,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A056 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The secondary press preserves exactly the selected group (S124).
 Source context since previous assertion:
 ;
 
@@ -668,8 +690,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A057 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: The secondary click leaves the document snapshot at its baseline (S127).
 Source context since previous assertion:
 ;
     mouseRelease(Qt::RightButton, windowPoint(nodePoint(kQuietVelocity, 12)));
@@ -679,8 +701,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A058 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: No history entry: the same snapshot predicate keeps the history identity and undo/redo reachability unchanged (S127).
 Source context since previous assertion:
 ;
 
@@ -688,8 +710,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A059 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the secondary click (S128, S129).
 Source context since previous assertion:
 ;
 
@@ -697,8 +719,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A060 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the secondary click (S128, S129).
 Source context since previous assertion:
 ;
 
@@ -706,8 +728,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A061 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Every fixture velocity stays at its captured level through the secondary click (S128, S129).
 Source context since previous assertion:
 ;
 
@@ -715,8 +737,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A062 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -724,8 +746,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A063 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -733,8 +755,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A064 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
 Source context since previous assertion:
 ;
 
@@ -742,8 +764,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A065 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: Releasing the secondary button preserves exactly the selected group (S125).
 Source context since previous assertion:
 ;
 
@@ -1083,3 +1105,113 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+S079 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:312
+  report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
+S080 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:319
+  report.fail(drawerVelocityHitPriorityID, "the overlap note was not inserted")
+S081 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:324
+  report.fail(drawerVelocityHitPriorityID, "the overlap note did not resolve")
+S082 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:328
+  report.fail(drawerVelocityHitPriorityID, "the stacked notes have no published handles")
+S083 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:332
+  report.fail(drawerVelocityHitPriorityID, "the overlap published off the target level")
+S084 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:338
+  report.fail(drawerVelocityHitPriorityID, "the overlap circle covers the target node")
+S085 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:342
+  report.fail(drawerVelocityHitPriorityID, "the overlap sits outside the target stem")
+S086 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:345
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(overlapID)?.velocity ?? 0), cppID: drawerVelocityHitPriorityID, what: "the overlap note carries the target velocity")
+S087 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:353
+  report.expect(selectedPress, cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle is consumed")
+S088 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:354
+  report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle holds a live gesture")
+S089 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:355
+  report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle keeps it over the stem")
+S090 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:357
+  report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the selected circle keeps it")
+S091 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:358
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem click writes nothing")
+S092 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:365
+  report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "an unselected circle wins over a selected stem")
+S093 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:367
+  report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the winning circle keeps it")
+S094 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:368
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem reselect writes nothing")
+S095 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:369
+  report.expectEqual(capturedOverlap, document.note(overlapID)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave the overlap velocity captured")
+S096 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:371
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave every velocity captured")
+S097 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:380
+  report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
+S098 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:388
+  report.fail(drawerVelocityHitPriorityID, "the press-time selection did not latch")
+S099 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:392
+  report.fail(drawerVelocityHitPriorityID, "the fixture's target note has no published handle")
+S100 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:397
+  report.fail(drawerVelocityHitPriorityID, "the target stem spans less than one hit diameter")
+S101 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:404
+  report.fail(drawerVelocityHitPriorityID, "the stem point touches another node")
+S102 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:411
+  report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a stem-only press is consumed")
+S103 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:412
+  report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a stem-only press holds a live gesture")
+S104 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:413
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "a stem-only press keeps the selected stem")
+S105 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:415
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "releasing the stem keeps it")
+S106 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:416
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a stem-only click writes nothing")
+S107 | drawerVelocityStemPressKeepsSelection | src/checks/velocity/VelocityClickSelectionChecks.swift:418
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a stem-only click leaves every velocity captured")
+S108 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:427
+  report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
+S109 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:435
+  report.fail(drawerVelocityHitPriorityID, "the selection did not clear")
+S110 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:439
+  report.fail(drawerVelocityHitPriorityID, "the fixture's notes have no published handles")
+S111 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:445
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "pressing a node selects it")
+S112 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:446
+  report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing a node holds a live gesture")
+S113 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:455
+  report.fail(drawerVelocityHitPriorityID, "no same-level step leaves the activation distance")
+S114 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:461
+  report.expectEqual(Int(notes[2].velocity), Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityHitPriorityID, what: "a same-level move previews the captured velocity")
+S115 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:463
+  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityHitPriorityID, message: "a same-value move ends the gesture with no preview left")
+S116 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:464
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a same-value move writes nothing")
+S117 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:465
+  report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "releasing over another column does not click through")
+S118 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift:467
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a moved node leaves every velocity captured")
+S119 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:476
+  report.fail(drawerVelocityHitPriorityID, "the synthetic fixture published fewer than three notes")
+S120 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:484
+  report.fail(drawerVelocityHitPriorityID, "the press-time selection did not latch")
+S121 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:488
+  report.fail(drawerVelocityHitPriorityID, "the fixture's lead note has no published handle")
+S122 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:494
+  report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a secondary press on the group is consumed")
+S123 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:495
+  report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a secondary press holds a live gesture")
+S124 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:496
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityHitPriorityID, message: "a secondary press preserves the selected group")
+S125 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:498
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityHitPriorityID, message: "a secondary release preserves the selected group")
+S126 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:499
+  report.expect(!page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a secondary release ends the gesture")
+S127 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:500
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a secondary click writes nothing")
+S128 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift:502
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a secondary click leaves every velocity captured")
+S129 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:43
+  report.expectEqual([100, 64, 32], notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
+S130 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:351
+  report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "the overlap selection latches before the press")
+S131 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:361
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "the stem selection latches before the press")
+S132 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:363
+  report.expect(unselectedPress, cppID: drawerVelocityHitPriorityID, message: "pressing the unselected circle is consumed")
+S133 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift:364
+  report.expect(page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "pressing the unselected circle holds a live gesture")

@@ -8,7 +8,9 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -18,21 +20,34 @@ assertions verbatim, and the tail preserves the closing sequence verbatim.
 MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+RETIRED-REPRESENTATION marks a C++ mechanism with no Swift ingress whose
+consumer-visible effect is carried by the predicates cited in its mapping.
 A method name or related Swift case alone never establishes an assertion match.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
-drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
+drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift),
+drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift), and
+drawerVelocityPaintCommitsOnce / drawerVelocityRampCommitsOnce
+(swiftcore/VelocityPaintDetentChecks.swift, cppIDs
+swiftcore/VelocityPaintDetent::paintCommitsOnce and
+swiftcore/VelocityPaintDetent::rampCommitsOnce) execute the paired checks.
+runVelocityPageChecks calls the two paint functions at
+src/checks/velocity/VelocityPageChecks.swift:176-177; that file is compiled by
+src/checks/CMakeLists.txt:198. Shared setup lives in swiftcore/VelocityPageChecks.swift
 (drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
 and gesture state live in the paired Swift sources. Their helper expectations execute
 on every call and are inventoried below.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore
+Result: PASS — 1/14 harnesses selected, 13 sibling harnesses skipped by the filter.
+Provenance: provided by the controller with the settled handoff for the pre-freeze source,
+and re-reported PASS by the GapsVelocity lane after the final edit of
+src/checks/velocity/VelocityPaintDetentChecks.swift (SHA-256 9c6f9389…). This ledger did
+not rerun the build or the suite; structural proof checking is not execution evidence
+and no parity or source-freshness claim follows from it.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -45,6 +60,17 @@ empty tick paints across the selected drag pair, staging per-note previews witho
 document mutation (revision frozen, zero signals), then committing exactly once on
 release with per-note painted velocities and preserved selection. No data rows.
 Methods in file order: paintCommitsOnce, rampCommitsOnce.
+The Swift counterparts run the same shape on the shared synthetic fixture
+(src/checks/velocity/VelocityPageChecks.swift:57-77): notes at tick 0 (pitch 60,
+velocity 100, square program), tick 24 (pitch 67, velocity 64) and tick 96 (pitch 72,
+velocity 32, after the program change to noise), so the selected pair spans two voice
+maps and the ruler is continuous only once setUseDetents(enabled: false) disables the
+detent ladder. drawerVelocityPaintCommitsOnce selects notes 0 and 2;
+drawerVelocityRampCommitsOnce adds a third note at tick 48 (pitch 60, duration 12,
+velocity 56) and selects all three. Both drive page.pointerPress / pointerMove /
+pointerRelease (surface 1, button 1; the ramp with Shift bit 0x0200_0000) and read
+page.frozenPreview, document.note(id)?.velocity, document.revision,
+document.history.currentIdentity and session.selectedNoteOrder.
 Exact original source anchors:
 src/checks/velocity/velocitypainting.cpp:16 | selectDragPair();
 src/checks/velocity/velocitypainting.cpp:27 | QSignalSpy documentChanged(&m_tab->document(), &SongDocument::documentChanged);
@@ -65,8 +91,10 @@ src/checks/velocity/velocitypainting.cpp:167 | mouseRelease(Qt::LeftButton, ramp
 Original assertion inventory
 
 A001 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:15
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:49 asserts page.axisMode is the continuous ruler for the mixed square/noise selection after setUseDetents(false); the same observable as the original Continuous mode check. Executed by runVelocityPageChecks (src/checks/velocity/VelocityPageChecks.swift:176); cppID swiftcore/VelocityPaintDetent::paintCommitsOnce.
+Swift counterpart expression (S080):
+  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityPaintID, what: "the mixed square and noise selection presents the continuous ruler")
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -87,8 +115,10 @@ Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A002 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:23
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:58 asserts pressX != endX: the two selected note columns give distinct paint endpoints, the observable of the original paintStart != paintEnd guard. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S081):
+  report.expect(pressX != endX, cppID: drawerVelocityPaintID, message: "the paint endpoints span two note columns")
 Source context since previous assertion:
 ;
     selectDragPair();
@@ -103,8 +133,9 @@ Original expression:
   QVERIFY(paintStart != paintEnd)
 
 A003 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:29
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityPaintCommitsOnce (S085, S086)
+Mapping/reason: QSignalSpy construction validity is a Qt test-harness mechanism with no Swift ingress: the Swift check holds no spy and counts no emissions, and src/checks/velocity/velocitypainting.cpp is uncompiled in every target and unregistered in checkcatalog (spec section 7). The consumer-visible effect the spy would observe is asserted through public document state by S085 (revision frozen) and S086 (history identity frozen).
 Source context since previous assertion:
 ;
 
@@ -117,8 +148,9 @@ Original expression:
   QVERIFY(documentChanged.isValid())
 
 A004 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:30
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityPaintCommitsOnce (S085, S086, S091, S093)
+Mapping/reason: the second QSignalSpy observes the native SongTab::edited signal; the Swift page has no tab QObject and no emission counter, so the spy-validity mechanism has no ingress (src/checks/velocity/velocitypainting.cpp is uncompiled and unregistered, spec section 7). The deferred-then-committed publication it observed is carried by S085/S086 (nothing staged) and S091/S093 (one release, undoable).
 Source context since previous assertion:
 ;
 
@@ -126,8 +158,10 @@ Original expression:
   QVERIFY(edited.isValid())
 
 A005 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:62 asserts the press column's frozen preview equals 37; a present 37 entry entails the has_value() observation the original makes for the first selected note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S082):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityPaintID, what: "the press column previews its literal paint velocity")
 Source context since previous assertion:
 ;
 
@@ -146,8 +180,10 @@ Original expression:
   QVERIFY(quietPreview.has_value())
 
 A006 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:63 asserts the release column's frozen preview equals 91, which entails the has_value() observation for the second selected note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S083):
+  report.expectEqual(91, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityPaintID, what: "the release column previews its literal paint velocity")
 Source context since previous assertion:
 ;
 
@@ -155,8 +191,10 @@ Original expression:
   QVERIFY(laterPreview.has_value())
 
 A007 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:62 asserts the first selected note's frozen preview is the literal 37; the same predicate carries the presence site A005. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S082):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityPaintID, what: "the press column previews its literal paint velocity")
 Source context since previous assertion:
 ;
 
@@ -164,8 +202,10 @@ Original expression:
   QCOMPARE(int(*quietPreview), int(kQuietPaintVelocity))
 
 A008 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:63 asserts the second selected note's frozen preview is the literal 91; the same predicate carries the presence site A006. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S083):
+  report.expectEqual(91, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityPaintID, what: "the release column previews its literal paint velocity")
 Source context since previous assertion:
 ;
 
@@ -173,8 +213,10 @@ Original expression:
   QCOMPARE(int(*laterPreview), int(kLaterPaintVelocity))
 
 A009 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:64 asserts page.frozenPreview has no entry for notes[1], the unselected loud sibling, which is the original's absent preview for m_loudStacked. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S084):
+  report.expect(page.frozenPreview[notes[1].id] == nil, cppID: drawerVelocityPaintID, message: "the unselected note previews nothing")
 Source context since previous assertion:
 ;
 
@@ -182,8 +224,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A010 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:65 asserts document.revision still equals the snapshot taken before the press while the paint preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S085):
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityPaintID, what: "the deferred paint stages no revision before release")
 Source context since previous assertion:
 ;
 
@@ -191,8 +235,10 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A011 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:66 asserts document.history.currentIdentity still equals the pre-gesture identity, so no history entry was staged; the Swift suite replaces the private QUndoStack::count() read with public history identity, exactly as proof.tst_velocityediting.txt does for the same gesture. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S086):
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityPaintID, what: "the deferred paint stages no history entry before release")
 Source context since previous assertion:
 ;
 
@@ -200,8 +246,10 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A012 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S085 (src/checks/velocity/VelocityPaintDetentChecks.swift:65, revision frozen) and S086 (:66, history identity frozen) establish that the deferred paint committed nothing, which is the no-op the original counts. Unproved: the documentChanged emission count itself - the Swift check attaches no document.onChange observer and counts no publications, so the exact zero-count observation is not executed. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S085):
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityPaintID, what: "the deferred paint stages no revision before release")
 Source context since previous assertion:
 ;
 
@@ -209,8 +257,10 @@ Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A013 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S085 (:65) and S086 (:66) show the deferred paint committed nothing. Unproved: the SongTab::edited emission count - the Swift page has no tab object and no edited/dirty publication counter to read. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S086):
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityPaintID, what: "the deferred paint stages no history entry before release")
 Source context since previous assertion:
 ;
 
@@ -218,8 +268,10 @@ Original expression:
   QCOMPARE(edited.count(), 0)
 
 A014 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:51
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:67 asserts document.note(notes[0])?.velocity still equals the captured first-note velocity while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S087):
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the first velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -227,8 +279,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A015 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:52
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:68 asserts the second selected note's document velocity still equals its captured value while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S088):
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the last velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -236,8 +290,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A016 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:69 asserts the unselected sibling's document velocity still equals its captured value while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S089):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the unselected velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -245,8 +301,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A017 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S087 (src/checks/velocity/VelocityPaintDetentChecks.swift:67) asserts the first selected note's document velocity during the preview. Unproved: the timeline projection value - the original reacquires the rebuilt MidiTimeline and reads its note-on velocity (tst_velocityediting.cpp:431-442), while the Swift check never re-reads the page's published projection.
+Swift counterpart expression (S087):
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the first velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -254,8 +312,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A018 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S088 (src/checks/velocity/VelocityPaintDetentChecks.swift:68) asserts the second selected note's document velocity during the preview. Unproved: its timeline projection value (original helper tst_velocityediting.cpp:431-442); the Swift check never re-reads the published projection.
+Swift counterpart expression (S088):
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the last velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -263,8 +323,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
 
 A019 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S089 (src/checks/velocity/VelocityPaintDetentChecks.swift:69) asserts the unselected note's document velocity during the preview. Unproved: its timeline projection value (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S089):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the unselected velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -272,8 +334,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A020 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:57
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:70 asserts session.selectedNoteOrder is exactly the paint pair while the preview is live, the observable of the original frozen noteSelectionIs check. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S090):
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the preview keeps the paint selection")
 Source context since previous assertion:
 ;
 
@@ -281,8 +345,10 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A021 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:64
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S091 (src/checks/velocity/VelocityPaintDetentChecks.swift:72, revision advanced by exactly one) and S092 (:73, a new history identity) establish the single release commit. Unproved: the documentChanged emission count - no document.onChange observer is attached, so exactly-one publication is corroborated but not executed.
+Swift counterpart expression (S091):
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityPaintID, what: "one paint release commits one revision")
 Source context since previous assertion:
 ;
 
@@ -296,8 +362,10 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A022 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S091 (:72) and S092 (:73) establish the single release commit. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S092):
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityPaintID, message: "one paint release makes one history entry")
 Source context since previous assertion:
 ;
 
@@ -305,8 +373,10 @@ Original expression:
   QCOMPARE(edited.count(), 1)
 
 A023 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:72 asserts document.revision is exactly one past the pre-gesture snapshot after the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S091):
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityPaintID, what: "one paint release commits one revision")
 Source context since previous assertion:
 ;
 
@@ -314,8 +384,10 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A024 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:73 asserts the history identity changed on release, i.e. exactly one newly committed entry for the single-release transaction; this replaces the private QUndoStack::count() delta. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S092):
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityPaintID, message: "one paint release makes one history entry")
 Source context since previous assertion:
 ;
 
@@ -323,8 +395,10 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A025 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:68
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:74 asserts document.history.canUndo after the release, the public form of the original history().canUndo(). Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S093):
+  report.expect(document.history.canUndo, cppID: drawerVelocityPaintID, message: "the paint entry is undoable")
 Source context since previous assertion:
 ;
 
@@ -332,8 +406,10 @@ Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A026 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:75 asserts page.frozenPreview.isEmpty (and no live gesture) after the release, so the first selected note keeps no preview. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S094):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityPaintID, message: "the paint release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -341,8 +417,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A027 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:75 asserts the whole frozen preview map is empty after release, which covers the second selected note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S094):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityPaintID, message: "the paint release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -350,8 +428,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A028 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:75 asserts the whole frozen preview map is empty after release, which covers the unselected sibling. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S094):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityPaintID, message: "the paint release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -359,8 +439,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A029 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:76 asserts document.note(notes[0])?.velocity == 37 after the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S095):
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the first literal velocity")
 Source context since previous assertion:
 ;
 
@@ -368,8 +450,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietPaintVelocity))
 
 A030 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:77 asserts document.note(notes[2])?.velocity == 91 after the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S096):
+  report.expectEqual(91, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the last literal velocity")
 Source context since previous assertion:
 ;
 
@@ -377,8 +461,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLaterPaintVelocity))
 
 A031 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:78 asserts the unselected sibling's document velocity is unchanged by the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S097):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release leaves the unselected note alone")
 Source context since previous assertion:
 ;
 
@@ -386,8 +472,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A032 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S095 (src/checks/velocity/VelocityPaintDetentChecks.swift:76) asserts the committed document velocity of the first selected note. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442); the Swift check never re-reads the published projection.
+Swift counterpart expression (S095):
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the first literal velocity")
 Source context since previous assertion:
 ;
 
@@ -395,8 +483,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietPaintVelocity))
 
 A033 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S096 (src/checks/velocity/VelocityPaintDetentChecks.swift:77) asserts the committed document velocity of the second selected note. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S096):
+  report.expectEqual(91, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the last literal velocity")
 Source context since previous assertion:
 ;
 
@@ -404,8 +494,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLaterPaintVelocity))
 
 A034 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S097 (src/checks/velocity/VelocityPaintDetentChecks.swift:78) asserts the unselected note's document velocity after the release. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S097):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release leaves the unselected note alone")
 Source context since previous assertion:
 ;
 
@@ -413,8 +505,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A035 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityPaintCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:79 asserts session.selectedNoteOrder is still the paint pair after the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:176).
+Swift counterpart expression (S098):
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the release keeps the paint selection")
 Source context since previous assertion:
 ;
 
@@ -422,8 +516,10 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A036 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:101 asserts page.axisMode is the continuous ruler for the mixed square/noise selection after setUseDetents(false); the same observable as the original Continuous mode check. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177); cppID swiftcore/VelocityPaintDetent::rampCommitsOnce.
+Swift counterpart expression (S099):
+  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityRampID, what: "the mixed ramp selection presents the continuous ruler")
 Source context since previous assertion:
 ;
 }
@@ -442,8 +538,14 @@ Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A037 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce asserts the freshly added middle note's placed geometry in src/checks/velocity/VelocityPaintDetentChecks.swift: its tick at :96 (S120) and its pitch at :97 (S121), the observable of the original (track 0, tick, key) findNote probe; S079 (:19) still fails the check when the identity addNotes returned does not resolve, and :25 when the add is rejected. The track-0 arm is fixed by the fixture construction (NewNote(track: 0) read back through notes(in: 0)) rather than re-probed. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S120):
+  report.expectEqual(48, Int(middle.tick), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed tick")
+Swift counterpart expression (S121):
+  report.expectEqual(60, Int(middle.pitch), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed pitch")
+Swift counterpart expression (S079):
+  report.fail(cppID, "the added note published no identity")
 Source context since previous assertion:
 ;
     m_tab->document().addNote(0, kMiddleTick, m_quietStacked.key, kMiddleDuration,
@@ -455,8 +557,10 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kMiddleTick, m_quietStacked.key, &middle))
 
 A038 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:123 asserts document.note(middle)?.velocity == 56 while the ramp preview is live, i.e. the added middle note keeps the velocity it was constructed with - the same observable as the original middle.velocity == kMiddleOriginalVelocity. The Swift fixture constructs that note at 56 (tick 48) instead of the original 42 (tick 36).
+Swift counterpart expression (S109):
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -464,8 +568,10 @@ Original expression:
   QCOMPARE(int(middle.velocity), int(kMiddleOriginalVelocity))
 
 A039 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S109 (src/checks/velocity/VelocityPaintDetentChecks.swift:123) asserts the added middle note's document velocity. Unproved: its timeline projection - the original's QTRY re-read of the rebuilt timeline (tst_velocityediting.cpp:431-442) is not executed.
+Swift counterpart expression (S109):
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -473,8 +579,10 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A040 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:126 asserts session.selectedNoteOrder is exactly the three-note ramp selection, the observable of the original noteSelectionIs check. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S111):
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the preview keeps the ramp selection")
 Source context since previous assertion:
 ;
 
@@ -485,8 +593,9 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A041 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityRampCommitsOnce (S101, S103)
+Mapping/reason: the original asserts that the native QTest window's integral QPoint endpoints balance around a half-pixel middle (2*middleExact.x() rounding parity). Swift pointer input is double-precision (VelocityPage.pointerPress/pointerMove take Double coordinates), so QPointF::toPoint rounding has no ingress; the intent - a swept span symmetric about the middle note - is carried by S101 (:111, the middle handle lies strictly inside the span) and S103 (:117, the middle preview equals the ramp value interpolated at that x). src/checks/velocity/velocitypainting.cpp is uncompiled and unregistered (spec section 7).
 Source context since previous assertion:
 ;
 
@@ -513,8 +622,9 @@ Original expression:
   QCOMPARE(doubledMiddleExactX, std::round(doubledMiddleExactX))
 
 A042 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityRampCommitsOnce (S101, S103)
+Mapping/reason: same native integral-coordinate mechanism as A041 for the endpoint-symmetry equality: Swift drives double-precision page coordinates and grounds no QPoint rounding, so the exact endpoint balance is not representable; the behavioural remnant (the middle sample inside the swept span, interpolated at its own x) is asserted by S101 and S103. src/checks/velocity/velocitypainting.cpp is uncompiled and unregistered (spec section 7).
 Source context since previous assertion:
 ;
 
@@ -522,8 +632,10 @@ Original expression:
   QCOMPARE(rampStart.x() + rampEnd.x(), static_cast<int>(doubledMiddleExactX))
 
 A043 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:110 asserts pressX != endX: the two endpoint note columns give distinct ramp endpoints, the observable of the original rampStart != rampEnd guard. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S100):
+  report.expect(pressX != endX, cppID: drawerVelocityRampID, message: "the ramp endpoints span two note columns")
 Source context since previous assertion:
 ;
 
@@ -531,8 +643,9 @@ Original expression:
   QVERIFY(rampStart != rampEnd)
 
 A044 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityRampCommitsOnce (S106, S107)
+Mapping/reason: QSignalSpy construction validity is a Qt test-harness mechanism with no Swift ingress; the Swift check holds no spy and counts no emissions (src/checks/velocity/velocitypainting.cpp uncompiled and unregistered, spec section 7). The deferred ramp's consumer-visible effect is asserted by S106 (:120, revision frozen) and S107 (:121, history identity frozen).
 Source context since previous assertion:
 ;
 
@@ -548,8 +661,9 @@ Original expression:
   QVERIFY(documentChanged.isValid())
 
 A045 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityRampCommitsOnce (S106, S107, S112, S114)
+Mapping/reason: same mechanism as A044 for the tab-level edited spy; the Swift page has no tab QObject or emission counter. The publication it observed is carried by S106/S107 (nothing staged during the ramp) and S112/S114 (one release revision, undoable).
 Source context since previous assertion:
 ;
 
@@ -557,8 +671,10 @@ Original expression:
   QVERIFY(edited.isValid())
 
 A046 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:116 asserts the ramp press endpoint's frozen preview equals 37, which entails the has_value() observation for the first selected note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S102):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -578,8 +694,10 @@ Original expression:
   QVERIFY(quietPreview.has_value())
 
 A047 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:117 asserts the added middle note's frozen preview equals middleExpected (the ramp value at that note's x, quantized by the axis), which entails the has_value() observation. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S103):
+  report.expectEqual(middleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityRampID, what: "the halfway middle note previews the interpolated velocity")
 Source context since previous assertion:
 ;
 
@@ -587,8 +705,10 @@ Original expression:
   QVERIFY(middlePreview.has_value())
 
 A048 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:118 asserts the ramp release endpoint's frozen preview equals 93, which entails the has_value() observation for the last selected note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S104):
+  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -596,8 +716,10 @@ Original expression:
   QVERIFY(laterPreview.has_value())
 
 A049 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:116 asserts the press endpoint's preview is the literal 37, matching the original's literal endpoint value. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S102):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -605,8 +727,10 @@ Original expression:
   QCOMPARE(int(*quietPreview), int(kRampStartVelocity))
 
 A050 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S103 (src/checks/velocity/VelocityPaintDetentChecks.swift:117) asserts the middle preview equals page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: pressX, y0: pressY, x1: endX, y1: endY)) computed at :114 - the same interpolation observable over the gesture's own span. Unproved: equality with the original's deliberately non-inferred literal 65, because the expectation is derived from the production ramp helper and axis quantizer rather than an independent constant.
+Swift counterpart expression (S103):
+  report.expectEqual(middleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityRampID, what: "the halfway middle note previews the interpolated velocity")
 Source context since previous assertion:
 ;
 
@@ -614,8 +738,10 @@ Original expression:
   QCOMPARE(int(*middlePreview), int(kRampMiddleVelocity))
 
 A051 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:118 asserts the release endpoint's preview is the literal 93, matching the original's literal endpoint value. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S104):
+  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -623,8 +749,10 @@ Original expression:
   QCOMPARE(int(*laterPreview), int(kRampEndVelocity))
 
 A052 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:119 asserts page.frozenPreview has no entry for the note outside the selection, the original's absent preview for m_loudStacked. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S105):
+  report.expect(page.frozenPreview[notes[1].id] == nil, cppID: drawerVelocityRampID, message: "the note outside the selection previews nothing")
 Source context since previous assertion:
 ;
 
@@ -632,8 +760,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A053 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:120 asserts document.revision still equals the pre-press snapshot while the ramp preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S106):
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityRampID, what: "the deferred ramp stages no revision before release")
 Source context since previous assertion:
 ;
 
@@ -641,8 +771,10 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A054 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:121 asserts document.history.currentIdentity still equals the pre-gesture identity, so no history entry was staged; public history identity replaces the private QUndoStack::count() read. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S107):
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityRampID, what: "the deferred ramp stages no history entry before release")
 Source context since previous assertion:
 ;
 
@@ -650,8 +782,10 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A055 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S106 (src/checks/velocity/VelocityPaintDetentChecks.swift:120) and S107 (:121) establish that the deferred ramp committed nothing, the no-op the original counts. Unproved: the documentChanged emission count - no document.onChange observer is attached. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S106):
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityRampID, what: "the deferred ramp stages no revision before release")
 Source context since previous assertion:
 ;
 
@@ -659,8 +793,10 @@ Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A056 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S106 (:120) and S107 (:121) establish that the deferred ramp committed nothing. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart.
+Swift counterpart expression (S107):
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityRampID, what: "the deferred ramp stages no history entry before release")
 Source context since previous assertion:
 ;
 
@@ -668,8 +804,10 @@ Original expression:
   QCOMPARE(edited.count(), 0)
 
 A057 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:122 asserts the first ramp note's document velocity is unchanged while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S108):
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the first velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -677,8 +815,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A058 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:123 asserts the added middle note's document velocity is 56 while the preview is live - unchanged and equal to its constructed velocity, the observable of the original middle == kMiddleOriginalVelocity (the Swift fixture uses 56 rather than 42). Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S109):
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -686,8 +826,12 @@ Original expression:
   QCOMPARE(documentVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A059 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:125 (S122) asserts the ramp-end note's document velocity still equals its captured value while the ramp preview is live, which is the documentVelocity read the original makes before the release; S117 (:134) covers its committed value. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S122):
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the last velocity during preview")
+Swift counterpart expression (S104):
+  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -695,8 +839,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A060 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:124 asserts the unselected sibling's document velocity is unchanged while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S110):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the outside velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -704,8 +850,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A061 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S108 (src/checks/velocity/VelocityPaintDetentChecks.swift:122) asserts the first ramp note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S108):
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the first velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -713,8 +861,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A062 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S109 (src/checks/velocity/VelocityPaintDetentChecks.swift:123) asserts the middle note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S109):
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -722,8 +872,10 @@ Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A063 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S104 (src/checks/velocity/VelocityPaintDetentChecks.swift:118, preview) and S117 (:134, commit) for the ramp-end note. Unproved: its pre-release timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S104):
+  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -731,8 +883,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
 
 A064 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S110 (src/checks/velocity/VelocityPaintDetentChecks.swift:124) asserts the unselected note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S110):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the outside velocity during preview")
 Source context since previous assertion:
 ;
 
@@ -740,8 +894,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A065 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:126 asserts session.selectedNoteOrder is exactly the three-note ramp selection while the preview is live. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S111):
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the preview keeps the ramp selection")
 Source context since previous assertion:
 ;
 
@@ -749,8 +905,10 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A066 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S112 (src/checks/velocity/VelocityPaintDetentChecks.swift:128, revision advanced by exactly one) and S113 (:129, a new history identity) establish the single ramp commit. Unproved: the documentChanged emission count - no document.onChange observer is attached.
+Swift counterpart expression (S112):
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRampID, what: "one ramp release commits one revision")
 Source context since previous assertion:
 ;
 
@@ -763,8 +921,10 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A067 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S112 (:128) and S113 (:129) establish the single ramp commit. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart.
+Swift counterpart expression (S113):
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRampID, message: "one ramp release makes one history entry")
 Source context since previous assertion:
 ;
 
@@ -772,8 +932,10 @@ Original expression:
   QCOMPARE(edited.count(), 1)
 
 A068 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:128 asserts document.revision is exactly one past the pre-gesture snapshot after the ramp release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S112):
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRampID, what: "one ramp release commits one revision")
 Source context since previous assertion:
 ;
 
@@ -781,8 +943,10 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A069 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:129 asserts the history identity changed on release, i.e. one newly committed entry for the ramp transaction; this replaces the private QUndoStack::count() delta. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S113):
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRampID, message: "one ramp release makes one history entry")
 Source context since previous assertion:
 ;
 
@@ -790,8 +954,10 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A070 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:130 asserts document.history.canUndo after the ramp release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S114):
+  report.expect(document.history.canUndo, cppID: drawerVelocityRampID, message: "the ramp entry is undoable")
 Source context since previous assertion:
 ;
 
@@ -799,8 +965,10 @@ Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A071 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:131 asserts the frozen preview map is empty (and no live gesture) after release, so the first ramp note keeps no preview. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S115):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRampID, message: "the ramp release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -808,8 +976,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A072 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:131 asserts the whole frozen preview map is empty after release, which covers the middle note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S115):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRampID, message: "the ramp release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -817,8 +987,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(middle.noteId).has_value())
 
 A073 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:131 asserts the whole frozen preview map is empty after release, which covers the last ramp note. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S115):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRampID, message: "the ramp release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -826,8 +998,10 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A074 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:131 asserts the whole frozen preview map is empty after release, which covers the unselected sibling. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S115):
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRampID, message: "the ramp release clears its preview")
 Source context since previous assertion:
 ;
 
@@ -835,8 +1009,12 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A075 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:132 (S123) asserts the first ramp note's committed document velocity is the literal 37 after the release, the original's post-release documentVelocity read; S102 (:116) covers its preview. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S123):
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the first ramp velocity")
+Swift counterpart expression (S102):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -844,8 +1022,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kRampStartVelocity))
 
 A076 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S116 (src/checks/velocity/VelocityPaintDetentChecks.swift:133) asserts the committed middle velocity equals middleExpected, the value derived from the production ramp helper and axis quantizer at :114. Unproved: equality with the original's independent literal 65.
+Swift counterpart expression (S116):
+  report.expectEqual(middleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the interpolated middle velocity")
 Source context since previous assertion:
 ;
 
@@ -853,8 +1033,10 @@ Original expression:
   QCOMPARE(documentVelocity(middle.noteId), int(kRampMiddleVelocity))
 
 A077 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:134 asserts document.note(notes[2])?.velocity == 93 after the ramp release, the original's literal last-ramp value. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S117):
+  report.expectEqual(93, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the last ramp velocity")
 Source context since previous assertion:
 ;
 
@@ -862,8 +1044,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kRampEndVelocity))
 
 A078 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:135 asserts the unselected note's document velocity is unchanged by the ramp release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S118):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release leaves the outside note alone")
 Source context since previous assertion:
 ;
 
@@ -871,8 +1055,10 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A079 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S102 (src/checks/velocity/VelocityPaintDetentChecks.swift:116, the first note's preview 37). Unproved: any post-commit read of the first ramp note - the release side asserts only the committed middle (S116, :133), the committed last note (S117, :134) and the untouched outside note (S118, :135), so neither its document nor its projected value is re-read.
+Swift counterpart expression (S102):
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
 Source context since previous assertion:
 ;
 
@@ -880,8 +1066,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kRampStartVelocity))
 
 A080 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S116 (src/checks/velocity/VelocityPaintDetentChecks.swift:133) asserts the committed middle note's document value (production-derived). Unproved: its post-commit timeline projection and an independent literal check of 65.
+Swift counterpart expression (S116):
+  report.expectEqual(middleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the interpolated middle velocity")
 Source context since previous assertion:
 ;
 
@@ -889,8 +1077,10 @@ Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kRampMiddleVelocity))
 
 A081 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S117 (src/checks/velocity/VelocityPaintDetentChecks.swift:134) asserts the committed last ramp note's document value 93. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S117):
+  report.expectEqual(93, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the last ramp velocity")
 Source context since previous assertion:
 ;
 
@@ -898,8 +1088,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kRampEndVelocity))
 
 A082 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S118 (src/checks/velocity/VelocityPaintDetentChecks.swift:135) asserts the unselected note's document value is unchanged after the release. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
+Swift counterpart expression (S118):
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release leaves the outside note alone")
 Source context since previous assertion:
 ;
 
@@ -907,8 +1099,10 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A083 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: drawerVelocityRampCommitsOnce at src/checks/velocity/VelocityPaintDetentChecks.swift:136 asserts session.selectedNoteOrder is still the three-note ramp selection after the release. Executed by runVelocityPageChecks (VelocityPageChecks.swift:177).
+Swift counterpart expression (S119):
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the release keeps the ramp selection")
 Source context since previous assertion:
 ;
 
@@ -1211,40 +1405,177 @@ S069 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdra
   report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                 message: "the published hit radius is font-relative and positive")
 
-S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:195
+S070 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:224
   report.expect(!grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity is unavailable with no selection")
 
-S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:209
+S071 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:238
   report.expect(grid.commandAvailable(command: setVelocity), cppID: drawerVelocityCommandID,
                 message: "Set Velocity becomes available with a selection")
 
-S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:213
+S072 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:242
   report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
                      what: "the existing command row asks its owner for the prompt")
 
-S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:215
+S073 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:244
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "the command commits no value before prompt acceptance")
 
-S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:220
+S074 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:249
   report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
                      what: "the command routes every execution through the same owner")
 
-S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:222
+S075 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:251
   report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                 message: "the routed command opened the page's captured prompt")
 
-S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:225
+S076 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:254
   report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                 message: "cancelling the routed prompt still commits nothing")
 
-S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:229
+S077 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:258
   report.expectEqual(EditNotesOperation.setVelocity.rawValue,
                      row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity on the notes arm")
 
-S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:232
+S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageChecks.swift:261
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocityPaintAddNote | src/checks/velocity/VelocityPaintDetentChecks.swift:19
+  report.fail(cppID, "the added note published no identity")
+
+S080 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:49
+  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityPaintID, what: "the mixed square and noise selection presents the continuous ruler")
+
+S081 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:58
+  report.expect(pressX != endX, cppID: drawerVelocityPaintID, message: "the paint endpoints span two note columns")
+
+S082 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:62
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityPaintID, what: "the press column previews its literal paint velocity")
+
+S083 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:63
+  report.expectEqual(91, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityPaintID, what: "the release column previews its literal paint velocity")
+
+S084 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:64
+  report.expect(page.frozenPreview[notes[1].id] == nil, cppID: drawerVelocityPaintID, message: "the unselected note previews nothing")
+
+S085 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:65
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityPaintID, what: "the deferred paint stages no revision before release")
+
+S086 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:66
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityPaintID, what: "the deferred paint stages no history entry before release")
+
+S087 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:67
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the first velocity during preview")
+
+S088 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:68
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the last velocity during preview")
+
+S089 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:69
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the unselected velocity during preview")
+
+S090 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:70
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the preview keeps the paint selection")
+
+S091 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:72
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityPaintID, what: "one paint release commits one revision")
+
+S092 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:73
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityPaintID, message: "one paint release makes one history entry")
+
+S093 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:74
+  report.expect(document.history.canUndo, cppID: drawerVelocityPaintID, message: "the paint entry is undoable")
+
+S094 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:75
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityPaintID, message: "the paint release clears its preview")
+
+S095 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:76
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the first literal velocity")
+
+S096 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:77
+  report.expectEqual(91, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the last literal velocity")
+
+S097 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:78
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release leaves the unselected note alone")
+
+S098 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:79
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the release keeps the paint selection")
+
+S099 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:101
+  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityRampID, what: "the mixed ramp selection presents the continuous ruler")
+
+S100 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:110
+  report.expect(pressX != endX, cppID: drawerVelocityRampID, message: "the ramp endpoints span two note columns")
+
+S101 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:111
+  report.expect(middleHandle.x > min(pressX, endX) && middleHandle.x < max(pressX, endX), cppID: drawerVelocityRampID, message: "the middle note sits inside the swept span")
+
+S102 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:116
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
+
+S103 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:117
+  report.expectEqual(middleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityRampID, what: "the halfway middle note previews the interpolated velocity")
+
+S104 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:118
+  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
+
+S105 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:119
+  report.expect(page.frozenPreview[notes[1].id] == nil, cppID: drawerVelocityRampID, message: "the note outside the selection previews nothing")
+
+S106 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:120
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityRampID, what: "the deferred ramp stages no revision before release")
+
+S107 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:121
+  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityRampID, what: "the deferred ramp stages no history entry before release")
+
+S108 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:122
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the first velocity during preview")
+
+S109 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:123
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
+
+S110 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:124
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the outside velocity during preview")
+
+S111 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:126
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the preview keeps the ramp selection")
+
+S112 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:128
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRampID, what: "one ramp release commits one revision")
+
+S113 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:129
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRampID, message: "one ramp release makes one history entry")
+
+S114 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:130
+  report.expect(document.history.canUndo, cppID: drawerVelocityRampID, message: "the ramp entry is undoable")
+
+S115 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:131
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRampID, message: "the ramp release clears its preview")
+
+S116 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:133
+  report.expectEqual(middleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the interpolated middle velocity")
+
+S117 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:134
+  report.expectEqual(93, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the last ramp velocity")
+
+S118 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:135
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release leaves the outside note alone")
+
+S119 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:136
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the release keeps the ramp selection")
+
+S120 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:96
+  report.expectEqual(48, Int(middle.tick), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed tick")
+
+S121 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:97
+  report.expectEqual(60, Int(middle.pitch), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed pitch")
+
+S122 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:125
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the last velocity during preview")
+
+S123 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:132
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the first ramp velocity")
+
+Tally: MATCHED 52, PARTIAL 25, GAP 0, RETIRED-REPRESENTATION 6

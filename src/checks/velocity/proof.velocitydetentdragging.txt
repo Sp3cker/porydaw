@@ -5,6 +5,12 @@ Original: src/checks/velocity/velocitydetentdragging.cpp
 Original SHA-256: 6626e06ff84d0561d4bb68a6fdbbd16c94347c2e3fd0780312d480ca241c8e0d
 Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
+Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
+Additional Swift SHA-256: 9c6f9389d6da12297ae6600087b5d8ffb5ab60b5a7275b422b4e655e6afebe8d
+Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
+Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
+Additional Swift SHA-256: 0377880eedfe6537c922ab8b81f4d2f41d1550f1c996b652a1fd3ee861fc8a80
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -13,6 +19,8 @@ original sequence; the context inventory below records its rows, loops and fixtu
 MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
 a specific related scenario differs; GAP means exact assertion correspondence is not
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+RETIRED-REPRESENTATION marks a C++ mechanism with no Swift ingress whose
+consumer-visible effect is carried by the predicates cited in its mapping.
 A method name or related Swift case alone never establishes an assertion match.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
@@ -21,9 +29,24 @@ The original swiftcore suite entrypoints invoke these paired functions in their 
 order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
 VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+The three detent-dragging methods execute as drawerVelocityLateUnlockKeepsSnapped,
+drawerVelocityUnlockedRelativeKeepsOffsets and drawerVelocityUnlockedRampInterpolates
+(src/checks/velocity/VelocityPaintDetentChecks.swift; cppIDs
+swiftcore/VelocityPaintDetent::lateUnlockKeepsGestureSnapped,
+::unlockedRelativeKeepsOffsets, ::unlockedRampInterpolates), called in file order from
+runVelocityPageChecks (src/checks/velocity/VelocityPageChecks.swift). Their page cases run on
+drawerVelocityVelocityFixture (three notes, ticks 0/24/96, pitches 60/67/72, velocities
+100/64/32); the wave row of each data set is driven at the value layer through VelocityMap
+(.wave) plus VelocityGesturePolicy, because the fixture presents no wave programme.
 
-Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification
+Command: deno task verify --filter swiftcore
+Result: PASS - swiftcore harness 1/14 ok (13 sibling harnesses skipped by the filter). Provided by
+the controller handoff for this tree; not re-run by the ledger writer.
+Command: deno task verify:qml
+Result: PASS - editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not
+re-run by the ledger writer.
+Tally: MATCHED 15, PARTIAL 112, GAP 0, NATIVE-SETUP 4, RETIRED-REPRESENTATION 9.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -73,844 +96,844 @@ src/checks/velocity/velocitydetentdragging.cpp:289 | mouseMove(rampEnd);
 Original assertion inventory
 
 A001 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:36
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the page's resolved opening programme is asserted for this fixture as page.contextSlot == 0 with !page.contextUnsupported (S108, a separate case that shares drawerVelocityVelocityFixture); the legacy per-row lane programme (1/2/3) and the noise section's programme identity are not asserted, so this site stays partly unproved.
 Original expression:
   QTRY_COMPARE(m_tab->view().currentProgram(0), program)
 
 A002 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:37
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square pair's PSG-context availability is asserted as page.detentsAvailable && page.detentsEnabled (S107, same VelocityPageChecks fixture); the wave and noise row contexts are not asserted, so the three-row site is only partly covered.
 Original expression:
   QTRY_VERIFY(m_area->isPsgContext())
 
 A003 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:38
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the intrinsic ruler is asserted for the square pair (S030) and for the ramped noise triple (S093); the wave row's page axis mode is not asserted, its pair being pinned at the value layer only (S051/S052).
 Original expression:
   QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
 
 A004 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:40
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the nullable C++ drawer lookup has no Swift ingress; the counterpart fixture constructs fixture.page as a non-optional VelocityPage (VelocityPageChecks.swift:118,122-124) and every executed predicate dereferences it directly, so no construction-failure branch exists to assert; the page's consumer-visible effect is carried by the predicates that drive it (S030/S032-S043, editcheck-proof-retirement spec 2.1).
 Original expression:
   QVERIFY(drawer)
 
 A005 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square pair's enabled detent control is asserted through the merged preference (S107); the legacy chrome's separate detentChecked widget state has no Swift predicate and the wave and noise rows are not asserted.
 Original expression:
   QTRY_VERIFY(drawer->chrome().detentEnabled() && drawer->chrome().detentChecked())
 
 A006 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: page.detentsEnabled, the documented VelocityArea::useDetents analogue, is asserted for the square pair (S107); the wave and noise rows and the setDetentChecked(true) enable step itself are not asserted.
 Original expression:
   QTRY_VERIFY(m_area->useDetents())
 
 A007 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the committed document origin 33 is asserted at the locked preview's no-commit stage (S036); no executing predicate reads the built timeline projection (the legacy timelineVelocity helper) for this fixture, so the timeline form stays unproved.
 Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A008 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the committed document origin 87 is asserted at the locked preview's no-commit stage (S037); no executing predicate reads the built timeline projection for this fixture, so the timeline form stays unproved.
 Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A009 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: retained native input precondition; the window-to-item mapping must place the press point inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454) and the check presses on the page's own published handle, so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(pressLocal))
 
 A010 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: retained native input precondition; the moved window point must stay inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(moveLocal))
 
 A011 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: a non-zero velocity.detent_unlock modifier is asserted by the sibling relative and ramp checks (S053, S077); this late-lock check never reads the binding, because its press is deliberately locked and pointerMove carries no modifier (VelocityPage.swift:462), so this instance's guard is not executed.
 Original expression:
   QVERIFY(unlock != Qt::NoModifier)
 
 A012 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: QSignalSpy construction validity is pure harness mechanics with no user-observable effect (editcheck-proof-retirement spec 2.1); the port has no spy object, and the no-commit observable it gates is asserted by revision stability (S035/S047).
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A013 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the legacy SongTab edited spy has no Swift counterpart and no user-observable effect of its own; the single-commit observable it gates is asserted as exactly one committed revision (S038/S048).
 Original expression:
   QVERIFY(edited.isValid())
 
 A014 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S032 asserts the square pair's press-locked quiet preview exists and equals 44 (absence fails the ?? 0 equality); S045 repeats 44 for the noise pair and the wave value-layer pin asserts 64 (S051).
 Original expression:
   QVERIFY(quietPreview.has_value())
 
 A015 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S033 asserts the square pair's press-locked later preview exists and equals 92; S046 repeats 92 for the noise pair and the wave value-layer pin asserts 127 (S052).
 Original expression:
   QVERIFY(laterPreview.has_value())
 
 A016 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the press-locked quiet preview equals the row's expectedQuiet - 44 for the square (S032) and noise (S045) pairs and 64 at the wave value layer (S051).
 Original expression:
   QCOMPARE(int(*quietPreview), expectedQuiet)
 
 A017 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the press-locked later preview equals the row's expectedLater - 92 for the square (S033) and noise (S046) pairs and 127 at the wave value layer (S052).
 Original expression:
   QCOMPARE(int(*laterPreview), expectedLater)
 
 A018 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S034 asserts an unselected note previews nothing for the square pair only; the noise and wave rows do not re-assert an unselected note's absence of preview.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A019 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:81
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S035 asserts the locked square drag stages no revision (S047 for the noise pair), which is this site's observable for those rows; the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A020 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:82
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executed predicate asserts history depth; the legacy undoStack count comparison is corroborated only by unchanged revision (S035/S047), and the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A021 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the zero documentChanged emission count is unproved because the port publishes document.onChange and has no spy; the no-commit observable is corroborated by unchanged revision (S035/S047).
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A022 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:84
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the legacy SongTab edited emission count has no Swift counterpart, so the zero count is unproved; no-commit is corroborated by unchanged revision (S035/S047).
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A023 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:85
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S036 asserts the document keeps the quiet origin 33 during the locked square preview; the noise pair's mid-preview document value and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A024 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S037 asserts the document keeps the later origin 87 during the locked square preview; the noise pair's mid-preview document value and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLaterOrigin))
 
 A025 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S042 asserts the unselected note's post-release value equals its fixture velocity for the square pair (S050 for the noise pair); an unselected note's mid-preview document value is not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A026 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted at the locked preview's no-commit stage (S036).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A027 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted at the locked preview's no-commit stage (S037).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A028 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S042/S050).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A029 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the drag selection is asserted only after the release (S043), not mid-drag; the noise and wave row instances are not asserted.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A030 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S038); the single documentChanged emission is unproved because the port has no spy.
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A031 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S038); the legacy edited signal has no Swift counterpart, so the single emission is unproved.
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A032 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S038 asserts exactly one committed revision for the square pair (S048 for the noise pair), which is this site's observable for those rows; the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A033 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:98
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: revision growth of exactly one is asserted (S038/S048); history depth equal to before plus one is asserted by no executed predicate, and the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A034 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S039 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A035 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S039 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A036 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S039 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A037 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S040 asserts the release commits the snapped quiet level 44 for the square pair (S049 for the noise pair); the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A038 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S041 asserts the release commits the snapped later level 92 for the square pair (S050 for the noise pair); the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), expectedLater)
 
 A039 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S042 asserts the unselected note's committed value is unchanged for the square pair; the noise pair's other notes and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A040 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S040/S049).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A041 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S041/S050).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), expectedLater)
 
 A042 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S042).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A043 | VelocityEditingTest::lateUnlockKeepsGestureSnapped | src/checks/velocity/velocitydetentdragging.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S043 asserts the drag pair's selection after the square release; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A044 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the page's resolved opening programme is asserted for this fixture as page.contextSlot == 0 with !page.contextUnsupported (S108, a separate case that shares drawerVelocityVelocityFixture); the legacy per-row lane programme (1/2/3) and the noise section's programme identity are not asserted, so this site stays partly unproved.
 Original expression:
   QTRY_COMPARE(m_tab->view().currentProgram(0), program)
 
 A045 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square pair's PSG-context availability is asserted as page.detentsAvailable && page.detentsEnabled (S107, same fixture); the wave and noise row contexts are not asserted.
 Original expression:
   QTRY_VERIFY(m_area->isPsgContext())
 
 A046 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the intrinsic ruler is asserted for the square pair (S030) and for the ramped noise triple (S093); the wave row's page axis mode is not asserted, its pair being pinned at the value layer only (S075/S076).
 Original expression:
   QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
 
 A047 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the nullable C++ drawer lookup has no Swift ingress; the counterpart fixture constructs fixture.page as a non-optional VelocityPage (VelocityPageChecks.swift:118,122-124) and every executed predicate dereferences it directly, so no construction-failure branch exists to assert; the page's consumer-visible effect is carried by the predicates that drive it (S056-S067, editcheck-proof-retirement spec 2.1).
 Original expression:
   QVERIFY(drawer)
 
 A048 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square pair's enabled detent control is asserted through the merged preference (S107); the legacy chrome's separate detentChecked widget state has no Swift predicate and the wave and noise rows are not asserted.
 Original expression:
   QTRY_VERIFY(drawer->chrome().detentEnabled() && drawer->chrome().detentChecked())
 
 A049 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: page.detentsEnabled, the documented VelocityArea::useDetents analogue, is asserted for the square pair (S107); the wave and noise rows and the setDetentChecked(true) enable step itself are not asserted.
 Original expression:
   QTRY_VERIFY(m_area->useDetents())
 
 A050 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted during the unlocked preview (S060).
 Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A051 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted during the unlocked preview (S061).
 Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A052 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: retained native input precondition; the delivered press point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:454), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(deliveredPressLocal))
 
 A053 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: NATIVE-SETUP: retained native input precondition; the delivered move point must lie inside the QML input item's bounds. The Swift page consumes plot coordinates directly (VelocityPage.swift:462), so the widget-bounds guard has no Swift counterpart.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(deliveredMoveLocal))
 
 A054 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the unlocked drag's raw delta is derived from the page's own axis mapping (moveDelta = yToVelocity(firstHandle.y - 24) - yToVelocity(firstHandle.y)), and S056/S057 pin both targets to origin plus that shared delta (33 + moveDelta, 87 + moveDelta); the legacy kRawDelta 7 literal and its delivered-geometry quantization guard are no longer asserted, so the delta's concrete magnitude stays unproved.
 Original expression:
   QCOMPARE(m_area->axis().yToVelocity(deliveredMoveLocal.y()) -
                    m_area->axis().yToVelocity(deliveredPressLocal.y()),
                kRawDelta)
 
 A055 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S053 is the same-sequence failure guard that fails the check when KeybindingRegistry().modifierBinding("velocity.detent_unlock") resolves to zero (the call is at VelocityPaintDetentChecks.swift:398), the exact observable of this site.
 Original expression:
   QVERIFY(unlock != Qt::NoModifier)
 
 A056 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: QSignalSpy construction validity is pure harness mechanics with no user-observable effect (editcheck-proof-retirement spec 2.1); the port has no spy object, and the no-commit observable it gates is asserted by revision stability (S059/S071).
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A057 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the legacy SongTab edited spy has no Swift counterpart and no user-observable effect of its own; the single-commit observable it gates is asserted as exactly one committed revision (S062/S072).
 Original expression:
   QVERIFY(edited.isValid())
 
 A058 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S056 asserts the unlocked square preview exists and equals the pressed origin plus the shared raw delta (absence fails the ?? 0 equality); S069 repeats the shared-delta form for the noise pair and the wave value-layer pin asserts its own raw preview 40 (S075).
 Original expression:
   QVERIFY(quietPreview.has_value())
 
 A059 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S057 asserts the unlocked later preview exists and equals 87 plus the shared raw delta; S070 repeats the shared-delta form for the noise pair and the wave value-layer pin asserts its own raw preview 94 (S076).
 Original expression:
   QVERIFY(laterPreview.has_value())
 
 A060 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S056/S069 assert the quiet preview equals 33 plus the shared raw delta for the square and noise rows, and the wave value-layer pin asserts 40 (S075); the page rows' independent fixture literal expectedQuiet 40 is no longer asserted, so the concrete row value stays unproved.
 Original expression:
   QCOMPARE(int(*quietPreview), expectedQuiet)
 
 A061 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S057/S070 assert the later preview equals 87 plus the shared raw delta for the square and noise rows, and the wave value-layer pin asserts 94 (S076); the page rows' independent fixture literal expectedLater 94 is no longer asserted, so the concrete row value stays unproved.
 Original expression:
   QCOMPARE(int(*laterPreview), expectedLater)
 
 A062 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the local predicates assert an unselected note previews nothing for the square flow (S058, the pair's third note) and the noise flow (S114, the outside note); the wave value-layer pin carries only its two selected notes, so the wave row's instance stays unproved.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A063 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S059 asserts the unlocked square drag stages no revision (S071 for the noise pair), which is this site's observable for those rows; the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A064 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executed predicate asserts history depth; the legacy undoStack count comparison is corroborated only by unchanged revision (S059/S071), and the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A065 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the zero documentChanged emission count is unproved because the port publishes document.onChange and has no spy; the no-commit observable is corroborated by unchanged revision (S059/S071).
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A066 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the legacy SongTab edited emission count has no Swift counterpart, so the zero count is unproved; no-commit is corroborated by unchanged revision (S059/S071).
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A067 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S060 asserts the document keeps the quiet origin 33 during the unlocked square preview; the noise pair's mid-preview document value and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A068 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S061 asserts the document keeps the later origin 87 during the unlocked square preview; the noise pair's mid-preview document value and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLaterOrigin))
 
 A069 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S066 asserts the unselected note's post-release value equals its fixture velocity for the square pair; the noise pair's other notes are not asserted and an unselected note's mid-preview document value stays unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A070 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted during the unlocked preview (S060).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietOrigin))
 
 A071 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the document origin is asserted during the unlocked preview (S061).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLaterOrigin))
 
 A072 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S066/S074).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A073 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the drag selection is asserted only after the release (S067), not mid-drag; the noise and wave row instances are not asserted.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A074 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S062); the single documentChanged emission is unproved because the port has no spy.
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A075 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S062); the legacy edited signal has no Swift counterpart, so the single emission is unproved.
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A076 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S062 asserts exactly one committed revision for the square pair (S072 for the noise pair), which is this site's observable for those rows; the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A077 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: revision growth of exactly one is asserted (S062/S072); history depth equal to before plus one is asserted by no executed predicate, and the wave row's page flow is not executed, so its instance stays unproved (the wave pair is pinned at the value layer only, S051/S052).
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A078 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S063 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A079 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S063 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A080 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S063 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A081 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S064/S073 assert the release commits 33 plus the shared delta for the square and noise rows; the legacy literal 40 is no longer asserted for the page rows and the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A082 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S065/S074 assert the release commits 87 plus the shared delta for the square and noise rows; the legacy literal 94 is no longer asserted for the page rows and the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), expectedLater)
 
 A083 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S066 asserts the unselected note's committed value is unchanged for the square pair; the noise pair's other notes and the wave row are not asserted.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A084 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S064/S073).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A085 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S065/S074).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), expectedLater)
 
 A086 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S066).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A087 | VelocityEditingTest::unlockedRelativeKeepsOffsets | src/checks/velocity/velocitydetentdragging.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S067 asserts the drag pair's selection after the square release; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A088 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the page's resolved opening programme is asserted for this fixture as page.contextSlot == 0 with !page.contextUnsupported (S108, a separate case that shares drawerVelocityVelocityFixture); the legacy per-row lane programme (1/2/3) and the noise section's programme identity are not asserted, so this site stays partly unproved.
 Original expression:
   QTRY_COMPARE(m_tab->view().currentProgram(0), program)
 
 A089 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square triple's PSG-context availability is asserted as page.detentsAvailable && page.detentsEnabled (S107, same fixture); the wave and noise row contexts are not asserted.
 Original expression:
   QTRY_VERIFY(m_area->isPsgContext())
 
 A090 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the intrinsic ruler is asserted for the square triple (S079) and for the noise triple (S093); the wave row's page axis mode is not asserted, its triple being pinned at the value layer only (S104-S106).
 Original expression:
   QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
 
 A091 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:247
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the nullable C++ drawer lookup has no Swift ingress; the counterpart fixture constructs fixture.page as a non-optional VelocityPage (VelocityPageChecks.swift:118,122-124) and every executed predicate dereferences it directly, so no construction-failure branch exists to assert; the page's consumer-visible effect is carried by the predicates that drive it (S079/S082-S092, editcheck-proof-retirement spec 2.1).
 Original expression:
   QVERIFY(drawer)
 
 A092 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:249
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the square triple's enabled detent control is asserted through the merged preference (S107); the legacy chrome's separate detentChecked widget state has no Swift predicate and the wave and noise rows are not asserted.
 Original expression:
   QTRY_VERIFY(drawer->chrome().detentEnabled() && drawer->chrome().detentChecked())
 
 A093 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: page.detentsEnabled, the documented VelocityArea::useDetents analogue, is asserted for the square pair (S107); the wave and noise rows and the setDetentChecked(true) enable step itself are not asserted.
 Original expression:
   QTRY_VERIFY(m_area->useDetents())
 
 A094 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the sibling ramp-commit case asserts its own added middle note resolves at its placed tick and pitch (S111, S112), and this case requires its own published middle handle (S080); this unlocked-ramp case asserts no tick/pitch resolution for its own middle note (tick 12, pitch 72, VelocityPaintDetentChecks.swift:485), so its instance stays unproved.
 Original expression:
   QVERIFY(m_tab->document().findNote(0, kMiddleTick, m_quietStacked.key, &middle))
 
 A095 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the sibling ramp-commit case asserts its own middle note keeps the added velocity 56 during its preview (S113); this unlocked-ramp case adds its middle at the same literal 56 (VelocityPaintDetentChecks.swift:485) but asserts no pre-gesture middle value, so its instance stays unproved.
 Original expression:
   QCOMPARE(int(middle.velocity), int(kMiddleOriginalVelocity))
 
 A096 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the added middle value 56 is asserted only in the sibling ramp-commit case (S113), and S086 corroborates this case's no-commit stage only.
 Original expression:
   QTRY_COMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A097 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the three-note frozen set is proven by the asserted previews (S082-S084 for the square row and S096-S098 for the noise row); the selection state itself is asserted by no predicate in the ramp check.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A098 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S081 asserts the middle note sits strictly inside the swept span; the legacy half-pixel centering identity (twice the middle x equals the rounded endpoint sum) is not asserted.
 Original expression:
   QCOMPARE(doubledMiddleExactX, std::round(doubledMiddleExactX))
 
 A099 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S081/S095 assert the middle note lies strictly inside the swept span; the legacy ceil/floor endpoint bracketing of the exact middle x is not asserted.
 Original expression:
   QCOMPARE(rampStart.x() + rampEnd.x(), static_cast<int>(doubledMiddleExactX))
 
 A100 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S081 (and S095 for the noise triple) assert the middle note lies strictly inside the swept span, which requires distinct ramp start and end x; the wave value-layer pin's distinct middle value 65 (S105) likewise requires a non-degenerate span for that row.
 Original expression:
   QVERIFY(rampStart != rampEnd)
 
 A101 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S077 is the same-sequence failure guard that fails the check when KeybindingRegistry().modifierBinding("velocity.detent_unlock") resolves to zero (the call is at VelocityPaintDetentChecks.swift:467), the exact observable of this site.
 Original expression:
   QVERIFY(unlock != Qt::NoModifier)
 
 A102 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: QSignalSpy construction validity is pure harness mechanics with no user-observable effect (editcheck-proof-retirement spec 2.1); the port has no spy object, and the no-commit observable it gates is asserted by revision stability (S086/S099).
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A103 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION: the legacy SongTab edited spy has no Swift counterpart and no user-observable effect of its own; the single-commit observable it gates is asserted as exactly one committed revision (S087/S100).
 Original expression:
   QVERIFY(edited.isValid())
 
 A104 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S082 asserts the unlocked square ramp's first preview exists and equals 37 (absence fails the ?? 0 equality); S096 repeats 37 for the noise row and the wave value-layer pin asserts 37 (S104).
 Original expression:
   QVERIFY(quietPreview.has_value())
 
 A105 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S083 asserts the middle note's preview exists and equals the square row's swept-line value; S097 repeats it for the noise row and the wave value-layer pin asserts its middle preview 65 (S105).
 Original expression:
   QVERIFY(middlePreview.has_value())
 
 A106 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: S084 asserts the last preview exists and equals 93 for the square row (S098 for the noise row) and the wave value-layer pin asserts 93 (S106).
 Original expression:
   QVERIFY(laterPreview.has_value())
 
 A107 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:298
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the first preview equals the row's expectedQuiet 37 - square (S082), noise (S096) and wave value layer (S104).
 Original expression:
   QCOMPARE(int(*quietPreview), expectedQuiet)
 
 A108 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:299
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the middle preview equals the row's expectedMiddle - the swept-line value for the square (S083) and noise (S097) rows and 65 at the wave value layer (S105).
 Original expression:
   QCOMPARE(int(*middlePreview), expectedMiddle)
 
 A109 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: MATCHED: the last preview equals the row's expectedLater 93 - square (S084), noise (S098) and wave value layer (S106).
 Original expression:
   QCOMPARE(int(*laterPreview), expectedLater)
 
 A110 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S085 asserts the note outside the swept span previews nothing for the square row only; the noise row's outside note and the wave row do not re-assert it.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A111 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S086 asserts the deferred unlocked square ramp stages no revision (S099 for the noise row), which is this site's observable for those rows; the wave row's page flow is not executed.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A112 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executed predicate asserts history depth; the legacy undoStack count comparison is corroborated only by unchanged revision (S086/S099), and the wave row's page flow is not executed.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A113 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the zero documentChanged emission count is unproved because the port publishes document.onChange and has no spy; the no-commit observable is corroborated by unchanged revision (S086/S099).
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A114 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the legacy SongTab edited emission count has no Swift counterpart, so the zero count is unproved; no-commit is corroborated by unchanged revision (S086/S099).
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A115 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:306
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no predicate asserts the quiet note's mid-preview document value; S086 corroborates only the no-commit stage, and the wave row's document is not exercised.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A116 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no predicate asserts the middle note's mid-preview document value 56; S086 corroborates only the no-commit stage.
 Original expression:
   QCOMPARE(documentVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A117 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no predicate asserts the later note's mid-preview document value; S086 corroborates only the no-commit stage.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A118 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:309
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no predicate asserts an unselected note's value during the ramp preview; S092 (square row) and S103 (noise row) assert it only after release.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A119 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S089).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A120 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S090).
 Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A121 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S091).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
 
 A122 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S092/S103).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A123 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the ramp triple's selection is asserted by the sibling ramp-commit case for its own three-note ramp - S109 (the preview keeps the ramp selection) and S110 (the release keeps the ramp selection); this unlocked-ramp case asserts no selection predicate of its own, so the instance here stays unproved.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A124 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S087/S100); the single documentChanged emission is unproved because the port has no spy.
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A125 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: one commit is asserted as exactly one committed revision (S087/S100); the legacy edited signal has no Swift counterpart, so the single emission is unproved.
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A126 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S087 asserts exactly one committed revision for the square row (S100 for the noise row), which is this site's observable for those rows; the wave row's page flow is not executed.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A127 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: revision growth of exactly one is asserted (S087/S100); history depth equal to before plus one is asserted by no executed predicate, and the wave row's page flow is not executed.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A128 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S088 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A129 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S088 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(middle.noteId).has_value())
 
 A130 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S088 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A131 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S088 asserts the square release clears the whole preview; the noise release and the wave row's page flow are not asserted.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A132 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S089 asserts the release commits the first raw ramp velocity 37 for the square row (S101 for the noise row); the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A133 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S090 asserts the release commits the interpolated middle velocity for the square row (S102 for the noise row); the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(middle.noteId), expectedMiddle)
 
 A134 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S091 asserts the release commits the last raw ramp velocity 93 for the square row (S103 for the noise row); the wave row's commit is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), expectedLater)
 
 A135 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:329
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S092 asserts the outside note's committed value is unchanged for the square row (S103 for the noise row); the wave row's page flow is not executed.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A136 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:330
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S089/S101).
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), expectedQuiet)
 
 A137 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S090/S102).
 Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), expectedMiddle)
 
 A138 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection for this fixture; the committed document value is asserted (S091/S103).
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), expectedLater)
 
 A139 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: no executing predicate reads the built timeline projection; the unselected note's committed value is asserted through the document (S092/S103).
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A140 | VelocityEditingTest::unlockedRampInterpolates | src/checks/velocity/velocitydetentdragging.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the ramp triple's selection is asserted by the sibling ramp-commit case for its own three-note ramp - S109 (the preview keeps the ramp selection) and S110 (the release keeps the ramp selection); this unlocked-ramp case asserts no selection predicate of its own, so the instance here stays unproved.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
@@ -1067,3 +1090,350 @@ S028 | drawerVelocityFrozenGesturePolicy | src/checks/velocity/velocitydetentdra
 Swift expression:
   report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                     message: "the published hit radius is font-relative and positive")
+
+S029 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:343
+Swift expression:
+  report.fail(drawerVelocityLateUnlockID, "the synthetic fixture published fewer than three notes")
+
+S030 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:351
+Swift expression:
+  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityLateUnlockID, what: "the square pair presents the intrinsic ruler")
+
+S031 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:353
+Swift expression:
+  report.fail(drawerVelocityLateUnlockID, "the square pair published no handles")
+
+S032 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:359
+Swift expression:
+  report.expectEqual(44, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked quiet note previews its snapped level")
+
+S033 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:360
+Swift expression:
+  report.expectEqual(92, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked later note keeps its own snapped offset")
+
+S034 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:361
+Swift expression:
+  report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityLateUnlockID, message: "the unselected note previews nothing")
+
+S035 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:362
+Swift expression:
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityLateUnlockID, what: "the locked drag stages no revision before release")
+
+S036 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:363
+Swift expression:
+  report.expectEqual(33, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the document keeps the quiet origin during preview")
+
+S037 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:364
+Swift expression:
+  report.expectEqual(87, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the document keeps the later origin during preview")
+
+S038 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:366
+Swift expression:
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityLateUnlockID, what: "one locked drag release commits one revision")
+
+S039 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:367
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityLateUnlockID, message: "the release clears its preview")
+
+S040 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:368
+Swift expression:
+  report.expectEqual(44, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release commits the snapped quiet level")
+
+S041 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:369
+Swift expression:
+  report.expectEqual(92, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release commits the snapped later level")
+
+S042 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:370
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release leaves the unselected note alone")
+
+S043 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:371
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityLateUnlockID, message: "the release keeps the drag selection")
+
+S044 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:379
+Swift expression:
+  report.fail(drawerVelocityLateUnlockID, "the noise pair published no handles")
+
+S045 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:385
+Swift expression:
+  report.expectEqual(44, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked noise note previews its snapped level")
+
+S046 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:386
+Swift expression:
+  report.expectEqual(92, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked second noise note keeps its own snapped offset")
+
+S047 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:387
+Swift expression:
+  report.expectEqual(noiseBaseline.revision, document.revision, cppID: drawerVelocityLateUnlockID, what: "the locked noise drag stages no revision before release")
+
+S048 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:389
+Swift expression:
+  report.expectEqual(noiseBaseline.revision + 1, document.revision, cppID: drawerVelocityLateUnlockID, what: "one locked noise release commits one revision")
+
+S049 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:390
+Swift expression:
+  report.expectEqual(44, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release commits the snapped noise level")
+
+S050 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:391
+Swift expression:
+  report.expectEqual(92, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityLateUnlockID, what: "the release commits the snapped second noise level")
+
+S051 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:396
+Swift expression:
+  report.expectEqual(64, Int(waveGesture.preview[NoteID(105)] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked wave quiet note previews its snapped level")
+
+S052 | drawerVelocityLateUnlockKeepsSnapped | src/checks/velocity/VelocityPaintDetentChecks.swift:397
+Swift expression:
+  report.expectEqual(127, Int(waveGesture.preview[NoteID(106)] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked wave later note keeps its own snapped offset")
+
+S053 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:404
+Swift expression:
+  report.fail(drawerVelocityUnlockedRelativeID, "the detent unlock hold resolved to no modifier")
+
+S054 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:410
+Swift expression:
+  report.fail(drawerVelocityUnlockedRelativeID, "the synthetic fixture published fewer than three notes")
+
+S055 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:419
+Swift expression:
+  report.fail(drawerVelocityUnlockedRelativeID, "the square pair published no handles")
+
+S056 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:427
+Swift expression:
+  report.expectEqual(33 + moveDelta, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note takes the shared raw delta")
+
+S057 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:428
+Swift expression:
+  report.expectEqual(87 + moveDelta, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked later note takes the same raw delta")
+
+S058 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:429
+Swift expression:
+  report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the unselected note previews nothing")
+
+S059 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:430
+Swift expression:
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked drag stages no revision before release")
+
+S060 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:431
+Swift expression:
+  report.expectEqual(33, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the document keeps the quiet origin during preview")
+
+S061 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:432
+Swift expression:
+  report.expectEqual(87, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the document keeps the later origin during preview")
+
+S062 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:434
+Swift expression:
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked drag release commits one revision")
+
+S063 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:435
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRelativeID, message: "the release clears its preview")
+
+S064 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:436
+Swift expression:
+  report.expectEqual(33 + moveDelta, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared raw delta")
+
+S065 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:437
+Swift expression:
+  report.expectEqual(87 + moveDelta, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same raw delta on every target")
+
+S066 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:438
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release leaves the unselected note alone")
+
+S067 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:439
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityUnlockedRelativeID, message: "the release keeps the drag selection")
+
+S068 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:447
+Swift expression:
+  report.fail(drawerVelocityUnlockedRelativeID, "the noise pair published no handles")
+
+S069 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:455
+Swift expression:
+  report.expectEqual(33 + noiseMoveDelta, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note takes the shared raw delta")
+
+S070 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:456
+Swift expression:
+  report.expectEqual(87 + noiseMoveDelta, Int(page.frozenPreview[secondNoise.id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked second noise note takes the same raw delta")
+
+S071 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:458
+Swift expression:
+  report.expectEqual(noiseBaseline.revision, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise drag stages no revision before release")
+
+S072 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:460
+Swift expression:
+  report.expectEqual(noiseBaseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRelativeID, what: "one unlocked noise release commits one revision")
+
+S073 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:461
+Swift expression:
+  report.expectEqual(33 + noiseMoveDelta, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the shared noise delta")
+
+S074 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:462
+Swift expression:
+  report.expectEqual(87 + noiseMoveDelta, Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the release commits the same noise delta on every target")
+
+S075 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:468
+Swift expression:
+  report.expectEqual(40, Int(waveGesture.preview[NoteID(107)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave quiet note previews its raw offset")
+
+S076 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:469
+Swift expression:
+  report.expectEqual(94, Int(waveGesture.preview[NoteID(108)] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked wave later note keeps its own raw offset")
+
+S077 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:476
+Swift expression:
+  report.fail(drawerVelocityUnlockedRampID, "the detent unlock hold resolved to no modifier")
+
+S078 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:483
+Swift expression:
+  report.fail(drawerVelocityUnlockedRampID, "the synthetic fixture published fewer than three notes")
+
+S079 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:493
+Swift expression:
+  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityUnlockedRampID, what: "the square triple presents the intrinsic ruler")
+
+S080 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:495
+Swift expression:
+  report.fail(drawerVelocityUnlockedRampID, "the square triple published no handles")
+
+S081 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:500
+Swift expression:
+  report.expect(middleHandle.x > min(firstHandle.x, lastHandle.x) && middleHandle.x < max(firstHandle.x, lastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the square middle note sits inside the swept span")
+
+S082 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:505
+Swift expression:
+  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp starts raw")
+
+S083 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:506
+Swift expression:
+  report.expectEqual(squareMiddleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square middle interpolates raw")
+
+S084 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:507
+Swift expression:
+  report.expectEqual(93, Int(page.frozenPreview[notes[1].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked square ramp ends raw")
+
+S085 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:508
+Swift expression:
+  report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityUnlockedRampID, message: "the note outside the triple previews nothing")
+
+S086 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:509
+Swift expression:
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred unlocked ramp stages no revision before release")
+
+S087 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:511
+Swift expression:
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked ramp release commits one revision")
+
+S088 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:512
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityUnlockedRampID, message: "the release clears its preview")
+
+S089 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:513
+Swift expression:
+  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first raw ramp velocity")
+
+S090 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:514
+Swift expression:
+  report.expectEqual(squareMiddleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated raw velocity")
+
+S091 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:515
+Swift expression:
+  report.expectEqual(93, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last raw ramp velocity")
+
+S092 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:516
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release leaves the outside note alone")
+
+S093 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:525
+Swift expression:
+  report.expectEqual(VelocityAxisModel.Mode.intrinsic.rawValue, page.axisMode, cppID: drawerVelocityUnlockedRampID, what: "the noise triple presents the intrinsic ruler")
+
+S094 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:527
+Swift expression:
+  report.fail(drawerVelocityUnlockedRampID, "the noise triple published no handles")
+
+S095 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:530
+Swift expression:
+  report.expect(noiseMiddleHandle.x > min(noiseFirstHandle.x, noiseLastHandle.x) && noiseMiddleHandle.x < max(noiseFirstHandle.x, noiseLastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the noise middle note sits inside the swept span")
+
+S096 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:534
+Swift expression:
+  report.expectEqual(37, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp starts raw")
+
+S097 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:536
+Swift expression:
+  report.expectEqual(noiseMiddleExpected, Int(page.frozenPreview[noiseMiddle.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise middle interpolates raw")
+
+S098 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:537
+Swift expression:
+  report.expectEqual(93, Int(page.frozenPreview[noiseLast.id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp ends raw")
+
+S099 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:538
+Swift expression:
+  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityUnlockedRampID, what: "the deferred noise ramp stages no revision before release")
+
+S100 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:540
+Swift expression:
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityUnlockedRampID, what: "one unlocked noise release commits one revision")
+
+S101 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:541
+Swift expression:
+  report.expectEqual(37, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the first noise raw velocity")
+
+S102 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:542
+Swift expression:
+  report.expectEqual(noiseMiddleExpected, Int(document.note(noiseMiddle.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the interpolated noise velocity")
+
+S103 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:543
+Swift expression:
+  report.expectEqual(93, Int(document.note(noiseLast.id)?.velocity ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the release commits the last noise raw velocity")
+
+S104 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:550
+Swift expression:
+  report.expectEqual(37, Int(waveGesture.preview[NoteID(109)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp starts raw")
+
+S105 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:551
+Swift expression:
+  report.expectEqual(65, Int(waveGesture.preview[NoteID(110)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave middle interpolates raw")
+
+S106 | drawerVelocityUnlockedRampInterpolates | src/checks/velocity/VelocityPaintDetentChecks.swift:552
+Swift expression:
+  report.expectEqual(93, Int(waveGesture.preview[NoteID(111)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp ends raw")
+
+S107 | drawerVelocityRulerUnlockKeepsRaw | src/checks/velocity/VelocityPaintDetentChecks.swift:158
+Swift expression:
+  report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityRulerUnlockID, message: "the square context offers the enabled detent control")
+
+S108 | drawerVelocityVoiceContextInvalidation | src/checks/drawerpresentation/velocity.swift:350
+Swift expression:
+  report.expect(!page.contextUnsupported && page.contextSlot == 0,
+                  cppID: drawerVelocityProjectionID,
+                  message: "the selected note starts with a parsed, editable opening voice")
+
+S109 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:126
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the preview keeps the ramp selection")
+
+S110 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:136
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the release keeps the ramp selection")
+
+S111 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:96
+Swift expression:
+  report.expectEqual(48, Int(middle.tick), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed tick")
+
+S112 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:97
+Swift expression:
+  report.expectEqual(60, Int(middle.pitch), cppID: drawerVelocityRampID, what: "the added middle note resolves at its placed pitch")
+
+S113 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:123
+Swift expression:
+  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
+
+
+S114 | drawerVelocityUnlockedRelativeKeepsOffsets | src/checks/velocity/VelocityPaintDetentChecks.swift:457
+Swift expression:
+  report.expect(page.frozenPreview[notes[0].id] == nil, cppID: drawerVelocityUnlockedRelativeID, message: "the outside note previews nothing")
