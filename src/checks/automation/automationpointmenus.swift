@@ -128,6 +128,8 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
                   message: "a stale point menu cannot delete its target")
     report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
                        what: "the rejected Delete leaves the rewritten lane intact")
+    report.expectEqual(["24:64", "120:40", "168:5"], stale.values(stale.panLane), cppID: staleID,
+                       what: "the rejected Delete preserves the rewritten points")
 }
 
 @MainActor
@@ -225,10 +227,14 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
                   message: "a stale confirmation cannot delete its target")
     report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
                        what: "the rejected confirmation leaves the rewritten lane intact")
+    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
+                       cppID: staleID,
+                       what: "the rejected confirmation preserves the rewritten points")
 
     let syntheticID = "automation/AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation"
     let synthetic = drawerAutomationAutomationFixture(suite: suite, service: service)
     synthetic.activate(synthetic.volumeLane)
+    let syntheticBefore = synthetic.snapshot
     _ = synthetic.page.openParameterMenu(
         index: synthetic.page.catalogIndex(of: synthetic.volumeLane), x: 0, y: 0)
     report.expect(synthetic.page.publishedMenuRows.first {
@@ -240,6 +246,8 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
                   message: "the disabled row is refused")
     report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
                   message: "no confirmation opens for the eventless lane")
+    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
+                       what: "the refused row writes nothing")
 
     let countID = "automation/AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic"
     let single = drawerAutomationAutomationFixture(suite: suite, service: service,

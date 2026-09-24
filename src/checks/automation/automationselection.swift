@@ -429,3 +429,34 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
     report.expectEqual(["0:60"], excursion.values(excursion.panLane), cppID: excursionID,
                        what: "collapsing the excursion leaves the baseline alone")
 }
+
+@MainActor
+func drawerAutomationSelectionDeleteCommand(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let id = "automation/AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 60), (120, 40)],
+                                                    tempo: [(48, 600_000)])
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 0, to: 96, lanes: [fixture.panLane, .tempo])
+    let before = fixture.snapshot
+    report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
+                  message: "the Delete command removes the covered span")
+    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "Delete keeps CC points outside the span")
+    report.expect(fixture.tempoValues.isEmpty, cppID: id,
+                  message: "Delete removes the covered tempo point")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one Delete is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
+    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the covered CC point")
+    report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
+                       what: "undo restores the covered tempo point")
+    fixture.page.clearTimeSelection()
+    let emptyBefore = fixture.snapshot
+    report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
+                  message: "Delete with no selection commits nothing")
+    report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
+                       what: "an empty Delete writes nothing")
+}

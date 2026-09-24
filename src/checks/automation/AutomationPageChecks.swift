@@ -378,6 +378,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationRestoredInteractionContracts(report, suite: session, service: service)
     drawerAutomationBandIsolatesTempoAndCc(report, suite: session, service: service)
     drawerAutomationMultiCcDragExcludesOthers(report, suite: session, service: service)
+    drawerAutomationSelectionDeleteCommand(report, suite: session, service: service)
     drawerAutomationGhostViewOnlyAndSurvives(report, suite: session, service: service)
     drawerAutomationPencilOwnershipAndShift(report, suite: session, service: service)
     drawerAutomationDetailThresholdPrecedence(report, suite: session, service: service)
