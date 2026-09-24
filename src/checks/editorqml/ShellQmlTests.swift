@@ -47,6 +47,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-grid-input", inputFileName: "tst_ShellGridInput.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-grid-menu", inputFileName: "tst_ShellGridMenu.qml",
+              fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-clipboard", inputFileName: "tst_ShellClipboard.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
         Entry(name: "shell-theme", inputFileName: "tst_Theme.qml",

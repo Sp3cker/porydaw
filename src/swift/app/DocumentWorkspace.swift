@@ -302,6 +302,9 @@ public final class DocumentWorkspace {
             grid.refreshCursorPresentation()
         }
 
+        if change.domains.contains(.bank) {
+            velocityPage.cancelSectionInteraction()
+        }
         if !change.domains.intersection(fullPageDomains).isEmpty {
             velocityPage.refreshFromDocument()
             voiceChangesPage.refreshFromDocument()
