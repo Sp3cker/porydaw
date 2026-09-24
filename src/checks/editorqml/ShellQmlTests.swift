@@ -76,6 +76,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-transport", inputFileName: "tst_ShellTransport.qml",
               fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+        Entry(name: "shell-menus", inputFileName: "tst_ShellMenus.qml",
+              fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-note-visuals", inputFileName: "tst_ShellNoteVisuals.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-reticle-visuals", inputFileName: "tst_ShellReticleVisuals.qml",

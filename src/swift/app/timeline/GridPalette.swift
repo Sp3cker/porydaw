@@ -126,10 +126,10 @@ public enum PaletteMath {
         // QColor::getHsvF works in double (qreal); the oracle keeps the
         // components in float locals and interpolates in float, so the same
         // widths are used here: Double conversion, Float interpolation, then
-        // QColor::fromHsvF quantized with qRound (round half up, non-negative).
+        // fromHsvF quantized with qRound (round half up, non-negative).
+        let t = Float(velocity - 1) / 126
         let minHSV = rgbToHsvFractional(r: 0x5F, g: 0x44, b: 0xE9)
         let maxHSV = rgbToHsvFractional(r: 0xE9, g: 0x09, b: 0x04)
-        let t = Float(velocity - 1) / 126.0
         let h = Double(Float(minHSV.h) + (Float(maxHSV.h) - Float(minHSV.h)) * t)
         let s = Double(Float(minHSV.s) + (Float(maxHSV.s) - Float(minHSV.s)) * t)
         let v = Double(Float(minHSV.v) + (Float(maxHSV.v) - Float(minHSV.v)) * t)

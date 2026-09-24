@@ -71,6 +71,58 @@ struct GridTypography {
         fontMaps = maps
     }
 
+    static func barLabel(_ bar: Int) -> String { "\(bar)" }
+
+    static func beatLabel(_ bar: Int, _ beat: Int) -> String { "\(bar).\(beat)" }
+
+    func rulerAdvance(bar: Int) -> Double {
+        rulerMetrics.advance(Self.barLabel(bar))
+    }
+
+    func beatAdvance(bar: Int, beat: Int) -> Double {
+        beatMetrics.advance(Self.beatLabel(bar, beat))
+    }
+
+    func signatureAdvance(_ label: String) -> Double {
+        signatureMetrics.advance(label)
+    }
+
+    func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
+
+    /// Advance of the pitch name in the fixed note-name face, for the
+    /// complete-name-plus-two-trailing-spaces fit rule in NoteNameLabels.
+    func noteNameAdvance(pitch: Int) -> Double { noteNameWidths[pitch] }
+
+    func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
+
+    static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
+        let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
+        let next = "Atkinson Hyperlegible Next"
+        let mono = "Atkinson Hyperlegible Mono"
+        func spec(_ family: String, _ px: Double, _ weight: Int, _ spacing: Double = 0)
+            -> GridFontSpec
+        {
+            GridFontSpec(
+                family: family, pixelSize: Int(px), weight: weight, letterSpacing: spacing)
+        }
+        let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
+        // The note-name face is the caption-weight Next face at two device
+        // pixels below the base size: typography::noteName(app font) with
+        // pixelSize() - 2 * singlePixel() (pianoroll.cpp). Unlike keyLabel it
+        // never shrinks to the row — it hides instead (NoteNameLabels gate).
+        let noteNamePx = max(1.0, m.baseFontPx.rounded() - 2.0)
+        return [
+            .ruler: spec(mono, rulerPx, 400, m.rulerLetterSpacing),
+            .beat: spec(mono, max(m.rulerMinFontPx, rulerPx - 1), 400, m.rulerLetterSpacing),
+            .bold: spec(mono, rulerPx, 600, m.rulerLetterSpacing),
+            .sig: spec(next, bodyPx, 600),
+            .chip: spec(next, m.baseFontPx, 400),
+            .keyLabel: spec(next, min(bodyPx, m.baseFontPx), 400),
+            .noteName: spec(next, noteNamePx, 400),
+        ]
+    }
+}
+
 @MainActor
 // Visible to the swiftcore harness for the fitted-maximality check; the
 // canvas remains the only production consumer.

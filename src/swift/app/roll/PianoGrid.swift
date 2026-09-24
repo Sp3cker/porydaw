@@ -118,7 +118,12 @@ public final class PianoGrid {
     @QtTracked public var editCursorTick = 0
     @QtTracked public var lastVelocity = 100
     @QtTracked public var hoverKey = -1
-
+    /// View menu display modes, mirrored from ApplicationSession (which owns
+    /// the app-wide state and pushes it to every tab). Plain Swift state, set
+    /// only through the setters below so each change rebuilds the notes;
+    /// standalone grids (checks, fixtures) default both off.
+    @QtIgnored public var velocityColorMode = false
+    @QtIgnored public var noteNameMode = false
     @QtIgnored private var measurementFonts: [GridFontKind: GridFontSpec] = [:]
     @QtIgnored private var typography: GridTypography?
     @QtIgnored private var typographyKey: (fontPx: Double, dpr: Double, rowHeight: Double)?
@@ -259,6 +264,24 @@ public final class PianoGrid {
         stopAudition()
         session.selectPrimaryTrack(index)
         refreshFromSession()
+    }
+
+    /// Mirrors ApplicationSession's velocity-color mode on this tab: every
+    /// non-ghost fill and the draw preview re-hue by velocity. No-op when
+    /// unchanged; otherwise rebuilds the visible notes.
+    public func setVelocityColorMode(enabled: Bool) {
+        guard velocityColorMode != enabled else { return }
+        velocityColorMode = enabled
+        refreshNotes()
+    }
+
+    /// Mirrors ApplicationSession's note-name mode on this tab: visible
+    /// selected-track notes gain pitch-name labels. No-op when unchanged;
+    /// otherwise rebuilds the visible notes.
+    public func setNoteNameMode(enabled: Bool) {
+        guard noteNameMode != enabled else { return }
+        noteNameMode = enabled
+        refreshNotes()
     }
 
     public func configureViewport(width: Double, height: Double,
@@ -1014,6 +1037,9 @@ public final class PianoGrid {
             isSelected: { self.session.selectedNotes.contains($0) },
             drawPreview: drawPreview, lastVelocity: lastVelocity,
             hoverKey: hoverKey, selectionBand: selectionBand,
+            velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
+            noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
+            noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0)
     }
 
     @QtIgnored

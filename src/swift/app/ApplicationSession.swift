@@ -37,6 +37,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// The one palette for the whole surface. The host pushes the window theme
     /// into it once; the strip and every page read their roles from it.
     @QtTracked public var palette: GridPalette
+    /// View menu display modes (app-wide): velocity-hue note fills and
+    /// pitch-name labels on roll notes. Runtime state only — QSettings
+    /// persistence lives in the shell layer. The setters below push each mode
+    /// to every open tab's grid immediately; tabs opened later receive the
+    /// current values in openTab.
+    @QtTracked public var velocityColorMode = false
+    @QtTracked public var noteNameMode = false
     /// The open songs. Constructed with the session and never nil: the surface
     /// binds the strip before the first open and after the last close.
     @QtTracked public var songTabs: SongTabsController
@@ -910,6 +917,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 callbacks: makeCallbacks())
+            // New tabs receive the current View menu display modes: the grid
+            // defaults both off, and each setter no-ops (without rebuilding)
+            // when the mode is already off.
+            workspace.grid.setVelocityColorMode(enabled: velocityColorMode)
+            workspace.grid.setNoteNameMode(enabled: noteNameMode)
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()
             }
@@ -1115,6 +1127,28 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         if !settingsApplicationName.isEmpty {
             EditorViewStateCodec.saveLanes(editorLanes, applicationName: settingsApplicationName)
+        }
+    }
+
+    /// Applies the velocity-hue display mode app-wide: every open tab's grid
+    /// re-hues its non-ghost fills (and draw preview) immediately, and tabs
+    /// opened later receive the current value in openTab. No-op when unchanged.
+    public func setVelocityColorMode(enabled: Bool) {
+        guard velocityColorMode != enabled else { return }
+        velocityColorMode = enabled
+        for tab in songTabs.allTabs {
+            tab.workspace.grid.setVelocityColorMode(enabled: enabled)
+        }
+    }
+
+    /// Applies the note-name display mode app-wide, with the same
+    /// push-to-open-tabs and apply-to-later-tabs semantics as
+    /// setVelocityColorMode. No-op when unchanged.
+    public func setNoteNameMode(enabled: Bool) {
+        guard noteNameMode != enabled else { return }
+        noteNameMode = enabled
+        for tab in songTabs.allTabs {
+            tab.workspace.grid.setNoteNameMode(enabled: enabled)
         }
     }
 

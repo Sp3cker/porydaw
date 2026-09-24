@@ -20,6 +20,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("file.open_project", "Open Project…"),
         Action("songs.find", "Find Song"),
         Action("file.save_song", "Save"),
+        Action("file.close_tab", "Close Tab"),
         Action("file.quit", "Quit"),
         Action("edit.undo", "Undo"),
         Action("edit.redo", "Redo"),
@@ -55,10 +56,21 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("roll.grid_narrow", "Narrow Grid", .gridNarrow),
         Action("roll.grid_widen", "Widen Grid", .gridWiden),
         Action("roll.grid_triplet", "Triplet Grid", .gridTriplet),
+        Action("transport.go_to_start", "Go to Start"),
+        Action("transport.play", "Play"),
         Action("transport.play_pause", "Play/Pause"),
+        Action("transport.pause", "Pause"),
         Action("transport.stop", "Stop"),
+        Action("transport.loop", "Toggle Loop"),
+        Action("transport.follow_playhead", "Follow Playhead"),
         Action("view.event_list", "MIDI Event List"),
+        Action("view.automation_drawer", "Automation Drawer"),
+        Action("view.velocity_drawer", "Velocity Drawer"),
+        Action("view.voice_changes_drawer", "Voice Changes Drawer"),
         Action("view.polyphony_debugger", "Polyphony Debugger"),
+        Action("view.velocity_colors", "Color Notes by Velocity"),
+        Action("view.note_names", "Show Note Names"),
+        Action("help.about", "About porydaw"),
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
@@ -174,11 +186,17 @@ public final class ShellPresenter: QmlInstantiableStatus {
         switch id {
         case "songs.find": return session.projectOpen
         case "file.save_song": return session.songOpen && !session.saveInProgress
+        case "file.close_tab": return session.songTabs.selectedPage != nil
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "edit.song_settings": return session.songOpen
-        case "transport.play_pause", "transport.stop": return session.songOpen
-        case "view.event_list": return session.songTabs.selectedPage != nil
+        case "transport.go_to_start", "transport.play", "transport.play_pause",
+            "transport.pause", "transport.stop", "transport.loop",
+            "transport.follow_playhead":
+            return session.songOpen
+        case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
+            "view.voice_changes_drawer":
+            return session.songTabs.selectedPage != nil
         default: return true // open project and quit were always enabled
         }
     }
@@ -194,20 +212,45 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.open_project": chooseProjectRequested()
         case "songs.find": session.songDockController().presenter.focusSearch()
         case "file.save_song": session.requestSave()
+        case "file.close_tab":
+            session.songTabs.requestClose(tabId: session.songTabs.selectedId)
         case "file.quit": quitRequested()
         case "edit.undo": session.requestUndo()
         case "edit.redo": session.requestRedo()
         case "edit.preferences": settingsRequested(songFirst: session.songOpen)
         case "edit.song_settings": settingsRequested(songFirst: true)
         case "edit.engine_settings": settingsRequested(songFirst: false)
+        case "transport.go_to_start": session.transportBarPresenter().goToStart()
+        case "transport.play": session.transportBarPresenter().play()
         case "transport.play_pause": session.playPause()
+        case "transport.pause": session.transportBarPresenter().pause()
         case "transport.stop": session.stop()
+        case "transport.loop":
+            let loopTransport = session.transportBarPresenter()
+            loopTransport.setLoopEnabled(enabled: !loopTransport.loopEnabled)
+        case "transport.follow_playhead":
+            let followTransport = session.transportBarPresenter()
+            followTransport.setFollowPlayhead(enabled: !followTransport.followPlayhead)
         case "view.event_list":
             session.songTabs.setSelectedTabEventsVisible(visible:
                 !session.songTabs.selectedTabShowsEvents)
+        case "view.automation_drawer":
+            session.songTabs.selectedPage?.drawerPresenter()
+                .toggleSection(kind: DrawerSectionKind.automation.rawValue, drawerOwnsFocus: false)
+        case "view.velocity_drawer":
+            session.songTabs.selectedPage?.drawerPresenter()
+                .toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
+        case "view.voice_changes_drawer":
+            session.songTabs.selectedPage?.drawerPresenter()
+                .toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: false)
+        case "view.velocity_colors":
+            session.setVelocityColorMode(enabled: !session.velocityColorMode)
+        case "view.note_names":
+            session.setNoteNameMode(enabled: !session.noteNameMode)
         case "view.polyphony_debugger":
             polyphonyVisible.toggle()
             session.polyphony.setVisible(showing: polyphonyVisible)
+        case "help.about": aboutRequested()
         default: break
         }
     }
@@ -358,6 +401,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
 
     @QtSignal public func chooseProjectRequested()
     @QtSignal public func settingsRequested(songFirst: Bool)
+    @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()
     @QtSignal public func informationRequested(title: String, message: String)
     @QtSignal public func criticalRequested(title: String, message: String)

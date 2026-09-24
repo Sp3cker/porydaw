@@ -75,6 +75,12 @@ ThemedWindow {
         property int columnWidth: 280
         property real songsRatio: 0.5
     }
+    // Velocity colours and note names persist as QSettings root keys, exactly
+    // as the old app stored them. No category: the keys live beside the other
+    // application-level settings, not in a group.
+    Settings {
+        id: displayModeSettings
+    }
     Loader {
         id: engineSettingsStore
         active: false
@@ -105,6 +111,10 @@ ThemedWindow {
             Qt.application.organization = "sp3cker"
             Qt.application.domain = ""
         }
+        // The session fans restored modes out to every tab, including tabs
+        // opened later, so this runs before the startup recipe opens anything.
+        shell.session.setVelocityColorMode(Boolean(displayModeSettings.value("velocityNoteColors", false)))
+        shell.session.setNoteNameMode(Boolean(displayModeSettings.value("noteNames", false)))
         transportBar.restoreOutputVolume()
         engineSettingsStore.active = true
         appearanceStore.active = true
@@ -117,6 +127,53 @@ ThemedWindow {
         const shortcut = shell.actionShortcut(actionId)
         const label = shell.actionLabel(actionId)
         return shortcut.length > 0 ? label + "\t" + shortcut : label
+    }
+
+    // Checked menu items mirror the live tracked state, so a toggle flipped
+    // from the transport bar, a drawer toggle, or a shortcut repaints the
+    // menu without reopening it. Every read below is a notified property, so
+    // the binding tracks it; no Swift method result is cached here.
+    function actionCheckable(actionId) {
+        switch (actionId) {
+        case "view.event_list":
+        case "view.automation_drawer":
+        case "view.velocity_drawer":
+        case "view.voice_changes_drawer":
+        case "view.polyphony_debugger":
+        case "view.velocity_colors":
+        case "view.note_names":
+        case "transport.loop":
+        case "transport.follow_playhead":
+            return true
+        default:
+            return false
+        }
+    }
+    function actionChecked(actionId) {
+        const tabs = shell.session.songTabs
+        const page = tabs.selectedPage
+        switch (actionId) {
+        case "view.event_list":
+            return tabs.selectedTabShowsEvents
+        case "view.automation_drawer":
+            return page !== null && page.drawerPresenter().automationSection.visible
+        case "view.velocity_drawer":
+            return page !== null && page.drawerPresenter().velocitySection.visible
+        case "view.voice_changes_drawer":
+            return page !== null && page.drawerPresenter().voiceChangesSection.visible
+        case "view.polyphony_debugger":
+            return shell.polyphonyVisible
+        case "view.velocity_colors":
+            return shell.session.velocityColorMode
+        case "view.note_names":
+            return shell.session.noteNameMode
+        case "transport.loop":
+            return shell.session.transportBarPresenter().loopEnabled
+        case "transport.follow_playhead":
+            return shell.session.transportBarPresenter().followPlayhead
+        default:
+            return false
+        }
     }
 
     // A Swift method's internal reads do not install QML binding dependencies.
@@ -136,6 +193,14 @@ ThemedWindow {
         function onCanUndoChanged() { ++root.actionRevision }
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
+        function onVelocityColorModeChanged() {
+            displayModeSettings.setValue("velocityNoteColors", shell.session.velocityColorMode)
+            displayModeSettings.sync()
+        }
+        function onNoteNameModeChanged() {
+            displayModeSettings.setValue("noteNames", shell.session.noteNameMode)
+            displayModeSettings.sync()
+        }
         function onOpenFailed(message) { shell.openFailed(message) }
         function onOperationFailed(message) { shell.operationFailed(message) }
         function onAllTabsClosed() { shell.allTabsClosed() }
@@ -144,10 +209,14 @@ ThemedWindow {
     Connections {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
+        function onSelectedPageChanged() { ++root.actionRevision }
+        function onSelectedIdChanged() { ++root.actionRevision }
+        function onTabCountChanged() { ++root.actionRevision }
     }
     Connections {
         target: shell
         function onChooseProjectRequested() { projectPicker.open() }
+        function onAboutRequested() { aboutDialog.open() }
         function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
         function onQuitRequested() { root.close() }
         function onInformationRequested(title, message) {
@@ -367,6 +436,8 @@ ThemedWindow {
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
+                    checkable: root.actionCheckable(modelData)
+                    checked: root.actionChecked(modelData)
                     enabled: {
                         root.actionRevision
                         return shell.actionEnabled(modelData)
@@ -388,8 +459,8 @@ ThemedWindow {
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    checkable: true
-                    checked: modelData === "view.event_list" ? shell.session.songTabs.selectedTabShowsEvents : shell.polyphonyVisible
+                    checkable: root.actionCheckable(modelData)
+                    checked: root.actionChecked(modelData)
                     enabled: {
                         root.actionRevision
                         return shell.actionEnabled(modelData)
@@ -400,6 +471,24 @@ ThemedWindow {
                 onObjectRemoved: (index, object) => viewMenu.removeItem(object)
             }
         }
+        Menu {
+            id: helpMenu
+            objectName: "shellHelpMenu"
+            title: qsTr("&Help")
+            onAboutToShow: ++root.actionRevision
+            // Qt Quick Controls offers no QAction::AboutRole equivalent, so the
+            // item stays in the Help menu on every platform, as it did on
+            // non-macOS builds of the old app.
+            MenuItem {
+                objectName: "shellAction_help.about"
+                text: root.nativeMenuText("help.about")
+                enabled: {
+                    root.actionRevision
+                    return shell.actionEnabled("help.about")
+                }
+                onTriggered: shell.activate("help.about")
+            }
+        }
     }
     SettingsDialog {
         id: settingsDialog
@@ -408,6 +497,12 @@ ThemedWindow {
         store: shell.settingsStore
         colors: root.colors
         applicationFont: Application.font
+    }
+    AboutDialog {
+        id: aboutDialog
+        colors: root.colors
+        applicationFont: root.font
+        baseFontPx: root.bodyFontPx
     }
 
     SplitView {
