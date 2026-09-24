@@ -68,6 +68,8 @@ TestCase {
     }
 
     function openRoute101() {
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()

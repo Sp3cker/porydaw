@@ -288,7 +288,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
         closeReady = true
     }
 
-    public func openStartup() {
+    public func openStartup(applicationName: String) {
+        session.configurePersistence(applicationName: applicationName)
         let arguments = CommandLine.arguments
         var project = ""
         var song = ""
@@ -308,9 +309,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
             }
             index += 1
         }
-        guard !project.isEmpty else { return }
-        if song.isEmpty { session.openProject(path: project) }
-        else { session.openProjectAndSong(path: project, label: song) }
+        if !project.isEmpty {
+            if song.isEmpty { session.openProject(path: project) }
+            else { session.openProjectAndSong(path: project, label: song) }
+        } else {
+            session.restoreStartup()
+        }
     }
 
     /// FolderDialog supplies a file URL; Foundation decodes it into the local

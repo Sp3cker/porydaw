@@ -14,6 +14,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runEditorCameraChecks(report)
     runTimelineScrollbarChecks(report)
     runEditorDrawerChecks(report)
+    runEditorViewStateChecks(report)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 

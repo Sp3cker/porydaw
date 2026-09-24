@@ -21,6 +21,20 @@ TestCase {
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
+    function initTestCase() {
+        Qt.application.name = bootstrap.settingsApplicationName
+        Qt.application.organization = "sp3cker"
+        Qt.application.domain = ""
+    }
+
+    function init() {
+        verify(bootstrap.clearSettings(), "each explicit-open scenario starts in an empty domain")
+    }
+
+    function cleanupTestCase() {
+        verify(bootstrap.clearSettings(), "removed only the private native settings")
+    }
+
     function waitForNative(predicate, timeoutMs) {
         var deadline = Date.now() + timeoutMs
         while (!predicate() && Date.now() < deadline) {

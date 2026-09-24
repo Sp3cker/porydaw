@@ -7,6 +7,7 @@ Swift counterpart: src/checks/workspace/SessionChecks.swift
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift counterpart: src/checks/workspace/session_io.swift
 Swift counterpart: src/checks/workspace/session_playback.swift
+Swift counterpart: src/checks/workspace/editor_view_state_checks.swift
 Swift counterpart: src/checks/workspace/session_save.swift
 Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
@@ -39,16 +40,13 @@ persistence, tab close, transport playhead); the retired sites are harness
 fixture and staging guards that carry no consumer-visible contract of their
 own.
 WorkspaceEditorCodecSelfTest covers the EditorViewState settings codec (codecRows over eight data rows) plus livePersistenceAndFinalClose, which round-trips full/bare editor states through a real MainWindow, poisons the lane blob, and verifies the playhead timer stops on final close.
-selftest_workspace.cpp contributes 41 sites: 0 MATCHED, 0 PARTIAL, 33 GAP, 8 RETIRED-REPRESENTATION. The paired
-counterpart drives the disjoint DocumentSession/ProjectService/bank-history
-suite; it never opens a MainWindow, workspace tab, transport, scale control,
-or editor-codec flow, so no workspace-flow predicate is matched here.
+selftest_workspace.cpp contributes 41 sites: 8 MATCHED, 0 PARTIAL, 25 GAP, 8 RETIRED-REPRESENTATION. The executed Swift codec checks match eight lane-blob grammar and fallback sites. Full drawer chrome and live MainWindow lifecycle observations remain GAP; no native widget harness runs.
 Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 PARTIAL.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Result: PASS, swiftcore 1/31 ok (30 skipped); the seven cited codec predicates executed.
 
 Execution and ownership
 No native execution remains: the QtTest suites declared in
@@ -56,17 +54,14 @@ src/checks/workspace/tst_workspacesessions.h (WorkspaceEditorCodecSelfTest)
 would run against a real MainWindow with the Null audio backend and a staged
 fixture project copy (workspace_test::ProjectCopy; fixture.h/fixture.cpp
 carries no assertion sites), but the harness is compiled into no CMake target
-and is unregistered in src/checks/checkcatalog.cpp, so each native site was
-reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
-and staging plumbing). On the Swift side, pdcSuiteRun in
-src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
-runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
-workspace, tab, transport, scale control, or editor-codec flow. The 185
-paired predicates are split across SessionChecks.swift (both suite entry
-points and their shared-state checks) and the session_*/bank_* counterparts
-(session_editor_semantics.swift, session_io.swift,
-session_playback.swift, session_save.swift, bank_edits.swift,
-bank_history_probes.swift, bank_saves.swift, bank_sharing.swift);
+and is unregistered in src/checks/checkcatalog.cpp. Its native assertions
+remain mapped to Swift checks where executed, GAP where not proved, or
+RETIRED-REPRESENTATION for retired fixture/staging plumbing. On the Swift side,
+pdcSuiteRun in src/checks/support/corecheck/CoreCheckSupport.swift dispatches
+runProjectSessionSuite and runBankHistorySuite, and SessionChecks.swift executes
+runEditorViewStateChecks. No Swift unit suite opens a MainWindow or exercises
+transport and tab chrome; that belongs to the QML shell checks. The Swift
+session and bank predicates reside in the session_*/bank_* counterparts.
 session_fixtures.swift (makeMidiFixture, stageTestProject) and
 session_support.swift (runBlocking, operationFailureMessage,
 noteOffSample, bytes, configLineBytes) are shared helpers that carry no
@@ -236,7 +231,7 @@ Original expression:
 
 A003 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:155
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native codec default predicate includes the entire EditorViewState (drawer chrome and camera); the Swift lane decoder defaults only lane preferences, and drawer chrome is owned by QML Settings. No equivalent full-state predicate is executed.
 Source context since previous assertion:
   ;
       QSettings store(directory.filePath(QStringLiteral("editorviewstate.ini")),
@@ -254,7 +249,7 @@ Original expression:
 
 A004 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:167
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: full EditorViewState save/reload includes all three drawer pages and active page in one object; Swift persists a lane blob separately from QML-owned drawer chrome.
 Source context since previous assertion:
   ;
           return;
@@ -273,7 +268,7 @@ Original expression:
 
 A005 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:168
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical full-state save emits compact lane JSON; the Swift codec emits compact JSON for lane preferences, but no equivalent integrated full-state save/reload with the three active pages has been exercised.
 Source context since previous assertion:
   ;
 Original expression:
@@ -281,7 +276,7 @@ Original expression:
 
 A006 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:176
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the optional drawer section heights and active page belong to QML Settings, while the Swift lane codec persists only lane preferences. No equivalent combined full-state save/reload predicate is executed.
 Source context since previous assertion:
   ;
           }
@@ -296,7 +291,7 @@ Original expression:
 
 A007 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:177
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical bare EditorViewState save emits compact lane JSON; the Swift codec's lane serialization is checked but no corresponding integrated bare-state save/reload is executed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -304,7 +299,7 @@ Original expression:
 
 A008 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:184
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness poisons a persisted lane blob to exercise full-state reload; the Swift decoder checks malformed bytes but no persisted poison/reload transition has been executed.
 Source context since previous assertion:
   ;
           return;
@@ -318,7 +313,7 @@ Original expression:
 
 A009 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:186
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness injects an empty persisted lane blob; the Swift decoder checks an empty blob but no persisted settings-poison/reload transition has been executed.
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("empty-blob"))
@@ -327,7 +322,7 @@ Original expression:
 
 A010 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:188
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness injects an array-valued persisted lane blob; the Swift decoder checks non-object JSON but no persisted settings-poison/reload transition has been executed.
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("array"))
@@ -336,7 +331,7 @@ Original expression:
 
 A011 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:190
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness injects a wrong-typed saved setting rather than bytes; the Swift decoder checks JSON scalars but no QSettings variant type/reload scenario is executed.
 Source context since previous assertion:
   ;
       else if (scenario == QStringLiteral("wrong-type"))
@@ -345,7 +340,7 @@ Original expression:
 
 A012 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:210
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness writes an arbitrary compact JSON object into saved settings; the Swift decoder checks the grammar directly, but no equivalent persisted poison/write path has been executed.
 Source context since previous assertion:
   ;
       else {
@@ -372,7 +367,7 @@ Original expression:
 
 A013 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:212
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical full-state reader preserves drawer chrome after valid lane JSON; Swift's lane codec and QML drawer settings are separate and have not been exercised as one combined persisted read.
 Source context since previous assertion:
   ;
           const EditorViewState decoded = loadEditorViewState(store);
@@ -380,16 +375,16 @@ Original expression:
   QVERIFY(decoded.drawerState() == full.drawerState())
 
 A014 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:213
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S186: executed swiftcore check asserts the font-derived floor for the decoded lane height.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(decoded.laneHeight, minimum)
 
 A015 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:217
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S187: executed swiftcore check asserts that valid row heights clamp and malformed row keys are rejected.
 Source context since previous assertion:
   ;
           const std::map<EditorAutomationRowId, int> expectedLaneHeights{
@@ -399,24 +394,24 @@ Original expression:
   QVERIFY(decoded.laneHeights == expectedLaneHeights)
 
 A016 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:218
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S188: executed swiftcore check asserts that valid range values survive and out-of-range values drop.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(decoded.laneRanges == expectedLaneRanges)
 
 A017 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:219
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S189: executed swiftcore check asserts only the valid empty lane survives malformed entries.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(decoded.emptyLanes == std::set<EditorAutomationRowId>{cc001})
 
 A018 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:220
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S190: executed swiftcore check asserts valid hidden-lane order without duplicates.
 Source context since previous assertion:
   ;
 Original expression:
@@ -424,7 +419,7 @@ Original expression:
 
 A019 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:223
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness injects a malformed persisted lane blob; the Swift decoder's malformed-input behavior is checked by S192, but no persisted poison/write path is executed.
 Source context since previous assertion:
   ;
           for (int raw : {0, 99999999}) {
@@ -436,7 +431,7 @@ Original expression:
 
 A020 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:227
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical full-state read preserves drawer chrome after a poisoned lane-height blob; the Swift lane codec and the separate QML drawer settings have not been exercised together after malformed saved input.
 Source context since previous assertion:
   ;
               const EditorViewState clamped = loadEditorViewState(store);
@@ -445,7 +440,7 @@ Original expression:
 
 A021 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:228
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness checks that other lane maps default when only a height remains in the poisoned blob; Swift decoding omits those fields but no exact multi-field predicate has been executed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -453,8 +448,8 @@ Original expression:
                       clamped.emptyLanes.empty() && clamped.hiddenLanes().empty())
 
 A022 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:230
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S191: executed swiftcore check asserts raw zero stays zero and an oversized stored lane height clamps to the font-derived ceiling.
 Source context since previous assertion:
   ;
 Original expression:
@@ -462,7 +457,7 @@ Original expression:
 
 A023 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:235
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness verifies full drawer chrome survives a malformed stored lane blob; Swift/QML holds chrome in separate settings but no production reload after malformed persisted data was executed.
 Source context since previous assertion:
   ;
           }
@@ -473,8 +468,8 @@ Original expression:
   QVERIFY(corrupted.drawerState() == full.drawerState())
 
 A024 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:236
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S192: executed swiftcore check asserts default lane state for malformed and non-object blobs.
 Source context since previous assertion:
   ;
 Original expression:
@@ -497,7 +492,7 @@ Original expression:
 
 A026 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:247
 Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target (src/checks/CMakeLists.txt lists only the workspace/*.swift counterparts) and unregistered in src/checks/checkcatalog.cpp; the stale QSettings lane-blob key absence check laneBlobKey(store).isEmpty(), whose key editorDrawer/automationLanes is written only by the uncompiled src/ui/editorviewstate.cpp codec and has no production Swift/QML writer. Harness plumbing with no consumer-visible contract of its own; no Swift-side predicate is claimed.
+Mapping/reason: Retired-representation (editcheck spec 2.1 class 3, no-ingress proof): native harness unexecuted - src/checks/workspace/tst_workspacesessions.h is compiled into no CMake target and unregistered in src/checks/checkcatalog.cpp; the fresh-fixture QSettings key-absence precondition is harness setup rather than consumer behavior. The Swift lane codec now writes the key after a semantic range change; absence before the fixture's first edit has no separate Swift-side predicate.
 Source context since previous assertion:
   ;
       QSettings store;
@@ -551,7 +546,7 @@ Original expression:
 
 A031 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:273
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the Swift workspace retains only a global automation-lane range blob and existing QML drawer chrome; the historical full EditorViewState setter/round-trip also includes unsaved per-song layout and camera fields, which remain live-only. The native harness is uncompiled and unregistered.
 Source context since previous assertion:
   ;
       const SongTarget songTarget{tab->document().cfg(), tab->document().label()};
@@ -571,7 +566,7 @@ Original expression:
 
 A032 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:278
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical setter clears the complete EditorViewState and persists it; the Swift codec implements only automation-lane preferences, and the drawer owns its separate chrome settings. No equivalent full-state clearing transition is implemented or executed.
 Source context since previous assertion:
   ;
       view.setEditorViewState(bare);
@@ -583,7 +578,7 @@ Original expression:
 
 A033 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:283
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: this is the native harness's setup call injecting a malformed saved lane blob; the Swift decoder's malformed input behavior is covered by S192, but no corresponding production settings-poison/reopen scenario has been executed.
 Source context since previous assertion:
   ;
       const QString blobKey = laneBlobKey(store);
@@ -592,7 +587,7 @@ Original expression:
 
 A034 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:286
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical full-state read preserves previously saved drawer chrome after a malformed lane blob. The Swift lane decoder defaults only lane fields, and QML owns drawer chrome separately, but no production reload scenario has exercised this combined invariant.
 Source context since previous assertion:
   ;
       const QByteArray poisoned = store.value(blobKey).toByteArray();
@@ -601,16 +596,15 @@ Original expression:
   QVERIFY(corrupted.drawerState() == bare.drawerState())
 
 A035 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:287
-Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: Matched by S192: the executed swiftcore check passes invalid JSON to the Swift lane decoder and asserts an empty default lane state.
 Source context since previous assertion:
-  ;
 Original expression:
   QVERIFY(lanesDefaulted(corrupted))
 
 A036 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:288
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the native harness verifies reading a malformed saved blob leaves the preferences bytes untouched; the Swift lane decoder does not write during decoding, but no malformed persisted-input read with before/after bytes is executed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -618,7 +612,7 @@ Original expression:
 
 A037 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:290
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: the historical drawer section-height gesture rewrites the complete compact lane blob; Swift currently writes the blob after a lane range change, not a drawer height change.
 Source context since previous assertion:
   ;
       view.setDrawerSectionHeight(EditorDrawerPage::Velocity, layout::fontPx(7.0 / 3.0) + 7);
@@ -631,7 +625,7 @@ Original expression:
 
 A038 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:296
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Still GAP: restoring the original complete EditorViewState after a malformed blob includes drawer and camera fields outside the Swift lane codec; no equivalent full-state restoration path is implemented.
 Source context since previous assertion:
   ;
       view.setEditorViewState(original);
@@ -1789,3 +1783,44 @@ Anchor: message "self-cancelling bank merge is removed so undo reaches the prece
   report.expect(cancelling.state.config.priority == 0,
           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
           message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
+
+S186 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "stored lane height clamps to font-derived floor"
+  report.expectEqual(minimum, decoded.laneHeight, cppID: codec,
+                     what: "stored lane height clamps to font-derived floor")
+
+S187 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "row heights clamp at both bounds and reject bad grammar"
+  report.expectEqual(["tempo": minimum + 2, "cc:0:74": minimum, "cc:0:80": maximum],
+                     decoded.laneHeights, cppID: codec,
+                     what: "row heights clamp at both bounds and reject bad grammar")
+
+S188 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "valid ranges survive and out-of-range values drop"
+  report.expectEqual(["tempo": 90, "cc:1:7": 64], decoded.laneRanges,
+                     cppID: codec, what: "valid ranges survive and out-of-range values drop")
+
+S189 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "invalid and repeated empty lanes do not create extra lanes"
+  report.expectEqual(Set([EditorLaneState.Lane(track: 0, controller: 1)]),
+                     decoded.emptyLanes, cppID: codec,
+                     what: "invalid and repeated empty lanes do not create extra lanes")
+
+S190 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "hidden-lane order survives without duplicates"
+  report.expectEqual([.init(track: 1, controller: 7), .init(track: 0, controller: 74)],
+                     decoded.hiddenLanes, cppID: codec,
+                     what: "hidden-lane order survives without duplicates")
+
+S191 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "large lane height clamps to font-derived ceiling"
+  report.expectEqual(maximum,
+                     EditorViewStateCodec.decodeLanes(Data("{\"laneHeight\":99999999}".utf8))
+                         .laneHeight, cppID: codec,
+                     what: "large lane height clamps to font-derived ceiling")
+
+S192 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "non-object or invalid JSON defaults lane fields"
+  report.expectEqual(EditorLaneState(),
+                     EditorViewStateCodec.decodeLanes(Data(malformed.utf8)),
+                     cppID: codec, what: "non-object or invalid JSON defaults lane fields")

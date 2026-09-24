@@ -70,6 +70,8 @@ TestCase {
         wait(0)
     }
     function openSong() {
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()

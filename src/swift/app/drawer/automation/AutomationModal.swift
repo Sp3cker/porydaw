@@ -417,7 +417,9 @@ extension AutomationPage {
              (.range64, .lane), (.range127, .lane):
             let ranges: [AutomationMenuAction: Int] = [
                 .rangeAuto: 0, .range16: 16, .range32: 32, .range64: 64, .range127: 127]
-            laneRanges[live.facts.parameter] = ranges[action]
+            guard let range = ranges[action] else { return false }
+            laneRanges[live.facts.parameter] = range
+            onLaneRangeChanged?(live.facts.parameter, range)
             rebuildContent()
         case let (.setValue, .point(tick, value)):
             // The form it opens is the action's own outcome: the returned row
