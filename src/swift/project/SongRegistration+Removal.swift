@@ -7,8 +7,9 @@ extension SongRegistration {
         result.tableIndex = table.labelIndex
         result.tableCount = table.count
         result.lastEntry = table.labelLine >= 0 && table.labelLine == table.lastSongLine
+        let ownDefine = RegistrationText.dynamic(#"^\s*#define\s+\#(constant)\s+\d"#)
         result.inSongsH = RegistrationText.lines(root, "include/constants/songs.h").contains {
-            RegistrationText.match(#"^\s*#define\s+\#(constant)\s+\d"#, $0) != nil
+            RegistrationText.match(ownDefine, $0) != nil
         }
         result.inLdScript = RegistrationText.lines(root, "ld_script.ld").contains {
             $0.contains("sound/songs/midi/\(label).o")
@@ -47,10 +48,10 @@ extension SongRegistration {
             var ownValue = -1
             var markerLines: [Int] = []
             var definitions: [(String, Int)] = []
+            let ownDefine = RegistrationText.dynamic(#"^\s*#define\s+\#(constant)\s+(\d+)\b"#)
             for index in file.lines.indices {
                 let text = file.text(index)
-                if own < 0, let match = RegistrationText.match(
-                    #"^\s*#define\s+\#(constant)\s+(\d+)\b"#, text) {
+                if own < 0, let match = RegistrationText.match(ownDefine, text) {
                     own = index
                     ownValue = Int(match.group(1)) ?? -1
                     continue
@@ -111,9 +112,9 @@ extension SongRegistration {
         }
         let mkPath = root + "/songs.mk"
         if var file = try? RegistrationLines(path: mkPath) {
+            let rule = RegistrationText.dynamic(#"^(?:\$\(MID_SUBDIR\)|sound/songs/midi)/\#(label)\.s\s*:"#)
             if let index = file.lines.indices.first(where: {
-                RegistrationText.match(#"^(?:\$\(MID_SUBDIR\)|sound/songs/midi)/\#(label)\.s\s*:"#,
-                                       file.text($0)) != nil
+                RegistrationText.match(rule, file.text($0)) != nil
             }) {
                 var last = index + 1
                 while last < file.lines.count && file.text(last).hasPrefix("\t") { last += 1 }

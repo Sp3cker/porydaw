@@ -18,8 +18,7 @@ struct DebugSoundLists {
     init(_ lines: [String]) {
         var index = 0
         while index < lines.count {
-            guard let define = RegistrationText.match(
-                #"^#define\s+(SOUND_LIST_BGM|SOUND_LIST_SE)\b"#, lines[index])
+            guard let define = RegistrationText.match(RegistrationText.soundList, lines[index])
             else {
                 index += 1
                 continue
@@ -33,8 +32,7 @@ struct DebugSoundLists {
             var previousSlash = -1
             while index + 1 < lines.count && Self.continues(lines[index]) {
                 index += 1
-                guard let entry = RegistrationText.match(
-                    #"^(\s*)X\((\w+) *(, *"[^"]*" *)?\)\s*(\\?)\s*$"#, lines[index])
+                guard let entry = RegistrationText.match(RegistrationText.soundListEntry, lines[index])
                 else { continue }
                 list.indices.append(index)
                 list.names.append(entry.group(2))
