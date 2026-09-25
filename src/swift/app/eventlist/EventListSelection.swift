@@ -119,8 +119,14 @@ extension EventListPresenter {
               let source = model.row(at: fromRow)?.eventIndex else { return }
         let following = model.rows[gap...].first(where: { $0.eventIndex != nil })?.eventIndex
         let preceding = model.rows[..<gap].last(where: { $0.eventIndex != nil })?.eventIndex
-        let destination = following.map { $0 > source ? $0 - 1 : $0 }
-            ?? preceding.map { $0 < source ? $0 + 1 : $0 }
+        let destination: Int?
+        if let following {
+            destination = following > source ? following - 1 : following
+        } else if let preceding {
+            destination = preceding < source ? preceding + 1 : preceding
+        } else {
+            destination = nil
+        }
         guard let destination else { return }
         session.document.moveRawEvent(chunk: chunkIndex, index: source, to: destination)
         selectedRows = []
