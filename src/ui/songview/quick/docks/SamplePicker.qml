@@ -168,6 +168,7 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 model: picker.entries
+                highlightFollowsCurrentItem: false
                 delegate: ItemDelegate {
                     id: entry
                     required property int index

@@ -359,6 +359,16 @@ Item {
             font: root.applicationFont
         }
         footer: DialogButtonBox {
+            id: closeButtons
+            contentItem: ListView {
+                implicitWidth: contentWidth
+                model: closeButtons.contentModel
+                spacing: closeButtons.spacing
+                orientation: ListView.Horizontal
+                boundsBehavior: Flickable.StopAtBounds
+                snapMode: ListView.SnapToItem
+                currentIndex: -1
+            }
             StripButton {
                 objectName: "songTabSave"
                 text: qsTr("Save")
