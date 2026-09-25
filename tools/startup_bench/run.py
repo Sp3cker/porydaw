@@ -16,16 +16,10 @@ APP = ROOT / "build/porydaw.app/Contents/MacOS/porydaw"
 PROBE_SOURCE = Path(__file__).with_name("probe.cpp")
 CACHE = Path.home() / "Library/Caches/porydaw-startup-bench"
 PROBE = CACHE / "probe.dylib"
-SNAPSHOT = CACHE / "project"
 SEED = CACHE / "seed.plist"
-SOURCE_PROJECT = Path("/Users/spencer/dev/hearth-test")
+PROJECT = Path("/Users/spencer/dev/hearth-test")
 DOMAINS = ("com.sp3cker.porydaw", "com.sp3cker.porydaw.porydaw")
 SONG = "mus_hanabi"
-SNAPSHOT_EXCLUDES = (
-    ".git", ".worktrees", "build", "graphics", "docs", "tools", "test",
-    "poryaaaa_render", "libagbsyscall", "migration_scripts",
-    "*.gba", "*.elf", "*.map", "*.sav", "*.zip", "*.sf2", "*.o",
-)
 QT_FRAMEWORKS = "/opt/homebrew/lib"
 
 
@@ -39,18 +33,6 @@ def build_probe():
          "-framework", "QtCore", "-framework", "QtGui", "-framework", "QtQuick",
          "-framework", "QtQml", str(PROBE_SOURCE), "-o", str(PROBE)],
         check=True)
-
-
-def ensure_snapshot():
-    if (SNAPSHOT / ".complete").exists():
-        return
-    if not SOURCE_PROJECT.exists():
-        sys.exit(f"missing source project {SOURCE_PROJECT} for the first snapshot")
-    SNAPSHOT.mkdir(parents=True, exist_ok=True)
-    excludes = [f"--exclude={pattern}" for pattern in SNAPSHOT_EXCLUDES]
-    subprocess.run(["rsync", "-a", "--delete", *excludes, f"{SOURCE_PROJECT}/", f"{SNAPSHOT}/"],
-                   check=True)
-    (SNAPSHOT / ".complete").write_text("")
 
 
 def export_domain(domain, path):
@@ -76,7 +58,7 @@ def ensure_seed():
                 data = plistlib.load(handle)
     for key in ("windowGeometry", "windowState", "NSOSPLastRootDirectory"):
         data.pop(key, None)
-    data["lastProjectDir"] = str(SNAPSHOT)
+    data["lastProjectDir"] = str(PROJECT)
     data["lastOpenSongs"] = [SONG]
     data["lastSongLabel"] = SONG
     with open(SEED, "wb") as handle:
@@ -137,7 +119,8 @@ def main():
     if not APP.exists():
         sys.exit(f"missing {APP}")
     build_probe()
-    ensure_snapshot()
+    if not PROJECT.exists():
+        sys.exit(f"missing project {PROJECT}")
     ensure_seed()
     scratch = Path(tempfile.mkdtemp(prefix="porydaw-startup-"))
     backups = {}
