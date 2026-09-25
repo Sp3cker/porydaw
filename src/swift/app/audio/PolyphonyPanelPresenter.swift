@@ -227,24 +227,27 @@ public final class PolyphonyPanelPresenter {
             return false
         }
         let pcmCount = min(Int(new.maxPcmChannels), Int(MAX_PCM_CHANNELS))
-        guard sameChannels(old.pcm.prefix(pcmCount), new.pcm.prefix(pcmCount)),
-              sameChannels(old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
-                           new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
+        guard sameChannelSlice(old.pcm.prefix(pcmCount), new.pcm.prefix(pcmCount)),
+              sameChannelSlice(old.cgb.prefix(Int(MAX_CGB_CHANNELS)),
+                               new.cgb.prefix(Int(MAX_CGB_CHANNELS)))
         else { return false }
         guard new.invert else { return true }
-        return sameChannels(old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
-                            new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
-            && sameChannels(old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
-                            new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
+        return sameChannelSlice(old.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)),
+                                new.pcm.dropFirst(Int(MAX_PCM_CHANNELS)).prefix(Int(MAX_PCM_CHANNELS)))
+            && sameChannelSlice(old.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)),
+                                new.cgb.dropFirst(Int(MAX_CGB_CHANNELS)).prefix(Int(MAX_CGB_CHANNELS)))
     }
 
-    private static func sameChannels(_ first: ArraySlice<AudioPolyChannel>,
-                                     _ second: ArraySlice<AudioPolyChannel>) -> Bool {
+    private static func sameChannelSlice(_ first: ArraySlice<AudioPolyChannel>,
+                                         _ second: ArraySlice<AudioPolyChannel>) -> Bool {
         guard first.count == second.count else { return false }
-        return zip(first, second).allSatisfy { old, new in
-            old.on == new.on && old.releasing == new.releasing
-                && old.track == new.track && old.midiKey == new.midiKey
+        for (old, new) in zip(first, second) {
+            if old.on != new.on || old.releasing != new.releasing
+                || old.track != new.track || old.midiKey != new.midiKey {
+                return false
+            }
         }
+        return true
     }
 
     private func makeChannels(_ channels: ArraySlice<AudioPolyChannel>, cgb isCgb: Bool,
