@@ -609,7 +609,7 @@ if (exclusions.length > 0) {
     !excludedNames.has(check.name)
   );
 }
-const visualPlatform = Deno.build.os === "darwin" ? "macos" : Deno.build.os;
+const visualPlatform = host;
 let hasVisualBaselines = false;
 try {
   for await (
@@ -648,10 +648,6 @@ const applicationBinary =
     ? await findApplication(buildRoot)
     : undefined;
 if (qtPayload !== undefined) {
-  if (runnableChecks.length === 0) {
-    console.error("run_checks: --qt selected no harness");
-    Deno.exit(2);
-  }
   if (runnableChecks.length > 1) {
     console.error(
       `run_checks: --qt requires exactly one harness, selected: ${

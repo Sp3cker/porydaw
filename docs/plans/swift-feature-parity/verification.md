@@ -13,7 +13,7 @@ For each inventory ID, require all four:
 
 A feature can be present but under-proven. An unresolved proof row is not automatically a missing feature. Neither a green aggregate suite nor a ledger disposition percentage proves product parity.
 
-Every new or rewritten MATCHED row must cite at least one predicate whose anchor is a `message` anchor; a `Mapping:` line citing only `function`/`deleted` anchors, or no mapping at all, does not count. `deno task proof check --strict-mappings` lists and fails on the remaining debt; run it before claiming a ledger closed. `check` has no `--area`, so a ledger counts as closed when none of its sites appear in the strict list, not when the command exits 0.
+Every new or rewritten MATCHED row must cite at least one predicate whose anchor is a `message` anchor; `Mapping:`/`Mapping/reason:`/`Swift:` lines citing only `function`/`deleted` anchors, or no citation at all, do not count. `deno task proof check --strict-mappings` lists and fails on the remaining debt; run it before claiming a ledger closed. `check` has no `--area`, so a ledger counts as closed when none of its sites appear in the strict list, not when the command exits 0.
 
 ## Existing commands and their limits
 

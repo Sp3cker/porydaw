@@ -26,9 +26,10 @@ const HELP = `usage: deno task proof <command> [options]
       With --executed, also classify each anchor against the JSON evidence in
       dir (default build/proof-evidence) written by the verify lanes.
       With --strict-mappings, additionally fail on every MATCHED site that
-      cites no predicate whose anchor is a message anchor (a Mapping line
-      citing only function/deleted anchors, or no mapping at all, fails).
-      Without it, the same sites are counted in a non-fatal debt warning.
+      cites no predicate whose anchor is a message anchor — Mapping:,
+      Mapping/reason: and Swift: lines citing only function/deleted anchors,
+      or no citation at all, all fail. Without the flag, the same sites are
+      counted in a non-fatal debt warning.
 
 An S entry names its predicate without a line number and carries one Anchor: line:
   S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift

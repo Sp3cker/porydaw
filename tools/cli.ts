@@ -426,7 +426,7 @@ async function runVerify(
       "--allow-read",
       "--allow-write",
       "--allow-run",
-      "--allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS",
+      "--allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST",
       "tools/run_checks.ts",
       binary,
       ...args,
