@@ -479,7 +479,10 @@ public final class SongDocument {
     private func projectTimeSignatures() -> [TimeSignature] {
         var signatures: [TimeSignature] = []
         for (chunkIndex, chunk) in state.file.chunks.enumerated() {
-            for (eventIndex, event) in chunk.events.enumerated() {
+            let sourceEvents = chunk.events
+            let events = sourceEvents.span
+            for eventIndex in events.indices {
+                let event = events[eventIndex]
                 if case let .meta(type, bytes) = event.payload, type == 0x58, bytes.count >= 2 {
                     signatures.append(TimeSignature(chunk: chunkIndex, eventIndex: eventIndex,
                                                     tick: event.tick, numerator: bytes[0],
