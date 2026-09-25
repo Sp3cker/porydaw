@@ -122,6 +122,20 @@ function buildRelease(args: string[], command: Subcommand): boolean {
 function printCapturedOutput(output: string): void {
   if (output.trim()) console.error(output.trimEnd());
 }
+const MAX_DIAGNOSTIC_LINES = 40;
+function printDiagnosticLines(output: string): void {
+  const hits = output.split(/\r?\n/).filter((line) =>
+    /\b(?:warning(?:\s+[A-Z]+\d+)?:|CMake Warning\b|error\b)/i.test(line)
+  );
+  if (hits.length === 0) return;
+  const shown = hits.slice(0, MAX_DIAGNOSTIC_LINES);
+  console.error(shown.join("\n"));
+  if (hits.length > shown.length) {
+    console.error(
+      `build: ... ${hits.length - shown.length} more diagnostic lines`,
+    );
+  }
+}
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -183,14 +197,15 @@ async function cachedBuildChecks(): Promise<boolean | undefined> {
 
 async function ensureConfigured(
   release: boolean,
-  buildChecks: boolean,
+  buildChecks: boolean | undefined,
 ): Promise<void> {
   const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
   const buildType = release ? "Release" : "Debug";
   const multiConfig = await usesMultiConfigBuild();
   const typeMatches = multiConfig ||
     (await cachedBuildType()) === buildType;
-  const checksMatch = (await cachedBuildChecks()) === buildChecks;
+  const checksMatch = buildChecks === undefined ||
+    (await cachedBuildChecks()) === buildChecks;
   if (
     (await hasBuildSystem()) && poryaaaa.cacheMatches && typeMatches &&
     checksMatch
@@ -214,13 +229,13 @@ async function ensureConfigured(
     console.error("build: configure failed");
     Deno.exit(result.code || 1);
   }
-  printCapturedOutput(err);
+  printDiagnosticLines(err);
 }
 
 async function runBuild(
   targets: string[],
   release = false,
-  buildChecks = true,
+  buildChecks?: boolean,
 ): Promise<void> {
   const started = performance.now();
   await ensureConfigured(release, buildChecks);
@@ -246,9 +261,7 @@ async function runBuild(
     console.error(`build: failed (${targets.join(", ") || "all"})`);
     Deno.exit(result.code || 1);
   }
-  if (/\b(?:warning(?:\s+[A-Z]+\d+)?:|CMake Warning\b)/i.test(combined)) {
-    printCapturedOutput(combined);
-  }
+  printDiagnosticLines(combined);
   const ms = performance.now() - started;
   const sec = (ms / 1000).toFixed(2);
   // Filter progress noise: only show summary, not per-target [%] lines
@@ -476,14 +489,10 @@ if (sub === "verify-shell") sub = "verify:shell";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], buildRelease(rest, "build:app"), false);
+    await runBuild(["porydaw"], buildRelease(rest, "build:app"));
     break;
   case "build:render":
-    await runBuild(
-      ["porydaw_render_cli"],
-      buildRelease(rest, "build:render"),
-      false,
-    );
+    await runBuild(["porydaw_render_cli"], buildRelease(rest, "build:render"));
     break;
   case "build:checks":
     await runBuild(
@@ -500,6 +509,7 @@ switch (normalized) {
     break;
   case "verify:qml-roll":
     await runVerify(rest, VERIFY_LANES["verify:qml-roll"]);
+    break;
   case "verify:shell":
     await runVerify(rest, VERIFY_LANES["verify:shell"]);
     break;
