@@ -8,6 +8,8 @@ Rectangle {
     id: bar
     objectName: "transportToolbar"
     required property QtObject presenter
+    required property QtObject shell
+    required property int actionRevision
     required property QtObject colors
     required property int baseFontPx
     required property bool songAvailable
@@ -76,65 +78,98 @@ Rectangle {
             objectName: "transport.go-to-start"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Go to Start"); symbol: "◀◀"
-            actionable: bar.presenter.state !== 0
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.go_to_start")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.goToStart()
+            onActivated: bar.shell.activate("transport.go_to_start")
         }
         TransportButton {
             objectName: "transport.play"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Play"); symbol: "▶"; iconSource: "qrc:/icons/transport-play.svg"
-            actionable: bar.presenter.state > 0 && bar.presenter.state !== 3
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.play")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.play()
+            onActivated: bar.shell.activate("transport.play")
         }
         TransportButton {
             objectName: "transport.pause"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Pause"); symbol: "Ⅱ"; iconSource: "qrc:/icons/transport-pause.svg"
-            actionable: bar.presenter.state === 3
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.pause")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.pause()
+            onActivated: bar.shell.activate("transport.pause")
         }
         TransportButton {
             objectName: "transport.stop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Stop"); symbol: "■"
-            actionable: bar.presenter.state > 1
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.stop")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.stop()
+            onActivated: bar.shell.activate("transport.stop")
         }
         TransportButton {
             objectName: "transport.loop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Loop"); symbol: "⟲"; iconSource: "qrc:/icons/transport-loop.svg"
-            checked: bar.presenter.loopEnabled
-            actionable: bar.presenter.state !== 0
+            checked: {
+                bar.actionRevision
+                return bar.shell.actionChecked("transport.loop")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.loop")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setLoopEnabled(!bar.presenter.loopEnabled)
+            onActivated: bar.shell.activate("transport.loop")
         }
         TransportButton {
             objectName: "transport.follow-playhead"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Follow Playhead"); symbol: "▶▶"; iconSource: "qrc:/icons/transport-follow.svg"
-            checked: bar.presenter.followPlayhead
+            checked: {
+                bar.actionRevision
+                return bar.shell.actionChecked("transport.follow_playhead")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.follow_playhead")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setFollowPlayhead(!bar.presenter.followPlayhead)
+            onActivated: bar.shell.activate("transport.follow_playhead")
         }
         TransportButton {
             objectName: "transport.resonance"
             colors: bar.colors; baseFontPx: bar.baseFontPx
             label: qsTr("Suppress Resonances"); symbol: "◖))"
-            checked: bar.presenter.resonanceSuppression
+            checked: {
+                bar.actionRevision
+                bar.presenter.resonanceSuppression
+                return bar.shell.actionChecked("transport.resonance")
+            }
+            actionable: {
+                bar.actionRevision
+                return bar.shell.actionEnabled("transport.resonance")
+            }
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
-            onActivated: bar.presenter.setResonanceSuppression(!bar.presenter.resonanceSuppression)
+            onActivated: bar.shell.activate("transport.resonance")
         }
         Text {
             objectName: "transportTimeLabel"

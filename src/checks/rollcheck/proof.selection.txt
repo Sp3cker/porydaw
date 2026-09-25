@@ -13,7 +13,7 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run, replayed here verbatim);
 the swiftcore projectSession suite executed selection.swift including the band-audition,
-grouped-velocity and threshold-draw predicates.
+keyboard-audition track-pin, grouped-velocity and threshold-draw predicates.
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); the roll QML lane ran the new
 tst_SwiftRollSelection.qml band-select, band-cancel and edge-hover probes.
@@ -810,7 +810,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S045 are the live counterparts. S001..S009, S013..S041 and S044/S045 are report.expect
+S001..S050 are the live counterparts. S001..S009, S013..S041 and S044..S050 are report.expect
 predicates in the registered swiftcore checks selection.swift and EditorGridCameraChecks.swift,
 executed by deno task verify --filter swiftcore --verbose. S010/S011 are Qt Quick Test
 predicates in the roll QML lane (src/checks/rollqml/tst_SwiftRollSelection.qml, deno task
@@ -965,3 +965,6 @@ Anchor: message "the velocity preview commits nothing before release"
 
 S049 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
 Anchor: message "dragging down again reaches the same grouped velocities"
+
+S050 | checkKeyboardAuditionTrackSwitch | src/checks/rollcheck/selection.swift
+Anchor: message "keyboard audition releases on the pressed track after a track switch"

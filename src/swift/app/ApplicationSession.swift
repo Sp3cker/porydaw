@@ -197,6 +197,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
+        transportBar.onAvailabilityChanged = { [weak self] in
+            self?.transportAvailabilityChanged()
+        }
         songDock.attach(session: self)
     }
 
@@ -495,6 +498,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     @QtSignal public func gridCommandAvailabilityChanged()
+    @QtSignal public func transportAvailabilityChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
     @QtSignal public func allTabsClosed()

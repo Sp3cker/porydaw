@@ -173,7 +173,12 @@ public final class TrackHeadersPresenter {
             nextEnds.append(span.end)
             next.append(makeSnapshot(track: track, session: session, program: span.program))
         }
-        if hasAdd { next.append(TrackHeaderSnapshot(isAddTrack: true, title: "+ Add track")) }
+        if hasAdd {
+            next.append(TrackHeaderSnapshot(
+                isAddTrack: true, title: "+ Add track",
+                titleFont: TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx),
+                subtitleFont: TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx)))
+        }
         if structural {
             snapshots = next
             rows.reset(to: next.map(TrackHeaderRowHandle.init))

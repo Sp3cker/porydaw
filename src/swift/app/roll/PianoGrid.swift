@@ -65,6 +65,7 @@ public final class PianoGrid {
     private var lastCommandAvailability: [Bool] = []
     private var lastCommandGestureActive = false
     private var keyboardAuditionKey: Int?
+    private var keyboardAuditionTrack: Int?
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     private var didApplyInitialHome = false
@@ -828,8 +829,10 @@ public final class PianoGrid {
         let key = pitch(atY: y)
         guard key >= 0, key <= 127, key != keyboardAuditionKey else { return }
         stopAudition()
+        let track = trackIndex
         keyboardAuditionKey = key
-        onAudition?(trackIndex, key, min(127, max(1, lastVelocity)))
+        keyboardAuditionTrack = track
+        onAudition?(track, key, min(127, max(1, lastVelocity)))
         hoverKey = key
         scene.rebuildHover(sceneInput())
     }
@@ -887,9 +890,10 @@ public final class PianoGrid {
 
     @QtIgnored
     private func stopAudition() {
-        guard let key = keyboardAuditionKey else { return }
-        onAudition?(trackIndex, key, 0)
+        guard let key = keyboardAuditionKey, let track = keyboardAuditionTrack else { return }
+        onAudition?(track, key, 0)
         keyboardAuditionKey = nil
+        keyboardAuditionTrack = nil
     }
 
     @QtIgnored

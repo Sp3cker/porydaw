@@ -335,16 +335,14 @@ if(APPLE)
 
     # A plain executable at the build root: the Deno runner resolves
     # `<build>/editor_qml_tests` as a file, so no bundle or symlink wrapper.
-    # The link runs through the C++ driver because porydaw_app's LTO objects
-    # only link with the toolchain that produced them — the Swift driver aborts
-    # in the LTO backend while force-loading them. The lane's template is the
-    # one (uncompiled) source this target needs; the entry point comes from the
-    # module archive above.
-    add_executable(editor_qml_tests editorqml/EditorQmlPaths.swift.in)
+    add_executable(editor_qml_tests
+        editorqml/EditorQmlPaths.swift.in
+        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
+    )
     set_target_properties(editor_qml_tests PROPERTIES
         AUTOMOC OFF
         AUTOUIC OFF
-        AUTORCC OFF
+        AUTORCC ON
         LINKER_LANGUAGE CXX
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
     )

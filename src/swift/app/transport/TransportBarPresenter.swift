@@ -31,12 +31,20 @@ public final class TransportBarPresenter {
 
     public init() {}
 
+    @QtIgnored public var onAvailabilityChanged: (() -> Void)?
+
     @QtIgnored public func attach(session: ApplicationSession) {
         self.session = session
         refresh()
     }
 
     public func refresh() {
+        let availabilityBefore = (state, loopEnabled, resonanceSuppression)
+        defer {
+            if (state, loopEnabled, resonanceSuppression) != availabilityBefore {
+                onAvailabilityChanged?()
+            }
+        }
         let scale = session?.selectedDocument?.scaleProjection ?? ScaleProjection()
         scaleRoot = scale.root
         scaleType = scale.scale.rawValue
@@ -148,7 +156,9 @@ public final class TransportBarPresenter {
     }
 
     public func setFollowPlayhead(enabled: Bool) {
+        guard followPlayhead != enabled else { return }
         followPlayhead = enabled
+        onAvailabilityChanged?()
         session?.playheadPresenter().setFollowEnabled(enabled)
     }
 

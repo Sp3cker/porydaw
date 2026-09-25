@@ -8,6 +8,7 @@ func runSelectionChecks(_ report: CheckReport, session: DocumentSession) {
     checkSelectionBandSweep(report, session: session)
     checkSelectionNonScaleMove(report, session: session)
     checkSelectionBandAudition(report, session: session)
+    checkKeyboardAuditionTrackSwitch(report, session: session)
     checkGroupedVelocityDrag(report, session: session)
     checkThresholdDrawCell(report, session: session)
 }
@@ -339,6 +340,58 @@ private func checkSelectionBandAudition(_ report: CheckReport, session: Document
     } catch {
         report.fail(id, "could not encode the post-band MIDI document: \(error)")
     }
+}
+
+@MainActor
+private func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::keyboardAuditionTrackSwitch"
+    let originalTrack = session.selectedTrack
+    let originalSelection = session.selectedNoteOrder
+    let originalCamera = session.camera
+    defer { _ = session.mutateCamera { $0 = originalCamera } }
+    let grid = selectionGrid(session: session)
+    let pressedTrack = grid.trackIndex
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-audition MIDI bytes")
+        return
+    }
+    defer {
+        grid.endKeyboardPointer()
+        grid.onAudition = nil
+        session.selectedTrack = originalTrack
+        selectionRestore(report, id: id, session: session, baseline: baseline,
+                         selection: originalSelection,
+                         message: "keyboard audition track switch restores the original document")
+    }
+    let otherTrack = (0..<session.document.engineTracks.usedTrackCount).first {
+        $0 != pressedTrack
+    } ?? (session.document.canAddTrack ? session.document.addTrack(voice: 0) : nil)
+    guard let otherTrack else {
+        report.fail(id, "no second track available for keyboard audition")
+        return
+    }
+    guard let pitch = (24...115).first(where: {
+        guard let box = grid.projectedNoteBox(tick: 96, end: 108, pitch: $0) else {
+            return false
+        }
+        return box.y >= 0 && box.y + box.h <= 320
+    }), let box = grid.projectedNoteBox(tick: 96, end: 108, pitch: pitch) else {
+        report.fail(id, "no visible keyboard row available for audition")
+        return
+    }
+    var auditions: [(track: Int, pitch: Int, velocity: Int)] = []
+    grid.onAudition = { auditions.append(($0, $1, $2)) }
+    grid.beginKeyboardPointer(y: box.y + box.h / 2)
+    session.selectedTrack = otherTrack
+    grid.refreshFromSession()
+    grid.endKeyboardPointer()
+    report.expect(grid.trackIndex == otherTrack && auditions.count == 2
+        && auditions[0].track == pressedTrack && auditions[0].pitch == pitch
+        && auditions[0].velocity > 0
+        && auditions[1].track == pressedTrack && auditions[1].pitch == pitch
+        && auditions[1].velocity == 0
+        && !auditions.contains { $0.track == otherTrack && $0.velocity == 0 },
+        cppID: id, message: "keyboard audition releases on the pressed track after a track switch")
 }
 
 @MainActor

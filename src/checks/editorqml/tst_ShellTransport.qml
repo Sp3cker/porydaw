@@ -88,6 +88,146 @@ TestCase {
         wait(0)
     }
 
+    function test_transportButtonMenuCommandParity() {
+        var bar = openShell()
+        const authority = shell.shellPresenter
+        const ids = ["transport.go_to_start", "transport.play", "transport.pause",
+                     "transport.stop", "transport.loop", "transport.follow_playhead",
+                     "transport.resonance"]
+        const names = ["transport.go-to-start", "transport.play", "transport.pause",
+                       "transport.stop", "transport.loop", "transport.follow-playhead",
+                       "transport.resonance"]
+        function button(index) { return findChild(bar, names[index]) }
+        function menu(index) { return findChild(shell, "shellAction_" + ids[index]) }
+        function parity(index, expected) {
+            const control = button(index)
+            verify(control !== null, ids[index] + " button is mounted")
+            compare(authority.actionEnabled(ids[index]), expected,
+                    ids[index] + " reports its expected availability")
+            tryCompare(control, "actionable", expected, 3000,
+                       ids[index] + " button matches command authority")
+            tryCompare(control, "enabled", expected, 3000,
+                       ids[index] + " rendered enabled state matches authority")
+            if (index < 6) {
+                const item = menu(index)
+                verify(item !== null, ids[index] + " menu item is mounted")
+                tryCompare(item, "enabled", expected, 3000,
+                           ids[index] + " menu availability matches the button")
+            }
+        }
+        for (let index = 0; index < ids.length; ++index)
+            parity(index, false)
+
+        bar = openSong()
+        const transport = bar.presenter
+        const clock = findChild(bar, "transportTimeLabel")
+        parity(0, true)
+        parity(1, true)
+        parity(2, false)
+        parity(3, false)
+        parity(4, true)
+        parity(5, true)
+        const playPause = findChild(shell, "shellAction_transport.play_pause")
+        verify(playPause !== null, "Play/Pause menu item is mounted")
+        verify(authority.actionEnabled("transport.play_pause"),
+               "Play/Pause command authority enables the window shortcut")
+        compare(playPause.enabled, authority.actionEnabled("transport.play_pause"),
+                "Play/Pause menu and shortcut share enabled authority")
+        parity(6, true)
+
+        mouseClick(button(1), button(1).width / 2, button(1).height / 2)
+        tryCompare(transport, "state", 3, 3000,
+                   "Play button starts real audio playback")
+        parity(1, false)
+        parity(2, true)
+        parity(3, true)
+        menu(2).triggered()
+        tryCompare(transport, "state", 2, 3000,
+                   "Pause menu pauses the same audio transport")
+        menu(1).triggered()
+        tryCompare(transport, "state", 3, 3000,
+                   "Play menu resumes the same audio transport")
+        mouseClick(button(2), button(2).width / 2, button(2).height / 2)
+        tryCompare(transport, "state", 2, 3000,
+                   "Pause button produces the same paused audio state")
+        mouseClick(button(3), button(3).width / 2, button(3).height / 2)
+        tryCompare(transport, "state", 1, 3000,
+                   "Stop button stops and rewinds audio")
+        verify(waitForNative(function() {
+            transport.refresh()
+            return clock.text.startsWith("0:00.0 / ")
+        }, 3000), "Stop button rewinds the real audio playhead")
+        menu(1).triggered()
+        tryCompare(transport, "state", 3, 3000)
+        menu(3).triggered()
+        tryCompare(transport, "state", 1, 3000,
+                   "Stop menu produces the same stopped audio state")
+        verify(waitForNative(function() {
+            transport.refresh()
+            return clock.text.startsWith("0:00.0 / ")
+        }, 3000), "Stop menu rewinds the real audio playhead")
+        parity(3, false)
+
+        menu(1).triggered()
+        tryCompare(transport, "state", 3, 3000)
+        verify(waitForNative(function() {
+            transport.refresh()
+            return !clock.text.startsWith("0:00.0 / ")
+        }, 3000), "playback advances before comparing the seek routes")
+        mouseClick(button(0), button(0).width / 2, button(0).height / 2)
+        verify(waitForNative(function() {
+            transport.refresh()
+            return clock.text.startsWith("0:00.0 / ")
+        }, 3000), "Go to Start button seeks the actual audio playhead")
+        verify(waitForNative(function() {
+            transport.refresh()
+            return !clock.text.startsWith("0:00.0 / ")
+        }, 3000), "audio advances again before the menu seek")
+        menu(0).triggered()
+        verify(waitForNative(function() {
+            transport.refresh()
+            return clock.text.startsWith("0:00.0 / ")
+        }, 3000), "Go to Start menu seeks the same audio playhead")
+        menu(3).triggered()
+        tryCompare(transport, "state", 1, 3000)
+
+        const loopBefore = transport.loopEnabled
+        mouseClick(button(4), button(4).width / 2, button(4).height / 2)
+        compare(transport.loopEnabled, !loopBefore,
+                "Loop button changes native audio loop state")
+        tryCompare(menu(4), "checked", !loopBefore, 3000,
+                   "Loop menu mirrors the button's checked state")
+        menu(4).triggered()
+        compare(transport.loopEnabled, loopBefore,
+                "Loop menu changes the same audio loop state")
+        tryCompare(button(4), "checked", loopBefore, 3000,
+                   "Loop button mirrors the menu's checked state")
+
+        const followBefore = transport.followPlayhead
+        mouseClick(button(5), button(5).width / 2, button(5).height / 2)
+        compare(transport.followPlayhead, !followBefore,
+                "Follow button changes the playhead policy")
+        tryCompare(menu(5), "checked", !followBefore, 3000,
+                   "Follow menu mirrors the button's checked state")
+        menu(5).triggered()
+        compare(transport.followPlayhead, followBefore,
+                "Follow menu restores the same playhead policy")
+        tryCompare(button(5), "checked", followBefore, 3000,
+                   "Follow button mirrors the menu's checked state")
+
+        const resonanceBefore = transport.resonanceSuppression
+        mouseClick(button(6), button(6).width / 2, button(6).height / 2)
+        compare(transport.resonanceSuppression, !resonanceBefore,
+                "resonance button updates native audio through command authority")
+        authority.activate("transport.resonance")
+        compare(transport.resonanceSuppression, resonanceBefore,
+                "the authority restores the same native resonance state")
+        tryCompare(button(6), "checked", resonanceBefore, 3000,
+                   "resonance button mirrors the authority's checked state")
+        compare(authority.session.documentDirty, false,
+                "transport parity actions never dirty the document")
+    }
+
     function test_transportControlTransitionsAndSettings() {
         var bar = openShell()
         var clock = findChild(bar, "transportTimeLabel")

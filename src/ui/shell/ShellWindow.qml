@@ -12,6 +12,8 @@ ThemedWindow {
     objectName: "shellWindow"
     readonly property alias shellPresenter: shell
     readonly property alias sceneLoader: editorScene
+    readonly property var drawerSectionSource: shell.session.songTabs.selectedPage
+                                               ? shell.session.songTabs.selectedPage.drawerPresenter() : null
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
@@ -113,8 +115,12 @@ ThemedWindow {
         }
         // The session fans restored modes out to every tab, including tabs
         // opened later, so this runs before the startup recipe opens anything.
-        shell.session.setVelocityColorMode(Boolean(displayModeSettings.value("velocityNoteColors", false)))
-        shell.session.setNoteNameMode(Boolean(displayModeSettings.value("noteNames", false)))
+        if (shell.actionChecked("view.velocity_colors") !==
+                Boolean(displayModeSettings.value("velocityNoteColors", false)))
+            shell.activate("view.velocity_colors")
+        if (shell.actionChecked("view.note_names") !==
+                Boolean(displayModeSettings.value("noteNames", false)))
+            shell.activate("view.note_names")
         transportBar.restoreOutputVolume()
         engineSettingsStore.active = true
         appearanceStore.active = true
@@ -127,53 +133,6 @@ ThemedWindow {
         const shortcut = shell.actionShortcut(actionId)
         const label = shell.actionLabel(actionId)
         return shortcut.length > 0 ? label + "\t" + shortcut : label
-    }
-
-    // Checked menu items mirror the live tracked state, so a toggle flipped
-    // from the transport bar, a drawer toggle, or a shortcut repaints the
-    // menu without reopening it. Every read below is a notified property, so
-    // the binding tracks it; no Swift method result is cached here.
-    function actionCheckable(actionId) {
-        switch (actionId) {
-        case "view.event_list":
-        case "view.automation_drawer":
-        case "view.velocity_drawer":
-        case "view.voice_changes_drawer":
-        case "view.polyphony_debugger":
-        case "view.velocity_colors":
-        case "view.note_names":
-        case "transport.loop":
-        case "transport.follow_playhead":
-            return true
-        default:
-            return false
-        }
-    }
-    function actionChecked(actionId) {
-        const tabs = shell.session.songTabs
-        const page = tabs.selectedPage
-        switch (actionId) {
-        case "view.event_list":
-            return tabs.selectedTabShowsEvents
-        case "view.automation_drawer":
-            return page !== null && page.drawerPresenter().automationSection.visible
-        case "view.velocity_drawer":
-            return page !== null && page.drawerPresenter().velocitySection.visible
-        case "view.voice_changes_drawer":
-            return page !== null && page.drawerPresenter().voiceChangesSection.visible
-        case "view.polyphony_debugger":
-            return shell.polyphonyVisible
-        case "view.velocity_colors":
-            return shell.session.velocityColorMode
-        case "view.note_names":
-            return shell.session.noteNameMode
-        case "transport.loop":
-            return shell.session.transportBarPresenter().loopEnabled
-        case "transport.follow_playhead":
-            return shell.session.transportBarPresenter().followPlayhead
-        default:
-            return false
-        }
     }
 
     // A Swift method's internal reads do not install QML binding dependencies.
@@ -193,13 +152,16 @@ ThemedWindow {
         function onCanUndoChanged() { ++root.actionRevision }
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
+        function onTransportAvailabilityChanged() { ++root.actionRevision }
         function onVelocityColorModeChanged() {
             displayModeSettings.setValue("velocityNoteColors", shell.session.velocityColorMode)
             displayModeSettings.sync()
+            ++root.actionRevision
         }
         function onNoteNameModeChanged() {
             displayModeSettings.setValue("noteNames", shell.session.noteNameMode)
             displayModeSettings.sync()
+            ++root.actionRevision
         }
         function onOpenFailed(message) { shell.openFailed(message) }
         function onOperationFailed(message) { shell.operationFailed(message) }
@@ -214,15 +176,17 @@ ThemedWindow {
         function onTabCountChanged() { ++root.actionRevision }
     }
     Connections {
+        target: root.drawerSectionSource
+        function onDrawerSectionPreferenceChanged() { ++root.actionRevision }
+    }
+    Connections {
         target: shell.session.songOpen ? shell.session.eventListPresenter() : null
         function onCurrentRowChanged() { ++root.actionRevision }
-        function onAttachedChanged() { ++root.actionRevision }
-        function onVisibleChanged() { ++root.actionRevision }
-        function onEditingChanged() { ++root.actionRevision }
-        function onMenuOpenChanged() { ++root.actionRevision }
     }
     Connections {
         target: shell
+        function onPolyphonyVisibleChanged() { ++root.actionRevision }
+        function onEventListGateChanged() { ++root.actionRevision }
         function onChooseProjectRequested() { projectPicker.open() }
         function onAboutRequested() { aboutDialog.open() }
         function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
@@ -455,8 +419,11 @@ ThemedWindow {
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    checkable: root.actionCheckable(modelData)
-                    checked: root.actionChecked(modelData)
+                    checkable: shell.actionCheckable(modelData)
+                    checked: {
+                        root.actionRevision
+                        return shell.actionChecked(modelData)
+                    }
                     enabled: {
                         root.actionRevision
                         return shell.actionEnabled(modelData)
@@ -479,8 +446,11 @@ ThemedWindow {
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    checkable: root.actionCheckable(modelData)
-                    checked: root.actionChecked(modelData)
+                    checkable: shell.actionCheckable(modelData)
+                    checked: {
+                        root.actionRevision
+                        return shell.actionChecked(modelData)
+                    }
                     enabled: {
                         root.actionRevision
                         return shell.actionEnabled(modelData)
@@ -669,6 +639,8 @@ ThemedWindow {
         songAvailable: shell.session.songOpen
         baseFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize))
         presenter: shell.session.transportBarPresenter()
+        shell: root.shellPresenter
+        actionRevision: root.actionRevision
         colors: root.colors
         toolbarFont: Qt.font({ family: root.font.family, pixelSize: baseFontPx,
                                hintingPreference: Font.PreferNoHinting,

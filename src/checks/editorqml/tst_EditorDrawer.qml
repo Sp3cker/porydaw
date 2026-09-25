@@ -68,6 +68,19 @@ TestCase {
     property bool windowSpaceProbeActive: false
     property int windowSpaceActivations: 0
 
+    FontLoader {
+        id: regularFont
+        source: "qrc:/fonts/AtkinsonHyperlegibleNext-Regular.ttf"
+    }
+    FontLoader {
+        id: semiboldFont
+        source: "qrc:/fonts/AtkinsonHyperlegibleNext-SemiBold.ttf"
+    }
+    FontLoader {
+        id: monoFont
+        source: "qrc:/fonts/AtkinsonHyperlegibleMono-Regular.ttf"
+    }
+
     Shortcut {
         sequence: "Space"
         context: Qt.WindowShortcut
@@ -180,6 +193,15 @@ TestCase {
             tryVerify(function() { return !!testCase.automationPageItem() }, 1000,
                       "the existing document owner remounts through the same production loader")
         }
+    }
+
+    function test_bundledFontsResolveInEditorLane() {
+        tryCompare(regularFont, "status", FontLoader.Ready)
+        tryCompare(semiboldFont, "status", FontLoader.Ready)
+        tryCompare(monoFont, "status", FontLoader.Ready)
+        compare(regularFont.name, "Atkinson Hyperlegible Next")
+        compare(semiboldFont.name, "Atkinson Hyperlegible Next")
+        compare(monoFont.name, "Atkinson Hyperlegible Mono")
     }
 
     function initTestCase() {
