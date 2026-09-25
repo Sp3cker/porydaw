@@ -11,8 +11,9 @@ cmake_minimum_required(VERSION 3.22)
 
 project(QtBridgeMacros LANGUAGES Swift)
 
-# Extract the swift-syntax version from the main Package.swift
-file(READ "${CMAKE_SOURCE_DIR}/../../Package.swift" PACKAGE_SWIFT_CONTENTS)
+# autoresearch harness: CMAKE_CURRENT_SOURCE_DIR works both as an
+# ExternalProject root and as an add_subdirectory child.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../Package.swift" PACKAGE_SWIFT_CONTENTS)
 string(REGEX MATCH "let[ \t]+swiftSyntaxVersion[ \t]*:[ \t]*Version[ \t]*=[ \t]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\"" _MATCH "${PACKAGE_SWIFT_CONTENTS}")
 set(SWIFT_SYNTAX_VERSION "${CMAKE_MATCH_1}")
 if(NOT SWIFT_SYNTAX_VERSION)
@@ -42,9 +43,11 @@ target_link_libraries(QtBridgeMacros PRIVATE
     SwiftSyntaxMacros
     SwiftCompilerPlugin
 )
-
 set_target_properties(QtBridgeMacros PROPERTIES
     Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF
+    AUTOUIC OFF
+    AUTORCC OFF
 )
 
 install(TARGETS QtBridgeMacros

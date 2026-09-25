@@ -50,48 +50,25 @@ if(WIN32)
   set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON)
 endif()
 
-# Build QtBridgeMacros via ExternalProject (must build for host, not target)
-include(ExternalProject)
-set(QTBRIDGE_MACROS_EP_ROOT "${CMAKE_BINARY_DIR}/qtbridge_macros_ep")
-ExternalProject_Add(QtBridgeMacros_External
-    PREFIX "${QTBRIDGE_MACROS_EP_ROOT}"
-    BINARY_DIR "${QTBRIDGE_MACROS_EP_ROOT}/build"
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
-    # autoresearch harness: the default EP build builds every swift-syntax
-    # target; only the macro executable and its three libraries are needed.
-    BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR>
-        --target QtBridgeMacros
-    CMAKE_ARGS
-        -G Ninja
-        -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
-        -DCMAKE_Swift_COMPILER:FILEPATH=${CMAKE_Swift_COMPILER}
-        -DCMAKE_Swift_FLAGS:STRING=${CMAKE_Swift_FLAGS}
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DBUILD_SHARED_LIBS=YES
-        -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${QTBRIDGE_MACROS_EP_ROOT}/build/bin
-    BUILD_BYPRODUCTS "${QTBRIDGE_MACROS_EP_ROOT}/build/bin/QtBridgeMacros"
-    USES_TERMINAL_BUILD TRUE
-    INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(QtBridgeMacros_External BINARY_DIR)
+# autoresearch harness: build QtBridgeMacros in-tree instead of an
+# ExternalProject. On this platform host == target, so the separate
+# configure+build EP only adds a serial stamp boundary; a subdirectory puts
+# the macro executable in the main Ninja graph.
+add_subdirectory(Sources/QtBridgeMacros)
 
-set(QTBRIDGE_MACROS_BINARY_DIR "${BINARY_DIR}"
-  CACHE PATH "Path to QtBridgeMacros build"
-)
 if(CMAKE_HOST_WIN32)
   set(QTBRIDGE_MACROS_PLUGIN_PATH
-    "${BINARY_DIR}/bin/QtBridgeMacros.exe#QtBridgeMacros"
+    "$<TARGET_FILE:QtBridgeMacros>#QtBridgeMacros"
     CACHE STRING "Macro plugin load path"
   )
 else()
   set(QTBRIDGE_MACROS_PLUGIN_PATH
-    "${BINARY_DIR}/bin/QtBridgeMacros#QtBridgeMacros"
+    "$<TARGET_FILE:QtBridgeMacros>#QtBridgeMacros"
     CACHE STRING "Macro plugin load path"
   )
 endif()
 
-add_library(QtBridgeMacros INTERFACE)
-add_dependencies(QtBridgeMacros QtBridgeMacros_External)
+
 
 add_subdirectory(Sources/QtBridgeCpp)
 add_subdirectory(Sources/QtBridge)
