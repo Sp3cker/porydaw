@@ -120,9 +120,11 @@ final class NoteCommands {
         guard let track = selectedTrack else { return }
         let notes = selectedNotes()
         guard let start = notes.map(\.tick).min() else { return }
-        let end = notes.reduce(UInt64(start)) { value, note in
-            max(value, UInt64(note.tick) + UInt64(note.isUnterminated ? max(1, snapTicks)
-                                                                    : max(1, note.duration)))
+        var end = UInt64(start)
+        for note in notes {
+            let noteEnd = UInt64(note.tick)
+                + UInt64(note.isUnterminated ? max(1, snapTicks) : max(1, note.duration))
+            if noteEnd > end { end = noteEnd }
         }
         let span = max(UInt64(1), end - UInt64(start))
         var additions: [NewNote] = []
