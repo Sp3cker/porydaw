@@ -84,4 +84,10 @@ internal final class ProjectBankViews {
         guard BankBindingIdentity(value.lease).owner == owner else { return }
         _ = state(for: value)
     }
+
+    func dirtyBanks() -> [AppliedBankEdit] {
+        states.values.map(\.value).filter(\.dirty).sorted {
+            ($0.lease.sourcePath, $0.lease.sectionLabel) < ($1.lease.sourcePath, $1.lease.sectionLabel)
+        }
+    }
 }

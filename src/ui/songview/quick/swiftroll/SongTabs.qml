@@ -46,13 +46,13 @@ Item {
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.
     readonly property real hairline: 1 / Screen.devicePixelRatio
-    // The tab the close gate is asking about. C++ (WorkspaceUi::requestCloseTab)
+    // The target the close gate is asking about. C++ (WorkspaceUi::requestCloseTab)
     // asks about one named tab ("%1 has unsaved changes. Save them?"), so the
-    // dialog names the strip's tab instead of saying "this tab". C++'s
-    // bank-dirty variant of that string has no counterpart here: the tab's
-    // single `dirty` flag is the union of document and voicegroup edits
-    // (the protective choice for a gate that can discard work).
+    // dialog names the strip's tab instead of saying "this tab", and names the
+    // bank when the close walk asks about a dirty bank no open tab holds.
     readonly property string pendingCloseTitle: {
+        if (root.controller.pendingCloseBankTitle.length > 0)
+            return root.controller.pendingCloseBankTitle;
         for (let i = 0; i < tabButtons.count; ++i) {
             const button = tabButtons.itemAt(i);
             if (button && button.tabId === root.controller.pendingCloseId)
@@ -156,7 +156,7 @@ Item {
         anchors.right: parent.right
         height: Math.max(Math.round(bodyMetrics.lineSpacing), root.scrollExtent) + 2 * root.tabMargin + 2
         color: root.controller.palette.windowBackground
-        enabled: root.controller.pendingCloseId < 0
+        enabled: root.controller.pendingCloseId < 0 && root.controller.pendingCloseBankTitle.length === 0
 
         Rectangle {
             width: parent.width
@@ -351,7 +351,7 @@ Item {
         font: root.applicationFont
         modal: true
         focus: true
-        visible: root.controller.pendingCloseId >= 0
+        visible: root.controller.pendingCloseId >= 0 || root.controller.pendingCloseBankTitle.length > 0
         closePolicy: Popup.CloseOnEscape
         onRejected: root.controller.cancelClose()
         Label {

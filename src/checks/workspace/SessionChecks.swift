@@ -268,5 +268,6 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     bankReleaseBoundsAndSharedBank(report: report, session: session, service: service)
     bankCatalogOutage(report: report, session: session, service: service, projectDir: projectDir)
     bankSaveRoundTrip(report: report, fixtureRoot: fixtureRoot)
+    orphanBankCloseAccounting(report: report, fixtureRoot: fixtureRoot)
     bankCoordinatorGate(report: report, fixtureRoot: fixtureRoot)
 }

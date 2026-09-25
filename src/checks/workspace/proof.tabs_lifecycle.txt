@@ -1462,3 +1462,24 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
+
+S186 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "the last session bound to the home bank detaches"
+
+S187 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "enumeration lists exactly the dirty cached banks by source then section"
+
+S188 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "saveBank persists the orphaned bank and returns a clean receipt"
+
+S189 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "the saved receipt carries the orphaned edit"
+
+S190 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "saving one bank leaves another dirty bank's source untouched"
+
+S191 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "the clean receipt publishes through the canonical cache"
+
+S192 | orphanBankCloseAccounting | src/checks/workspace/bank_saves.swift
+Anchor: message "an older clean receipt cannot clean a newer dirty edit"

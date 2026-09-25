@@ -639,9 +639,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// Closes every tab, asking about each dirty one in turn. The host's close
-    /// path calls this; `allTabsClosed` answers when the last tab is gone and
-    /// `closeCancelled` answers a refusal.
+    /// Closes every tab, then accounts for every dirty bank, asking about each
+    /// dirty one in turn. The host's close path calls this; `allTabsClosed`
+    /// answers when nothing is left to ask and `closeCancelled` answers a refusal.
     public func requestCloseAll() {
         persistTabRecipe()
         isHostCloseWalk = true
@@ -725,6 +725,43 @@ public final class ApplicationSession: QmlInstantiableStatus {
             self?.saveInProgress = false
             self?.songTabs.closeAfterSave(tabId: tabId, saved: saved)
         }
+    }
+
+    /// The gate's Save answer for one dirty bank, reported back through
+    /// `bankCloseAfterSave(saved:)`: the walk moves on after a successful save
+    /// and leaves the question up on a refusal.
+    @QtIgnored
+    func saveBankBeforeClose(_ target: BankCloseTarget) {
+        guard !saveInProgress else {
+            let message = "A save is already in progress."
+            lastSaveError = message
+            operationFailed(message: message)
+            songTabs.bankCloseAfterSave(saved: false)
+            return
+        }
+        saveInProgress = true
+        lastSaveError = ""
+        let service = catalogService
+        let lease = target.lease
+        Task { [weak self] in
+            var saved = true
+            do {
+                guard let service else { throw ProjectServiceError.serviceClosed }
+                _ = try await service.saveBank(lease: lease)
+            } catch {
+                saved = false
+                let message = String(describing: error)
+                self?.lastSaveError = message
+                self?.operationFailed(message: message)
+            }
+            self?.saveInProgress = false
+            self?.songTabs.bankCloseAfterSave(saved: saved)
+        }
+    }
+
+    @QtIgnored
+    func dirtyBanksForClose() -> [AppliedBankEdit] {
+        catalogService?.bankViews.dirtyBanks() ?? []
     }
 
     @QtIgnored
@@ -877,12 +914,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 path: path, label: label, restore: restore, service: loaded.service,
                 labels: loaded.songs.map(\.label), songs: loaded.songs,
                 voicegroupCatalog: loaded.voicegroupCatalog)
-            if self.songTabs.tabCount == 0 {
-                await self.finishProjectSwitch(candidate)
-            } else {
-                self.pendingProjectSwitch = candidate
-                self.songTabs.startProjectSwitchCloseAll()
-            }
+            self.pendingProjectSwitch = candidate
+            self.songTabs.startProjectSwitchCloseAll()
         }
         activeReplacementTask = replacement
         if restore != nil { startupRestoreTask = replacement }

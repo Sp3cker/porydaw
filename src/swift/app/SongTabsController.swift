@@ -114,6 +114,18 @@ public final class SongTabSession {
     }
 }
 
+internal struct BankCloseTarget {
+    let identity: BankBindingIdentity
+    let lease: NativeBankLease
+    let title: String
+
+    init(_ bank: AppliedBankEdit) {
+        identity = BankBindingIdentity(bank.lease)
+        lease = bank.lease
+        title = bank.loadName.isEmpty ? bank.lease.sectionLabel : bank.loadName
+    }
+}
+
 /// The song tab strip: the model its Repeaters read, the selection the strip and
 /// the pages bind, and the close gate the unsaved-changes dialog answers.
 ///
@@ -132,6 +144,7 @@ public final class SongTabsController {
     public var selectedId: Int = -1
     public var selectedIndex: Int = -1
     public var tabCount: Int = 0
+    public var pendingCloseBankTitle: String = ""
     public var pendingCloseId: Int = -1
 
     /// The one palette every surface reads. The session owns the instance; the
@@ -159,10 +172,13 @@ public final class SongTabsController {
     /// The tab whose close-save is in flight. The gate stays up until the
     /// application reports back, so a second Save press starts no second write.
     private var savingCloseId = -1
-    /// Whether a close-all walk still has tabs to ask about.
+    /// Whether a close-all walk still has tabs or dirty banks to ask about.
     private var isClosingAll = false
     /// Whether the walk's next step is already scheduled for the next turn.
     private var advancePending = false
+    private var pendingCloseBank: BankCloseTarget?
+    private var savingCloseBank: BankBindingIdentity?
+    private var answeredCloseBanks: Set<BankBindingIdentity> = []
     private var projectSwitchApprovalIndex: Int?
 
     private var nextTabId = 1
@@ -288,7 +304,8 @@ public final class SongTabsController {
     /// tab that is still loading, has no counterpart: a tab is installed only
     /// after its document loaded, so nothing saveable is ever missing.
     public func requestClose(tabId: Int) {
-        guard let index = tabIndex(of: tabId), savingCloseId != tabId else { return }
+        guard pendingCloseBank == nil, let index = tabIndex(of: tabId),
+              savingCloseId != tabId else { return }
         guard tabs[index].dirty else {
             closeTab(index: index)
             return
@@ -300,6 +317,13 @@ public final class SongTabsController {
     }
 
     public func confirmDiscard() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank != bank.identity else { return }
+            answeredCloseBanks.insert(bank.identity)
+            clearPendingCloseBank()
+            advanceCloseAll()
+            return
+        }
         guard let tabId = takePendingClose() else { return }
         if let index = projectSwitchApprovalIndex {
             projectSwitchApprovalIndex = index + 1
@@ -309,19 +333,34 @@ public final class SongTabsController {
         advanceCloseAll()
     }
 
-    /// The gate's Save answer: the application writes the document and reports
-    /// back through `closeAfterSave(tabId:saved:)`. A refused save leaves the
-    /// gate up, so the user can answer again.
+    /// The gate's Save answer: the application writes the document or the bank
+    /// and reports back through `closeAfterSave(tabId:saved:)` or
+    /// `bankCloseAfterSave(saved:)`. A refused save leaves the gate up, so the
+    /// user can answer again.
     public func confirmSave() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank == nil else { return }
+            savingCloseBank = bank.identity
+            app?.saveBankBeforeClose(bank)
+            return
+        }
         guard pendingCloseId != -1, savingCloseId == -1 else { return }
         guard let tab = tab(id: pendingCloseId) else { return }
         savingCloseId = tab.tabId
         app?.saveTabBeforeClose(tab)
     }
 
-    /// The gate's Cancel answer: the tab stays open. A close-all walk stops and
-    /// the application reports the refusal to the host.
+    /// The gate's Cancel answer: the tab stays open and a bank stays dirty. A
+    /// close-all walk stops and the application reports the refusal to the host.
     public func cancelClose() {
+        if let bank = pendingCloseBank {
+            guard savingCloseBank != bank.identity else { return }
+            clearPendingCloseBank()
+            isClosingAll = false
+            projectSwitchApprovalIndex = nil
+            app?.closeAllResolved(closed: false)
+            return
+        }
         guard pendingCloseId != -1 else { return }
         pendingCloseId = -1
         if reloadId != -1 { reloadId = -1 }
@@ -339,7 +378,8 @@ public final class SongTabsController {
     /// under the open document.
     @QtIgnored
     func requestReload(tabId: Int) {
-        guard pendingCloseId == -1, let index = tabIndex(of: tabId) else { return }
+        guard pendingCloseId == -1, pendingCloseBank == nil,
+              let index = tabIndex(of: tabId) else { return }
         reloadId = tabId
         if tabs[index].dirty {
             if tabId != selectedId { select(tabId: tabId) }
@@ -353,7 +393,7 @@ public final class SongTabsController {
     /// at the selected tab's position.
     @QtIgnored
     func requestReplacement(tabId: Int, label: String) {
-        guard pendingCloseId == -1, tab(id: tabId) != nil else { return }
+        guard pendingCloseId == -1, pendingCloseBank == nil, tab(id: tabId) != nil else { return }
         replacementLabel = label
         requestReload(tabId: tabId)
     }
@@ -373,6 +413,17 @@ public final class SongTabsController {
         advanceCloseAll()
     }
 
+    /// The application's answer to a bank target's `confirmSave()`.
+    @QtIgnored
+    func bankCloseAfterSave(saved: Bool) {
+        guard let identity = savingCloseBank else { return }
+        savingCloseBank = nil
+        guard saved, pendingCloseBank?.identity == identity else { return }
+        answeredCloseBanks.insert(identity)
+        clearPendingCloseBank()
+        advanceCloseAll()
+    }
+
     /// The page acknowledgment: `SongTab.qml` reports the destruction of the
     /// page that bound `tabId`, which is what allows the application to release
     /// the workspace behind it. The page holds the C++ proxy for every presenter
@@ -381,8 +432,9 @@ public final class SongTabsController {
         app?.tabPageReleased(tabId: tabId)
     }
 
-    /// Walks every tab through the close gate, asking about each dirty one in
-    /// turn and reporting the walk's verdict once it is settled.
+    /// Walks every tab through the close gate, then every dirty bank of the
+    /// project, asking about each dirty one in turn and reporting the walk's
+    /// verdict once it is settled.
     @QtIgnored
     func startCloseAll() {
         guard !isClosingAll else { return }
@@ -393,6 +445,7 @@ public final class SongTabsController {
         // the outcome.
         reloadId = -1
         replacementLabel = nil
+        answeredCloseBanks = []
         isClosingAll = true
         if pendingCloseId == -1 { advanceCloseAll() }
     }
@@ -402,6 +455,7 @@ public final class SongTabsController {
         guard !isClosingAll else { return }
         reloadId = -1
         projectSwitchApprovalIndex = 0
+        answeredCloseBanks = []
         isClosingAll = true
         if pendingCloseId == -1 { advanceCloseAll() }
     }
@@ -500,6 +554,14 @@ public final class SongTabsController {
             if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
             return
         }
+        if let bank = app?.dirtyBanksForClose().first(where: {
+            !answeredCloseBanks.contains(BankBindingIdentity($0.lease))
+        }) {
+            let target = BankCloseTarget(bank)
+            pendingCloseBank = target
+            if pendingCloseBankTitle != target.title { pendingCloseBankTitle = target.title }
+            return
+        }
         isClosingAll = false
         app?.closeAllResolved(closed: true)
     }
@@ -509,6 +571,11 @@ public final class SongTabsController {
         let tabId = pendingCloseId
         pendingCloseId = -1
         return tabId
+    }
+
+    private func clearPendingCloseBank() {
+        pendingCloseBank = nil
+        if !pendingCloseBankTitle.isEmpty { pendingCloseBankTitle = "" }
     }
 
     private func deactivateSelection() {

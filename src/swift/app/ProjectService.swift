@@ -569,16 +569,7 @@ public actor ProjectService {
         do {
             var refreshed: AppliedBankEdit?
             if let bank {
-                guard bank.publicationOwner == store.publicationOwner else {
-                    throw ProjectServiceError.serviceClosed
-                }
-                guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
-                    throw ProjectServiceError.operationFailed(
-                        "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
-                }
-                let savedView = appliedBank(saved, token: nil)
-                refreshed = savedView
-                await publish(savedView, from: store)
+                refreshed = try await saveBankStage(bank, in: store)
             }
             try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
             var flagsWritten = false
@@ -593,6 +584,29 @@ public actor ProjectService {
         } catch {
             throw projectFailure(error)
         }
+    }
+
+    public func saveBank(lease: NativeBankLease) async throws -> AppliedBankEdit {
+        let store = try requireStore()
+        do {
+            return try await saveBankStage(lease, in: store)
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    private func saveBankStage(_ bank: NativeBankLease,
+                               in store: ProjectStore) async throws -> AppliedBankEdit {
+        guard bank.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
+            throw ProjectServiceError.operationFailed(
+                "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
+        }
+        let savedView = appliedBank(saved, token: nil)
+        await publish(savedView, from: store)
+        return savedView
     }
 
     /// Applies a set-slot edit against the lease's bank. A nil expected value

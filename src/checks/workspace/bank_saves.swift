@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
@@ -254,4 +254,84 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
         report.fail("vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes", message)
     }
 
+}
+
+@MainActor
+internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/ProjectService::orphanBankCloseAccounting"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-orphan-bank-close")
+    let indexPath = root + "/sound/voice_groups.inc"
+    let service = ProjectService()
+    do {
+        let index = try String(contentsOfFile: indexPath, encoding: .utf8)
+        try (index + """
+
+            voicegroup_orphan_one::
+                voice_square_1 60, 0, 2, 2, 2, 3, 12, 4
+            .align 2
+            voicegroup_orphan_two::
+                voice_square_2 60, 0, 1, 3, 2, 11, 4
+
+            """).write(toFile: indexPath, atomically: true, encoding: .utf8)
+        try runBlocking { try await service.open(root: root) }
+        let session = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        let sectionOne = try runBlocking { try await service.loadBank(voicegroupArg: "_orphan_one") }
+        _ = try runBlocking { try await service.loadBank(voicegroupArg: "_orphan_two") }
+        guard var homeEdit = session.bankSlots.first?.voice,
+              var sectionEdit = sectionOne.slots.first?.voice else {
+            report.fail(id, "home bank and section slot zero must be editable")
+            return
+        }
+        homeEdit.release = homeEdit.release == 255 ? 254 : homeEdit.release + 1
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: homeEdit,
+                                            expected: session.bankSlots[0].voice)
+        }
+        sectionEdit.release = sectionEdit.release == 255 ? 254 : sectionEdit.release + 1
+        _ = try runBlocking {
+            try await service.bankApply(lease: sectionOne.lease, slot: 0,
+                                        value: sectionEdit, expected: sectionOne.slots[0].voice)
+        }
+        let home = BankBindingIdentity(session.bankLease)
+        let one = BankBindingIdentity(sectionOne.lease)
+        let homePath = root + "/" + session.bankLease.sourcePath
+        let closed = try runBlocking { await session.close() }
+        report.expect(closed, cppID: id, message: "the last session bound to the home bank detaches")
+
+        let orphaned = service.bankViews.dirtyBanks()
+        report.expectEqual([one, home], orphaned.map { BankBindingIdentity($0.lease) },
+                           cppID: id,
+                           what: "enumeration lists exactly the dirty cached banks by source then section")
+        guard let orphan = orphaned.first(where: { BankBindingIdentity($0.lease) == home }) else {
+            report.fail(id, "the detached home bank must stay cached dirty")
+            return
+        }
+
+        let homeBefore = bytes(at: homePath)
+        let indexBefore = bytes(at: indexPath)
+        let saved = try runBlocking { try await service.saveBank(lease: orphan.lease) }
+        report.expect(!saved.dirty && bytes(at: homePath) != homeBefore, cppID: id,
+                      message: "saveBank persists the orphaned bank and returns a clean receipt")
+        report.expectEqual(homeEdit, saved.slots.first?.voice, cppID: id,
+                           what: "the saved receipt carries the orphaned edit")
+        report.expectEqual(indexBefore, bytes(at: indexPath), cppID: id,
+                           what: "saving one bank leaves another dirty bank's source untouched")
+        report.expectEqual([one],
+                           service.bankViews.dirtyBanks().map { BankBindingIdentity($0.lease) },
+                           cppID: id, what: "the clean receipt publishes through the canonical cache")
+
+        var newer = homeEdit
+        newer.release = newer.release == 255 ? 254 : newer.release + 1
+        _ = try runBlocking {
+            try await service.bankApply(lease: saved.lease, slot: 0, value: newer, expected: homeEdit)
+        }
+        service.bankViews.publish(saved)
+        report.expectEqual([one, home],
+                           service.bankViews.dirtyBanks().map { BankBindingIdentity($0.lease) },
+                           cppID: id, what: "an older clean receipt cannot clean a newer dirty edit")
+    } catch {
+        report.fail(id, "orphan bank close accounting failed: \(error)")
+    }
 }

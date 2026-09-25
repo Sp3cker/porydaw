@@ -304,17 +304,14 @@ public final class ShellPresenter: QmlInstantiableStatus {
         return false
     }
 
-    /// The native window rejects the first close while tabs answer their dirty
-    /// gate; no tab closes bypass hostClosing -> scene removal -> detach ack.
+    /// The native window rejects the first close while tabs and dirty banks
+    /// answer their gate; no close bypasses hostClosing -> scene removal ->
+    /// detach ack.
     public func beginClose() -> Bool {
         if closeReady { return true }
         if closing || closePending { return false }
-        if session.songTabs.tabCount > 0 {
-            closePending = true
-            session.requestCloseAll()
-            return false
-        }
-        finishClose()
+        closePending = true
+        session.requestCloseAll()
         return false
     }
 
