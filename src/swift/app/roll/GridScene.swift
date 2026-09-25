@@ -631,12 +631,10 @@ public final class GridScene {
     private func maxRulerBar(_ input: GridSceneInput, end: Tick) -> Int {
         var bar = 1
         let segment = input.metrics.timeAxis.segmentAt(end)
-        let beat = segment.start
-            + (end - segment.start) / segment.beatTicks * segment.beatTicks
-        input.metrics.timeAxis.forEachGridLine(
-            from: beat,
-            to: end < TimeDefaults.maxTick ? end + 1 : TimeDefaults.noTick
-        ) { _, _, number, _ in
+        let offset = end - segment.start
+        let beat = segment.start + offset / segment.beatTicks * segment.beatTicks
+        let tickEnd: Tick = end < TimeDefaults.maxTick ? end + 1 : TimeDefaults.noTick
+        input.metrics.timeAxis.forEachGridLine(from: beat, to: tickEnd) { _, _, number, _ in
             bar = number
         }
         return bar + 1
