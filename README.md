@@ -60,6 +60,16 @@ deno task verify:qml --verbose                 # editor drawer QML lane
 deno task verify:qml-roll --verbose            # Swift roll window QML lane
 ```
 
+### Startup profiling
+
+`bash autoresearch.sh` measures the configured live-project cold launch on a
+Debug build, including song restoration and a settled rendered window. It is
+not a portable fixture-based check.
+
+Track-name scans borrow a Swift `Span` from an explicitly scoped array owner
+to reduce Debug-build iterator allocations. Names still come from the current
+document; the scan neither caches names nor copies the event buffer.
+
 ## License
 
 Porydaw is licensed under [GPL-3.0](LICENSE). The embedded poryaaaa engine is
