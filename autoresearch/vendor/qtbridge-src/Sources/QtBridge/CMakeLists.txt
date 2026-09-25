@@ -77,7 +77,9 @@ if(DEFINED QTBRIDGE_MACROS_PLUGIN_PATH)
     )
 endif()
 
-# Set Swift version
+# Set Swift version; AUTOMOC off — pure Swift target, the autogen step only
+# serializes QtBridge.swiftmodule behind the C++ QtBridgeCpp archive.
 set_target_properties(QtBridge PROPERTIES
     Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
