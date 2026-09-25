@@ -22,6 +22,7 @@ export interface Reporter {
     suiteMs: number,
     total: number,
     runnable: number,
+    platformSkipped: number,
   ): void;
 }
 
@@ -98,11 +99,13 @@ export function createReporter(
       suiteMs: number,
       totalManifest: number,
       runnable: number,
+      platformSkipped: number,
     ): void {
       clearLive();
       const sec = (suiteMs / 1000).toFixed(2);
-      const skipped = totalManifest - runnable;
-      const skippedPart = skipped > 0 ? `, ${skipped} skipped` : "";
+      const skipped = totalManifest - runnable - platformSkipped;
+      const skippedPart = (skipped > 0 ? `, ${skipped} skipped` : "") +
+        (platformSkipped > 0 ? `, ${platformSkipped} platform-skipped` : "");
       if (failures.length === 0) {
         // Primary human summary
         console.log(

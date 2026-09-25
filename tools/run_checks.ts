@@ -6,6 +6,8 @@
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
 //      ASAN_OPTIONS defaults to detect_leaks=0
+//      PORYDAW_CHECK_HOST     macos|windows|linux; overrides the host platform
+//                             when env access to it is granted
 
 import { dirname, join } from "node:path";
 import { createReporter } from "./checks_reporter.ts";
@@ -16,6 +18,7 @@ import { parseCheckOptions, VERIFY_HELP } from "./checks_options.ts";
 type ScratchKind = "existing-directory" | "must-not-exist-path" | "unused";
 type FixtureRootKind = "decomp-project" | "songs-mk-project" | "none";
 type Windowing = "offscreen" | "window-system";
+const CHECK_PLATFORMS: readonly string[] = ["macos", "windows", "linux"];
 interface CheckManifestEntry {
   readonly name: string;
   readonly argv: readonly string[];
@@ -23,6 +26,7 @@ interface CheckManifestEntry {
   readonly windowing: Windowing;
   readonly framework: "qt-test" | "process";
   readonly optIn: boolean;
+  readonly platforms?: readonly string[];
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
@@ -159,7 +163,44 @@ async function loadManifest(
     console.error("run_checks: manifest is missing the opt-in classification");
     Deno.exit(2);
   }
+  if (
+    checks.some((check) =>
+      check.platforms !== undefined &&
+      (!Array.isArray(check.platforms) ||
+        check.platforms.some((platform) => !CHECK_PLATFORMS.includes(platform)))
+    )
+  ) {
+    console.error("run_checks: manifest has an unsupported platform");
+    Deno.exit(2);
+  }
   return checks;
+}
+
+function hostPlatform(): string {
+  const override =
+    Deno.permissions.querySync({ name: "env", variable: "PORYDAW_CHECK_HOST" })
+        .state === "granted"
+      ? Deno.env.get("PORYDAW_CHECK_HOST")
+      : undefined;
+  if (override !== undefined) {
+    if (!CHECK_PLATFORMS.includes(override)) {
+      console.error(
+        `run_checks: PORYDAW_CHECK_HOST must be one of ${
+          CHECK_PLATFORMS.join(", ")
+        }: ${override}`,
+      );
+      Deno.exit(2);
+    }
+    return override;
+  }
+  return Deno.build.os === "darwin" ? "macos" : Deno.build.os;
+}
+
+function refuseUnrunnable(registered: number, platform: string): never {
+  console.error(
+    `run_checks: ${registered} check(s) registered but none runnable on this platform (${platform})`,
+  );
+  Deno.exit(2);
 }
 
 function fixtureRoot(
@@ -528,17 +569,26 @@ async function runParallel(
   );
 }
 
+const host = hostPlatform();
+const platformSkippedChecks = checkManifest.filter((check) =>
+  check.platforms !== undefined && !check.platforms.includes(host)
+);
 const skipWindowSystem = selection === "--no-windowing-checks";
 let runnableChecks = checkManifest.filter(
   (check) =>
+    !platformSkippedChecks.includes(check) &&
     (!skipWindowSystem || check.windowing !== "window-system") &&
     (!check.optIn || selection === "--all" || filters.length > 0),
 );
 if (filters.length > 0) {
-  runnableChecks = runnableChecks.filter((check) =>
-    filters.some((filter) => check.name.includes(filter))
-  );
+  const matchesFilter = (check: CheckManifestEntry) =>
+    filters.some((filter) => check.name.includes(filter));
+  runnableChecks = runnableChecks.filter(matchesFilter);
   if (runnableChecks.length === 0) {
+    const platformMatches = platformSkippedChecks.filter(matchesFilter);
+    if (platformMatches.length > 0) {
+      refuseUnrunnable(platformMatches.length, host);
+    }
     console.error(
       `run_checks: no harness matches filter: ${filters.join(", ")}`,
     );
@@ -585,6 +635,13 @@ if (
     `verify: no reviewed ${visualPlatform} visual baselines; skipping visual-* ` +
       "(use --filter=visual to run them)",
   );
+}
+if (runnableChecks.length === 0) {
+  if (platformSkippedChecks.length > 0) {
+    refuseUnrunnable(platformSkippedChecks.length, host);
+  }
+  console.error("run_checks: selection resolved to zero runnable checks");
+  Deno.exit(2);
 }
 const applicationBinary =
   runnableChecks.some((check) => check.binary === "application")
@@ -640,6 +697,7 @@ reporter.onSummary(
   performance.now() - suiteStartedAt,
   checkManifest.length,
   runnableChecks.length,
+  platformSkippedChecks.length,
 );
 if (failures.length > 0) {
   Deno.exit(1);

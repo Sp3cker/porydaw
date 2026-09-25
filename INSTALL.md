@@ -85,3 +85,5 @@ open build/porydaw.app
 # Linux
 ./build/porydaw
 ```
+
+`deno task verify` runs the check lanes declared for the host platform. On macOS every lane runs. On Linux and Windows the Swift lanes (`swiftcore`, `projectidentitycheck`, `projectstore-*`, `bankleases`, `vgbankcheck`, `exportcheck-*`) are still listed by `porydaw_checks --manifest` with `"platforms": ["macos"]`, but the runner reports them as platform-skipped because the check harness does not link Swift there yet. A verify selection that leaves no runnable check on the host exits with status 2 instead of passing.
