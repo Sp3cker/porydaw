@@ -125,6 +125,7 @@ ColumnLayout {
             clip: true
             model: panel.controller.rows
             boundsBehavior: Flickable.StopAtBounds
+            currentIndex: -1
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             delegate: Rectangle {
                 id: row
