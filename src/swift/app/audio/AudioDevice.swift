@@ -7,7 +7,6 @@ final class AudioDevice {
     enum InitializationError: String, LocalizedError {
         case nullBackend = "Failed to initialize the null audio backend."
         case outputDevice = "Failed to initialize the audio output device."
-        case startDevice = "Failed to start the audio output device."
 
         var errorDescription: String? { rawValue }
     }
@@ -70,29 +69,22 @@ final class AudioDevice {
             periodCount = Int(device.pointee.playback.internalPeriods)
             retainedRenderer = try AudioRenderEngine(
                 sampleRate: sampleRate, periodFrames: periodSizeFrames)
-            // The device is still stopped. Publish only after the renderer is complete;
-            // retain it through uninit, including when start partially fails.
             device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
-            guard ma_device_start(device) == MA_SUCCESS else {
-                throw InitializationError.startDevice
-            }
-            deviceStarted = true
         } catch {
             shutdown()
             throw error
         }
     }
 
-    /// Matches native cold operations: stop/resume results are deliberately ignored.
-    /// Nested cold operations remain parked until the outer operation finishes.
     func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
-        let resume = deviceStarted
-        if resume, let device {
+        coldDepth += 1
+        if coldDepth == 1, deviceStarted, let device {
             _ = ma_device_stop(device)
             deviceStarted = false
         }
         defer {
-            if resume, let device {
+            coldDepth -= 1
+            if coldDepth == 0, let device {
                 _ = ma_device_start(device)
                 deviceStarted = true
             }
@@ -125,6 +117,7 @@ final class AudioDevice {
     private var context: UnsafeMutablePointer<ma_context>?
     private var deviceInitialized = false
     private var deviceStarted = false
+    private var coldDepth = 0
 
     private func initializeContext(backends: [ma_backend]) -> Bool {
         let context = UnsafeMutablePointer<ma_context>.allocate(capacity: 1)
