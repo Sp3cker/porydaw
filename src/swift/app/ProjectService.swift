@@ -689,11 +689,20 @@ private func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
 }
 
 private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
-    BankVoice(macro: voice.macro.rawValue, key: Int32(voice.key), pan: Int32(voice.pan),
-              symbol: voice.symbol, keysplitTable: voice.keysplitTable,
-              sweep: Int32(voice.sweep), duty: Int32(voice.duty), period: Int32(voice.period),
-              attack: Int32(voice.attack), decay: Int32(voice.decay),
-              sustain: Int32(voice.sustain), release: Int32(voice.release))
+    let macro = voice.macro.rawValue
+    let key = Int32(voice.key)
+    let pan = Int32(voice.pan)
+    let sweep = Int32(voice.sweep)
+    let duty = Int32(voice.duty)
+    let period = Int32(voice.period)
+    let attack = Int32(voice.attack)
+    let decay = Int32(voice.decay)
+    let sustain = Int32(voice.sustain)
+    let release = Int32(voice.release)
+    return BankVoice(macro: macro, key: key, pan: pan, symbol: voice.symbol,
+                     keysplitTable: voice.keysplitTable, sweep: sweep, duty: duty,
+                     period: period, attack: attack, decay: decay,
+                     sustain: sustain, release: release)
 }
 
 private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {

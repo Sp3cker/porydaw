@@ -259,8 +259,10 @@ final class NoteCommands {
         for (pitch, group) in groups where group.count > 1 && group.allSatisfy({ !$0.isUnterminated }) {
             let sorted = group.sorted { $0.tick < $1.tick }
             guard let first = sorted.first else { continue }
-            let end = sorted.reduce(UInt64(first.tick)) {
-                max($0, UInt64($1.tick) + UInt64($1.duration))
+            var end = UInt64(first.tick)
+            for note in sorted {
+                let noteEnd = UInt64(note.tick) + UInt64(note.duration)
+                if noteEnd > end { end = noteEnd }
             }
             removals.append(contentsOf: sorted)
             additions.append(NewNote(track: track, tick: first.tick, pitch: pitch,
