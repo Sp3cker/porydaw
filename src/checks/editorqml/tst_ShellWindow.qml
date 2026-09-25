@@ -1057,8 +1057,11 @@ TestCase {
                 }, 30000), "the reload completion returns through the native run loop")
                 compare(session.songTabs.tabCount, 2,
                         "the replacement song rejoins the surviving tab")
-                verify(session.songTabs.selectedId !== closingId,
-                       "reload installs a different workspace for the song")
+                verify(waitForNative(function() {
+                    var current = selectedSurface()
+                    return session.songTabs.selectedId === closingId
+                            && current !== null && current.gridModel !== grid
+                }, 5000), "reload installs a different workspace for the song")
             }
             return
         }

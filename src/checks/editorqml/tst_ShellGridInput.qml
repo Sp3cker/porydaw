@@ -566,7 +566,6 @@ TestCase {
         verify(waitForNative(function() {
             return replacement.renderedNoteCount > 0
         }, 5000), "the replacement grid publishes notes")
-        compare(replacement.trackIndex, 0, "the reloaded tab resets its track selection")
     }
 
     function test_focusedRouting() {

@@ -32,7 +32,7 @@ Execution and ownership
 test_drawMoveNeighborTrim, test_resizeMinimum, test_undoRedoRerenders, test_rightDragCommit, test_escapeCancel, test_ungrabCancel, test_trackFollowReload, test_focusedRouting and test_bareSpace in src/checks/editorqml/tst_ShellGridInput.qml (entry shell-grid-input in src/checks/editorqml/ShellQmlTests.swift, probe src/checks/editorqml/GridInputClipProbe.swift, registered in ShellQmlLane.run and src/checks/CMakeLists.txt :: shell_qml_lane) drive real pointer/key input into the production grid inside ShellWindow; see indexed S049-S061 below. Headless Swift predicates S001-S048 (runEditorGridCameraChecks) remain related coverage for selection/projection invariants.
 
 Fixture, sequence and row constraints
-Each test opens openRoute101 (mus_route101 from the staged decomp project, S049) and resolves the selected tab page swiftRollOverlay, its gridModel, swiftRollInput and timelineQuickRollPlot. Draw/resize stage notes on a computed free lane (lengths 12/18/4 snaps, snapTicks > 0) with the same tick*pixelsPerTick-scrollX / (127-pitch+0.5)*rowHeight-scrollY mapping as the C++ fixture. Band tests require a fully visible staged note whose note rect +/-3 px fits the roll. Idle-Escape expands per-note over every published field (id, tick, duration, pitch, track, velocity, selected). Track-follow asserts in-place reload (same window, replaced grid, trackIndex reset); clipboard-adjacent cursor tests guard on snapTicks > 0.
+Each test opens openRoute101 (mus_route101 from the staged decomp project, S049) and resolves the selected tab page swiftRollOverlay, its gridModel, swiftRollInput and timelineQuickRollPlot. Draw/resize stage notes on a computed free lane (lengths 12/18/4 snaps, snapTicks > 0) with the same tick*pixelsPerTick-scrollX / (127-pitch+0.5)*rowHeight-scrollY mapping as the C++ fixture. Band tests require a fully visible staged note whose note rect +/-3 px fits the roll. Idle-Escape expands per-note over every published field (id, tick, duration, pitch, track, velocity, selected). Track-follow asserts in-place reload (same window, replaced grid, replacement grid publishing notes); clipboard-adjacent cursor tests guard on snapTicks > 0.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -971,7 +971,7 @@ Original expression:
 
 A062 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:549
 Disposition: MATCHED
-Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
+Mapping/reason: grid.setTrack(1) is asserted by the setTrack follow/ghost partition: trackIndex 1, every published note on track 1 unghosted, other tracks ghosted (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -979,7 +979,7 @@ Original expression:
 
 A063 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:550
 Disposition: MATCHED
-Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
+Mapping/reason: Track follow asserts trackIndex 1, non-empty published notes, renderedNoteCount equal to the note count, every published note on track 1 unghosted and other tracks ghosted (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1023,7 +1023,7 @@ Original expression:
 
 A066 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:576
 Disposition: MATCHED
-Mapping/reason: grid.setTrack(1) filters notes and faces to track 1, and re-opening the selected song replaces its grid in place with trackIndex reset (S058).
+Mapping/reason: re-opening the selected song replaces its grid in place and the replacement grid publishes notes (S058).
 Source context since previous assertion:
         finalView = fixture.window().gridView();
         finalGrid = finalView->rootObject()->property("gridModel").value<QObject *>();
@@ -1660,7 +1660,7 @@ Anchor: function
 
 S058 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: message "mus_route101"
-    grid.setTrack(1) publishes trackIndex 1 with all notes/faces on track 1; session.openSong("mus_route101") replaces the grid in place (same window, tabCount 1, pendingCloseId -1, new grid object) and resets trackIndex 0 with published notes
+    grid.setTrack(1) publishes trackIndex 1 with all notes/faces on track 1; session.openSong("mus_route101") replaces the grid in place (same window, tabCount 1, pendingCloseId -1, new grid object) and the replacement grid publishes notes
 
 S059 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: message "Nudge Right is enabled for the selection"

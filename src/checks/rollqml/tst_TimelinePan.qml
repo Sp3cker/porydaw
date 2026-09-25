@@ -282,6 +282,8 @@ TestCase {
         var startX = input.width / 2
         var startY = input.height / 2
 
+        g.setCameraHScroll(0)
+        tryCompare(g, "cameraScrollX", 0, 5000)
         var beforeX = g.cameraScrollX
         var beforeY = g.cameraScrollY
         mouseMove(input, startX, startY)
