@@ -15,7 +15,12 @@ Result: PASS — 3 Qt results (initTestCase, projectSession, cleanupTestCase), 0
 S001 (insert-time model rows) and S007 (half-open boundary menu open).
 Command: deno task verify:shell --verbose --filter shell-grid-menu --qt ShellGridMenu::test_shiftRightRollSweepOpensCanonicalTimeMenu
 Result: PASS — 1/19 ok (local mounted ShellWindow test; shift-right roll sweep exposes time commands and rendered menu).
-Counts: MATCHED 7, PARTIAL 3, GAP 80, RETIRED-REPRESENTATION 10.
+Command: deno task verify:shell --filter shell-grid-menu --verbose
+Result: PASS — 11/11 ShellGridMenu rows (Totals line: 9 test_ functions plus initTestCase and
+cleanupTestCase); controller run of `deno task verify:shell --filter shell-grid-menu` —
+shell-grid-menu PASS. It executed the mounted clipboard and Insert Time cases that source
+S008-S014.
+Counts: MATCHED 15, PARTIAL 6, GAP 69, RETIRED-REPRESENTATION 10.
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: GAP
@@ -185,35 +190,16 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A006 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-
-      // Paste is enabled exactly when the clipboard holds a non-empty clip; the
-      // other action rows never pre-disable.
-      const int pasteRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Paste);
-Original expression:
-  QVERIFY2(pasteRow >= 0, "the shared time menu has no Paste row")
+Disposition: MATCHED
+Mapping: S008
 
 A007 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:139
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(opened.model->itemAt(pasteRow)->enabled,
-               "Paste was disabled while the clipboard held a non-empty range clip")
+Disposition: MATCHED
+Mapping: S009
 
 A008 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:142
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const int copyRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Copy);
-Original expression:
-  QVERIFY2(copyRow >= 0 && opened.model->itemAt(copyRow)->enabled,
-               "Copy was not unconditionally enabled")
+Disposition: MATCHED
+Mapping: S010
 
 A009 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:144
 Disposition: GAP
@@ -324,8 +310,8 @@ Original expression:
                "the menu Copy row mutated the document")
 
 A018 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:194
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: time selection (PianoGrid owns no time-selection state). Range-clip clipboard, timeSelection values, post-paste cursor/selection, and selection-dependent enablement below remain open; no Swift predicate observes them.
+Disposition: PARTIAL
+Mapping/reason: S011 (tst_ShellGridMenu.qml test_rulerClipboardRowsFollowClipAndTimeSelection, mounted) observes the rendered Paste row disabled while the clipboard holds no decodable clip. Unproved: the window Edit action's paste-clip-present flag this row reads, and the encoded empty-clip fixture.
 Source context since previous assertion:
   ;
 
@@ -340,17 +326,12 @@ A019 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rol
 Disposition: RETIRED-REPRESENTATION
 
 A020 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:199
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      const int disabledPasteRow = timeMenuRow(*reopened.model, songview::TimeSelectionAction::Paste);
-Original expression:
-  QVERIFY2(disabledPasteRow >= 0, "the reopened shared time menu has no Paste row")
+Disposition: MATCHED
+Mapping: S008
 
 A021 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:200
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: S011 (tst_ShellGridMenu.qml test_rulerClipboardRowsFollowClipAndTimeSelection, mounted) opens the rendered time-selection menu while the native clipboard holds an empty, undecodable payload and asserts the Paste row renders disabled. Unproved: the decodable-but-empty clip branch of this row (the mounted fixture poisons the clipboard with zero bytes, not an encoded empty clip).
 Source context since previous assertion:
   ;
 Original expression:
@@ -358,23 +339,12 @@ Original expression:
                "Paste was enabled while the clipboard held an empty clip")
 
 A022 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:202
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY2(quick_popup::clickMenuRow(*reopened.session, disabledPasteRow),
-               "the disabled Paste row did not receive a real click")
+Disposition: MATCHED
+Mapping: S012
 
 A023 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:205
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(reopened.session && reopened.session->isOpen(),
-               "a click on the disabled Paste row dismissed the menu")
+Disposition: MATCHED
+Mapping: S012
 
 A024 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:207
 Disposition: GAP
@@ -482,29 +452,16 @@ Original expression:
   QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
 
 A030 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:271
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-                  const int pasteRow = timeMenuRow(*menu.model, songview::TimeSelectionAction::Paste);
-Original expression:
-  QVERIFY(pasteRow >= 0 && menu.model->itemAt(pasteRow)->enabled)
+Disposition: MATCHED
+Mapping: S009
 
 A031 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:272
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(quick_popup::clickMenuRow(*menu.session, pasteRow))
+Disposition: MATCHED
+Mapping: S013
 
 A032 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:273
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_VERIFY(!menu.session->isOpen())
+Disposition: MATCHED
+Mapping: S013
 
 A033 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:278
 Disposition: GAP
@@ -1014,8 +971,8 @@ Original expression:
                "the Insert Time row did not commit exactly one undo transaction")
 
 A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
-Disposition: MATCHED
-Mapping: S001
+Disposition: PARTIAL
+Mapping/reason: S014 (tst_ShellGridMenu.qml test_rulerSelectionInsertTimeRowsShiftNotesAndUndo, mounted) clicks the rendered time-selection Insert Time row and asserts one undo restores the rendered note layout; S001 remains model-level byte evidence. Unproved: the mounted byte equality (QML observes rendered notes, not song bytes).
 
 A089 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:473
 Disposition: RETIRED-REPRESENTATION
@@ -1080,7 +1037,10 @@ Original expression:
 Swift executable assertion index
 S001 proves model insertion undo in swiftcore; S007 proves the half-open range boundary in
 the registered time-menu presenter check; S002-S006 run in the mounted
-shell QML test and prove a roll-origin sweep and rendered-menu eligibility.
+shell QML test and prove a roll-origin sweep and rendered-menu eligibility. S008-S014 run in the
+same mounted test file: they seed the native clipboard through the rendered Copy row (or poison it
+with an empty payload), click rendered time-menu rows, and observe Paste/Copy/Cut enablement,
+menu dismissal and the rendered note layout after Insert Time and undo.
 
 S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
 Anchor: message "A088: one undo restores the bytes before time insertion"
@@ -1102,6 +1062,27 @@ Anchor: message "Duplicate Time is enabled in the rendered time menu after sweep
 
 S007 | checkTimeMenuHalfOpenBoundary | src/checks/rollcheck/timemenu.swift
 Anchor: message "a press one tick inside the end stays inside the half-open interval"
+
+S008 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-selection menu renders a Paste row"
+
+S009 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the reopened time-selection menu enables Paste for the copied range clip"
+
+S010 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Copy and Cut render enabled while a time selection is active"
+
+S011 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-selection menu disables Paste while the clipboard holds no decodable clip"
+
+S012 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a click on the disabled time-menu Paste row keeps the menu open"
+
+S013 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the enabled time-menu Paste activation closes the menu"
+
+S014 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "one undo restores the rendered notes before the time-menu insertion"
 
 Remaining original source (closing sequence and helper bodies):
   ;

@@ -1250,4 +1250,148 @@ TestCase {
         compare(fileProbe.fileFingerprint(bankPath()), bankBefore, "Discard wrote no bank bytes")
         compare(fileProbe.fileFingerprint(songPath), songBefore, "Discard wrote no song bytes")
     }
+
+    function holdBandOn(tabId) {
+        var surface = surfaceOf(tabId)
+        var input = findChild(surface, "swiftRollInput")
+        verify(input && input.visible, "tab " + tabId + " mounts its roll input")
+        var notes = JSON.parse(summaryOf(tabId))
+        for (var n = 0; n < notes.length; ++n) {
+            if (notes[n].ghost || notes[n].selected)
+                continue
+            var face = findChild(surface, "gridNote_" + notes[n].id)
+            if (!face || face.width <= 0 || face.height <= 0)
+                continue
+            var topLeft = face.mapToItem(input, 0, 0)
+            var bottomRight = face.mapToItem(input, face.width, face.height)
+            var sx = topLeft.x - 3
+            var sy = topLeft.y - 3
+            var ex = bottomRight.x + 3
+            var ey = bottomRight.y + 3
+            if (sx < 1 || sy < 1 || ex > input.width - 1 || ey > input.height - 1)
+                continue
+            var targetId = notes[n].id
+            mouseMove(input, sx, sy)
+            mousePress(input, sx, sy, Qt.RightButton)
+            mouseMove(input, ex, ey, -1, Qt.RightButton)
+            verify(waitForNative(function() {
+                return JSON.parse(summaryOf(tabId)).some(function(note) {
+                    return note.id === targetId && note.selected
+                })
+            }, 5000), "the held band on tab " + tabId + " previews its selection")
+            return input.mapToItem(shell.contentItem, ex, ey)
+        }
+        fail("tab " + tabId + " has a fully visible note a band can enclose")
+    }
+
+    function watchPageRemoval(tabId, grid, before) {
+        var stack = pages()
+        var repeater = null
+        for (var i = 0; i < stack.children.length && !repeater; ++i) {
+            if (stack.children[i].itemRemoved !== undefined)
+                repeater = stack.children[i]
+        }
+        verify(repeater !== null, "the page stack exposes its page repeater")
+        var watch = { seen: false, reason: -1, restored: false, closeReady: true,
+                      repeater: repeater }
+        watch.handler = function(index, item) {
+            if (watch.seen || !item || item.objectName !== "songTab_" + tabId)
+                return
+            watch.seen = true
+            watch.reason = grid.lastCancelReason
+            watch.restored = grid.noteSummary === before
+            watch.closeReady = shell.shellPresenter.closeReady
+        }
+        repeater.itemRemoved.connect(watch.handler)
+        return watch
+    }
+
+    function test_oMidGestureCloseCancelsHeldBand() {
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        var survivorId = ids[0]
+        var closingId = ids[1]
+        compare(tabs().selectedId, closingId, "the gesture tab is selected")
+        var closingPath = fileProbe.songPath(bootstrap.projectRoot, "mus_littleroot_test")
+        var closingBytes = fileProbe.fileFingerprint(closingPath)
+        var survivorSummary = summaryOf(survivorId)
+        var grid = gridOf(closingId)
+        var before = grid.noteSummary
+        grid.inputCancelled(1)
+        compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
+        var release = holdBandOn(closingId)
+        verify(!JSON.parse(summaryOf(survivorId)).some(function(note) { return note.selected }),
+               "the survivor starts without a selection")
+        var watch = watchPageRemoval(closingId, grid, before)
+        tabs().requestClose(closingId)
+        verify(waitForNative(function() { return watch.seen }, 5000),
+               "the mid-gesture close retires the closed page")
+        watch.repeater.itemRemoved.disconnect(watch.handler)
+        compare(watch.reason, 2, "the mid-gesture close cancels the band as hidden before page retirement")
+        verify(watch.restored, "the mid-gesture close restores the pre-band notes before page retirement")
+        compare(tabs().pendingCloseId, -1, "the cancelled band left nothing to save")
+        compare(tabs().tabCount, 1, "the mid-gesture close removes the tab")
+        mouseRelease(shell.contentItem, release.x, release.y, Qt.RightButton)
+        verify(waitForNative(function() {
+            var survivor = pageOf(survivorId)
+            return pageOf(closingId) === null && tabs().selectedId === survivorId
+                && survivor !== null && survivor.visible
+        }, 5000), "the survivor is presented after the closed page retires")
+        compare(fileProbe.fileFingerprint(closingPath), closingBytes,
+                "the mid-gesture close wrote no song bytes")
+        compare(summaryOf(survivorId), survivorSummary, "the survivor's notes are untouched")
+        verify(!session().canUndo, "the survivor inherits no history")
+
+        var input = findChild(surfaceOf(survivorId), "swiftRollInput")
+        var notes = JSON.parse(summaryOf(survivorId))
+        var target = null
+        for (var n = 0; n < notes.length && !target; ++n) {
+            if (notes[n].ghost)
+                continue
+            var center = pointFor(survivorId, notes[n].tick + notes[n].duration / 2,
+                                  notes[n].pitch)
+            if (center.x > 1 && center.y > 1
+                    && center.x < input.width - 1 && center.y < input.height - 1)
+                target = center
+        }
+        verify(target, "the survivor has a note a click can reach")
+        mouseClick(input, target.x, target.y)
+        verify(waitForNative(function() {
+            return JSON.parse(summaryOf(survivorId)).filter(function(note) {
+                return note.selected
+            }).length === 1
+        }, 5000), "the survivor roll takes a fresh click after the mid-gesture close")
+
+        var survivorPage = pageOf(survivorId)
+        session().openSong("mus_littleroot_test")
+        verify(waitForNative(function() { return tabs().tabCount === 2 }, 30000),
+               "reopening the closed song appends its replacement tab")
+        var reopenedId = tabs().selectedId
+        verify(reopenedId !== closingId && reopenedId !== survivorId,
+               "the reopened song is selected under a new identity")
+        compare(pageOf(survivorId), survivorPage, "the reopen retains the survivor tab")
+        waitForPage(reopenedId)
+    }
+
+    function test_pCloseWalkCancelsHeldBand() {
+        var onlyId = openShell(["mus_route101"])[0]
+        var songPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        var songBytes = fileProbe.fileFingerprint(songPath)
+        var grid = gridOf(onlyId)
+        var before = grid.noteSummary
+        grid.inputCancelled(1)
+        compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
+        var release = holdBandOn(onlyId)
+        var watch = watchPageRemoval(onlyId, grid, before)
+        shell.close()
+        verify(waitForNative(function() { return watch.seen }, 30000),
+               "the window close walk retires the held band's page")
+        mouseRelease(shell.contentItem, release.x, release.y, Qt.RightButton)
+        compare(watch.reason, 2, "the close walk cancels the held band as hidden before page retirement")
+        verify(watch.restored, "the close walk restores the pre-band notes before page retirement")
+        verify(!watch.closeReady, "the close walk cancels the band before the detach acknowledgment")
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
+               "the close walk reaches scene detach after cancelling the band")
+        compare(fileProbe.fileFingerprint(songPath), songBytes,
+                "the cancelled close walk wrote no song bytes")
+    }
 }

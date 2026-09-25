@@ -1,6 +1,5 @@
 import Foundation
 import QtBridge
-import SwiftGrid
 
 @MainActor
 @QtBridgeable
@@ -145,6 +144,56 @@ public final class BridgeProbe: QmlInstantiableStatus {
     public func actViaRow(row: BridgeRow) {
         let entry = "\(row.domainKey):\(row.title)"
         actionLog = actionLog.isEmpty ? entry : "\(actionLog)|\(entry)"
+    }
+}
+
+@MainActor
+public enum BridgeProbeLifetimeChecks {
+    public static func staleSelectionReleased() -> Bool {
+        var probe: BridgeProbe? = BridgeProbe()
+        probe?.resetToDefaultRows()
+        probe?.selectedIndex = 1
+        guard let selected = probe?.selectedRow() else { return false }
+        weak let retiredProbe = probe
+        probe?.resetToFreshRows()
+        probe?.actViaSelectedRow()
+        guard probe?.actionLog == "202:Beta" else { return false }
+        probe = nil
+        let replacement = BridgeProbe()
+        replacement.resetToDefaultRows()
+        replacement.selectedIndex = 1
+        guard replacement.selectedRow() != nil else { return false }
+        selected.title = "Detached"
+        replacement.actViaSelectedRow()
+        return retiredProbe == nil && replacement.actionLog == "202:Beta"
+            && replacement.rows[1].title == "Beta"
+    }
+
+    public static func returnedRowReleased() -> Bool {
+        var probe: BridgeProbe? = BridgeProbe()
+        weak var heldRow: BridgeRow?
+        do {
+            let returned = probe?.makeRow(title: "Returned", value: 7, key: 707)
+            heldRow = returned
+        }
+        guard heldRow?.title == "Returned" else { return false }
+        weak let retiredProbe = probe
+        probe = nil
+        guard retiredProbe == nil, heldRow == nil else { return false }
+
+        var secondProbe: BridgeProbe? = BridgeProbe()
+        guard let survivingRow = secondProbe?.makeRow(title: "Survivor", value: 8, key: 808)
+        else { return false }
+        weak let retiredSecondProbe = secondProbe
+        secondProbe = nil
+        let replacement = BridgeProbe()
+        replacement.resetToDefaultRows()
+        replacement.selectedIndex = 1
+        guard replacement.selectedRow() != nil else { return false }
+        survivingRow.title = "Detached"
+        replacement.actViaSelectedRow()
+        return retiredSecondProbe == nil && survivingRow.title == "Detached"
+            && replacement.actionLog == "202:Beta" && replacement.rows[1].title == "Beta"
     }
 }
 

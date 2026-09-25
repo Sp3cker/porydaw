@@ -80,6 +80,10 @@ public final class PianoGrid {
     /// the whole document, so it is only re-encoded when its inputs change.
     private var summaryNotes: [GridNote]?
     private var summarySelection: [NoteID]?
+    @QtIgnored public var noteSummaryRebuilds = 0
+    private var lastEndTickNotes: [GridNote]?
+    private var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
+    private var lastEndTickLength: Tick?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -1047,7 +1051,7 @@ public final class PianoGrid {
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: timeSelectionSource?(),
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex)
+            selectedTrack: trackIndex, geometryStable: !interactionActive)
     }
 
     @QtIgnored
@@ -1094,7 +1098,15 @@ public final class PianoGrid {
 
     @QtIgnored
     private func recomputeContentEndTick() {
-        var end = max(Int(session.timeline.lengthTicks), GridMetrics.songLengthTicks)
+        let length = session.timeline.lengthTicks
+        if notes == lastEndTickNotes, length == lastEndTickLength,
+            drawPreview?.tick == lastEndTickPreview?.tick,
+            drawPreview?.duration == lastEndTickPreview?.duration,
+            drawPreview?.pitch == lastEndTickPreview?.pitch { return }
+        lastEndTickNotes = notes
+        lastEndTickPreview = drawPreview
+        lastEndTickLength = length
+        var end = max(Int(length), GridMetrics.songLengthTicks)
         for note in notes { end = max(end, note.tick + note.duration) }
         if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
         contentEndTick = end
@@ -1270,6 +1282,7 @@ public final class PianoGrid {
         if notes != summaryNotes || selection != summarySelection {
             summaryNotes = notes
             summarySelection = selection
+            noteSummaryRebuilds += 1
             let parts = notes.map { note in
                 "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
                     + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"

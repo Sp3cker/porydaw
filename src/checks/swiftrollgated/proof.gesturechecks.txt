@@ -1009,7 +1009,7 @@ Original expression:
 
 A065 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:567
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058. No QWidget layer exists in the Swift app.
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058; the mounted scene close and page retirement execute in src/checks/rollqml/tst_SwiftRoll.qml cleanupTestCase, but that does not observe a new native QQuickView replacing the old one.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1032,7 +1032,7 @@ Original expression:
 
 A067 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:580
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Native QQuickView QPointer nullness after DeferredDelete remains unobserved: the mounted cleanupTestCase in src/checks/rollqml/tst_SwiftRoll.qml exercises pageReleased and acknowledged scene removal, while S058 covers in-place grid replacement, not native-view destruction.
 Source context since previous assertion:
     }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -1041,12 +1041,8 @@ Original expression:
     QVERIFY(finalView.isNull());
 
 A068 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QVERIFY(finalGrid.isNull());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QPointer finalGrid nullness after native DeferredDelete pins the deleted QQuickView proxy; mounted pageReleased retires its Swift workspace after page destruction (src/checks/rollqml/tst_SwiftRoll.qml cleanupTestCase), while S058 proves in-place grid replacement.
 
 A069 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:587
 Disposition: MATCHED

@@ -369,6 +369,7 @@ if(APPLE)
     )
     add_library(roll_qml_lane STATIC
         rollqml/RollQmlTests.swift
+        swiftqtml/BridgeProbeCheck.swift
         "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )

@@ -39,7 +39,7 @@ public struct SessionChange: Sendable {
 
 // MARK: - Document session
 
-/// Task 8's ownership interface: one document plus its confirmed bank history,
+/// One document plus its confirmed bank history,
 /// session-only selection/track-scope/camera/mute-solo, the current bank
 /// lease, and the published playback projection.
 ///
@@ -47,8 +47,7 @@ public struct SessionChange: Sendable {
 /// initial open and for every edit/history rebuild alike. Document history
 /// operations stay immediate; bank transitions serialize on the service actor.
 /// Selection and other session state never dirty the document and never enter
-/// history. Playback is published as an immutable value for Task 7 to bind;
-/// the old AudioEngine timeline API is not referenced here.
+/// history.
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
@@ -97,7 +96,6 @@ public final class DocumentSession {
     /// Session-state callback. Document changes invoke it after selection
     /// reconciliation, timeline rebuild, and playback publication.
     public var onChange: ((SessionChange) -> Void)?
-    /// Immutable playback publication for Task 7 to bind.
     public var onPlayback: ((PlaybackTimeline) -> Void)?
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
     public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?

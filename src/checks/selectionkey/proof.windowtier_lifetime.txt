@@ -5,6 +5,7 @@ Original: src/checks/selectionkey/windowtier_lifetime.cpp
 Original SHA-256: 47d589471dbc0075cb36225ef0f79df0eb818a96a61bfc963a79ab67f4e8d8d6
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -20,6 +21,8 @@ Command: deno task verify:shell --filter shellwindow (writer-observed, post-fix)
 Result: PASS; verify 1/11 ok (10 skipped, 3.93 s); run_checks PASS. That run executes the shellwindow predicates S018-S024, unaffected by the B1 message fix (same line, no shift).
 Command: deno task verify --filter swiftcore (writer-observed, out-of-range row)
 Result: PASS; verify 1/6 ok (5 skipped, 10.16 s); run_checks PASS. That run executes the extended entry including the S056 out-of-range selectPrimaryTrack row and the reworded S041 message.
+Command: deno task verify:shell --filter shell-tabs --verbose (R16)
+Result: pending controller run. S057-S062 are shell-lane (windowing=offscreen) predicates of test_oMidGestureCloseCancelsHeldBand: the clean selected tab is closed through SongTabsController.requestClose and the same song is reopened.
 
 A001 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:61
 Disposition: RETIRED-REPRESENTATION
@@ -273,56 +276,20 @@ Original expression:
                qUtf8Printable(error))
 
 A045 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:213
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const QPointer<SongTab> closingTab = tabB;
-      const QPointer<AutomationCanvas> closingCanvas = canvasB;
-      {
-          selectionkey::DeclineModalsWithin guard(
-              QStringLiteral("closing the clean second song tab"));
-          workspace.requestCloseSelectedTab();
-      }
-      selectionkey::settle();
-
-Original expression:
-  QVERIFY2(workspace.songTabFor(*SongName::create(m_songB)) == nullptr && closingTab.isNull(),
-               "the clean second tab did not close and destroy its session")
+Disposition: MATCHED
+Mapping: S057, S058, S062
 
 A046 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:215
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(closingCanvas.isNull())
+Disposition: MATCHED
+Mapping: S058
 
 A047 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:219
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      const QByteArray documentABeforeReopen = documentA.smf().write();
-      const int tabCountBeforeReopen = workspace.openTabCount();
-      SongTab *const reopened = selectionkey::openSongTab(m_session, m_songB, true, error);
-
-Original expression:
-  QVERIFY2(reopened, qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S059
 
 A048 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:220
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_lifetime.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(workspace.selectedSongTab() == reopened &&
-                   workspace.openTabCount() == tabCountBeforeReopen + 1 &&
-                   workspace.songTabFor(tabA->name()) == tabA,
-               "reopening the second song did not create and select its replacement while "
-               "retaining the first tab")
+Disposition: MATCHED
+Mapping: S059, S060, S061
 
 A049 | SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime | src/checks/selectionkey/windowtier_lifetime.cpp:230
 Disposition: GAP
@@ -570,6 +537,24 @@ Anchor: message "a real first-tab click retargets the selected workspace"
 
 S024 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Up transposes one semitone"
+
+S057 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the mid-gesture close removes the tab"
+
+S058 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the survivor is presented after the closed page retires"
+
+S059 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening the closed song appends its replacement tab"
+
+S060 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopened song is selected under a new identity"
+
+S061 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the reopen retains the survivor tab"
+
+S062 | test_oMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the cancelled band left nothing to save"
 
 Shared helpers
 selectDrawnVelocityNote (:153) and openTwoSongShell (:88) stage the two-song
