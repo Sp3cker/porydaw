@@ -480,26 +480,35 @@ public actor ProjectService {
         let catalog = await store.voicegroupCatalog()
         let groups = catalog.groups
         let direct = catalog.direct
-        let defaults = VoiceListAdsrDefaults(
-            bySymbol: groups.typicalAdsr.bySymbol.mapValues {
-                VoiceListAdsr(attack: Int32($0.attack), decay: Int32($0.decay),
-                              sustain: Int32($0.sustain), release: Int32($0.release))
-            },
-            byFamily: Dictionary(uniqueKeysWithValues:
-                groups.typicalAdsr.byFamily.map { key, adsr in
-                    (Int32(key), VoiceListAdsr(
-                        attack: Int32(adsr.attack), decay: Int32(adsr.decay),
-                        sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
-                }))
+        var adsrBySymbol: [String: VoiceListAdsr] = [:]
+        adsrBySymbol.reserveCapacity(groups.typicalAdsr.bySymbol.count)
+        for (symbol, adsr) in groups.typicalAdsr.bySymbol {
+            adsrBySymbol[symbol] = VoiceListAdsr(attack: Int32(adsr.attack),
+                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
+                release: Int32(adsr.release))
+        }
+        var adsrByFamily: [Int32: VoiceListAdsr] = [:]
+        adsrByFamily.reserveCapacity(groups.typicalAdsr.byFamily.count)
+        for (key, adsr) in groups.typicalAdsr.byFamily {
+            adsrByFamily[Int32(key)] = VoiceListAdsr(attack: Int32(adsr.attack),
+                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
+                release: Int32(adsr.release))
+        }
+        let defaults = VoiceListAdsrDefaults(bySymbol: adsrBySymbol, byFamily: adsrByFamily)
+        var keysplits: [String: String] = [:]
+        keysplits.reserveCapacity(groups.keysplits.count)
+        for split in groups.keysplits { keysplits[split.symbol] = split.table }
+        let synths: [String] = direct.synths.defs.map(\.symbol)
+        var synthDefinitions: [String: VgSynthDesc] = [:]
+        synthDefinitions.reserveCapacity(direct.synths.defs.count)
+        for def in direct.synths.defs { synthDefinitions[def.symbol] = def.descriptor }
         return VoicegroupCatalog(
             groupArgs: groups.groupArgs,
             samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
             drumkits: groups.drumkits,
-            keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
-                                  uniquingKeysWith: { _, latest in latest }),
-            synths: direct.synths.defs.map(\.symbol),
-            synthDefinitions: Dictionary(direct.synths.defs.map { ($0.symbol, $0.descriptor) },
-                                         uniquingKeysWith: { first, _ in first }),
+            keysplits: keysplits,
+            synths: synths,
+            synthDefinitions: synthDefinitions,
             canMintSynths: direct.synths.creatable(), defaults: defaults)
     }
 
