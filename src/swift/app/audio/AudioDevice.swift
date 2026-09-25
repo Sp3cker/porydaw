@@ -69,6 +69,7 @@ final class AudioDevice {
             periodCount = Int(device.pointee.playback.internalPeriods)
             retainedRenderer = try AudioRenderEngine(
                 sampleRate: sampleRate, periodFrames: periodSizeFrames)
+            // Stay stopped: the first bind starts the device (starting here forces a ~100 ms restart).
             device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
         } catch {
             shutdown()
@@ -76,6 +77,7 @@ final class AudioDevice {
         }
     }
 
+    /// Sole device start point; only the outermost call stops/starts, results ignored.
     func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
         coldDepth += 1
         if coldDepth == 1, deviceStarted, let device {

@@ -1,5 +1,6 @@
 import Foundation
 
+/// Cross-platform byte parser; keep index loops (generic slice helpers tripled allocations).
 struct AsmLine {
     typealias Bytes = ArraySlice<UInt8>
 
