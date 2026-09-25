@@ -32,8 +32,18 @@ must be a message-anchored predicate.
   view state and tab identity; the C++ contract retains both). Scope is
   `closeTab`'s reopen path, `reloadApproved`, `startOpen`/`openTab`, plus a
   minimal view-state capture/apply on `DocumentSession`/`DocumentWorkspace`
-  if no existing surface suffices. Any other BEHAVIOR-GAP stops and
-  escalates — no additional production edits.
+  if no existing surface suffices.
+- `src/swift/app/roll/PianoGrid.swift` — **initial-home repair authorized**
+  (second BEHAVIOR-GAP: `EditorCamera.init` homes `scrollX` to `minHScroll`
+  at the 480px placeholder width; `configureViewport`'s one-time
+  `didApplyInitialHome` block homes vertical only, so `scrollX` stays at
+  the stale −48 home after the real viewport sets leadPad −61 — violating
+  `scrollPx == -leadPadPx`, A004). Fix inside that existing block:
+  `_ = camera.setHScroll(camera.snapshot.minHScroll)` alongside the
+  setVScroll. Do not touch `EditorCamera.reconcile` semantics.
+
+Any BEHAVIOR-GAP beyond these two authorized repairs stops and escalates —
+no other production edits.
 
 Controller owns the ledger handoff: `proof.tabs_lifecycle.txt` and
 `proof.tabs_persistence.txt` remaps happen after the implementer's checks
