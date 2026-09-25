@@ -1,4 +1,5 @@
 @testable import PorydawApp
+@testable import PorydawAppAudio
 import PorydawPlaybackNative
 
 func checkAudioVolumeClamps(_ audio: AudioRenderEngine, _ report: CheckReport) {

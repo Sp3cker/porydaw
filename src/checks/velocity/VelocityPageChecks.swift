@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 
 // Direct coverage for the Velocity page. The pure layers (voice context, the

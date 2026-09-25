@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 
 // Keep the no-fold legacy probes and exercise Fold against a live session,

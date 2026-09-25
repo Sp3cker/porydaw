@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 
 @MainActor
 final class NoteCommands {
@@ -119,9 +120,11 @@ final class NoteCommands {
         guard let track = selectedTrack else { return }
         let notes = selectedNotes()
         guard let start = notes.map(\.tick).min() else { return }
-        let end = notes.reduce(UInt64(start)) { value, note in
-            max(value, UInt64(note.tick) + UInt64(note.isUnterminated ? max(1, snapTicks)
-                                                                    : max(1, note.duration)))
+        var end = UInt64(start)
+        for note in notes {
+            let noteEnd = UInt64(note.tick)
+                + UInt64(note.isUnterminated ? max(1, snapTicks) : max(1, note.duration))
+            if noteEnd > end { end = noteEnd }
         }
         let span = max(UInt64(1), end - UInt64(start))
         var additions: [NewNote] = []
@@ -153,8 +156,12 @@ final class NoteCommands {
             else { return }
             _ = session.document.nudgeNotes(notes.map(\.id), toPitches: pitches)
         } else {
-            guard notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) })
-            else { return }
+            var canTranspose = true
+            for note in notes {
+                let shifted = Int(note.pitch) + semitones
+                if shifted < 0 || shifted > 127 { canTranspose = false; break }
+            }
+            guard canTranspose else { return }
             session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
         }
     }
@@ -256,8 +263,10 @@ final class NoteCommands {
         for (pitch, group) in groups where group.count > 1 && group.allSatisfy({ !$0.isUnterminated }) {
             let sorted = group.sorted { $0.tick < $1.tick }
             guard let first = sorted.first else { continue }
-            let end = sorted.reduce(UInt64(first.tick)) {
-                max($0, UInt64($1.tick) + UInt64($1.duration))
+            var end = UInt64(first.tick)
+            for note in sorted {
+                let noteEnd = UInt64(note.tick) + UInt64(note.duration)
+                if noteEnd > end { end = noteEnd }
             }
             removals.append(contentsOf: sorted)
             additions.append(NewNote(track: track, tick: first.tick, pitch: pitch,

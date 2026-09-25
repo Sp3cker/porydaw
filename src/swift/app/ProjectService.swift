@@ -478,26 +478,35 @@ public actor ProjectService {
         let catalog = await store.voicegroupCatalog()
         let groups = catalog.groups
         let direct = catalog.direct
-        let defaults = VoiceListAdsrDefaults(
-            bySymbol: groups.typicalAdsr.bySymbol.mapValues {
-                VoiceListAdsr(attack: Int32($0.attack), decay: Int32($0.decay),
-                              sustain: Int32($0.sustain), release: Int32($0.release))
-            },
-            byFamily: Dictionary(uniqueKeysWithValues:
-                groups.typicalAdsr.byFamily.map { key, adsr in
-                    (Int32(key), VoiceListAdsr(
-                        attack: Int32(adsr.attack), decay: Int32(adsr.decay),
-                        sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
-                }))
+        var adsrBySymbol: [String: VoiceListAdsr] = [:]
+        adsrBySymbol.reserveCapacity(groups.typicalAdsr.bySymbol.count)
+        for (symbol, adsr) in groups.typicalAdsr.bySymbol {
+            adsrBySymbol[symbol] = VoiceListAdsr(attack: Int32(adsr.attack),
+                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
+                release: Int32(adsr.release))
+        }
+        var adsrByFamily: [Int32: VoiceListAdsr] = [:]
+        adsrByFamily.reserveCapacity(groups.typicalAdsr.byFamily.count)
+        for (key, adsr) in groups.typicalAdsr.byFamily {
+            adsrByFamily[Int32(key)] = VoiceListAdsr(attack: Int32(adsr.attack),
+                decay: Int32(adsr.decay), sustain: Int32(adsr.sustain),
+                release: Int32(adsr.release))
+        }
+        let defaults = VoiceListAdsrDefaults(bySymbol: adsrBySymbol, byFamily: adsrByFamily)
+        var keysplits: [String: String] = [:]
+        keysplits.reserveCapacity(groups.keysplits.count)
+        for split in groups.keysplits { keysplits[split.symbol] = split.table }
+        let synths: [String] = direct.synths.defs.map(\.symbol)
+        var synthDefinitions: [String: VgSynthDesc] = [:]
+        synthDefinitions.reserveCapacity(direct.synths.defs.count)
+        for def in direct.synths.defs { synthDefinitions[def.symbol] = def.descriptor }
         return VoicegroupCatalog(
             groupArgs: groups.groupArgs,
             samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
             drumkits: groups.drumkits,
-            keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
-                                  uniquingKeysWith: { _, latest in latest }),
-            synths: direct.synths.defs.map(\.symbol),
-            synthDefinitions: Dictionary(direct.synths.defs.map { ($0.symbol, $0.descriptor) },
-                                         uniquingKeysWith: { first, _ in first }),
+            keysplits: keysplits,
+            synths: synths,
+            synthDefinitions: synthDefinitions,
             canMintSynths: direct.synths.creatable(), defaults: defaults)
     }
 
@@ -678,11 +687,20 @@ private func projectVoice(_ voice: BankVoice) throws -> PorydawProject.VgVoice {
 }
 
 private func copyVoice(_ voice: PorydawProject.VgVoice) -> BankVoice {
-    BankVoice(macro: voice.macro.rawValue, key: Int32(voice.key), pan: Int32(voice.pan),
-              symbol: voice.symbol, keysplitTable: voice.keysplitTable,
-              sweep: Int32(voice.sweep), duty: Int32(voice.duty), period: Int32(voice.period),
-              attack: Int32(voice.attack), decay: Int32(voice.decay),
-              sustain: Int32(voice.sustain), release: Int32(voice.release))
+    let macro = voice.macro.rawValue
+    let key = Int32(voice.key)
+    let pan = Int32(voice.pan)
+    let sweep = Int32(voice.sweep)
+    let duty = Int32(voice.duty)
+    let period = Int32(voice.period)
+    let attack = Int32(voice.attack)
+    let decay = Int32(voice.decay)
+    let sustain = Int32(voice.sustain)
+    let release = Int32(voice.release)
+    return BankVoice(macro: macro, key: key, pan: pan, symbol: voice.symbol,
+                     keysplitTable: voice.keysplitTable, sweep: sweep, duty: duty,
+                     period: period, attack: attack, decay: decay,
+                     sustain: sustain, release: release)
 }
 
 private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
@@ -692,28 +710,28 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
         return lease.slotViews.enumerated().map { index, slot in
             let voice = slot.voice.map(copyVoice)
             let loaded: ToneData? = bank.flatMap { storage in
-                guard slot.kind != .none, index < 128 else { return nil }
-                return withUnsafePointer(to: storage.pointee.voices) {
-                    $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[index] }
-                }
+                guard slot.kind != .none, index < 128,
+                      let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
+                else { return nil }
+                return UnsafeRawPointer(storage).advanced(by: voicesOffset)
+                    .assumingMemoryBound(to: ToneData.self)[index]
             }
             let synth = loaded.map {
                 $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
             } ?? false
             let tone: BankTone? = bank.flatMap { storage in
-                guard voice == nil, let loaded else { return nil }
-                let name = withUnsafePointer(to: storage.pointee.voiceNames) {
-                    $0.withMemoryRebound(to: CChar.self,
-                                         capacity: 128 * Int(VG_VOICE_NAME_LEN)) { names in
-                        let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
-                        let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
-                            start[$0] == 0
-                        }) ?? Int(VG_VOICE_NAME_LEN)
-                        let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
-                        return String(decoding: UnsafeBufferPointer(start: bytes, count: length),
-                                      as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                }
+                guard voice == nil, let loaded,
+                      let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
+                else { return nil }
+                let names = UnsafeRawPointer(storage).advanced(by: namesOffset)
+                    .assumingMemoryBound(to: CChar.self)
+                let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
+                let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
+                    start[$0] == 0
+                }) ?? Int(VG_VOICE_NAME_LEN)
+                let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
+                let name = String(decoding: UnsafeBufferPointer(start: bytes, count: length),
+                                  as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
                 let adsr = loaded.type == UInt8(VOICE_KEYSPLIT)
                     || loaded.type == UInt8(VOICE_KEYSPLIT_ALL) ? nil
                     : BankToneAdsr(attack: Int32(loaded.attack), decay: Int32(loaded.decay),

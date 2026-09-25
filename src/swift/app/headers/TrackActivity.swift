@@ -1,4 +1,5 @@
 import Foundation
+import PorydawAppAudio
 
 /// Stereo meter envelope shared by the live header and its deterministic checks.
 public struct TrackActivity {

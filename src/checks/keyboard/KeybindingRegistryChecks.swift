@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawAppCommands
 
 // Values from Qt 6.11 qnamespace.h. The Qt enum cases are not imported by the
 // Swift Clang module, so these retain the native Qt integer contract directly.

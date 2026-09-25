@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppEventList
 import PorydawCore
 
 private let tintLastOfRunID = "eventviews/EventViewsPlayheadTest::tintLastOfRun"

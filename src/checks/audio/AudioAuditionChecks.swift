@@ -1,4 +1,5 @@
 import PorydawApp
+import PorydawAppAudio
 import PorydawCoreCheckNative
 import PorydawPlaybackNative
 

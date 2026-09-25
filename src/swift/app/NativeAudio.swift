@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
+import PorydawAppAudio
 
 public enum NativeAudioError: Error, Equatable {
     case initializationFailed(String)

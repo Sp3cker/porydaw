@@ -388,6 +388,8 @@ set_target_properties(porydaw_shell_entry PROPERTIES
     AUTOUIC OFF
     AUTORCC OFF
 )
+target_compile_options(porydaw_shell_entry PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
 target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 
 set(shell_qml
@@ -407,7 +409,8 @@ if(NOT APPLE)
 endif()
 # Retain Swift @main and the original editor qrc from their archives
 # while linking native LTO objects with the C++ driver.
-set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX
+    AUTOMOC OFF AUTOUIC OFF)
 target_link_libraries(porydaw PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_shell_entry>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"

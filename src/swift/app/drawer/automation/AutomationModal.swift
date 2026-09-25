@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppCommands
 
 // Captured prompt/menu state and acceptance policy. All accepted mutations route
 // through AutomationCommit; modal state never owns document history.

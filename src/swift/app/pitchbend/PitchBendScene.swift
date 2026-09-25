@@ -151,7 +151,8 @@ public final class PitchBendLane {
                 fillColor: palette.separator))
             x += 6 * g.hairline
         }
-        syncModel(gridLines, rules, matches: { $0.matches($1) })
+        let ruleMatch: (SceneRect, SceneRect) -> Bool = { $0.matches($1) }
+        syncModel(gridLines, rules, matches: ruleMatch)
 
         let ordered = k.orderedPoints
         var strokes: [PitchBendLine] = []
@@ -178,27 +179,31 @@ public final class PitchBendLane {
                 x1: k.x(at: last.tick), y1: k.y(at: last.value),
                 width: g.hairline, color: palette.editCursor))
         }
-        syncModel(curveLines, strokes, matches: {
+        let lineMatch: (PitchBendLine, PitchBendLine) -> Bool = {
             $0.x0 == $1.x0 && $0.y0 == $1.y0 && $0.x1 == $1.x1 && $0.y1 == $1.y1
                 && $0.strokeWidth == $1.strokeWidth && $0.strokeColor == $1.strokeColor
-        })
-        var dots: [PitchBendVertex] = ordered.map { point in
+        }
+        syncModel(curveLines, strokes, matches: lineMatch)
+        var dots: [PitchBendVertex] = []
+        dots.reserveCapacity(ordered.count + 1)
+        for point in ordered {
             let selected = k.selectedTick == point.tick
             let endpoint = point.tick == k.startTick || point.tick == k.endTick
-            return PitchBendVertex(x: k.x(at: point.tick), y: k.y(at: point.value),
+            dots.append(PitchBendVertex(x: k.x(at: point.tick), y: k.y(at: point.value),
                 radius: selected ? g.selectedRingRadius : g.nodePaintRadius,
                 fill: endpoint && !selected ? palette.secondaryText : curveColor,
                 ring: selected ? palette.focusOutline : "transparent",
-                ringWidth: selected ? g.hairline * 1.5 : 0)
+                ringWidth: selected ? g.hairline * 1.5 : 0))
         }
         dots.append(PitchBendVertex(x: k.x(at: k.keyboardTick), y: k.y(at: k.liveValue),
                                      radius: g.nodePaintRadius, fill: "transparent",
                                      ring: palette.editCursor, ringWidth: g.hairline))
-        syncModel(vertices, dots, matches: {
+        let vertexMatch: (PitchBendVertex, PitchBendVertex) -> Bool = {
             $0.x == $1.x && $0.y == $1.y && $0.radius == $1.radius
                 && $0.fillColor == $1.fillColor && $0.ringColor == $1.ringColor
                 && $0.ringWidth == $1.ringWidth
-        })
+        }
+        syncModel(vertices, dots, matches: vertexMatch)
         if k.lane == .modulation {
             liveValueText = String(k.liveValue)
             upperValueText = "127"

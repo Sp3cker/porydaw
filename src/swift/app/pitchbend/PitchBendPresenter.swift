@@ -259,16 +259,23 @@ public final class PitchBendPresenter {
 
     private func spanStillPresent() -> Bool {
         guard let note, let current = session.document.note(note.id) else { return false }
-        return current.track == note.track && current.tick == note.tick
-            && current.endTick == note.endTick && current.pitch == note.pitch
+        if current.track != note.track { return false }
+        if current.tick != note.tick { return false }
+        if current.endTick != note.endTick { return false }
+        return current.pitch == note.pitch
     }
 
     private func commit(_ graph: PitchBendLane, lane: Lane) {
         guard isOpen, let note, spanStillPresent() else { return }
         let sorted = graph.kernel.orderedPoints
+        var points: [LaneWrite] = []
+        points.reserveCapacity(sorted.count)
+        for point in sorted {
+            points.append(LaneWrite(tick: Tick(point.tick), value: point.value))
+        }
         session.document.writeLane(track: note.track, lane: lane,
                                    from: note.tick, through: Tick(noteEnd),
-                                   points: sorted.map { LaneWrite(tick: Tick($0.tick), value: $0.value) })
+                                   points: points)
     }
 
     private func refreshDescription() {

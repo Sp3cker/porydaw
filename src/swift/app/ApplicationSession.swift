@@ -2,6 +2,8 @@ import Foundation
 import PorydawCore
 import PorydawProject
 import QtBridge
+import PorydawAppAudio
+import PorydawAppCommands
 
 /// The application behind the mounted surface: the project service, the one
 /// audio engine and playhead, and the strip of open songs.

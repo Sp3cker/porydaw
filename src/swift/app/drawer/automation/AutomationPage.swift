@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import QtBridge
+import PorydawAppCommands
 
 // The Automation drawer page owner: document-bound parameter selection, the
 // explicit per-parameter time selection, hover/preview/prompt/menu state, the

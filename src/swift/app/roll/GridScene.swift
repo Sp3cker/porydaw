@@ -71,19 +71,24 @@ public final class SceneText {
 
     @QtIgnored
     var signature: String {
-        sceneTextDictSignature(labelRect) + "|"
-            + sceneTextDictSignature(labelBackgroundRect) + "|"
-            + sceneTextDictSignature(labelClipRect) + "|"
-            + sceneTextDictSignature(labelFont) + "|"
-            + labelText + "|" + labelColor + "|" + labelBackground + "|"
+        let rectSig = sceneTextDictSignature(labelRect)
+        let bgSig = sceneTextDictSignature(labelBackgroundRect)
+        let clipSig = sceneTextDictSignature(labelClipRect)
+        let fontSig = sceneTextDictSignature(labelFont)
+        return rectSig + "|" + bgSig + "|" + clipSig + "|" + fontSig
+            + "|" + labelText + "|" + labelColor + "|" + labelBackground + "|"
             + "\(labelHorizontalAlignment)|\(labelVerticalAlignment)"
     }
 }
 
 private func sceneTextDictSignature(_ dict: [String: QVariantSettable]) -> String {
-    dict.keys.sorted().map { key in
-        "\(key)=\(dict[key].map { "\($0)" } ?? "")"
-    }.joined(separator: ",")
+    var parts: [String] = []
+    parts.reserveCapacity(dict.count)
+    for key in dict.keys.sorted() {
+        let value = dict[key].map { "\($0)" } ?? ""
+        parts.append("\(key)=\(value)")
+    }
+    return parts.joined(separator: ",")
 }
 
 // Everything a scene rebuild needs, projected out of PianoGrid once per
@@ -658,12 +663,10 @@ public final class GridScene {
     private func maxRulerBar(_ input: GridSceneInput, end: Tick) -> Int {
         var bar = 1
         let segment = input.metrics.timeAxis.segmentAt(end)
-        let beat = segment.start
-            + (end - segment.start) / segment.beatTicks * segment.beatTicks
-        input.metrics.timeAxis.forEachGridLine(
-            from: beat,
-            to: end < TimeDefaults.maxTick ? end + 1 : TimeDefaults.noTick
-        ) { _, _, number, _ in
+        let offset = end - segment.start
+        let beat = segment.start + offset / segment.beatTicks * segment.beatTicks
+        let tickEnd: Tick = end < TimeDefaults.maxTick ? end + 1 : TimeDefaults.noTick
+        input.metrics.timeAxis.forEachGridLine(from: beat, to: tickEnd) { _, _, number, _ in
             bar = number
         }
         return bar + 1

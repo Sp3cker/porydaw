@@ -250,12 +250,17 @@ struct VoiceGridProjectionColors {
 @MainActor
 enum VoiceChangesProjection {
     static func entries(points: [LanePoint]) -> [VoiceProjectionEntry] {
-        points.enumerated().map { index, point in
-            VoiceProjectionEntry(tick: point.tick, value: point.value,
-                                 identity: VoiceOccurrence(point).text, sourceOrder: index)
-        }.sorted { left, right in
-            left.tick == right.tick
-                ? left.sourceOrder < right.sourceOrder : left.tick < right.tick
+        var projected: [VoiceProjectionEntry] = []
+        projected.reserveCapacity(points.count)
+        for (index, point) in points.enumerated() {
+            let identity = VoiceOccurrence(point).text
+            projected.append(
+                VoiceProjectionEntry(tick: point.tick, value: point.value,
+                                     identity: identity, sourceOrder: index))
+        }
+        return projected.sorted { left, right in
+            if left.tick != right.tick { return left.tick < right.tick }
+            return left.sourceOrder < right.sourceOrder
         }
     }
 

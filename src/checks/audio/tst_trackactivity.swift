@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppAudio
 
 func runTrackActivityChecks(_ report: CheckReport) {
     let zero = Array(repeating: AudioActivityLevel(), count: 16)

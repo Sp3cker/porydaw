@@ -473,7 +473,7 @@ public enum ClipboardSemantics {
     }
 
     @MainActor
-    static func gather(_ range: TimeRange, scope: TimeScope,
+    public static func gather(_ range: TimeRange, scope: TimeScope,
                        from document: SongDocument) -> RangeContents {
         let scopedTracks: [Int]
         if scope.wholeSong {
@@ -481,9 +481,12 @@ public enum ClipboardSemantics {
         } else {
             scopedTracks = scope.tracks.sorted()
         }
-        let tracks = scopedTracks.compactMap { track -> (Int, [Note])? in
-            guard track >= 0, track < document.engineTracks.usedTrackCount else { return nil }
-            return (track, document.notes(in: track).filter { range.contains($0.tick) })
+        var tracks: [(Int, [Note])] = []
+        tracks.reserveCapacity(scopedTracks.count)
+        for track in scopedTracks {
+            guard track >= 0, track < document.engineTracks.usedTrackCount else { continue }
+            let notes = document.notes(in: track).filter { range.contains($0.tick) }
+            tracks.append((track, notes))
         }
 
         var lanes = scope.lanes
@@ -492,14 +495,16 @@ public enum ClipboardSemantics {
                 TimeScope.ScopedLane(track: track, lane: $0)
             })
         }
-        let gatheredLanes = lanes.sorted {
-            $0.track == $1.track ? encoded($0.lane) < encoded($1.lane) : $0.track < $1.track
-        }.compactMap { scoped -> (Int, Lane, [LanePoint])? in
+        var gatheredLanes: [(Int, Lane, [LanePoint])] = []
+        for scoped in lanes.sorted(by: { left, right in
+            if left.track != right.track { return left.track < right.track }
+            return encoded(left.lane) < encoded(right.lane)
+        }) {
             guard scoped.track >= 0,
-                  scoped.track < document.engineTracks.usedTrackCount else { return nil }
-            return (scoped.track, scoped.lane,
-                    document.lanePoints(track: scoped.track, lane: scoped.lane)
-                        .filter { range.contains($0.tick) })
+                  scoped.track < document.engineTracks.usedTrackCount else { continue }
+            let points = document.lanePoints(track: scoped.track, lane: scoped.lane)
+                .filter { range.contains($0.tick) }
+            gatheredLanes.append((scoped.track, scoped.lane, points))
         }
         let tempo = scope.coversTempo
             ? document.state.tempo.filter { range.contains($0.tick) } : []
@@ -557,15 +562,16 @@ public enum ClipboardSemantics {
     }
 }
 
-struct RangeContents {
-    var tracks: [(track: Int, notes: [Note])]
-    var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
-    var tempo: [TempoPoint]
+public struct RangeContents: Sendable {
+    public var tracks: [(track: Int, notes: [Note])]
+    public var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
+    public var tempo: [TempoPoint]
 }
 
 @MainActor
-final class GridClipboard {
-    func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
+public final class GridClipboard {
+    nonisolated public init() {}
+    public func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
         guard let data = ClipboardCodec.encode(clip, ticksPerBeat: ticksPerBeat) else { return false }
         return data.withUnsafeBytes { bytes in
             let pointer = bytes.bindMemory(to: UInt8.self).baseAddress
@@ -573,7 +579,7 @@ final class GridClipboard {
         }
     }
 
-    func read() -> DecodedPorydawClip? {
+    public func read() -> DecodedPorydawClip? {
         let box = ClipboardReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
         guard pd_clipboard_read(context, { rawContext, bytes, count in

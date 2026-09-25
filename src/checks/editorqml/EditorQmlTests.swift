@@ -1,5 +1,7 @@
 import Foundation
 import PorydawApp
+import PorydawAppAudio
+import PorydawAppCommands
 import PorydawCore
 import QtBridge
 import QtBridgeCpp
