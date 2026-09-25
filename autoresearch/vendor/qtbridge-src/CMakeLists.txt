@@ -57,6 +57,10 @@ ExternalProject_Add(QtBridgeMacros_External
     PREFIX "${QTBRIDGE_MACROS_EP_ROOT}"
     BINARY_DIR "${QTBRIDGE_MACROS_EP_ROOT}/build"
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
+    # autoresearch harness: the default EP build builds every swift-syntax
+    # target; only the macro executable and its three libraries are needed.
+    BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR>
+        --target QtBridgeMacros
     CMAKE_ARGS
         -G Ninja
         -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
