@@ -35,14 +35,15 @@ must be a message-anchored predicate.
   if no existing surface suffices.
 - `src/swift/app/roll/PianoGrid.swift` — **initial-home repair authorized**
   (second BEHAVIOR-GAP: `EditorCamera.init` homes `scrollX` to `minHScroll`
-  at placeholder width; `configureViewport`'s `didApplyInitialHome` block
-  fires on QML's clamped 1×1 placeholder viewport, so `scrollX` stays at
-  the stale home once real dimensions arrive — violating
-  `scrollPx == -leadPadPx`, A004). Fix: in `configureViewport`'s one-time
-  `didApplyInitialHome` block, (a) change the guard to `width > 1 &&
-  height > 1` so the placeholder can't consume it, and (b) add
-  `_ = camera.setHScroll(camera.snapshot.minHScroll)` alongside the
-  setVScroll. Do not touch `EditorCamera.reconcile` semantics.
+  at placeholder width; after the real viewport changes `leadPad`,
+  `reconcile` clamps the stale home inside the wider range — violating
+  `scrollPx == -leadPadPx`, A004). Fix: leave the `didApplyInitialHome`
+  block untouched (`height > 0`, vertical home timing unchanged); around
+  `camera.updateViewport`, snapshot whether `scrollX == minHScroll` before
+  the update and, if still true after, rebase `scrollX` to the new
+  `minHScroll`. Cameras the user has scrolled or a reload restored keep
+  their offset. Do not touch `EditorCamera.reconcile` semantics or the
+  vertical home path.
 
 Any BEHAVIOR-GAP beyond these two authorized repairs stops and escalates —
 no other production edits.
