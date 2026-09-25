@@ -1,0 +1,48 @@
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- The CXX compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /Users/sallegrezza/.swiftly/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /Users/sallegrezza/.swiftly/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configured repository Git hooks from .githooks
+-- The OBJCXX compiler identification is Clang 21.0.0
+-- Detecting OBJCXX compiler ABI info
+-- Detecting OBJCXX compiler ABI info - done
+-- Check for working OBJCXX compiler: /Users/sallegrezza/.swiftly/bin/clang++ - skipped
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Performing Test HAVE_STDATOMIC
+-- Performing Test HAVE_STDATOMIC - Success
+-- Found WrapAtomic: TRUE
+-- Found OpenGL: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework
+-- Found WrapOpenGL: TRUE
+-- Found WrapVulkanHeaders: /opt/homebrew/include
+-- The Swift compiler identification is Apple 6.4
+-- Check for working Swift compiler: /Users/sallegrezza/.swiftly/bin/swiftc
+-- Check for working Swift compiler: /Users/sallegrezza/.swiftly/bin/swiftc - works
+-- Using Swift bridging include: /Users/sallegrezza/Library/Developer/Toolchains/swift-6.4.0-RELEASE.xctoolchain/usr/include
+CMake Warning (dev) at /opt/homebrew/lib/cmake/Qt6Core/Qt6CoreMacros.cmake:3561 (message):
+  Qt policy QTP0004 is not set: You need qmldir files for each extra
+  directory that contains .qml files for your module.  Check
+  https://doc.qt.io/qt-6/qt-cmake-policy-qtp0004.html for policy details.
+  Use the qt_policy command to set the policy and suppress this warning.
+
+Call Stack (most recent call first):
+  /opt/homebrew/lib/cmake/Qt6Qml/Qt6QmlMacros.cmake:4013 (__qt_internal_setup_policy)
+  /opt/homebrew/lib/cmake/Qt6Qml/Qt6QmlMacros.cmake:1035 (qt6_target_qml_sources)
+  /opt/homebrew/lib/cmake/Qt6Qml/Qt6QmlMacros.cmake:1507 (qt6_add_qml_module)
+  CMakeLists.txt:211 (qt_add_qml_module)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Templates/Project Templates/Qt Bridge/Qt Bridge.xctemplate/Resources/main.qml:11:Required properties with initializer do not make sense.
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Templates/Project Templates/Qt Bridge/Qt Bridge.xctemplate/Resources/main.qml:21:Expected token `,'
+-- Configuring done (5.5s)
+-- Generating done (0.3s)
+-- Build files have been written to: /Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/build-prof

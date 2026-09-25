@@ -1,0 +1,1021 @@
+[1/223] Copying porydaw_app qml resources into build dir
+[2/223] Copying porydaw_app qml sources into build dir
+[3/223] Populating .qmlls.ini file at /Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/build-prof/.qt/.qmlls.build.ini
+[4/223] Automatic MOC and UIC for target m4a_driver
+[5/223] Automatic MOC and UIC for target hw_audio
+[6/223] Automatic MOC and UIC for target PorydawCore
+[7/223] Building CXX object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_driver_autogen/mocs_compilation.cpp.o
+[8/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/m4a_tables.c.o
+[9/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_driver.c.o
+[10/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_freq.c.o
+[11/223] Building CXX object CMakeFiles/porydaw_app_resources_4.dir/build-prof/.qt/rcc/qrc_voicegroup_type_icons_init.cpp.o
+[12/223] Building CXX object CMakeFiles/porydaw_app_resources_3.dir/build-prof/.qt/rcc/qrc_swift_roll_tabart_init.cpp.o
+[13/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_pcm.c.o
+[14/223] Building CXX object CMakeFiles/porydaw_app_resources_5.dir/build-prof/.qt/rcc/qrc_drawer_icons_init.cpp.o
+[15/223] Building CXX object CMakeFiles/porydaw_app_resources_1.dir/build-prof/.qt/rcc/qrc_qmake_Porydaw_Ui_init.cpp.o
+[16/223] Building CXX object CMakeFiles/porydaw_app_resources_2.dir/build-prof/.qt/rcc/qrc_porydaw_app_raw_qml_0_init.cpp.o
+[17/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_pcm_mixer_mode.c.o
+[18/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_pcm_ipatix.c.o
+[19/223] Building CXX object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_audio_autogen/mocs_compilation.cpp.o
+[20/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_cgb.c.o
+[21/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_main.c.o
+[22/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_pcm_sappy.c.o
+[23/223] Building CXX object src/swift/core/CMakeFiles/PorydawCore.dir/PorydawCore_autogen/mocs_compilation.cpp.o
+[24/223] Building C object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_pcm.c.o
+[25/223] Building C object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_mix.c.o
+[26/223] Building C object poryaaaa-engine/m4a/CMakeFiles/m4a_driver.dir/m4a_track.c.o
+[27/223] Building C object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_audio.c.o
+[28/223] Building C object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_psg.c.o
+[29/223] Copying OS X Content porydaw.app/Contents/Resources/PorydawApplication.qml
+[30/223] Building C object poryaaaa-engine/hw_audio/CMakeFiles/hw_audio.dir/hw_resample.c.o
+[31/223] Copying OS X Content porydaw.app/Contents/Resources/porydaw.icns
+[32/223] Linking CXX static library poryaaaa-engine/m4a/libm4a_driver.a
+[33/223] Building CXX object CMakeFiles/porydaw_app_resources_8.dir/build-prof/.qt/rcc/qrc_controls_style_init.cpp.o
+[34/223] Building CXX object CMakeFiles/porydaw_app_resources_7.dir/build-prof/.qt/rcc/qrc_drawer_cursors_init.cpp.o
+[35/223] Linking CXX static library poryaaaa-engine/hw_audio/libhw_audio.a
+[36/223] Building CXX object CMakeFiles/porydaw_app_resources_6.dir/build-prof/.qt/rcc/qrc_transport_icons_init.cpp.o
+[37/223] Automatic MOC and UIC for target poryaaaa_engine
+[38/223] Automatic MOC and UIC for target QtBridgeCpp
+[39/223] Building C object poryaaaa-engine/CMakeFiles/poryaaaa_engine.dir/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_load_session.c.o
+[40/223] Building CXX object poryaaaa-engine/CMakeFiles/poryaaaa_engine.dir/poryaaaa_engine_autogen/mocs_compilation.cpp.o
+[41/223] Building C object poryaaaa-engine/CMakeFiles/poryaaaa_engine.dir/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/m4a_engine.c.o
+[42/223] Building C object poryaaaa-engine/CMakeFiles/poryaaaa_engine.dir/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_asset_batch.c.o
+[43/223] Building Swift Module 'QtBridgeMacros' with 2 sources
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridgeMacros/QtBridgeableMacro.swift:319:1: warning: deprecated default implementation is used to satisfy static method 'expansion(of:providingMembersOf:conformingTo:in:)' required by protocol 'MemberMacro': `MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter [#DeprecatedDeclaration]
+317 | }
+318 | 
+319 | extension QtBridgeableMacro : MemberMacro {
+    | `- warning: deprecated default implementation is used to satisfy static method 'expansion(of:providingMembersOf:conformingTo:in:)' required by protocol 'MemberMacro': `MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter [#DeprecatedDeclaration]
+320 |     public static func expansion(
+321 |         of node: AttributeSyntax,
+
+SwiftSyntaxMacros.MemberMacro.expansion:3:22: note: 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+1 | protocol MemberMacro {
+2 | @available(*, deprecated, message: "`MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter")
+3 |   public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext) throws -> [DeclSyntax]}
+  |                      `- note: 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+4 | 
+
+SwiftSyntaxMacros.MemberMacro.expansion:2:13: note: requirement 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+1 | protocol MemberMacro {
+2 | static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext) throws -> [DeclSyntax]}
+  |             `- note: requirement 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+3 | 
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridgeMacros/QtBridgeableMacro.swift:319:1: warning: deprecated default implementation is used to satisfy static method 'expansion(of:providingMembersOf:conformingTo:in:)' required by protocol 'MemberMacro': `MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter [#DeprecatedDeclaration]
+317 | }
+318 | 
+319 | extension QtBridgeableMacro : MemberMacro {
+    | `- warning: deprecated default implementation is used to satisfy static method 'expansion(of:providingMembersOf:conformingTo:in:)' required by protocol 'MemberMacro': `MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter [#DeprecatedDeclaration]
+320 |     public static func expansion(
+321 |         of node: AttributeSyntax,
+
+SwiftSyntaxMacros.MemberMacro.expansion:3:22: note: 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+1 | protocol MemberMacro {
+2 | @available(*, deprecated, message: "`MemberMacro` conformance should implement the `expansion` function that takes a `conformingTo` parameter")
+3 |   public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext) throws -> [DeclSyntax]}
+  |                      `- note: 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+4 | 
+
+SwiftSyntaxMacros.MemberMacro.expansion:2:13: note: requirement 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+1 | protocol MemberMacro {
+2 | static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext) throws -> [DeclSyntax]}
+  |             `- note: requirement 'expansion(of:providingMembersOf:conformingTo:in:)' declared here
+3 | 
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[44/223] Building C object poryaaaa-engine/CMakeFiles/poryaaaa_engine.dir/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.c.o
+[45/223] Running qmlimportscanner for porydaw
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Templates/Project Templates/Qt Bridge/Qt Bridge.xctemplate/Resources/main.qml:11:Required properties with initializer do not make sense.
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Templates/Project Templates/Qt Bridge/Qt Bridge.xctemplate/Resources/main.qml:21:Expected token `,'
+[46/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/metaparamslist.cpp.o
+[47/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/callbackbase.cpp.o
+[48/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/abstracttablemodel.cpp.o
+[49/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/abstractlistmodel.cpp.o
+[50/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/abstractitemmodel.cpp.o
+[51/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/QtBridgeCpp_autogen/mocs_compilation.cpp.o
+[52/223] Linking CXX static library poryaaaa-engine/libporyaaaa_engine.a
+[53/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/qobjectproxy.cpp.o
+[54/223] Linking Swift shared library lib/libQtBridgeMacros.dylib
+[55/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/qappcpp.cpp.o
+[56/223] Building Swift Module 'PorydawCore' with 14 sources
+[57/223] Linking Swift static library src/swift/core/libPorydawCore.a
+libtool: warning: 'mocs_compilation.cpp.o' has no symbols
+[58/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/quickdisplaylistitem.cpp.o
+[59/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/qobjectproxyimpl.cpp.o
+[60/223] Building Swift Module 'PorydawPlayback' with 2 sources
+[61/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/swiftqmlelementbuilder.cpp.o
+[62/223] Linking Swift static library src/swift/playback/libPorydawPlayback.a
+[63/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/swiftmetaobjectbuilder.cpp.o
+[64/223] Building Swift Module 'PorydawProject' with 29 sources
+[65/223] Linking Swift static library src/swift/project/libPorydawProject.a
+[66/223] Building CXX object _deps/qtbridge-build/Sources/QtBridgeCpp/CMakeFiles/QtBridgeCpp.dir/qtestappcpp.cpp.o
+[67/223] Linking CXX static library lib/libQtBridgeCpp.a
+[68/223] Building Swift Module 'PorydawAppEventList' with 2 sources
+[69/223] Linking Swift static library src/swift/app/libPorydawAppEventList.a
+[70/223] Building Swift Module 'QtBridge' with 17 sources
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:31:14: warning: external macro implementation type 'QtBridgeMacros.QtBridgeableMacro' could not be found for macro 'QtBridgeable()'; plugin for module 'QtBridgeMacros' not found
+ 29 | @attached(memberAttribute)
+ 30 | @attached(extension, conformances: QObjectBuildable)
+ 31 | public macro QtBridgeable() = #externalMacro(module: "QtBridgeMacros", type: "QtBridgeableMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtBridgeableMacro' could not be found for macro 'QtBridgeable()'; plugin for module 'QtBridgeMacros' not found
+ 32 | 
+ 33 | /// Exposes a property to QML and enables change tracking.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:63:14: warning: external macro implementation type 'QtBridgeMacros.QtTrackedMacro' could not be found for macro 'QtTracked()'; plugin for module 'QtBridgeMacros' not found
+ 61 | /// observer to non-constant properties.
+ 62 | @attached(accessor, names: named(didSet))
+ 63 | public macro QtTracked() = #externalMacro(module: "QtBridgeMacros", type: "QtTrackedMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtTrackedMacro' could not be found for macro 'QtTracked()'; plugin for module 'QtBridgeMacros' not found
+ 64 | 
+ 65 | /// Prevents a property or method from being exposed to QML.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:85:14: warning: external macro implementation type 'QtBridgeMacros.QtIgnoredMacro' could not be found for macro 'QtIgnored()'; plugin for module 'QtBridgeMacros' not found
+ 83 | /// ```
+ 84 | @attached(peer)
+ 85 | public macro QtIgnored() = #externalMacro(module: "QtBridgeMacros", type: "QtIgnoredMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtIgnoredMacro' could not be found for macro 'QtIgnored()'; plugin for module 'QtBridgeMacros' not found
+ 86 | 
+ 87 | /// Defines custom QML signals using function declarations.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:139:14: warning: external macro implementation type 'QtBridgeMacros.QtSignalMacro' could not be found for macro 'QtSignal()'; plugin for module 'QtBridgeMacros' not found
+137 | /// ```
+138 | @attached(body)
+139 | public macro QtSignal() = #externalMacro(module: "QtBridgeMacros", type: "QtSignalMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtSignalMacro' could not be found for macro 'QtSignal()'; plugin for module 'QtBridgeMacros' not found
+140 | 
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:31:14: warning: external macro implementation type 'QtBridgeMacros.QtBridgeableMacro' could not be found for macro 'QtBridgeable()'; plugin for module 'QtBridgeMacros' not found
+ 29 | @attached(memberAttribute)
+ 30 | @attached(extension, conformances: QObjectBuildable)
+ 31 | public macro QtBridgeable() = #externalMacro(module: "QtBridgeMacros", type: "QtBridgeableMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtBridgeableMacro' could not be found for macro 'QtBridgeable()'; plugin for module 'QtBridgeMacros' not found
+ 32 | 
+ 33 | /// Exposes a property to QML and enables change tracking.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:63:14: warning: external macro implementation type 'QtBridgeMacros.QtTrackedMacro' could not be found for macro 'QtTracked()'; plugin for module 'QtBridgeMacros' not found
+ 61 | /// observer to non-constant properties.
+ 62 | @attached(accessor, names: named(didSet))
+ 63 | public macro QtTracked() = #externalMacro(module: "QtBridgeMacros", type: "QtTrackedMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtTrackedMacro' could not be found for macro 'QtTracked()'; plugin for module 'QtBridgeMacros' not found
+ 64 | 
+ 65 | /// Prevents a property or method from being exposed to QML.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:85:14: warning: external macro implementation type 'QtBridgeMacros.QtIgnoredMacro' could not be found for macro 'QtIgnored()'; plugin for module 'QtBridgeMacros' not found
+ 83 | /// ```
+ 84 | @attached(peer)
+ 85 | public macro QtIgnored() = #externalMacro(module: "QtBridgeMacros", type: "QtIgnoredMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtIgnoredMacro' could not be found for macro 'QtIgnored()'; plugin for module 'QtBridgeMacros' not found
+ 86 | 
+ 87 | /// Defines custom QML signals using function declarations.
+
+/Users/sallegrezza/dev/cProjects/porydaw/.worktrees/autoresearch/autoresearch/vendor/qtbridge-src/Sources/QtBridge/QtBridgesMacros.swift:139:14: warning: external macro implementation type 'QtBridgeMacros.QtSignalMacro' could not be found for macro 'QtSignal()'; plugin for module 'QtBridgeMacros' not found
+137 | /// ```
+138 | @attached(body)
+139 | public macro QtSignal() = #externalMacro(module: "QtBridgeMacros", type: "QtSignalMacro")
+    |              `- warning: external macro implementation type 'QtBridgeMacros.QtSignalMacro' could not be found for macro 'QtSignal()'; plugin for module 'QtBridgeMacros' not found
+140 | 
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtBridgeCpp'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+/opt/homebrew/lib/QtCore.framework/Headers/qhash.h:544:16: warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+ 542 |     static auto allocateSpans(size_t numBuckets)
+ 543 |     {
+ 544 |         struct R {
+     |                |- warning: cycle detected while resolving 'allocateSpans' in swift_name attribute for 'R' [#ClangDeclarationImport]
+     |                `- note: please report this issue to the owners of 'QtBridgeCpp'
+ 545 |             Span *spans;
+ 546 |             size_t nSpans;
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+[71/223] Linking Swift static library lib/libQtBridge.a
+[72/223] Automatic MOC and UIC for target porydaw_app
+[73/223] Running AUTOMOC file extraction for target porydaw_app
+[74/223] Running rcc for resource voicegroup_type_icons
+[75/223] Running rcc for resource qmake_Porydaw_Ui
+[76/223] Running rcc for resource drawer_icons
+[77/223] Running rcc for resource transport_icons
+[78/223] Running rcc for resource swift_roll_tabart
+[79/223] Generating .rcc/qmlcache/porydaw_app_qmlcache_loader.cpp
+[80/223] Running moc --collect-json for target porydaw_app
+[81/223] Running rcc for resource controls_style
+[82/223] Running rcc for resource drawer_cursors
+[83/223] Automatic QML type registration for target porydaw_app
+[84/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptButton_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptButton_qml.cpp.aotstats
+[85/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptCard_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptCard_qml.cpp.aotstats
+[86/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/VelocityPrompt_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/VelocityPrompt_qml.cpp.aotstats
+[87/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimeSignaturePrompt_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimeSignaturePrompt_qml.cpp.aotstats
+[88/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/VoicePickerPrompt_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/VoicePickerPrompt_qml.cpp.aotstats
+[89/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PianoRollCanvas_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PianoRollCanvas_qml.cpp.aotstats
+[90/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/InsertTimePrompt_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/InsertTimePrompt_qml.cpp.aotstats
+[91/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/MoveCoalescer_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/MoveCoalescer_qml.cpp.aotstats
+[92/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/RulerToolTip_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/RulerToolTip_qml.cpp.aotstats
+[93/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/HoverHint_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/HoverHint_qml.cpp.aotstats
+[94/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/HintProfiles_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/HintProfiles_qml.cpp.aotstats
+[95/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/EventListPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/EventListPage_qml.cpp.aotstats
+[96/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PitchBendPopup_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/PitchBendPopup_qml.cpp.aotstats
+[97/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/DragInput_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/DragInput_qml.cpp.aotstats
+[98/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimelineScrollbar_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimelineScrollbar_qml.cpp.aotstats
+[99/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/AutomationTabs_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/AutomationTabs_qml.cpp.aotstats
+[100/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/QuickMenuPanel_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/QuickMenuPanel_qml.cpp.aotstats
+[101/223] Running rcc for resource porydaw_app_raw_qml_0
+[102/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SharedPlayhead_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SharedPlayhead_qml.cpp.aotstats
+[103/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/MouseHintStatus_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/MouseHintStatus_qml.cpp.aotstats
+[104/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TimelineQuickItem_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TimelineQuickItem_qml.cpp.aotstats
+[105/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTab_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTab_qml.cpp.aotstats
+[106/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsPanel_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsPanel_qml.cpp.aotstats
+[107/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TrackHeaderBand_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TrackHeaderBand_qml.cpp.aotstats
+[108/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/EditorSurface_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/EditorSurface_qml.cpp.aotstats
+[109/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongConfirmDialog_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongConfirmDialog_qml.cpp.aotstats
+[110/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoicegroupPanel_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoicegroupPanel_qml.cpp.aotstats
+[111/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/EditorDrawer_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/EditorDrawer_qml.cpp.aotstats
+[112/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoiceEditor_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoiceEditor_qml.cpp.aotstats
+[113/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsDockColumn_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsDockColumn_qml.cpp.aotstats
+[114/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VelocityPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VelocityPage_qml.cpp.aotstats
+[115/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SwiftRollOverlay_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SwiftRollOverlay_qml.cpp.aotstats
+[116/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPrompt_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPrompt_qml.cpp.aotstats
+[117/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationMenu_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationMenu_qml.cpp.aotstats
+[118/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangeMenu_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangeMenu_qml.cpp.aotstats
+[119/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/ThemedWindow_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/ThemedWindow_qml.cpp.aotstats
+[120/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangesPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangesPage_qml.cpp.aotstats
+[121/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTabs_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTabs_qml.cpp.aotstats
+[122/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPage_qml.cpp.aotstats
+[123/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoicePicker_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoicePicker_qml.cpp.aotstats
+[124/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/AboutDialog_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/AboutDialog_qml.cpp.aotstats
+[125/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/TransportButton_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/TransportButton_qml.cpp.aotstats
+[126/223] Generating .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SamplePicker_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SamplePicker_qml.cpp.aotstats
+[127/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyChannelGroup_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyChannelGroup_qml.cpp.aotstats
+[128/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyPanel_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyPanel_qml.cpp.aotstats
+[129/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/TransportOutputDial_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/TransportOutputDial_qml.cpp.aotstats
+[130/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/settings/SettingsDialog_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/settings/SettingsDialog_qml.cpp.aotstats
+[131/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/settings/EngineSettingsPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/settings/EngineSettingsPage_qml.cpp.aotstats
+[132/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/settings/SongSettingsPage_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/settings/SongSettingsPage_qml.cpp.aotstats
+[133/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/TransportBar_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/TransportBar_qml.cpp.aotstats
+[134/223] Generating .rcc/qmlcache/porydaw_app_src/ui/shell/ShellWindow_qml.cpp, .rcc/qmlcache/porydaw_app_src/ui/shell/ShellWindow_qml.cpp.aotstats
+[135/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_voicegroup_type_icons.cpp.o
+[136/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_qmake_Porydaw_Ui.cpp.o
+[137/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_swift_roll_tabart.cpp.o
+[138/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_drawer_icons.cpp.o
+[139/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_drawer_cursors.cpp.o
+[140/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_transport_icons.cpp.o
+[141/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_controls_style.cpp.o
+[142/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.qt/rcc/qrc_porydaw_app_raw_qml_0.cpp.o
+[143/223] Building Swift Module 'PorydawAppAudio' with 8 sources
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+
+/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h:3907:13: warning: import of C++ module '_DarwinFoundation3.pthread' appears within extern "C" language linkage specification
+ 3740 | 
+ 3741 | #ifdef __cplusplus
+ 3742 | extern "C" {
+      | `- note: extern "C" language linkage specification begins here
+ 3743 | #endif
+ 3744 | 
+      :
+ 3905 |         */
+ 3906 |         #ifndef MA_NO_PTHREAD_IN_HEADER
+ 3907 |             #include <pthread.h>    /* Unfortunate #include, but needed for pthread_t, pthread_mutex_t and pthread_cond_t types. */
+      |             `- warning: import of C++ module '_DarwinFoundation3.pthread' appears within extern "C" language linkage specification
+ 3908 |             typedef pthread_t       ma_pthread_t;
+ 3909 |             typedef pthread_mutex_t ma_pthread_mutex_t;
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+
+/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h:3907:13: warning: import of C++ module '_DarwinFoundation3.pthread' appears within extern "C" language linkage specification
+ 3740 | 
+ 3741 | #ifdef __cplusplus
+ 3742 | extern "C" {
+      | `- note: extern "C" language linkage specification begins here
+ 3743 | #endif
+ 3744 | 
+      :
+ 3905 |         */
+ 3906 |         #ifndef MA_NO_PTHREAD_IN_HEADER
+ 3907 |             #include <pthread.h>    /* Unfortunate #include, but needed for pthread_t, pthread_mutex_t and pthread_cond_t types. */
+      |             `- warning: import of C++ module '_DarwinFoundation3.pthread' appears within extern "C" language linkage specification
+ 3908 |             typedef pthread_t       ma_pthread_t;
+ 3909 |             typedef pthread_mutex_t ma_pthread_mutex_t;
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+1 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/third_party/miniaudio.h"
+  |         `- note: in file included from <module-includes>:1:
+2 | #import "/Users/sallegrezza/dev/cProjects/porydaw/external/poryaaaa/packages/poryaaaa/plugin/voicegroup_loader.h"
+3 | 
+[144/223] Linking Swift static library src/swift/app/libPorydawAppAudio.a
+[145/223] Building C object CMakeFiles/porydaw_app.dir/src/audio/stb_vorbis_impl.c.o
+[146/223] Building CXX object CMakeFiles/porydaw_app.dir/src/audio/audioengine.cpp.o
+[147/223] Building CXX object CMakeFiles/porydaw_app.dir/cmake_pch.hxx.pch
+[148/223] Building CXX object CMakeFiles/porydaw_app.dir/porydaw_app_autogen/mocs_compilation.cpp.o
+[149/223] Building CXX object CMakeFiles/porydaw_app.dir/src/audio/resonance_suppressor.cpp.o
+[150/223] Building CXX object CMakeFiles/porydaw_app.dir/src/project/banklease.cpp.o
+[151/223] Building CXX object CMakeFiles/porydaw_app.dir/src/audio/auditionslots.cpp.o
+[152/223] Building CXX object CMakeFiles/porydaw_app.dir/src/ui/songview/quick/swiftroll/native/font_metrics.cpp.o
+[153/223] Building CXX object CMakeFiles/porydaw_app.dir/src/app/clipboard_host.cpp.o
+[154/223] Building CXX object CMakeFiles/porydaw_app.dir/porydaw_app_qmltyperegistrations.cpp.o
+[155/223] Building CXX object CMakeFiles/porydaw_app.dir/src/audio/wavexport.cpp.o
+[156/223] Building CXX object CMakeFiles/porydaw_app.dir/src/app/qml_engine_host.cpp.o
+[157/223] Building CXX object CMakeFiles/porydaw_app.dir/src/project/projectidentity.cpp.o
+[158/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptCard_qml.cpp.o
+[159/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/PromptButton_qml.cpp.o
+[160/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_qmlcache_loader.cpp.o
+[161/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/PianoRollCanvas_qml.cpp.o
+[162/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/VelocityPrompt_qml.cpp.o
+[163/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimeSignaturePrompt_qml.cpp.o
+[164/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/VoicePickerPrompt_qml.cpp.o
+[165/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/RulerToolTip_qml.cpp.o
+[166/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/DragInput_qml.cpp.o
+[167/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/InsertTimePrompt_qml.cpp.o
+[168/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/MoveCoalescer_qml.cpp.o
+[169/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/HoverHint_qml.cpp.o
+[170/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/HintProfiles_qml.cpp.o
+[171/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/TimelineScrollbar_qml.cpp.o
+[172/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/PitchBendPopup_qml.cpp.o
+[173/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTab_qml.cpp.o
+[174/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/EventListPage_qml.cpp.o
+[175/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/QuickMenuPanel_qml.cpp.o
+[176/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/AutomationTabs_qml.cpp.o
+[177/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SongTabs_qml.cpp.o
+[178/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SwiftRollOverlay_qml.cpp.o
+[179/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TimelineQuickItem_qml.cpp.o
+[180/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/EditorSurface_qml.cpp.o
+[181/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/MouseHintStatus_qml.cpp.o
+[182/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/SharedPlayhead_qml.cpp.o
+[183/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongConfirmDialog_qml.cpp.o
+[184/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsDockColumn_qml.cpp.o
+[185/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SongsPanel_qml.cpp.o
+[186/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/swiftroll/TrackHeaderBand_qml.cpp.o
+[187/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/SamplePicker_qml.cpp.o
+[188/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoiceEditor_qml.cpp.o
+[189/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/docks/VoicegroupPanel_qml.cpp.o
+[190/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangeMenu_qml.cpp.o
+[191/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/EditorDrawer_qml.cpp.o
+[192/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VelocityPage_qml.cpp.o
+[193/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPrompt_qml.cpp.o
+[194/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoiceChangesPage_qml.cpp.o
+[195/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationMenu_qml.cpp.o
+[196/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/ThemedWindow_qml.cpp.o
+[197/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/AutomationPage_qml.cpp.o
+[198/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/songview/quick/drawer/VoicePicker_qml.cpp.o
+[199/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/AboutDialog_qml.cpp.o
+[200/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/ShellWindow_qml.cpp.o
+[201/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/TransportOutputDial_qml.cpp.o
+[202/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/TransportButton_qml.cpp.o
+[203/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyChannelGroup_qml.cpp.o
+[204/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/settings/SettingsDialog_qml.cpp.o
+[205/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/settings/EngineSettingsPage_qml.cpp.o
+[206/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/TransportBar_qml.cpp.o
+[207/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/PolyphonyPanel_qml.cpp.o
+[208/223] Building CXX object CMakeFiles/porydaw_app.dir/build-prof/.rcc/qmlcache/porydaw_app_src/ui/shell/settings/SongSettingsPage_qml.cpp.o
+[209/223] Building C object CMakeFiles/porydaw_app.dir/src/audio/miniaudio_impl.c.o
+[210/223] Linking CXX static library libporydaw_app.a
+[211/223] Building Swift Module 'PorydawAppCommands' with 4 sources
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawBankLease'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+[212/223] Linking Swift static library src/swift/app/libPorydawAppCommands.a
+[213/223] Automatic MOC and UIC for target PorydawApp
+[214/223] Building CXX object src/swift/app/CMakeFiles/PorydawApp.dir/PorydawApp_autogen/mocs_compilation.cpp.o
+[215/223] Building Swift Module 'PorydawApp' with 90 sources
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawBankLease'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawBankLease'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawBankLease'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'PorydawProjectNative'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+[216/223] Linking Swift static library src/swift/app/libPorydawApp.a
+libtool: warning: 'mocs_compilation.cpp.o' has no symbols
+[217/223] Building Swift Module 'PorydawShellEntry' with 2 sources
+/opt/homebrew/lib/QtCore.framework/Headers/qstringview.h:533:12: warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+531 | [[nodiscard]] constexpr auto QChar::fromUcs4(char32_t c) noexcept
+532 | {
+533 |     struct R {
+    |            |- warning: cycle detected while resolving 'fromUcs4' in swift_name attribute for 'R' [#ClangDeclarationImport]
+    |            `- note: please report this issue to the owners of 'QtKeybindings'
+534 |         char16_t chars[2];
+535 |         [[nodiscard]] constexpr operator QStringView() const noexcept { return {begin(), end()}; }
+
+[#ClangDeclarationImport]: <https://docs.swift.org/compiler/documentation/diagnostics/clang-declaration-import>
+[218/223] Linking Swift static library libporydaw_shell_entry.a
+[219/223] Running rcc for resource app_icon
+[220/223] Automatic RCC for resources/fonts.qrc
+[221/223] Building CXX object CMakeFiles/porydaw.dir/build-prof/.qt/rcc/qrc_app_icon.cpp.o
+[222/223] Building CXX object CMakeFiles/porydaw.dir/porydaw_autogen/3YJK5W5UP7/qrc_fonts.cpp.o
+[223/223] Linking CXX executable porydaw.app/Contents/MacOS/porydaw
