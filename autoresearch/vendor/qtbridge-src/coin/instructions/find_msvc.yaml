@@ -1,0 +1,17 @@
+type: Group
+instructions:
+  - type: EnvironmentVariable
+    variableName: VC_SCRIPT
+    variableValue: "\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat"
+    enable_if:
+      condition: property
+      property: host.compiler
+      equals_value: MSVC2022
+  - type: WriteFile
+    fileContents: "call \"{{.Env.VC_SCRIPT}}\" amd64 \r\ncmd /c %*"
+    filename: "c:\\users\\qt\\MSVC.bat"
+    fileMode: 420
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Windows

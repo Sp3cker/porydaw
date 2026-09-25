@@ -1,0 +1,280 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BF21FB172FA19CDB004EC331 /* QtBridge in Frameworks */ = {isa = PBXBuildFile; productRef = BF21FB162FA19CDB004EC331 /* QtBridge */; };
+		BF21FB212FA19DA0004EC331 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB1C2FA19DA0004EC331 /* Extensions.swift */; };
+		BF21FB222FA19DA0004EC331 /* ColorPaletteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB1B2FA19DA0004EC331 /* ColorPaletteApp.swift */; };
+		BF21FB242FA19DA0004EC331 /* AbstractResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB182FA19DA0004EC331 /* AbstractResource.swift */; };
+		BF21FB252FA19DA0004EC331 /* BasicLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB192FA19DA0004EC331 /* BasicLogin.swift */; };
+		BF21FB262FA19DA0004EC331 /* PaginatedResourceColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB1D2FA19DA0004EC331 /* PaginatedResourceColors.swift */; };
+		BF21FB272FA19DA0004EC331 /* RestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB1F2FA19DA0004EC331 /* RestService.swift */; };
+		BF21FB282FA19DA0004EC331 /* ServiceApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB202FA19DA0004EC331 /* ServiceApi.swift */; };
+		BF21FB292FA19DA0004EC331 /* PaginatedResourceUsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF21FB1E2FA19DA0004EC331 /* PaginatedResourceUsers.swift */; };
+		BF21FBD32FA1A346004EC331 /* ColorPalette in Resources */ = {isa = PBXBuildFile; fileRef = BF21FBD12FA1A346004EC331 /* ColorPalette */; };
+		BF21FBD42FA1A346004EC331 /* QtExampleStyle in Resources */ = {isa = PBXBuildFile; fileRef = BF21FBD22FA1A346004EC331 /* QtExampleStyle */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BF21FB052FA19CAF004EC331 /* ColorPalette.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ColorPalette.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BF21FB182FA19DA0004EC331 /* AbstractResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AbstractResource.swift; sourceTree = "<group>"; };
+		BF21FB192FA19DA0004EC331 /* BasicLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicLogin.swift; sourceTree = "<group>"; };
+		BF21FB1B2FA19DA0004EC331 /* ColorPaletteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPaletteApp.swift; sourceTree = "<group>"; };
+		BF21FB1C2FA19DA0004EC331 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		BF21FB1D2FA19DA0004EC331 /* PaginatedResourceColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaginatedResourceColors.swift; sourceTree = "<group>"; };
+		BF21FB1E2FA19DA0004EC331 /* PaginatedResourceUsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaginatedResourceUsers.swift; sourceTree = "<group>"; };
+		BF21FB1F2FA19DA0004EC331 /* RestService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestService.swift; sourceTree = "<group>"; };
+		BF21FB202FA19DA0004EC331 /* ServiceApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceApi.swift; sourceTree = "<group>"; };
+		BF21FBD12FA1A346004EC331 /* ColorPalette */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ColorPalette; path = ColorPalette/Resources/qml/ColorPalette; sourceTree = "<group>"; };
+		BF21FBD22FA1A346004EC331 /* QtExampleStyle */ = {isa = PBXFileReference; lastKnownFileType = folder; name = QtExampleStyle; path = ColorPalette/Resources/qml/QtExampleStyle; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BF21FB022FA19CAF004EC331 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF21FB172FA19CDB004EC331 /* QtBridge in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BF21FAFC2FA19CAF004EC331 = {
+			isa = PBXGroup;
+			children = (
+				BF21FB072FA19CAF004EC331 /* ColorPalette */,
+				BF21FBD12FA1A346004EC331 /* ColorPalette */,
+				BF21FBD22FA1A346004EC331 /* QtExampleStyle */,
+				BF21FB062FA19CAF004EC331 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BF21FB062FA19CAF004EC331 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BF21FB052FA19CAF004EC331 /* ColorPalette.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BF21FB072FA19CAF004EC331 /* ColorPalette */ = {
+			isa = PBXGroup;
+			children = (
+				BF21FB082FA19CAF004EC331 /* Sources */,
+			);
+			path = ColorPalette;
+			sourceTree = "<group>";
+		};
+		BF21FB082FA19CAF004EC331 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				BF21FB182FA19DA0004EC331 /* AbstractResource.swift */,
+				BF21FB192FA19DA0004EC331 /* BasicLogin.swift */,
+				BF21FB1B2FA19DA0004EC331 /* ColorPaletteApp.swift */,
+				BF21FB1C2FA19DA0004EC331 /* Extensions.swift */,
+				BF21FB1D2FA19DA0004EC331 /* PaginatedResourceColors.swift */,
+				BF21FB1E2FA19DA0004EC331 /* PaginatedResourceUsers.swift */,
+				BF21FB1F2FA19DA0004EC331 /* RestService.swift */,
+				BF21FB202FA19DA0004EC331 /* ServiceApi.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BF21FB042FA19CAF004EC331 /* ColorPalette */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BF21FB122FA19CAF004EC331 /* Build configuration list for PBXNativeTarget "ColorPalette" */;
+			buildPhases = (
+				BF21FB012FA19CAF004EC331 /* Sources */,
+				BF21FB022FA19CAF004EC331 /* Frameworks */,
+				BF21FB032FA19CAF004EC331 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ColorPalette;
+			packageProductDependencies = (
+				BF21FB162FA19CDB004EC331 /* QtBridge */,
+			);
+			productName = ColorPalette;
+			productReference = BF21FB052FA19CAF004EC331 /* ColorPalette.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BF21FAFD2FA19CAF004EC331 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					BF21FB042FA19CAF004EC331 = {
+						CreatedOnToolsVersion = 26.2;
+						LastSwiftMigration = 2620;
+					};
+				};
+			};
+			buildConfigurationList = BF21FB002FA19CAF004EC331 /* Build configuration list for PBXProject "ColorPalette" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BF21FAFC2FA19CAF004EC331;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BF21FB152FA19CDB004EC331 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BF21FB062FA19CAF004EC331 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BF21FB042FA19CAF004EC331 /* ColorPalette */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BF21FB032FA19CAF004EC331 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF21FBD32FA1A346004EC331 /* ColorPalette in Resources */,
+				BF21FBD42FA1A346004EC331 /* QtExampleStyle in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BF21FB012FA19CAF004EC331 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF21FB212FA19DA0004EC331 /* Extensions.swift in Sources */,
+				BF21FB222FA19DA0004EC331 /* ColorPaletteApp.swift in Sources */,
+				BF21FB242FA19DA0004EC331 /* AbstractResource.swift in Sources */,
+				BF21FB252FA19DA0004EC331 /* BasicLogin.swift in Sources */,
+				BF21FB262FA19DA0004EC331 /* PaginatedResourceColors.swift in Sources */,
+				BF21FB272FA19DA0004EC331 /* RestService.swift in Sources */,
+				BF21FB282FA19DA0004EC331 /* ServiceApi.swift in Sources */,
+				BF21FB292FA19DA0004EC331 /* PaginatedResourceUsers.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BF21FB102FA19CAF004EC331 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		BF21FB112FA19CAF004EC331 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		BF21FB132FA19CAF004EC331 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				PRODUCT_BUNDLE_IDENTIFIER = qt.io.ColorPalette;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		BF21FB142FA19CAF004EC331 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				PRODUCT_BUNDLE_IDENTIFIER = qt.io.ColorPalette;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BF21FB002FA19CAF004EC331 /* Build configuration list for PBXProject "ColorPalette" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF21FB102FA19CAF004EC331 /* Debug */,
+				BF21FB112FA19CAF004EC331 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BF21FB122FA19CAF004EC331 /* Build configuration list for PBXNativeTarget "ColorPalette" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF21FB132FA19CAF004EC331 /* Debug */,
+				BF21FB142FA19CAF004EC331 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BF21FB152FA19CDB004EC331 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../qtbridge-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BF21FB162FA19CDB004EC331 /* QtBridge */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = QtBridge;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = BF21FAFD2FA19CAF004EC331 /* Project object */;
+}

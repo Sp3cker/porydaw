@@ -1,0 +1,261 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BF4B9B9A2F169C10005456A7 /* QtBridge in Frameworks */ = {isa = PBXBuildFile; productRef = BF4B9B992F169C10005456A7 /* QtBridge */; };
+		EA3C309D2EE6FC6F007F6889 /* MyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3C309C2EE6FC6F007F6889 /* MyApp.swift */; };
+		EA3C309F2EE6FC6F007F6889 /* MyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3C309E2EE6FC6F007F6889 /* MyModel.swift */; };
+		EA3C30A22EE6FC6F007F6889 /* main.qml in Resources */ = {isa = PBXBuildFile; fileRef = EA3C30A12EE6FC6F007F6889 /* main.qml */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		EA3C30982EE6FC6F007F6889 /* HelloWorld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HelloWorld.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EA3C309C2EE6FC6F007F6889 /* MyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyApp.swift; sourceTree = "<group>"; };
+		EA3C309E2EE6FC6F007F6889 /* MyModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyModel.swift; sourceTree = "<group>"; };
+		EA3C30A12EE6FC6F007F6889 /* main.qml */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.qml; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EA3C30952EE6FC6F007F6889 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF4B9B9A2F169C10005456A7 /* QtBridge in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EA3C308F2EE6FC6F007F6889 = {
+			isa = PBXGroup;
+			children = (
+				EA3C309A2EE6FC6F007F6889 /* HelloWorld */,
+				EA3C30992EE6FC6F007F6889 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EA3C30992EE6FC6F007F6889 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EA3C30982EE6FC6F007F6889 /* HelloWorld.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EA3C309A2EE6FC6F007F6889 /* HelloWorld */ = {
+			isa = PBXGroup;
+			children = (
+				EA3C309B2EE6FC6F007F6889 /* Sources */,
+				EA3C30A02EE6FC6F007F6889 /* Resources */,
+			);
+			path = HelloWorld;
+			sourceTree = "<group>";
+		};
+		EA3C309B2EE6FC6F007F6889 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				EA3C309C2EE6FC6F007F6889 /* MyApp.swift */,
+				EA3C309E2EE6FC6F007F6889 /* MyModel.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		EA3C30A02EE6FC6F007F6889 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EA3C30A12EE6FC6F007F6889 /* main.qml */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EA3C30972EE6FC6F007F6889 /* HelloWorld */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EA3C30A52EE6FC6F007F6889 /* Build configuration list for PBXNativeTarget "HelloWorld" */;
+			buildPhases = (
+				EA3C30942EE6FC6F007F6889 /* Sources */,
+				EA3C30952EE6FC6F007F6889 /* Frameworks */,
+				EA3C30962EE6FC6F007F6889 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HelloWorld;
+			packageProductDependencies = (
+				BF4B9B992F169C10005456A7 /* QtBridge */,
+			);
+			productName = HelloWorld;
+			productReference = EA3C30982EE6FC6F007F6889 /* HelloWorld.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EA3C30902EE6FC6F007F6889 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					EA3C30972EE6FC6F007F6889 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = EA3C30932EE6FC6F007F6889 /* Build configuration list for PBXProject "HelloWorld" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EA3C308F2EE6FC6F007F6889;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BF4B9B982F169C10005456A7 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EA3C30992EE6FC6F007F6889 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EA3C30972EE6FC6F007F6889 /* HelloWorld */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EA3C30962EE6FC6F007F6889 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA3C30A22EE6FC6F007F6889 /* main.qml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EA3C30942EE6FC6F007F6889 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA3C309D2EE6FC6F007F6889 /* MyApp.swift in Sources */,
+				EA3C309F2EE6FC6F007F6889 /* MyModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		EA3C30A32EE6FC6F007F6889 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		EA3C30A42EE6FC6F007F6889 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		EA3C30A62EE6FC6F007F6889 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Hello, World!";
+				"LD_RUNPATH_SEARCH_PATHS[arch=*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.qt.HelloWorld;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		EA3C30A72EE6FC6F007F6889 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Hello, World!";
+				"LD_RUNPATH_SEARCH_PATHS[arch=*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.qt.HelloWorld;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EA3C30932EE6FC6F007F6889 /* Build configuration list for PBXProject "HelloWorld" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA3C30A32EE6FC6F007F6889 /* Debug */,
+				EA3C30A42EE6FC6F007F6889 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EA3C30A52EE6FC6F007F6889 /* Build configuration list for PBXNativeTarget "HelloWorld" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA3C30A62EE6FC6F007F6889 /* Debug */,
+				EA3C30A72EE6FC6F007F6889 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BF4B9B982F169C10005456A7 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../qtbridge-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BF4B9B992F169C10005456A7 /* QtBridge */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = QtBridge;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EA3C30902EE6FC6F007F6889 /* Project object */;
+}

@@ -1,0 +1,4 @@
+module QtBridgeCpp {
+    umbrella header "QtBridgeCpp.h"
+    export *
+}

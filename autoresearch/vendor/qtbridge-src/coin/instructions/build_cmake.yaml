@@ -1,0 +1,70 @@
+type: Group
+instructions:
+  - type: Group
+    instructions:
+      - !include "{{qt/qtbridge-swift}}/install_swift_win.yaml"
+      - !include "{{qt/qtbridge-swift}}/find_msvc.yaml"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Windows
+  - type: ChangeDirectory
+    directory: "{{.SourceDir}}"
+  - type: MakeDirectory
+    directory: .git
+  - type: MakeDirectory
+    directory: "{{.SourceDir}}_build"
+  - type: SetBuildDirectory
+    directory: "{{.SourceDir}}_build"
+  - type: ChangeDirectory
+    directory: "{{.BuildDir}}"
+  - type: EnvironmentVariable
+    variableName: Qt6_ROOT
+    variableValue: "/home/qt/work/install"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Linux
+  - type: EnvironmentVariable
+    variableName: QT6_ROOT
+    variableValue: "C:\\Users\\qt\\work\\install"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Windows
+  - type: EnvironmentVariable
+    variableName: SRC_DIR
+    variableValue: "{{.SourceDir}}"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Linux
+  - type: EnvironmentVariable
+    variableName: SRC_DIR
+    variableValue: "C:{{.SourceDir}}"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Windows
+  - type: EnvironmentVariable
+    variableName: ENV_PREFIX
+    variableValue: "c:\\users\\qt\\MSVC.bat"
+    enable_if:
+      condition: property
+      property: host.os
+      equals_value: Windows
+
+  - type: ExecuteCommand
+    command: "{{.Env.ENV_PREFIX}} cmake -G Ninja {{.Env.SRC_DIR}} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX={{.InstallDir}} -DQt6_ROOT={{.Env.QT6_ROOT}}"
+    maxTimeInSeconds: 6000
+    maxTimeBetweenOutput: 1200
+    userMessageOnFailure: >
+      Failed to configure with CMake.
+
+  - type: ExecuteCommand
+    command: "{{.Env.ENV_PREFIX}} cmake --build . --parallel -v"
+    maxTimeInSeconds: 6000
+    maxTimeBetweenOutput: 1200
+    userMessageOnFailure: >
+      Failed to build sources.
+

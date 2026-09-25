@@ -12,3 +12,5 @@ site/
 
 # SDD loop review breadcrumbs
 docs/plans/**/*-review.diff
+autoresearch/logs/
+build-bench-*/

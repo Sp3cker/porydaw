@@ -1,0 +1,259 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BF4B9B972F169B8F005456A7 /* QtBridge in Frameworks */ = {isa = PBXBuildFile; productRef = BF4B9B962F169B8F005456A7 /* QtBridge */; };
+		EAF50DB32EE6FA8400A8F1B2 /* ChatApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAF50DB22EE6FA8400A8F1B2 /* ChatApp.swift */; };
+		EAF50DB52EE6FA8400A8F1B2 /* ChatModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAF50DB42EE6FA8400A8F1B2 /* ChatModel.swift */; };
+		EAF50DB82EE6FA8400A8F1B2 /* chatUI.qml in Resources */ = {isa = PBXBuildFile; fileRef = EAF50DB72EE6FA8400A8F1B2 /* chatUI.qml */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		EAF50DAE2EE6FA8400A8F1B2 /* ChatApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChatApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EAF50DB22EE6FA8400A8F1B2 /* ChatApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatApp.swift; sourceTree = "<group>"; };
+		EAF50DB42EE6FA8400A8F1B2 /* ChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModel.swift; sourceTree = "<group>"; };
+		EAF50DB72EE6FA8400A8F1B2 /* chatUI.qml */ = {isa = PBXFileReference; lastKnownFileType = text; path = chatUI.qml; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EAF50DAB2EE6FA8400A8F1B2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF4B9B972F169B8F005456A7 /* QtBridge in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EAF50DA52EE6FA8400A8F1B2 = {
+			isa = PBXGroup;
+			children = (
+				EAF50DB02EE6FA8400A8F1B2 /* ChatApp */,
+				EAF50DAF2EE6FA8400A8F1B2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EAF50DAF2EE6FA8400A8F1B2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EAF50DAE2EE6FA8400A8F1B2 /* ChatApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EAF50DB02EE6FA8400A8F1B2 /* ChatApp */ = {
+			isa = PBXGroup;
+			children = (
+				EAF50DB12EE6FA8400A8F1B2 /* Sources */,
+				EAF50DB62EE6FA8400A8F1B2 /* Resources */,
+			);
+			path = ChatApp;
+			sourceTree = "<group>";
+		};
+		EAF50DB12EE6FA8400A8F1B2 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				EAF50DB22EE6FA8400A8F1B2 /* ChatApp.swift */,
+				EAF50DB42EE6FA8400A8F1B2 /* ChatModel.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		EAF50DB62EE6FA8400A8F1B2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EAF50DB72EE6FA8400A8F1B2 /* chatUI.qml */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EAF50DAD2EE6FA8400A8F1B2 /* ChatApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EAF50DBB2EE6FA8400A8F1B2 /* Build configuration list for PBXNativeTarget "ChatApp" */;
+			buildPhases = (
+				EAF50DAA2EE6FA8400A8F1B2 /* Sources */,
+				EAF50DAB2EE6FA8400A8F1B2 /* Frameworks */,
+				EAF50DAC2EE6FA8400A8F1B2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChatApp;
+			packageProductDependencies = (
+				BF4B9B962F169B8F005456A7 /* QtBridge */,
+			);
+			productName = ChatApp;
+			productReference = EAF50DAE2EE6FA8400A8F1B2 /* ChatApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EAF50DA62EE6FA8400A8F1B2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					EAF50DAD2EE6FA8400A8F1B2 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = EAF50DA92EE6FA8400A8F1B2 /* Build configuration list for PBXProject "ChatApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EAF50DA52EE6FA8400A8F1B2;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BF4B9B952F169B8F005456A7 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EAF50DAF2EE6FA8400A8F1B2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EAF50DAD2EE6FA8400A8F1B2 /* ChatApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EAF50DAC2EE6FA8400A8F1B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EAF50DB82EE6FA8400A8F1B2 /* chatUI.qml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EAF50DAA2EE6FA8400A8F1B2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EAF50DB32EE6FA8400A8F1B2 /* ChatApp.swift in Sources */,
+				EAF50DB52EE6FA8400A8F1B2 /* ChatModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		EAF50DB92EE6FA8400A8F1B2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		EAF50DBA2EE6FA8400A8F1B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		EAF50DBC2EE6FA8400A8F1B2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ChatApp example";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				"LD_RUNPATH_SEARCH_PATHS[arch=*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.qt.ChatApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		EAF50DBD2EE6FA8400A8F1B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ChatApp example";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				"LD_RUNPATH_SEARCH_PATHS[arch=*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.qt.ChatApp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EAF50DA92EE6FA8400A8F1B2 /* Build configuration list for PBXProject "ChatApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EAF50DB92EE6FA8400A8F1B2 /* Debug */,
+				EAF50DBA2EE6FA8400A8F1B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EAF50DBB2EE6FA8400A8F1B2 /* Build configuration list for PBXNativeTarget "ChatApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EAF50DBC2EE6FA8400A8F1B2 /* Debug */,
+				EAF50DBD2EE6FA8400A8F1B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BF4B9B952F169B8F005456A7 /* XCLocalSwiftPackageReference "../../../qtbridge-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../../qtbridge-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BF4B9B962F169B8F005456A7 /* QtBridge */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = QtBridge;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EAF50DA62EE6FA8400A8F1B2 /* Project object */;
+}
