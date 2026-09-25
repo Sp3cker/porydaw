@@ -322,4 +322,58 @@ TestCase {
         compare(controller.editorModel().notice, "Cry voices are read-only.")
         capture("editor-readonly")
     }
+
+    function test_zzzzSharedBankBetweenTwoLiveTabs() {
+        const tabs = app.songTabs
+        const firstId = tabs.selectedId
+        app.openSong("mus_route102")
+        verify(waitForNative(function() {
+            return tabs.tabCount === 2 && tabs.selectedId !== firstId
+                   || app.lastSaveError.length > 0
+        }, 30000), "second shared-bank song opens: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        const peerId = tabs.selectedId
+        compare(tabs.selectedPage.title, "mus_route102")
+        const controller = app.voiceListController()
+        controller.selectSlot(4)
+        const release = findChild(panel, "vgReleaseSpin")
+        const scroll = findChild(panel, "voiceEditorScrollView")
+        verify(release !== null && release.visible && release.enabled && scroll !== null,
+               "mounted release spin is available for the shared bank")
+        const peerBefore = release.value
+        tabs.selectTab(firstId)
+        verify(waitForNative(function() {
+            return tabs.selectedId === firstId && controller.bankLoadName === "fixture_rich"
+        }, 5000), "first live document reselects the shared bank")
+        controller.selectSlot(4)
+        const draft = controller.editorModel()
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        compare(draft.release, peerBefore)
+        const edited = peerBefore === release.to ? peerBefore - 1 : peerBefore + 1
+        mouseClick(release, release.width / 2, release.height / 2, Qt.LeftButton)
+        keyClick(peerBefore === release.to ? Qt.Key_Down : Qt.Key_Up)
+        verify(waitForNative(function() {
+            return controller.bankDirty && draft.release === edited && release.value === edited
+        }, 15000), "first document commits its mounted numeric release edit")
+
+        tabs.selectTab(peerId)
+        verify(waitForNative(function() {
+            return tabs.selectedId === peerId && controller.editorModel().release === edited
+                   && release.value === edited
+                   && controller.bankDirty
+        }, 15000), "already-open peer presents edited voice and dirty bank")
+        const save = findChild(panel, "vgSaveButton")
+        verify(save !== null && save.enabled, "peer offers mounted Save for the shared dirty bank")
+        mouseClick(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() {
+            return !controller.bankDirty || app.lastSaveError.length > 0
+        }, 15000), "peer Save completes: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        compare(release.value, edited, "peer's mounted release spin retains the saved voice")
+        tabs.selectTab(firstId)
+        verify(waitForNative(function() {
+            return tabs.selectedId === firstId && !controller.bankDirty
+                   && controller.editorModel().release === edited && release.value === edited
+        }, 15000), "clean saved bank and numeric editor publish back to the first tab")
+    }
 }

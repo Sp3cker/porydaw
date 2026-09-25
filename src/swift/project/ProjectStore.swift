@@ -3,6 +3,8 @@ import Foundation
 /// Serializes project-store operations; native blocking work belongs on ProjectContext's worker.
 public actor ProjectStore {
     let projectRoot: String
+    public nonisolated let publicationOwner = UUID()
+    var publicationRevision: UInt64 = 0
     var openedSnapshot: ProjectSnapshot?
     var projectContext: ProjectContext?
     var voicegroupStore: VoicegroupStore?

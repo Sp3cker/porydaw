@@ -3,6 +3,7 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
     ProjectService.swift
+    SharedBankState.swift
     ServiceBankHistory.swift
     DocumentSession.swift
     DocumentWorkspace.swift

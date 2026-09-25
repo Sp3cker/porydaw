@@ -109,9 +109,10 @@ private func bankCase(
     }
 }
 
+@MainActor
 private func serviceBankCase(
     _ name: String, _ report: CheckReport,
-    _ body: (URL, ProjectService, LoadedSong) throws -> Void
+    _ body: @MainActor (URL, ProjectService, LoadedSong) throws -> Void
 ) {
     let cppID = "vgbankcheck/VoicegroupBankTest::\(name)"
     do {
@@ -125,9 +126,15 @@ private func serviceBankCase(
         defer { try? FileManager.default.removeItem(at: copy) }
         try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: copy)
         let service = ProjectService()
-        defer { _ = awaitValue { await service.close() } }
-        try bankAwait { try await service.open(root: copy.path) }
-        let song = try bankAwait { try await service.openSong(label: "mus_gym") }
+        defer {
+            do {
+                try runBlocking { await service.close() }
+            } catch {
+                report.fail(cppID, "service close failed: \(error)")
+            }
+        }
+        try runBlocking { try await service.open(root: copy.path) }
+        let song = try runBlocking { try await service.openSong(label: "mus_gym") }
         try bankRequire(song.bankLoadName == "fixture_rich" &&
                         song.bankSlots.count == voicegroupSize && !song.bankDirty &&
                         song.bankSlots[directSoundSlot].kind == BankSlotKind.editable &&
@@ -141,6 +148,7 @@ private func serviceBankCase(
     }
 }
 
+@MainActor
 internal func runBankLeasesSuite(_ report: CheckReport) {
     bankCase("playableSongResolvesOnlyPlayableLabels", report) { _, store, _, _ in
         let found = try bankAwait { try await store.songMeta(label: "mus_gym") }
@@ -310,8 +318,8 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
     }
 
     serviceBankCase("serviceLeaseReuse", report) { _, service, first in
-        let repeated = try bankAwait { try await service.openSong(label: "mus_gym") }
-        let shared = try bankAwait { try await service.openSong(label: "mus_oldale") }
+        let repeated = try runBlocking { try await service.openSong(label: "mus_gym") }
+        let shared = try runBlocking { try await service.openSong(label: "mus_oldale") }
         try bankRequire(shared.label == "mus_oldale" &&
                         first.bank.bankToken != 0 &&
                         repeated.bank.bankToken == first.bank.bankToken &&
@@ -330,7 +338,7 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
             voice.key = 61
             return voice
         }()
-        let edited = try bankAwait {
+        let edited = try runBlocking {
             try await service.bankApply(lease: first.bank, slot: directSoundSlot,
                                         value: changed, expected: original)
         }
@@ -340,7 +348,7 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                         first.bankSlots[directSoundSlot].voice == original && !first.bankDirty,
                         "service scalar edit did not preserve the old lease and publish key 61")
         let blankVoice = BankVoice(macro: BankVoiceMacro.square1, sustain: 15)
-        let materialized = try bankAwait {
+        let materialized = try runBlocking {
             try await service.bankApply(lease: edited.lease, slot: blankSlot,
                                         value: blankVoice, expected: nil)
         }
@@ -351,21 +359,22 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                         materialized.slots[blankSlot].kind == BankSlotKind.editable &&
                         materialized.slots[blankSlot].voice == blankVoice,
                         "service blank materialization did not publish the expected voice")
-        let restored = try bankAwait {
+        let restored = try runBlocking {
             try await service.bankRevert(lease: materialized.lease, token: token)
         }
         try bankRequire(restored.materializationToken == nil && restored.dirty &&
                         restored.slots == edited.slots &&
                         restored.slots[blankSlot].kind == BankSlotKind.none,
                         "service revert did not restore the bank before materialization")
-        let spent = awaitValue {
-            try await service.bankRevert(lease: restored.lease, token: token)
-        }
-        guard case .failure(let error as ProjectServiceError)? = spent,
-              error == .bankConflict else {
+        do {
+            _ = try runBlocking {
+                try await service.bankRevert(lease: restored.lease, token: token)
+            }
             throw BankLeasesCheckError.failed("spent service token did not throw bankConflict")
+        } catch let error as ProjectServiceError {
+            try bankRequire(error == .bankConflict, "spent service token did not throw bankConflict")
         }
-        let current = try bankAwait { try await service.openSong(label: "mus_gym") }
+        let current = try runBlocking { try await service.openSong(label: "mus_gym") }
         let sourceAfter = try Data(contentsOf: source)
         try bankRequire(current.bank.bankToken == restored.lease.bankToken &&
                         current.bankDirty == restored.dirty &&
@@ -384,29 +393,26 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
             voice.key = 61
             return voice
         }()
-        let edited = try bankAwait {
+        let edited = try runBlocking {
             try await service.bankApply(lease: first.bank, slot: directSoundSlot,
                                         value: changed, expected: original)
         }
         let blankVoice = BankVoice(macro: BankVoiceMacro.square1, sustain: 15)
-        let materialized = try bankAwait {
+        let materialized = try runBlocking {
             try await service.bankApply(lease: edited.lease, slot: blankSlot,
                                         value: blankVoice, expected: nil)
         }
         guard let spentToken = materialized.materializationToken else {
             throw BankLeasesCheckError.failed("save fixture did not mint a blank-slot token")
         }
-        let restored = try bankAwait {
+        let restored = try runBlocking {
             try await service.bankRevert(lease: materialized.lease, token: spentToken)
         }
-        // The cdecl envelope runs this synchronous row on the Qt main thread (CoreCheckSupport case 4).
-        let snapshot = try MainActor.assumeIsolated {
-            let document = SongDocument(
-                file: try MidiFile.decode(first.midiBytes), config: first.config,
-                source: first.source, trackBudget: first.trackBudget)
-            return try document.captureSave()
-        }
-        let receipt = try bankAwait { try await service.save(snapshot, bank: restored.lease) }
+        let document = SongDocument(
+            file: try MidiFile.decode(first.midiBytes), config: first.config,
+            source: first.source, trackBudget: first.trackBudget)
+        let snapshot = try document.captureSave()
+        let receipt = try runBlocking { try await service.save(snapshot, bank: restored.lease) }
         guard let saved = receipt.bank else {
             throw BankLeasesCheckError.failed("service save returned no refreshed bank")
         }
@@ -417,20 +423,26 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                         sourceAfter != sourceBefore,
                         "service save did not publish a clean refreshed bank with persisted key 61")
         for conflict in 0..<2 {
-            let attempted = awaitValue {
+            let expected = conflict == 0
+                ? "service stale edit did not throw bankConflict"
+                : "service spent revert did not throw bankConflict"
+            do {
                 if conflict == 0 {
-                    return try await service.bankApply(
-                        lease: saved.lease, slot: directSoundSlot,
-                        value: changed, expected: original)
+                    _ = try runBlocking {
+                        try await service.bankApply(
+                            lease: saved.lease, slot: directSoundSlot,
+                            value: changed, expected: original)
+                    }
+                } else {
+                    _ = try runBlocking {
+                        try await service.bankRevert(lease: saved.lease, token: spentToken)
+                    }
                 }
-                return try await service.bankRevert(lease: saved.lease, token: spentToken)
+                throw BankLeasesCheckError.failed(expected)
+            } catch let error as ProjectServiceError {
+                try bankRequire(error == .bankConflict, expected)
             }
-            guard case .failure(let error as ProjectServiceError)? = attempted,
-                  error == .bankConflict else {
-                throw BankLeasesCheckError.failed(
-                    "service \(conflict == 0 ? "stale edit" : "spent revert") did not throw bankConflict")
-            }
-            let current = try bankAwait { try await service.openSong(label: "mus_gym") }
+            let current = try runBlocking { try await service.openSong(label: "mus_gym") }
             let bytes = try Data(contentsOf: source)
             try bankRequire(current.bank.bankToken == saved.lease.bankToken &&
                             current.bankDirty == saved.dirty &&

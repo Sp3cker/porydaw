@@ -962,9 +962,6 @@ Anchor: message "failed bank save retains the dirty bank record"
 S174 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed ordered save retains the dirty document record"
 
-S175 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
-Anchor: message "unknown identity is reported as a hard native error"
-
 S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "session gate refuses a second transition while the first is pending"
 

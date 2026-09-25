@@ -96,7 +96,7 @@ enum ShellQmlLane {
         Entry(name: "shell-polyphony", inputFileName: "tst_ShellPolyphony.qml",
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
-              fixtureFiles: songs("mus_route101") + [
+              fixtureFiles: songs("mus_route101", "mus_route102") + [
                   "asm/macros/synth_test.inc", "data/sound_data.s"
               ]),
         Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",

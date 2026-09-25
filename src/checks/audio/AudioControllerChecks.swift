@@ -4,6 +4,7 @@ import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
 
+@MainActor
 func runAudioControllerChecks(_ report: CheckReport) {
     do {
         try checkControllerCuts(report)
@@ -16,7 +17,101 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerSettingsAndBank(report)
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
+        try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
+}
+
+@MainActor
+private func checkNativeAudioLifetime(_ report: CheckReport) throws {
+    guard let projectRoot = CheckEnvironment.fixtureRoot else {
+        report.fail("swiftcore/NativeAudio::forcedNullBackend", "missing real-project audio fixture")
+        return
+    }
+
+    for detachedRelease in [false, true] {
+        let id = detachedRelease
+            ? "swiftcore/NativeAudio::detachedLastRelease"
+            : "swiftcore/NativeAudio::mainActorLastRelease"
+        let service = ProjectService()
+        var facade: NativeAudio?
+        weak var releasedFacade: NativeAudio?
+        weak var releasedBank: NativeBankLease?
+        do {
+            let song = try runBlocking {
+                try await service.open(root: projectRoot)
+                return try await service.openSong(label: "mus_route101")
+            }
+            do {
+                let owner = try NativeAudio()
+                let midi = try MidiFile.decode(song.midiBytes)
+                let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
+                try owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                owner.play()
+                if !detachedRelease {
+                    report.expect(owner.usingNullBackend && owner.nullBackendForced
+                                  && owner.backendName == "Null",
+                                  cppID: "swiftcore/NativeAudio::forcedNullBackend",
+                                  message: "forced null request resolves to the reported Null backend")
+                }
+
+                let soundingDeadline = Date().addingTimeInterval(5)
+                var sounding = false
+                while !sounding && Date() < soundingDeadline {
+                    sounding = owner.playheadSamples > 0
+                        && owner.consumeTrackActivityLevels().contains {
+                            $0.left > 0 || $0.right > 0
+                        }
+                    if !sounding {
+                        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+                    }
+                }
+                report.expect(sounding, cppID: id,
+                              message: "real bank sounds through the null-backend callback before teardown")
+                releasedBank = song.bank
+                releasedFacade = owner
+                facade = owner
+            }
+            try runBlocking { await service.close() }
+        } catch {
+            do {
+                try runBlocking { await service.close() }
+            } catch {
+                report.fail(id, "project close after audio setup failure failed: \(error)")
+            }
+            report.fail(id, "real-project audio setup failed: \(error)")
+            continue
+        }
+
+        report.expect(releasedFacade != nil && releasedBank != nil, cppID: id,
+                      message: "the facade still pins its bank after project service close")
+        if detachedRelease {
+            let handoff = AsyncStream<Void>.makeStream()
+            let lastOwner: Task<Void, Never>
+            do {
+                guard let owner = facade else {
+                    report.fail(id, "detached handoff lost its final facade owner")
+                    continue
+                }
+                lastOwner = Task.detached { [owner] in
+                    for await _ in handoff.stream { break }
+                    withExtendedLifetime(owner) {}
+                }
+            }
+            facade = nil
+            handoff.continuation.yield(())
+            handoff.continuation.finish()
+            try runBlocking { await lastOwner.value }
+        } else {
+            facade = nil
+        }
+
+        let releaseDeadline = Date().addingTimeInterval(5)
+        while (releasedFacade != nil || releasedBank != nil) && Date() < releaseDeadline {
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        report.expect(releasedFacade == nil && releasedBank == nil, cppID: id,
+                      message: "isolated deinit joins callback and releases facade and pinned bank")
+    }
 }
 
 private func checkControllerPitchBendAudio(_ report: CheckReport) throws {

@@ -6,10 +6,11 @@ Original: src/checks/voicegroup/tst_voicegroupbank.cpp
 Original SHA-256: 478ab4b4f1233477838cc8a2367023c388d10032cd324d960677fa91593a75e4
 Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
 Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
+Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
 Shared SHA-256: 2bb40884c45fa62a7a88a6acfaf210e5766d3be4e58197b1759f8701e4e72612
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
-Shared SHA-256: e974d8ddfba8e2e21fc1aab0657cbe1e542b828d7dfe2c24908a25bb344f551d
+Shared SHA-256: 5047f1f06c61f42b946459a73e1482e09151d8ff95e6743d6790388e7e240eef
 
 
 Command: deno task verify --filter vgbankcheck --verbose
@@ -305,7 +306,7 @@ Mapping: S006, S007, S008, S009
 
 A044 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:200
 Disposition: PARTIAL
-Mapping/reason: Related predicate S020 (src/checks/projectstore/BankLeasesChecks.swift unknownIdentityIsHardError). The Swift row substitutes a second ProjectStore opened over the same fixture root, whose lease the owning store does not recognise, for the original absent VoicegroupId; unproved: VoicegroupId creation has no Swift ingress, so the unknown-identity construction itself is unproved.
+Mapping/reason: Related predicate S020 (src/checks/projectstore/BankLeasesChecks.swift unknownIdentityIsHardError). The Swift rows substitute a foreign lease — a second ProjectStore over the same fixture root (S020) or a service whose store has been replaced and then closed (S047-S050, typed .serviceClosed refusal with unchanged replacement view, native bank and dirty state) — for the original absent VoicegroupId; unproved: VoicegroupId creation has no Swift ingress, so the unknown-identity construction itself is unproved.
 Source context since previous assertion:
 
     const std::optional<VoicegroupId> unknown =
@@ -316,11 +317,11 @@ Original expression:
 
 A045 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:205
 Disposition: MATCHED
-Mapping: S020, S022
+Mapping: S020, S022, S047, S048, S049
 
 A046 | VoicegroupBankTest::unknownIdentityIsHardError | src/checks/voicegroup/tst_voicegroupbank.cpp:206
 Disposition: MATCHED
-Mapping: S021
+Mapping: S021, S047
 
 A047 | VoicegroupBankTest::previewFailureRollsBackCandidate | src/checks/voicegroup/tst_voicegroupbank.cpp:213
 Disposition: MATCHED
@@ -761,6 +762,18 @@ Anchor: function
 
 S046 | runProjectStoreSaveSuite | src/checks/projectstore/ProjectStoreSaveChecks.swift
 Anchor: function
+
+S047 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
+Anchor: message "old store lease is refused by the replacement service"
+
+S048 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
+Anchor: message "refused old-store edit leaves the replacement bank unchanged"
+
+S049 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
+Anchor: message "refused old-store edit leaves the native store unchanged"
+
+S050 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
+Anchor: message "refused old-store edit does not dirty the replacement source"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and

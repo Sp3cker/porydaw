@@ -1,6 +1,6 @@
 # Swift rewrite: feature-parity roadmap
 
-Status: **ACTIVE; the overall objective is not complete.** Earlier tasks 1–3 completed a bounded batch, not the roadmap. The branch assessment found integration failures and additional existing-surface obligations; their status is tracked below.
+Status: **PAUSED AT THE USER-REQUESTED HANDOFF; the overall objective is not complete.** Tasks 12/13 are accepted after their bounded runtime/proof/review gates. [handoff.md](handoff.md) records the checkpoint, protected work and exact continuation. Task 14 and BANK-CLOSE remain unstarted; the rest of this inventory is preserved, not cancelled.
 
 Current authorization: **details of existing surfaces first, with no extra UI beyond C++ checks/proofs.** Reuse/adapt original QML; do not redesign old features. Sample Studio, WAV export, onboarding and other absent surfaces are deferred, not completed or removed from the inventory.
 
@@ -16,7 +16,7 @@ This is the cross-feature roadmap, not a single dispatchable implementation brie
 
 This file is the single authoritative plan. `inventory.md` supplies behavior/oracle details, `verification.md` supplies acceptance, and `current-surfaces.md` records historical batch evidence only. The live todo mirrors this plan. Every required item is **pending**, **active**, **complete**, or **blocked**. A blocked item does not stop independent authorized work. Completion requires observed acceptance, not an implementer report or an aggregate count.
 
-Assessment base: `86c88903661ee6d44a77da505bf4b9fef777f6e0`; accepted repair checkpoint: `e171f3ef`; whole-branch review base: `fceecd888e29c0a39c3a98d17e47d3d734b1de06`. Preserve the pre-existing dirty tree, staged `.lsp.json` deletion, independently modified `.omp` instructions, and pre-existing `SongTabs.qml` tooltip / `VelocityPage.qml` diagnostic removals outside the repair checkpoint. The user authorized integration of the two incoming commits and focused, verified milestone commits with pushes. No red or unrelated changes may be committed.
+Assessment base: `86c88903661ee6d44a77da505bf4b9fef777f6e0`; earlier accepted repair checkpoint: `e171f3ef`; prior pushed integration checkpoint: `fea4034d`; whole-branch review base: `fceecd888e29c0a39c3a98d17e47d3d734b1de06`. The commit containing [handoff.md](handoff.md) checkpoints accepted tasks 12/13 on top of `fea4034d`. Preserve the pre-existing dirty tree, staged `.lsp.json` deletion, independently modified `.omp` instructions, and pre-existing `SongTabs.qml` tooltip / `VelocityPage.qml` diagnostic removals outside these checkpoints. Their protected diff still matches its pre-checkpoint snapshot. No red or unrelated changes belong in the milestone.
 
 ### Completed earlier batch
 
@@ -32,7 +32,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 
 | ID | Status | Required outcome / dependency |
 | --- | --- | --- |
-| GIT | active | Accepted repairs and the atomic QtBridge patch move are committed in `e171f3ef`. Integration of `91727ce7`/`cf990a1c` preserves origin-scoped Swift callbacks while retiring dead Qt forwarding; spec/quality review approved. Merged app, native 31/31, shell 26/26, drawer, roll, bridge/proof/format and native Metal/Space/clean-exit gates passed. Commit/push remains; unrelated user changes match their pre-checkpoint snapshot. |
+| GIT | complete | Repair checkpoint `e171f3ef` and integration `fea4034d` are pushed. Merged `91727ce7`/`cf990a1c` preserves live origin-scoped Swift callbacks and removes only the unused context-property native seam; live engine access remains. Spec/quality review, merged runtime/bridge/proof/format and native Metal/Space/clean-exit gates passed; unrelated user work remains excluded. |
 | POLICY | complete | User authorized deletion of completed proof files and obsolete C++ checks with their validated Swift/QML replacement. Keep unresolved behavior as the surface spec; do not maintain completed ledgers indefinitely or run a separate deletion sweep. |
 | R01 | complete | [Task 4](task-4-brief.md): concrete actor-owned project operations; projectstore and swiftcore gate passed (24 applicable entries, 7 filtered skips). Spec/quality review approved; Linux executor/loader boundaries unchanged, Linux runtime not requalified. |
 | R02 | complete | [Task 5](task-5-brief.md): selected-workspace mute/solo, activation and track remaps reach the real audio engine; native telemetry and mounted controls passed. Spec/quality review approved. |
@@ -40,8 +40,9 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R04 | complete | Task 5: background callbacks cannot publish into selected shared event-list/playhead presenters; origin guards and isolation checks passed. |
 | R05 | complete | Task 5: toolbar Play resumes; Space restarts at the edit cursor with immediate presentation. Final shell-transport lane passed (4.78s); exact unproved legacy timing clauses remain PARTIAL. |
 | R06 | complete | [Task 7](task-7-brief.md): queued voice edits retain request-time document/bank identity and discard stale work. Real two-session and mounted voicegroup checks passed; bounded failure wait, proof handoff and spec/quality review accepted. |
-| R07 | pending | Reproduce and repair shared-bank cross-tab edits, history, dirty/save and audio coherence. |
-| R08 | pending | Preserve unsaved bank edits across `-G` changes. |
+| R07 | complete | [Task 12](task-12-brief.md): canonical versioned bank views publish edit/history/save/dirty/audio state across live sessions; stale-store receipts and mutations are refused. Native audio, mounted editor/Save, identity/history and non-autosaving switch gates passed. Spec/quality review approved. Exact remaining original clauses stay GAP/PARTIAL; R08 and BANK-CLOSE are not claimed. |
+| R08 | pending | [Task 14](task-14-brief.md) freezes same-file section preservation through the existing source/store owner; dispatch follows the shared-bank/audio checkpoint. Task 12 proves existing non-autosaving `-G` switch retention, not sibling-section saves. Orphan-bank close handling has its own authorized row below. |
+| BANK-CLOSE | pending | User selected all-dirty-bank project/window Save–Discard–Cancel handling, including banks no longer bound to any open song. Ordinary Save remains scoped to the current song/bank; switching banks remains non-autosaving. Consume task 12's shared bank lifetime, then freeze the close/save brief. |
 | R09 | complete | [Task 11](task-11-brief.md): finite executor batches preserve `c47b55f4` while allowing Qt events/timers to progress. Actual-source Swift 6.4/Swift 6-mode probe passed FIFO/exactly-once delivery for 128 jobs, pre-application enqueue and nested processing; spec/quality review approved. Linux runtime qualification still requires a host. |
 | R10 | complete | [Task 6](task-6-brief.md): drawer comparisons target editable primary notes; clipboard checks preserve whole-document content across ghost projection/track changes. Drawer and clipboard lanes passed; spec/quality review approved. |
 | R11 | complete | Task 6: menu checks assert mounted named commands and enablement, not incidental counts/order. Shell-window lane and corrected proof anchors passed; spec/quality review approved. |
@@ -57,10 +58,10 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R21 | pending | Make platform coverage explicit and reject misleading empty-lane success. |
 | R22 | pending | Consolidate shell availability/activation in the existing command authority. |
 | R23 | pending | Reduce avoidable all-track projection/highlight/sweep work while preserving ghost rendering. |
-| R24 | pending | Replace unsafe audio isolation suppression with an enforced ownership boundary. |
+| R24 | complete | [Task 13](task-13-brief.md): isolated NativeAudio teardown, real null-backend sounding and both final-owner release paths, and actor-qualified dispatch passed. App build, native Metal/Space/normal-exit and consumer gates passed; spec/quality review approved. Native backend coverage remains registered because Swift checks are Apple-gated. |
 | R25 | pending | Address cohesion and stale comments in touched owners, not unrelated mechanical churn. Revisit the long transport workspace-isolation journey and repeated play/start publication when touching those owners; current behavior gates pass. |
 | R26 | pending | Incoming cleanup removes unreachable ramp presentation while retaining live `.ramp` math. Hidden-tab lifetime, repeated clipping and band-audition projection still need assessment and demonstrated-risk repairs. |
-| R27 | pending | [Task 10](task-10-brief.md) link ownership accepted: all three QML executables relinked and executed without duplicate-library warnings. Missing fonts, zero-pixel font warnings, QTP0004 and usable QML lint imports remain pending. |
+| R27 | pending | [Task 10](task-10-brief.md) link ownership accepted: all three QML executables relinked and executed without duplicate-library warnings. Missing fonts, zero-pixel font warnings, QTP0004 and usable QML lint imports remain pending. Zero-size source candidate: the add-track snapshot retains two zero-sized fonts and `TrackHeaderBand.qml` constructs their hidden Text items; isolate that runtime path before repair. |
 | R28 | blocked | New bank and sample callbacks cannot implement deferred workflows; requires VG03/SA01 scope authorization. |
 
 ### Complete product inventory
@@ -131,7 +132,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | J09 | blocked | Clean-host distribution depends on complete authorized product and platform hosts. |
 | FINAL | pending | Settled ALL/SHELL/DRAWER/ROLL/PROOF/EXECUTED/format/review gates; report batch and overall status separately. |
 
-Tasks 4–11 and the task 2 ghost-predicate handoff are accepted after their applicable source, runtime, proof and review gates. The merged current-host app built in 92.17s; native suite passed 31/31 (20.61s), shell 26/26 (58.66s), drawer four profiles (35.04s), and roll (22.97s). Bridge findings remain zero. Proof structure/execution classification passed: 9,491 resolved anchors, 8,863 executed, 13 not executed and 615 unverifiable; this is not full parity. Formatting passed. Native Metal on Apple M4 Pro rendered `mus_route101`, primary/ghost notes and drawer; Space advanced the clock/playhead and Cmd-Q exited zero. Known font warnings remain R27, and SourceKit indexing still reports 0/0 rather than semantic qualification. Finish the integration push, then shared-bank safety and remaining independent findings; evidence and oracle retirement remain surface-local.
+Tasks 4–11 and the task 2 ghost-predicate handoff were accepted and pushed with integration `fea4034d`. That merged current-host app built in 92.17s; native suite passed 31/31 (20.61s), shell 26/26 (58.66s), drawer four profiles (35.04s), and roll (22.97s). Its proof classification had 9,491 resolved anchors, 8,863 executed, 13 not executed and 615 unverifiable. Tasks 12/13 then passed their bounded CORE/projectstore/audio/voicegroup/tabs/transport/polyphony/app/bridge/proof/format gates and both spec/quality reviews. Latest proof classification is 9,496 resolved, 8,868 executed, 13 not executed and 615 unverifiable; this is not full parity. Native Metal rendered `mus_route101`, actual Space advanced playback and normal Cmd-Q exited zero. See [handoff.md](handoff.md) for exact commands, observations, limits and review rulings. Font warnings remain R27; SourceKit indexing remains 0/0. No next implementation task was started.
 
 ## Inspected baseline
 
@@ -160,8 +161,9 @@ If these disagree, record the concrete behavior difference and resolve it before
 - Follow the current font-derived geometry, unhinted font and GridPalette contrast rules. Preserve keyboard and accessibility routes; bare Space in persistent chrome remains transport-owned. Do not copy obsolete pixel constants or old low-contrast colors as compatibility requirements.
 - Proof work is surface-local and accompanies the code/checks it proves. Use the proof-only ledger handoff and acceptance policy in [verification.md](verification.md). Delete a completed proof file and its obsolete C++ check when the Swift/QML replacement is validated; retain unresolved GAP/PARTIAL behavior as the remaining spec. No standalone reconciliation/count-reduction/deletion waves.
 - The controller runs shared builds/checks after writers settle. Reuse the exact commands recorded in verification and the frozen briefs; reassess only on a concrete scope/command mismatch. Native desktop and platform checks require the relevant host, not an offscreen substitute.
-- Preserve independently owned work. Serialize edits to shared composition/build/registration files; parallelize domain work only with explicit ownership. Checkpoint accepted work before another task reuses its files; push every commit made. The completed current-surface batch was handed off uncommitted.
+- Preserve independently owned work. Serialize edits to shared composition/build/registration files; parallelize domain work only with explicit ownership. Checkpoint accepted work before another task reuses its files; push every commit made. The accepted repair/integration batch is pushed as `fea4034d`.
 - Preserve the Linux Swift-main-actor/Qt GUI event-loop integration from `c47b55f4` and `ProjectContext`'s dedicated native-loader worker. The user reports that a Linux Qt timer/thread-affinity issue was fixed today; actor cleanup must not undo either ownership boundary.
+- Authorized bank-safety policy: extend existing project/window Save–Discard–Cancel handling to every dirty bank, including unbound banks. Ordinary Save stays current-song/current-bank-only; changing `-G` does not autosave or prompt. This explicitly repairs the inherited orphan-bank close gap without authorizing new unrelated UI.
 
 ## Dependency-ordered work packages
 
@@ -185,7 +187,7 @@ P3's effective-bank snapshot contract and P4's bank assignment/commit-visibility
 ## Implementation order and parallelism
 
 1. **Accepted repair wave.** Tasks 4–8 repaired project operations, workspace/transport, QML consumers, queued voice identity and contrast. Covering native/QML/proof gates and task reviews passed; checkpoint accepted work before reusing its files.
-2. **Next: push accepted integration, then shared-bank safety.** Relocated QtBridge rendering and incoming cleanup passed their merged gates and independent review. Push the coherent checkpoint, then reproduce P5/VG05 through real two-tab operations; preserve one bank/history authority. Independent work may proceed on disjoint files.
+2. **Handoff: shared-bank safety and audio lifetime accepted.** Tasks 12/13 are complete at this checkpoint. The next implementation is [task 14](task-14-brief.md), same-file section preservation, followed by a bounded brief for the authorized all-dirty-bank close policy. The user requested a stop and handoff; these and other independent obligations remain pending for the successor.
 3. **Continue existing-surface parity (remaining P1/P5/P6/P7).** Freeze one behavior-sized brief at a time from current source and original assertions. Do not replay the three completed briefs or treat their partial proof coverage as full native parity.
 4. **Deferred delivery and release.** P2–P4 and absent P5/P7 workflows require scope expansion before implementation. Their dependency contracts below remain reference material, not authorization to add UI. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
 

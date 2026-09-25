@@ -366,8 +366,8 @@ Original expression:
     QVERIFY(staleApplied.applied && staleApplied.token);
 
 A023 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:182
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S011 (src/checks/workspace/bank_sharing.swift bankSharedHistoryAndLifecycle) asserts that the newer same-slot value survives a stale peer undo attempt. Unproved: the original also requires the stale undo request to be present and to return a non-applied result, which no Swift predicate observes.
 Source context since previous assertion:
 
     history.pushConfirmedBank(staleUndo, *staleApplied.token);
@@ -855,3 +855,9 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S010 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "session gate refuses a second transition while the first is pending"
+
+S011 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+Anchor: message "same-slot stale peer undo cannot replace the newer edit"
+
+S012 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+Anchor: message "stale bank command prunes without dropping document history"

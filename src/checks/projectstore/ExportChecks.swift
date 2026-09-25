@@ -28,15 +28,8 @@ private func exportRequire(_ condition: Bool, _ reason: String) throws {
     guard condition else { throw ExportCheckError.failed(reason) }
 }
 
-private func exportAwait<Value: Sendable>(
-    _ operation: @escaping @Sendable () async throws -> Value
-) throws -> Value {
-    guard let result = awaitValue(operation) else {
-        throw ExportCheckError.failed("project operation timed out after 60 seconds")
-    }
-    return try result.get()
-}
 
+@MainActor
 private func withExportFixture(label: String, _ body: (ExportFixture) throws -> Void) throws {
     var isDirectory: ObjCBool = false
     guard let root = CheckEnvironment.fixtureRoot,
@@ -49,19 +42,21 @@ private func withExportFixture(label: String, _ body: (ExportFixture) throws -> 
     }
     let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(
         "exportcheck-\(UUID().uuidString)", isDirectory: true)
-    // Best-effort cleanup of an isolated scratch fixture.
     defer { try? FileManager.default.removeItem(at: scratch) }
     try FileManager.default.copyItem(at: URL(filePath: root), to: scratch)
     let service = ProjectService()
-    defer { _ = awaitValue { await service.close() } }
-    try exportAwait { try await service.open(root: scratch.path) }
-    let song = try exportAwait { try await service.openSong(label: label) }
-    let file = try MidiFile.decode(song.midiBytes)
-    let timeline = PlaybackTimeline.build(
-        file: file, sampleRate: Double(exportRate),
-        settings: PlaybackSettings(exactGate: song.config.exactGate,
-                                   extendedClocks: song.config.extendedClocks))
-    try body(ExportFixture(song: song, timeline: timeline, scratch: scratch))
+    let outcome = Result {
+        try runBlocking { try await service.open(root: scratch.path) }
+        let song = try runBlocking { try await service.openSong(label: label) }
+        let file = try MidiFile.decode(song.midiBytes)
+        let timeline = PlaybackTimeline.build(
+            file: file, sampleRate: Double(exportRate),
+            settings: PlaybackSettings(exactGate: song.config.exactGate,
+                                       extendedClocks: song.config.extendedClocks))
+        try body(ExportFixture(song: song, timeline: timeline, scratch: scratch))
+    }
+    try runBlocking { await service.close() }
+    try outcome.get()
 }
 
 private func appendU16(_ value: UInt16, to bytes: inout Data) {
@@ -177,6 +172,7 @@ private func le32(_ bytes: Data, _ offset: Int) -> UInt32 {
         UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3]) << 24
 }
 
+@MainActor
 private func exportCase(_ name: String, labels: [String], _ report: CheckReport,
                         _ body: (ExportFixture) throws -> Void) {
     let cppID = "exportcheck/MidiExportTest::\(name)"

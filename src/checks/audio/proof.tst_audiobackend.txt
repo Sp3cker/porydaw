@@ -3,7 +3,10 @@ Assertion correspondence: audio/tst_audiobackend.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/audio/tst_audiobackend.cpp
 Original SHA-256: 337f6bca8dd8f12a8174a039543ad8a39a769dfd4f7f3a5113ebb1858d8527d9
-Swift counterpart: none identified
+Swift counterpart: src/checks/audio/AudioControllerChecks.swift
+Platform limit: the Swift counterpart executes only in the Apple-gated swiftcore lane; the retained native src/checks/audio/tst_audiobackend.cpp harness stays registered as the non-Apple forced-null backend lane. No platform-wide parity is claimed.
+Scope: S001 is the single combined forced-null predicate (usingNullBackend && nullBackendForced && backendName == "Null"); A002-A006 bind to it, because at this forced-null fixture the conjunction entails the A003 biconditional and the A002 non-empty name. S002-S004 execute once per final-owner path (mainActorLastRelease and detachedLastRelease) and add callback/lifetime observations that have no original site. A001 is native engine-start setup and stays NATIVE-SETUP, so the retained native lane remains required.
+Disposition tally: 6 sites: 1 NATIVE-SETUP, 5 MATCHED.
 
 
 
@@ -18,6 +21,15 @@ executed the forced-null sites above under PORYDAW_AUDIO_BACKEND=null. Focused
 alternative: deno task verify --filter audiocheck-backend --verbose selects the
 same retained harness. The SHA-256 values below pin the tree inspected here.
 
+Command: deno task verify --filter swiftcore --verbose (controller-observed
+final gate for the counterpart lane; reused by this pass, not re-run here)
+Result: PASS -- swiftcore lane green (21.46s), recording the passing rows that
+back S001-S004 below; the retained native lane also passed (audiocheck-backend,
+0.09s) with the forced-null sites executed under PORYDAW_AUDIO_BACKEND=null.
+
+Verification: controller-observed final gates reused by this ledger pass; not
+re-executed here.
+
 Inspected at these revisions:
 src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
@@ -26,23 +38,42 @@ src/checks/audio/tst_clicktransport.swift: e738e6113fe1a372e221a53913d884232ff1f
 src/checks/audio/tst_resonancelaw.swift: b05654d1714191620beeda4612926d78a723669cb4fa55a5b5f901665dc7c8d3
 src/checks/audio/tst_resonancetiming.swift: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
 src/checks/audio/tst_trackactivity.swift: 5d6e3d7a57a12628ad024258d5bfdd6077af440d6db656dee5780f096c85246d
-src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
+src/checks/audio/AudioControllerChecks.swift: 7a80eaa4181896fbe2228a5ea31f04e63f4770bccce8f07caa70ad320fd44ce9
 src/checks/audio/AudioAuditionChecks.swift: eff42c2a96d3317784f2fb3d9c885add031181446b27c687c7e3c4a668c61699
 
 A001 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:31
 Disposition: NATIVE-SETUP
 
 A002 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:35
-Disposition: NATIVE-SETUP
+Disposition: MATCHED
+Mapping: S001
 
 A003 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:36
-Disposition: NATIVE-SETUP
+Disposition: MATCHED
+Mapping: S001
 
 A004 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:37
-Disposition: NATIVE-SETUP
+Disposition: MATCHED
+Mapping: S001
 
 A005 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:38
-Disposition: NATIVE-SETUP
+Disposition: MATCHED
+Mapping: S001
 
 A006 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:39
-Disposition: NATIVE-SETUP
+Disposition: MATCHED
+Mapping: S001
+
+Swift assertion predicates (executed through the swiftcore lane; the native lane above is not retired)
+
+S001 | checkNativeAudioLifetime | src/checks/audio/AudioControllerChecks.swift
+Anchor: message "forced null request resolves to the reported Null backend"
+
+S002 | checkNativeAudioLifetime | src/checks/audio/AudioControllerChecks.swift
+Anchor: message "real bank sounds through the null-backend callback before teardown"
+
+S003 | checkNativeAudioLifetime | src/checks/audio/AudioControllerChecks.swift
+Anchor: message "the facade still pins its bank after project service close"
+
+S004 | checkNativeAudioLifetime | src/checks/audio/AudioControllerChecks.swift
+Anchor: message "isolated deinit joins callback and releases facade and pinned bank"

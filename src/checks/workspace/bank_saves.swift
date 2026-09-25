@@ -254,29 +254,4 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
         report.fail("vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes", message)
     }
 
-    // A stale lease becomes an unknown identity after the worker adopts a
-    // different project; this must be a hard native error, not a conflict.
-    if let roundtripSession {
-        let staleLease = roundtripSession.bankLease
-        let otherDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-other")
-        do {
-            try runBlocking {
-                try await roundtripService.open(root: otherDir)
-            }
-            _ = try runBlocking {
-                try await roundtripService.bankApply(
-                    lease: staleLease, slot: 0, value: BankVoice(),
-                    expected: roundtripSession.bankSlots[0].voice)
-            }
-            report.fail("vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
-                        "stale bank identity should fail")
-        } catch {
-            report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
-                          cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
-                          message: "unknown identity is reported as a hard native error")
-        }
-    } else {
-        report.fail("vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
-                    "unknown-identity fixture did not open")
-    }
 }

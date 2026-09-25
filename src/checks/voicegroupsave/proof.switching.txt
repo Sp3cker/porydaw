@@ -90,13 +90,8 @@ Disposition: MATCHED
 Mapping: S005
 
 A007 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:63
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
+Disposition: MATCHED
+Mapping: S006, S007, S008
 
 A008 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:69
 Disposition: GAP
@@ -618,3 +613,12 @@ Anchor: message "failed source load does not change the lease or history"
 
 S005 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "save of song and edited home bank refreshes the clean lease"
+
+S006 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "switch to B does not autosave dirty A"
+
+S007 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "returning to dirty A does not write its source"
+
+S008 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "redoing B still does not write dirty A"

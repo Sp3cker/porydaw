@@ -158,11 +158,15 @@ public final class NativeBankLease: Sendable {
     /// Voicegroup identity, copied from the published view for save requests.
     public let sourcePath: String
     public let sectionLabel: String
+    internal let publicationOwner: UUID
+    internal let publicationRevision: UInt64
 
     fileprivate init(handle: ProjectBankLease) {
         self.handle = handle
         sourcePath = handle.id.sourceRelativePath
         sectionLabel = handle.sectionLabel
+        publicationOwner = handle.publicationOwner
+        publicationRevision = handle.publicationRevision
     }
 
     /// Identity of the underlying native bank, for reuse/validity checks.
@@ -329,6 +333,7 @@ public struct SongDeletionPlan: Equatable, Sendable {
 /// Async Swift front over the project-store actor. The actor owns bank
 /// transitions; document history never blocks on it.
 public actor ProjectService {
+    nonisolated let bankViews = ProjectBankViews()
     private var store: ProjectStore?
     private var snapshot: ProjectSnapshot?
     private var projectRoot = ""
@@ -343,6 +348,10 @@ public actor ProjectService {
         }
         return store
     }
+    private func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
+        guard !closed, store === source else { return }
+        await bankViews.publish(value)
+    }
 
     /// Opens the project root in the project-store actor.
     public func open(root: String) async throws {
@@ -354,6 +363,7 @@ public actor ProjectService {
             store = candidate
             snapshot = opened
             projectRoot = root
+            await bankViews.reset(owner: candidate.publicationOwner)
         } catch {
             throw projectFailure(error)
         }
@@ -455,9 +465,9 @@ public actor ProjectService {
         let store = try requireStore()
         do {
             let bank = try await store.loadBank(voicegroupArg: voicegroupArg)
-            return AppliedBankEdit(lease: NativeBankLease(handle: bank),
-                                   slots: copySlots(bank), dirty: bank.dirty,
-                                   loadName: bank.loadName, materializationToken: nil)
+            let loaded = appliedBank(bank, token: nil)
+            await publish(loaded, from: store)
+            return loaded
         } catch {
             throw projectFailure(error)
         }
@@ -535,15 +545,16 @@ public actor ProjectService {
             }
             let bytes = try await store.readFile(midiPath)
             let bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
-            let lease = NativeBankLease(handle: bank)
+            let published = appliedBank(bank, token: nil)
+            await publish(published, from: store)
             return LoadedSong(
                 label: song.label, midiPath: midiPath, constant: song.constant,
                 player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
                 hasMid: song.hasMid, hasCfg: song.hasCfg, registered: song.registered,
                 config: song.cfg, source: SongSource(label: song.label, midiPath: midiPath,
                                                     hasConfig: song.hasCfg),
-                midiBytes: Array(bytes), bank: lease, bankSlots: copySlots(bank),
-                bankDirty: bank.dirty, bankLoadName: bank.loadName)
+                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
+                bankDirty: published.dirty, bankLoadName: published.loadName)
         } catch {
             throw projectFailure(error)
         }
@@ -557,11 +568,16 @@ public actor ProjectService {
         do {
             var refreshed: AppliedBankEdit?
             if let bank {
+                guard bank.publicationOwner == store.publicationOwner else {
+                    throw ProjectServiceError.serviceClosed
+                }
                 guard let saved = try await store.saveVoicegroup(lease: bank.handle) else {
                     throw ProjectServiceError.operationFailed(
                         "Could not save voicegroup \(bank.sourcePath) [\(bank.sectionLabel)].")
                 }
-                refreshed = appliedBank(saved, token: nil)
+                let savedView = appliedBank(saved, token: nil)
+                refreshed = savedView
+                await publish(savedView, from: store)
             }
             try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
             var flagsWritten = false
@@ -584,13 +600,18 @@ public actor ProjectService {
     public func bankApply(lease: NativeBankLease, slot: Int,
                           value: BankVoice, expected: BankVoice?) async throws -> AppliedBankEdit {
         let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
         do {
             let converted = try projectVoice(value)
             let old = try expected.map(projectVoice)
             let result = try await store.applyVoicegroupEdit(
                 lease: lease.handle,
                 operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
-            return try bankEditResult(result)
+            let applied = try bankEditResult(result)
+            await publish(applied, from: store)
+            return applied
         } catch {
             throw projectFailure(error)
         }
@@ -600,9 +621,14 @@ public actor ProjectService {
     /// or unknown tokens throw bankConflict; the source bytes stay untouched.
     public func bankRevert(lease: NativeBankLease, token: UInt64) async throws -> AppliedBankEdit {
         let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
         do {
-            return try bankEditResult(
+            let applied = try bankEditResult(
                 await store.revertBlankSlot(lease: lease.handle, materializationToken: token))
+            await publish(applied, from: store)
+            return applied
         } catch {
             throw projectFailure(error)
         }
@@ -613,6 +639,7 @@ public actor ProjectService {
         store = nil
         snapshot = nil
         closed = true
+        await bankViews.reset()
     }
 }
 

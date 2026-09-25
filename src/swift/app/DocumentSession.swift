@@ -55,10 +55,10 @@ public final class DocumentSession {
     internal private(set) lazy var projectionCache = DocumentProjectionCache(session: self)
     /// Current projection, always rebuilt via the state factory.
     public private(set) var timeline: PlaybackTimeline
-    public private(set) var bankLease: NativeBankLease
-    public private(set) var bankSlots: [BankSlotView]
-    public private(set) var bankDirty: Bool
-    public private(set) var bankLoadName: String
+    public var bankLease: NativeBankLease { sharedBank.value.lease }
+    public var bankSlots: [BankSlotView] { sharedBank.value.slots }
+    public var bankDirty: Bool { sharedBank.value.dirty }
+    public var bankLoadName: String { sharedBank.value.loadName }
     public private(set) var isClosed = false
 
     /// Selection order is authoritative; membership is its cached lookup index.
@@ -109,7 +109,8 @@ public final class DocumentSession {
     private unowned let service: ProjectService
     private let inbox = BankResultInbox()
     private let sampleRate: Double
-    private var previousBankVoices: [BankVoice?]
+    private var sharedBank: SharedBankState
+    private var pendingBankNotification = false
     /// A queued bank write owns the session's bank/history lifecycle, but not
     /// ordinary document mutation admission.
     private var bankPersistenceInFlight = false
@@ -123,11 +124,9 @@ public final class DocumentSession {
                 loadName: String, sampleRate: Double = 48_000) {
         self.document = document
         self.service = service
-        self.bankLease = lease
-        self.bankSlots = slots
-        self.bankDirty = dirty
-        self.bankLoadName = loadName
-        self.previousBankVoices = slots.map(\.voice)
+        sharedBank = service.bankViews.state(for: AppliedBankEdit(
+            lease: lease, slots: slots, dirty: dirty, loadName: loadName,
+            materializationToken: nil))
         self.sampleRate = sampleRate
         let timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
         self.timeline = timeline
@@ -141,6 +140,7 @@ public final class DocumentSession {
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
+        sharedBank.attach(self)
     }
 
     public func setSelectedNotes(_ ids: [NoteID]) {
@@ -314,9 +314,6 @@ public final class DocumentSession {
                                loadName: loaded.bankLoadName, sampleRate: sampleRate)
     }
 
-    /// Ordered save (bank stage when the bank is dirty, then MIDI, then
-    /// flags). A clean session performs no work and emits no receipt. Failures
-    /// throw and never mark clean.
     public func save() async throws {
         try requireOpen()
         guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else {
@@ -326,16 +323,20 @@ public final class DocumentSession {
         let bank = bankDirty ? bankLease : nil
         if bank != nil { bankPersistenceInFlight = true }
         defer {
-            if bank != nil { bankPersistenceInFlight = false }
+            if bank != nil {
+                bankPersistenceInFlight = false
+                flushPendingBankNotification()
+            }
         }
         let snapshot = try document.captureSave()
         let receipt = try await service.save(snapshot, bank: bank)
         document.didSave(snapshot)
         var domains: SessionChangeDomains = [.dirty, .history]
         if let refreshed = receipt.bank {
-            adoptBank(refreshed, remembersPrevious: false)
+            adoptBank(refreshed)
             domains.insert(.bank)
         }
+        if domains.contains(.bank) { pendingBankNotification = false }
         publishChange(domains)
     }
 
@@ -348,13 +349,6 @@ public final class DocumentSession {
         guard !bankPersistenceInFlight else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
         }
-        if bankSlots.indices.contains(slot),
-           bankSlots[slot].voice != expected,
-           previousBankVoices.indices.contains(slot),
-           previousBankVoices[slot] == expected {
-            throw ProjectServiceError.operationFailed(
-                "A bank transition is already in progress.")
-        }
         if !bankDirty { document.history.sealBankMerge() }
         guard let transition = document.history.beginBankTransition() else {
             throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
@@ -362,6 +356,7 @@ public final class DocumentSession {
         var ownsTransition = true
         defer {
             if ownsTransition { document.history.endBankTransition(transition) }
+            flushPendingBankNotification()
         }
         let result = try await service.bankApply(lease: bankLease, slot: slot,
                                                  value: value, expected: expected)
@@ -373,6 +368,7 @@ public final class DocumentSession {
             materializedBlank: materializationToken != nil,
             current: result, inbox: inbox))
         ownsTransition = false
+        pendingBankNotification = false
         publishChange([.bank, .dirty, .history])
         return result
     }
@@ -393,7 +389,10 @@ public final class DocumentSession {
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
               !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return }
         bankPersistenceInFlight = true
-        defer { bankPersistenceInFlight = false }
+        defer {
+            bankPersistenceInFlight = false
+            flushPendingBankNotification()
+        }
         let previous = document.state.config.voicegroupArgument
         let bank = try await service.loadBank(voicegroupArg: arg)
         try requireOpen()
@@ -406,6 +405,7 @@ public final class DocumentSession {
             document.setConfig(config)
             guard document.state.config.voicegroupArgument == arg else { return }
             adoptBank(bank)
+            pendingBankNotification = false
             publishChange([.bank, .dirty, .history])
         }
     }
@@ -435,11 +435,16 @@ public final class DocumentSession {
             } catch {
                 document.history.endBankTransition(token)
                 bankPersistenceInFlight = false
+                flushPendingBankNotification()
                 throw error
             }
             document.history.endBankTransition(token)
         }
-        defer { bankPersistenceInFlight = false }
+        bankPersistenceInFlight = true
+        defer {
+            bankPersistenceInFlight = false
+            flushPendingBankNotification()
+        }
         let previousArg = document.state.config.voicegroupArgument
         let changed: Bool
         switch direction {
@@ -457,6 +462,7 @@ public final class DocumentSession {
                 adoptBank(result)
                 domains.insert(.bank)
             }
+            if domains.contains(.bank) { pendingBankNotification = false }
             publishChange(domains)
         }
         return changed
@@ -474,6 +480,7 @@ public final class DocumentSession {
         onCameraChangeDetailed = nil
         document.onChange = nil
         isClosed = true
+        sharedBank.detach(self)
         return true
     }
 
@@ -485,14 +492,29 @@ public final class DocumentSession {
         }
     }
 
-    private func adoptBank(_ result: AppliedBankEdit, remembersPrevious: Bool = true) {
-        if remembersPrevious {
-            previousBankVoices = bankSlots.map(\.voice)
+    private func adoptBank(_ result: AppliedBankEdit) {
+        let next = service.bankViews.state(for: result)
+        if next !== sharedBank {
+            sharedBank.detach(self)
+            sharedBank = next
+            next.attach(self)
         }
-        bankLease = result.lease
-        bankSlots = result.slots
-        bankDirty = result.dirty
-        bankLoadName = result.loadName
+        service.bankViews.publish(result)
+    }
+
+    internal func sharedBankDidChange(_ state: SharedBankState) {
+        guard !isClosed, state === sharedBank else { return }
+        if bankPersistenceInFlight || document.history.bankTransitionInFlight {
+            pendingBankNotification = true
+        } else {
+            publishChange([.bank, .dirty])
+        }
+    }
+
+    private func flushPendingBankNotification() {
+        guard pendingBankNotification, !isClosed else { return }
+        pendingBankNotification = false
+        publishChange([.bank, .dirty])
     }
 
     private func publishChange(_ domains: SessionChangeDomains,

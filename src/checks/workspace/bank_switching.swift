@@ -23,7 +23,9 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         let originalArg = session.document.state.config.voicegroupArgument
         let original = session.bankSlots
         let originalLease = session.bankLease
-        guard var edited = original[0].voice else {
+        let homeBankPath = root + "/" + originalLease.sourcePath
+        guard let homeBytes = bytes(at: homeBankPath),
+              var edited = original[0].voice else {
             report.fail(id, "fixture slot zero is not editable")
             return
         }
@@ -37,15 +39,24 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
                       && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
                       && session.bankLease !== originalLease,
                       cppID: id, message: "selector binds the alternate source and makes -G undoable")
+        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "switch to B does not autosave dirty A")
         try runBlocking { _ = try await session.undo() }
         report.expect(session.document.state.config.voicegroupArgument == originalArg
                       && session.bankSlots[0].voice == edited && session.bankDirty,
                       cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                       message: "undo of -G rebinds the unsaved home voicegroup")
+        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "returning to dirty A does not write its source")
         try runBlocking { _ = try await session.redo() }
         report.expect(session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
                       && !session.bankDirty,
                       cppID: id, message: "redo of -G rebinds the alternate bank")
+        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
+                           what: "redoing B still does not write dirty A")
         let beforeFailed = session.bankLease.bankToken
         let indexBeforeFailed = session.document.history.undoIndex
         let failed: Bool

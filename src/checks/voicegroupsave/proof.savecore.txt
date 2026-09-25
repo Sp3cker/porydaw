@@ -7,6 +7,7 @@ Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift
 Additional Swift counterpart: src/checks/workspace/bank_switching.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Shared helper: none; saveCoreBankRoundTrip and saveCoreSourceSaveAndPreview are file-private in SaveCoreChecks.swift.
 
 
@@ -613,7 +614,7 @@ QVERIFY2(saveSelectedSong(), "unified save had no dirty state to submit")
 
 A050 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:194
 Disposition: PARTIAL
-Mapping/reason: S005 asserts session save clears both song and bank dirty state and refreshes the clean lease, but the native row also requires a counted MainWindow save receipt.
+Mapping/reason: S005 asserts session save clears both song and bank dirty state and refreshes the clean lease; S008 and S009 assert the completed bank stage publishes the saved voice and a clean bank to a second live document even when the later MIDI stage fails, and S011 (src/checks/editorqml/tst_ShellVoicegroup.qml test_zzzzSharedBankBetweenTwoLiveTabs) completes the mounted Save control and publishes the clean shared bank back to both tabs. Unproved: the native row also requires a counted MainWindow save receipt.
 Source context since previous assertion:
 ;
 
@@ -987,3 +988,15 @@ Anchor: message "stale snapshot completion leaves the newer document dirty"
 
 S007 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "mounted save completes: "
+
+S008 | bankSharedFailedSaveAndStaleReceipt | src/checks/workspace/bank_sharing.swift
+Anchor: message "completed bank stage cleans both peers despite MIDI failure"
+
+S009 | bankSharedFailedSaveAndStaleReceipt | src/checks/workspace/bank_sharing.swift
+Anchor: message "peer receives the saved bank voice despite MIDI failure"
+
+S010 | bankSharedFailedSaveAndStaleReceipt | src/checks/workspace/bank_sharing.swift
+Anchor: message "failed later stage does not clean the song"
+
+S011 | test_zzzzSharedBankBetweenTwoLiveTabs | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "clean saved bank and numeric editor publish back to the first tab"

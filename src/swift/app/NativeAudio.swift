@@ -14,7 +14,7 @@ public enum NativeAudioError: Error, Equatable {
 /// Cold mutations park callbacks before replacing storage.
 @MainActor
 public final class NativeAudio {
-    nonisolated(unsafe) private let device: AudioDevice
+    private let device: AudioDevice
     private var bankLease: NativeBankLease?
     private var engineSettings = AudioSettings()
 
@@ -29,7 +29,7 @@ public final class NativeAudio {
         }
     }
 
-    deinit {
+    isolated deinit {
         // Joining callbacks and destroying both engines must precede lease release.
         withExtendedLifetime(bankLease) { device.shutdown() }
     }

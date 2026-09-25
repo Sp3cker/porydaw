@@ -11,8 +11,11 @@ public final class ProjectBankLease: @unchecked Sendable {
     public let sectionLabel: String
     public let dirty: Bool
     public let slotViews: [VoicegroupSlotView]
+    public let publicationOwner: UUID
+    public let publicationRevision: UInt64
 
-    init(handle: OpaquePointer, view: LoadedBankView, projectRoot: String) {
+    init(handle: OpaquePointer, view: LoadedBankView, projectRoot: String,
+         publicationOwner: UUID, publicationRevision: UInt64) {
         self.handle = handle
         id = view.id
         loadName = view.loadName
@@ -20,6 +23,8 @@ public final class ProjectBankLease: @unchecked Sendable {
         sectionLabel = view.id.sectionLabel
         dirty = view.dirty
         slotViews = view.slotViews
+        self.publicationOwner = publicationOwner
+        self.publicationRevision = publicationRevision
     }
 
     deinit {
@@ -70,7 +75,10 @@ extension ProjectStore {
             retained.release()
             throw VoicegroupStoreError.operationFailed("Could not identify the voicegroup source.")
         }
-        return ProjectBankLease(handle: box, view: view, projectRoot: projectRoot)
+        publicationRevision += 1
+        return ProjectBankLease(handle: box, view: view, projectRoot: projectRoot,
+                                publicationOwner: publicationOwner,
+                                publicationRevision: publicationRevision)
     }
 }
 

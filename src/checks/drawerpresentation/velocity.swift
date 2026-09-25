@@ -220,13 +220,82 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
     report.expect(split.subvoiceMacro(forKey: -1) == nil
                       && split.subvoiceMacro(forKey: 128) == nil,
                   cppID: drawerVelocityKeysplitID, message: "out-of-domain keys do not resolve")
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVelocityKeysplitID, "the staged project fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("drawer-velocity-keysplit-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: scratch) }
+    let fixtureService = ProjectService()
+    defer {
+        do {
+            try drawerVelocityRunBlocking { await fixtureService.close() }
+        } catch {
+            report.fail(drawerVelocityKeysplitID, "could not close the keysplit fixture: \(error)")
+        }
+    }
+    let loaded: (split: LoadedSong, unsupported: LoadedSong)
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        let voicegroups = scratch.appendingPathComponent("sound/voicegroups", isDirectory: true)
+        let square = "\tvoice_square_1 60, 0, 2, 2, 2, 3, 12, 4"
+        let wave = "\tvoice_programmable_wave 60, 0, ProgrammableWaveData_fixture_pulse, 2, 3, 12, 4"
+        let children = (60...72).map { $0 == 67 ? wave : square }.joined(separator: "\n")
+        try """
+            \t.align 2
+            velocity_children::
+            voice_group velocity_children, 60
+            \(children)
+
+            """.write(to: voicegroups.appendingPathComponent("velocity_children.inc"),
+                       atomically: true, encoding: .utf8)
+        try """
+            \t.align 2
+            velocity_split::
+            voice_group velocity_split
+            \tvoice_keysplit_all velocity_children
+            \(square)
+            \tvoice_keysplit_all velocity_children
+
+            """.write(to: voicegroups.appendingPathComponent("velocity_split.inc"),
+                       atomically: true, encoding: .utf8)
+        try """
+            \t.align 2
+            velocity_unsupported::
+            voice_group velocity_unsupported, 36
+            \(square)
+
+            """.write(to: voicegroups.appendingPathComponent("velocity_unsupported.inc"),
+                       atomically: true, encoding: .utf8)
+        let cfgPath = scratch.appendingPathComponent("sound/songs/midi/midi.cfg")
+        var cfg = try String(contentsOf: cfgPath, encoding: .utf8)
+        let splitRoute = "mus_gym.mid: -E -R50 -G_fixture_rich -V100"
+        let unsupportedRoute = "mus_oldale.mid: -E -R50 -G_fixture_rich -V100"
+        guard cfg.contains(splitRoute), cfg.contains(unsupportedRoute) else {
+            report.fail(drawerVelocityKeysplitID, "fixture MIDI bank routes are missing")
+            return
+        }
+        cfg = cfg.replacingOccurrences(of: splitRoute,
+                                       with: "mus_gym.mid: -E -R50 -G_velocity_split -V100")
+        cfg = cfg.replacingOccurrences(of: unsupportedRoute,
+                                       with: "mus_oldale.mid: -E -R50 -G_velocity_unsupported -V100")
+        try cfg.write(to: cfgPath, atomically: true, encoding: .utf8)
+        try drawerVelocityRunBlocking { try await fixtureService.open(root: scratch.path) }
+        loaded = (
+            split: try drawerVelocityRunBlocking { try await fixtureService.openSong(label: "mus_gym") },
+            unsupported: try drawerVelocityRunBlocking { try await fixtureService.openSong(label: "mus_oldale") })
+    } catch {
+        report.fail(drawerVelocityKeysplitID, "could not load the staged keysplit fixture: \(error)")
+        return
+    }
     let document = SongDocument(file: drawerVelocityVelocityPageFixture(),
-                                config: session.document.state.config,
-                                source: session.document.source,
-                                trackBudget: session.document.trackBudget)
-    let splitSession = DocumentSession(document: document, service: service,
-                                       lease: session.bankLease, slots: slots,
-                                       dirty: false, loadName: session.bankLoadName,
+                                config: loaded.split.config,
+                                source: loaded.split.source,
+                                trackBudget: loaded.split.trackBudget)
+    let splitSession = DocumentSession(document: document, service: fixtureService,
+                                       lease: loaded.split.bank, slots: loaded.split.bankSlots,
+                                       dirty: loaded.split.bankDirty, loadName: loaded.split.bankLoadName,
                                        sampleRate: 48_000)
     splitSession.selectedTrack = 0
     let page = VelocityPage(baseFontPx: 13)
@@ -281,22 +350,28 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
                   cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
     page.detach()
 
-    let invalidSession = DocumentSession(document: document, service: service,
-                                         lease: session.bankLease, slots: [BankSlotView()],
-                                         dirty: false, loadName: session.bankLoadName,
+    let invalidDocument = SongDocument(file: drawerVelocityVelocityPageFixture(),
+                                       config: loaded.unsupported.config,
+                                       source: loaded.unsupported.source,
+                                       trackBudget: loaded.unsupported.trackBudget)
+    let invalidSession = DocumentSession(document: invalidDocument, service: fixtureService,
+                                         lease: loaded.unsupported.bank, slots: loaded.unsupported.bankSlots,
+                                         dirty: loaded.unsupported.bankDirty,
+                                         loadName: loaded.unsupported.bankLoadName,
                                          sampleRate: 48_000)
     invalidSession.selectedTrack = 0
     page.attach(session: invalidSession, palette: GridPalette())
     report.expect(page.contextUnsupported, cppID: drawerVelocityKeysplitID,
                   message: "the invalid bank context advertises that velocity editing is unavailable")
-    let invalidBefore = drawerVelocityDocumentSnapshot(document)
+    let invalidBefore = drawerVelocityDocumentSnapshot(invalidDocument)
     _ = page.pointerPress(x: 399, y: 0, surface: VelocityInputSurface.plot.rawValue,
                           button: 1, modifiers: 0)
     report.expect(!page.interactionActive, cppID: drawerVelocityKeysplitID,
                   message: "an unsupported paint press never suspends follow or owns Escape")
     _ = page.pointerMove(x: 0, y: 60, buttons: 1)
     _ = page.pointerRelease(x: 0, y: 60, button: 1)
-    report.expect(drawerVelocityDocumentSnapshot(document) == invalidBefore, cppID: drawerVelocityKeysplitID,
+    report.expect(drawerVelocityDocumentSnapshot(invalidDocument) == invalidBefore,
+                  cppID: drawerVelocityKeysplitID,
                   message: "dragging an unsupported velocity context cannot change notes or history")
     page.detach()
 }

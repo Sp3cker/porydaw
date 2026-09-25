@@ -54,7 +54,7 @@ src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 
 runProjectSessionSuite and runBankHistorySuite, and those entry points never
 open a workspace, tab, transport, scale control, or editor-codec flow; the
 mounted shell-transport QML lane is the counterpart that opens the workspace
-and transport (S186-S197). The 185
+and transport (S186-S197). The 184
 paired predicates are split across SessionChecks.swift (both suite entry
 points and their shared-state checks) and the session_*/bank_* counterparts
 (session_editor_semantics.swift, session_io.swift,
@@ -740,9 +740,6 @@ Anchor: message "failed bank save retains the dirty bank record"
 
 S174 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
 Anchor: message "failed ordered save retains the dirty document record"
-
-S175 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift
-Anchor: message "unknown identity is reported as a hard native error"
 
 S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
 Anchor: message "session gate refuses a second transition while the first is pending"

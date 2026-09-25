@@ -252,6 +252,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         report.fail(originID, "both sessions need editable slot zero")
         return
     }
+    let originalHistory = session.document.history.currentIdentity
     list.refresh(from: session)
     list.selectSlot(slot: 0)
     let editor = list.editor
@@ -260,6 +261,8 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     editor.changeType(macro: Int(BankVoiceMacro.square2), symbol: "")
     list.refresh(from: second)
     let committedRelease = secondVoice.release == 7 ? 6 : secondVoice.release + 1
+    var expectedVoice = secondVoice
+    expectedVoice.release = committedRelease
     editor.change(field: "release", value: Int(committedRelease))
     do {
         try runBlocking {
@@ -272,8 +275,12 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         report.fail(originID, "same-origin queued edit did not complete: \(error)")
         return
     }
-    report.expectEqual(firstVoice, session.bankSlots[0].voice, cppID: originID,
-                       what: "queued scalar and type edits do not commit to the original tab")
+    report.expectEqual(originalHistory, session.document.history.currentIdentity, cppID: originID,
+                       what: "discarded queued edits leave the original document history unchanged")
+    report.expect(session.bankSlots[0].voice == expectedVoice &&
+                      second.bankSlots[0].voice == expectedVoice,
+                  cppID: originID,
+                  message: "the valid peer edit publishes its full voice to both live bank views")
     report.expectEqual(secondVoice.macro, second.bankSlots[0].voice?.macro, cppID: originID,
                        what: "queued type edit cannot retarget the other tab's slot")
     report.expectEqual(committedRelease, second.bankSlots[0].voice?.release, cppID: originID,

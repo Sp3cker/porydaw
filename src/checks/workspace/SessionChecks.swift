@@ -93,6 +93,11 @@ internal func runBankHistorySuite(_ report: CheckReport) {
                     "missing --swiftcore fixture root")
         return
     }
+    twoOpenSessionsShareBankEdit(report: report, fixtureRoot: fixtureRoot)
+    bankSharedHistoryAndLifecycle(report: report, fixtureRoot: fixtureRoot)
+    bankBindingIdentityIsolation(report: report, fixtureRoot: fixtureRoot)
+    bankSharedFailedSaveAndStaleReceipt(report: report, fixtureRoot: fixtureRoot)
+    bankBackgroundEditReachesSelectedAudio(report: report, fixtureRoot: fixtureRoot)
     releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
     bankSaveMergeBoundaryParity(report: report, fixtureRoot: fixtureRoot)
     bankSwitchingParity(report: report, fixtureRoot: fixtureRoot)

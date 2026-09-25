@@ -103,7 +103,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         }
     case 3:
         runPlaybackSuite(report)
-        runAudioControllerChecks(report)
+        let boxedAudio = ReportBox(report)
+        MainActor.assumeIsolated {
+            runAudioControllerChecks(boxedAudio.report)
+        }
         runAudioAuditionChecks(report)
         runResonanceSuppressionChecks(report)
     case 4:
@@ -187,7 +190,10 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
     case 30:
         runProjectStoreSaveSuite(report)
     case 31:
-        runBankLeasesSuite(report)
+        let boxedBankLeases = ReportBox(report)
+        MainActor.assumeIsolated {
+            runBankLeasesSuite(boxedBankLeases.report)
+        }
     case 32:
         let boxedExport = ReportBox(report)
         MainActor.assumeIsolated {

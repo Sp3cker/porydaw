@@ -8,7 +8,7 @@ Swift counterpart: src/checks/projectstore/ExportChecks.swift
 Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
 Shared SHA-256: 2bb40884c45fa62a7a88a6acfaf210e5766d3be4e58197b1759f8701e4e72612
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
-Shared SHA-256: e974d8ddfba8e2e21fc1aab0657cbe1e542b828d7dfe2c24908a25bb344f551d
+Shared SHA-256: 5047f1f06c61f42b946459a73e1482e09151d8ff95e6743d6790388e7e240eef
 
 
 Command: deno task verify --filter exportcheck-loop --verbose
@@ -540,6 +540,6 @@ S022 | runExportChecks | src/checks/projectstore/ExportChecks.swift
 Anchor: function
 
 Shared helpers
-src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue, shared with the
-projectstore suites) and src/checks/support/corecheck/CoreCheckSupport.swift
-(CheckEnvironment, CheckReport, ReportBox) carry no export expects of their own.
+src/checks/projectstore/ProjectStoreCheckSupport.swift (retained for the projectstore suites; the export
+rows no longer wait through its awaitValue) and src/checks/support/corecheck/CoreCheckSupport.swift
+(CheckEnvironment, CheckReport, ReportBox) carry no export expects; waits use runBlocking (workspace/session_support.swift).
