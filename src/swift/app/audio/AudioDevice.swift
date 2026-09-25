@@ -77,18 +77,18 @@ final class AudioDevice {
         }
     }
 
-    /// Sole device start point; only the outermost call stops/starts, results ignored.
+    /// Sole device start point; outermost call parks synchronously and restarts off-main.
     func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
         coldDepth += 1
-        if coldDepth == 1, deviceStarted, let device {
-            _ = ma_device_stop(device)
-            deviceStarted = false
+        if coldDepth == 1, let device {
+            let handle = DeviceHandle(device: device)
+            startStop.sync { _ = ma_device_stop(handle.device) }
         }
         defer {
             coldDepth -= 1
             if coldDepth == 0, let device {
-                _ = ma_device_start(device)
-                deviceStarted = true
+                let handle = DeviceHandle(device: device)
+                startStop.async { _ = ma_device_start(handle.device) }
             }
         }
         return try body()
@@ -96,13 +96,13 @@ final class AudioDevice {
 
     func shutdown() {
         if let device {
+            startStop.sync {}
             if deviceInitialized {
                 ma_device_uninit(device) // Joins/parks callbacks before releasing their borrower.
             }
             device.deallocate()
             self.device = nil
             deviceInitialized = false
-            deviceStarted = false
         }
         retainedRenderer = nil
         if let context {
@@ -118,8 +118,9 @@ final class AudioDevice {
     private var device: UnsafeMutablePointer<ma_device>?
     private var context: UnsafeMutablePointer<ma_context>?
     private var deviceInitialized = false
-    private var deviceStarted = false
     private var coldDepth = 0
+    // Serializes start/stop: a queued start must finish before the next stop parks callbacks.
+    private let startStop = DispatchQueue(label: "porydaw.audio.startstop")
 
     private func initializeContext(backends: [ma_backend]) -> Bool {
         let context = UnsafeMutablePointer<ma_context>.allocate(capacity: 1)
@@ -164,6 +165,11 @@ final class AudioDevice {
         return release.lowercased().contains("microsoft")
     }
     #endif
+}
+
+// Thread-safe C handle: miniaudio's startStopLock plus the serial startStop queue.
+private struct DeviceHandle: @unchecked Sendable {
+    let device: UnsafeMutablePointer<ma_device>
 }
 
 /// Playback guarantees non-null output; pUserData borrows the renderer until uninit returns.
