@@ -65,11 +65,12 @@ endif()
 target_compile_options(QtBridge PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:-DQT_IS_CMAKE_BUILD>"
 )
-
 # autoresearch harness: QtBridge's own sources only declare the macros —
-# they never invoke them — so the library compiles without the plugin
-# binary. INTERFACE scope still hands consumers the -load-plugin-executable
-# flag, and the $<TARGET_FILE:> genex preserves their dependency on the exe.
+# they never invoke them — so the library compiles without the plugin dylib.
+# INTERFACE scope hands consumers -load-plugin-library (dylib path only, no
+# #module). NOTE: TARGET_FILE inside target_compile_options adds NO Ninja
+# build edge — each macro-consuming target needs its own add_dependencies
+# (see PorydawApp); the leaves are macro-free so they carry none.
 if(DEFINED QTBRIDGE_MACROS_PLUGIN_PATH)
     target_compile_options(QtBridge INTERFACE
         "$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-library>"

@@ -59,11 +59,15 @@ endif()
 execute_process(
     COMMAND "${CMAKE_Swift_COMPILER}" -print-target-info
     OUTPUT_VARIABLE _qtb_target_info
+    RESULT_VARIABLE _qtb_rc
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+if(NOT _qtb_rc EQUAL 0)
+    message(FATAL_ERROR "swiftc -print-target-info failed (${_qtb_rc})")
+endif()
 string(JSON _qtb_rt GET "${_qtb_target_info}" paths runtimeResourcePath)
 set(QTBRIDGE_HOST_LIB_DIR "${_qtb_rt}/host")
-if(NOT EXISTS "${QTBRIDGE_HOST_LIB_DIR}/libSwiftSyntax.dylib")
+if(NOT EXISTS "${QTBRIDGE_HOST_LIB_DIR}/libSwiftSyntax${CMAKE_SHARED_LIBRARY_SUFFIX}")
     message(FATAL_ERROR "host swift-syntax not found at ${QTBRIDGE_HOST_LIB_DIR}")
 endif()
 add_library(QtBridgeMacros SHARED
@@ -75,24 +79,25 @@ set_target_properties(QtBridgeMacros PROPERTIES
     Swift_LANGUAGE_VERSION 6
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
     BUILD_RPATH "${QTBRIDGE_HOST_LIB_DIR}"
+    INSTALL_RPATH "${QTBRIDGE_HOST_LIB_DIR}"
 )
 target_compile_options(QtBridgeMacros PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:-I${QTBRIDGE_HOST_LIB_DIR}>"
 )
-target_link_directories(QtBridgeMacros PRIVATE "${QTBRIDGE_HOST_LIB_DIR}")
-target_link_libraries(QtBridgeMacros PRIVATE
+set(_qtb_host_libs
     SwiftSyntax SwiftDiagnostics SwiftBasicFormat SwiftParser
     SwiftParserDiagnostics SwiftOperators SwiftSyntaxBuilder
     SwiftSyntaxMacros SwiftSyntaxMacroExpansion SwiftIfConfig
     SwiftCompilerPluginMessageHandling
 )
+list(TRANSFORM _qtb_host_libs PREPEND "${QTBRIDGE_HOST_LIB_DIR}/lib")
+list(TRANSFORM _qtb_host_libs APPEND "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+target_link_libraries(QtBridgeMacros PRIVATE ${_qtb_host_libs})
 
 set(QTBRIDGE_MACROS_PLUGIN_PATH
     "$<TARGET_FILE:QtBridgeMacros>"
     CACHE STRING "Macro plugin load path"
 )
-
-
 
 add_subdirectory(Sources/QtBridgeCpp)
 add_subdirectory(Sources/QtBridge)

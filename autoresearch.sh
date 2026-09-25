@@ -57,7 +57,7 @@ run_once() {
         -DPORYDAW_BUILD_CHECKS=OFF \
         -DPORYAAAA_DIR="$PORYAAAA_PKG" \
         -DFETCHCONTENT_SOURCE_DIR_QTBRIDGE="$VENDOR/qtbridge-src" \
-        -DCMAKE_Swift_FLAGS="-experimental-emit-module-separately" \
+        -DCMAKE_Swift_FLAGS="${CMAKE_Swift_FLAGS:-} -experimental-emit-module-separately" \
         "${SWIFT_ARGS[@]}" \
         >"$build_dir.configure.log" 2>&1 || return 1
     t1=$(now_s)

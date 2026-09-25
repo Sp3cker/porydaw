@@ -160,11 +160,9 @@ target_compile_options(PorydawApp PUBLIC
 target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject QtBridge Qt6::Gui)
 
 
-# The -load-plugin-executable genex in compile options does not create a
-# Ninja edge, so PorydawApp can be scheduled before the plugin binary exists.
-# Declare it explicitly; in-tree QtBridgeMacros is the executable target and
-# upstream (ExternalProject variant) is an INTERFACE lib — the name resolves
-# either way.
+# The -load-plugin-library genex in compile options creates no Ninja edge, so
+# the hub could schedule before the in-tree SHARED plugin dylib exists. Order
+# the macro-consuming target behind it explicitly.
 add_dependencies(PorydawApp QtBridgeMacros)
 
 # autoresearch star-topology leaves: macro-plugin-free modules that compile in
