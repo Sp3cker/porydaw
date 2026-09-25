@@ -94,12 +94,12 @@ public final class SongListPresenter {
     @QtIgnored public var onSongRegisterRequested: ((Int) -> Void)?
     @QtIgnored public var onSongDeleteRequested: ((Int) -> Void)?
 
-    @QtIgnored private var songs: [SongListing] = []
-    @QtIgnored private var visible: [SongListing] = []
-    @QtIgnored private var knownPrefixes: [String] = []
+    private var songs: [SongListing] = []
+    private var visible: [SongListing] = []
+    private var knownPrefixes: [String] = []
     /// Restored category awaiting its first rebuild; a category the project
     /// doesn't have falls back to All.
-    @QtIgnored private var pendingCategory = ""
+    private var pendingCategory = ""
 
     public init() {
         // The native combo ships one placeholder All entry until the first
@@ -124,7 +124,7 @@ public final class SongListPresenter {
 
     /// The listing behind a song ID, for context-action handlers.
     @QtIgnored
-    public func listing(songId: Int) -> SongListing? {
+    public func listing(songId: Int) -> Optional<SongListing> {
         songs.first { $0.id == songId }
     }
 

@@ -16,7 +16,7 @@ This is the cross-feature roadmap, not a single dispatchable implementation brie
 
 This file is the single authoritative plan. `inventory.md` supplies behavior/oracle details, `verification.md` supplies acceptance, and `current-surfaces.md` records historical batch evidence only. The live todo mirrors this plan. Every required item is **pending**, **active**, **complete**, or **blocked**. A blocked item does not stop independent authorized work. Completion requires observed acceptance, not an implementer report or an aggregate count.
 
-Execution checkpoint: `86c88903661ee6d44a77da505bf4b9fef777f6e0`; whole-branch review base: `fceecd888e29c0a39c3a98d17e47d3d734b1de06`. Preserve the pre-existing dirty tree, staged `.lsp.json` deletion, independently modified `.omp` instructions, and pre-existing `SongTabs.qml` tooltip / `VelocityPage.qml` diagnostic removals outside the repair checkpoint. The user authorized integration of the two incoming commits and focused, verified milestone commits with pushes. No red or unrelated changes may be committed.
+Assessment base: `86c88903661ee6d44a77da505bf4b9fef777f6e0`; accepted repair checkpoint: `e171f3ef`; whole-branch review base: `fceecd888e29c0a39c3a98d17e47d3d734b1de06`. Preserve the pre-existing dirty tree, staged `.lsp.json` deletion, independently modified `.omp` instructions, and pre-existing `SongTabs.qml` tooltip / `VelocityPage.qml` diagnostic removals outside the repair checkpoint. The user authorized integration of the two incoming commits and focused, verified milestone commits with pushes. No red or unrelated changes may be committed.
 
 ### Completed earlier batch
 
@@ -32,7 +32,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 
 | ID | Status | Required outcome / dependency |
 | --- | --- | --- |
-| GIT | pending | User authorized remote integration and verified milestone commits/pushes. Resolve overlap only after the active wave is green; replacement QtBridge patch accompanies its move. |
+| GIT | active | Accepted repairs and the atomic QtBridge patch move are committed in `e171f3ef`. Integration of `91727ce7`/`cf990a1c` preserves origin-scoped Swift callbacks while retiring dead Qt forwarding; spec/quality review approved. Merged app, native 31/31, shell 26/26, drawer, roll, bridge/proof/format and native Metal/Space/clean-exit gates passed. Commit/push remains; unrelated user changes match their pre-checkpoint snapshot. |
 | POLICY | complete | User authorized deletion of completed proof files and obsolete C++ checks with their validated Swift/QML replacement. Keep unresolved behavior as the surface spec; do not maintain completed ledgers indefinitely or run a separate deletion sweep. |
 | R01 | complete | [Task 4](task-4-brief.md): concrete actor-owned project operations; projectstore and swiftcore gate passed (24 applicable entries, 7 filtered skips). Spec/quality review approved; Linux executor/loader boundaries unchanged, Linux runtime not requalified. |
 | R02 | complete | [Task 5](task-5-brief.md): selected-workspace mute/solo, activation and track remaps reach the real audio engine; native telemetry and mounted controls passed. Spec/quality review approved. |
@@ -46,7 +46,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R10 | complete | [Task 6](task-6-brief.md): drawer comparisons target editable primary notes; clipboard checks preserve whole-document content across ghost projection/track changes. Drawer and clipboard lanes passed; spec/quality review approved. |
 | R11 | complete | Task 6: menu checks assert mounted named commands and enablement, not incidental counts/order. Shell-window lane and corrected proof anchors passed; spec/quality review approved. |
 | R12 | complete | [Task 8](task-8-brief.md): keyboard labels share the painted keys' clipped gutter; all six contrast profiles and roll lane passed. Native macOS upper/lower clipping observed; spec/quality review approved. A111 ancestry retired; horizontal drum-label overflow remains GAP. |
-| R13 | complete | Assessment correction: `runVerify` calls `Deno.exit(status.code)` at `tools/cli.ts:387`; the alleged runtime fallthrough is unreachable. No behavioral fix required. |
+| R13 | complete | Assessment correction: `runVerify` in `tools/cli.ts` terminates with `Deno.exit(status.code)`; the alleged runtime fallthrough is unreachable. No behavioral fix required. |
 | R14 | complete | [Task 9](task-9-brief.md): complete patch relocation/rendering contract verified; count-only diagnostics/tests removed. App/check builds, shell raster, drawer/roll lanes, native Metal load/clean exit and spec/Qt-quality review passed. Git persistence belongs to GIT. |
 | R15 | pending | Prove ruler menu interactions and repair their model-direct proof overclaims with the surface. |
 | R16 | pending | Prove actual tab/window cancellation and repair missing mappings with that surface. |
@@ -59,7 +59,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R23 | pending | Reduce avoidable all-track projection/highlight/sweep work while preserving ghost rendering. |
 | R24 | pending | Replace unsafe audio isolation suppression with an enforced ownership boundary. |
 | R25 | pending | Address cohesion and stale comments in touched owners, not unrelated mechanical churn. Revisit the long transport workspace-isolation journey and repeated play/start publication when touching those owners; current behavior gates pass. |
-| R26 | pending | Assess hidden-tab lifetime, ramp math, repeated clipping and band-audition projection; repair demonstrated risks. |
+| R26 | pending | Incoming cleanup removes unreachable ramp presentation while retaining live `.ramp` math. Hidden-tab lifetime, repeated clipping and band-audition projection still need assessment and demonstrated-risk repairs. |
 | R27 | pending | [Task 10](task-10-brief.md) link ownership accepted: all three QML executables relinked and executed without duplicate-library warnings. Missing fonts, zero-pixel font warnings, QTP0004 and usable QML lint imports remain pending. |
 | R28 | blocked | New bank and sample callbacks cannot implement deferred workflows; requires VG03/SA01 scope authorization. |
 
@@ -96,7 +96,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | AU01 | blocked | Production WAV export workflow requires scope authorization. |
 | AU02 | blocked | Complete export cancellation/error/duration/suppression journey requires AU01. |
 | AU03 | pending | Transport/seek/loop/follow/live edits/settings/audio; consumes R02/R05/R24. |
-| AU04 | pending | Polyphony Debugger counters/inversion/jumps and lifecycle. |
+| AU04 | pending | Polyphony Debugger counters/inversion/jumps and lifecycle, including rendered flash-state contrast; the incoming ink correction has a contrast calculation but no executing flash-state lane predicate. |
 | AU05 | pending | Existing transport preferences; absent compact meter remains SH05. |
 | ED01 | pending | Note gestures/collision/history/ghost exclusion and rendered selection. |
 | ED02 | pending | Shared camera, zoom/pan/scrollbars/follow/playhead. |
@@ -131,7 +131,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | J09 | blocked | Clean-host distribution depends on complete authorized product and platform hosts. |
 | FINAL | pending | Settled ALL/SHELL/DRAWER/ROLL/PROOF/EXECUTED/format/review gates; report batch and overall status separately. |
 
-Tasks 4–11 and the task 2 ghost-predicate handoff are accepted after their applicable source, runtime, proof and review gates. The full current-host native suite passed 31/31 and shell suite passed 26/26. The next shared-file prerequisite is the remote integration checkpoint, then shared-bank safety and remaining independent audit findings. Evidence and oracle retirement remain surface-local after sources settle.
+Tasks 4–11 and the task 2 ghost-predicate handoff are accepted after their applicable source, runtime, proof and review gates. The merged current-host app built in 92.17s; native suite passed 31/31 (20.61s), shell 26/26 (58.66s), drawer four profiles (35.04s), and roll (22.97s). Bridge findings remain zero. Proof structure/execution classification passed: 9,491 resolved anchors, 8,863 executed, 13 not executed and 615 unverifiable; this is not full parity. Formatting passed. Native Metal on Apple M4 Pro rendered `mus_route101`, primary/ghost notes and drawer; Space advanced the clock/playhead and Cmd-Q exited zero. Known font warnings remain R27, and SourceKit indexing still reports 0/0 rather than semantic qualification. Finish the integration push, then shared-bank safety and remaining independent findings; evidence and oracle retirement remain surface-local.
 
 ## Inspected baseline
 
@@ -185,7 +185,7 @@ P3's effective-bank snapshot contract and P4's bank assignment/commit-visibility
 ## Implementation order and parallelism
 
 1. **Accepted repair wave.** Tasks 4–8 repaired project operations, workspace/transport, QML consumers, queued voice identity and contrast. Covering native/QML/proof gates and task reviews passed; checkpoint accepted work before reusing its files.
-2. **Next: integration prerequisites, then shared-bank safety.** Verify the relocated QtBridge patch and rendering contract, integrate the authorized incoming commits, and push the coherent checkpoint. Reproduce P5/VG05 through real two-tab operations; preserve one bank/history authority. Independent executor/proof-tool work may proceed on disjoint files.
+2. **Next: push accepted integration, then shared-bank safety.** Relocated QtBridge rendering and incoming cleanup passed their merged gates and independent review. Push the coherent checkpoint, then reproduce P5/VG05 through real two-tab operations; preserve one bank/history authority. Independent work may proceed on disjoint files.
 3. **Continue existing-surface parity (remaining P1/P5/P6/P7).** Freeze one behavior-sized brief at a time from current source and original assertions. Do not replay the three completed briefs or treat their partial proof coverage as full native parity.
 4. **Deferred delivery and release.** P2–P4 and absent P5/P7 workflows require scope expansion before implementation. Their dependency contracts below remain reference material, not authorization to add UI. P9 requires platform evidence; P10 stays blocked until the full required scope is accepted.
 

@@ -45,13 +45,13 @@ public final class AutomationPage: EditorDrawerPage {
     public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/AutomationPage.qml"
     /// The application's proportional family, the same one the grid and the
     /// sibling pages measure their captions with.
-    @QtIgnored static let fontFamily = "Atkinson Hyperlegible Next"
+    static let fontFamily = "Atkinson Hyperlegible Next"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .automation
     @QtIgnored public var contentUrl: String { Self.contentUrl }
     /// Production's `defaultAutomationHeight`: a fifth of the host, clamped by
     /// the section minimum and the piano-roll reserve.
-    @QtIgnored public private(set) var bodyPolicy: EditorDrawerBodyPolicy
+    public private(set) var bodyPolicy: EditorDrawerBodyPolicy
     /// The container's follow-scroll gate: a pointer/pan/node/pencil/range
     /// gesture, an open prompt or menu, a tap-tempo session or a live hover is an
     /// active interaction. Published so the lane can read the same fact the
@@ -106,9 +106,9 @@ public final class AutomationPage: EditorDrawerPage {
     /// session's edit cursor while stopped.
     @QtIgnored public internal(set) var contextTick: Tick = 0
     @QtIgnored public internal(set) var contextValue: Int?
-    @QtIgnored public private(set) var playing = false
+    public private(set) var playing = false
     /// The shared pencil tool's state, owned by the window's edit commands.
-    @QtTracked public var isPencilMode: Bool = false {
+    public var isPencilMode: Bool = false {
         willSet {
             if newValue != isPencilMode {
                 publishHoverHintProfile(
@@ -136,8 +136,6 @@ public final class AutomationPage: EditorDrawerPage {
     public var nodeCount: Int = 0
     /// The step curve's horizontal runs, ghost pins first.
     public var curveRuns: QListModel<SceneRect> = QListModel()
-    /// The ramp segments, ghost pins first.
-    public var ramps: QListModel<AutomationRampHandle> = QListModel()
     /// The shared time grid.
     public var gridLines: QListModel<SceneRect> = QListModel()
     /// The value axis: the three scale rules.
@@ -211,11 +209,11 @@ public final class AutomationPage: EditorDrawerPage {
     /// Hover publications.
     @QtIgnored public internal(set) var hoverBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
-    @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
+    public private(set) var playheadPresentationCount: UInt64 = 0
     /// Presentations that moved the effective context.
     @QtIgnored public internal(set) var contextChangeCount: UInt64 = 0
     /// The playing tick the last presentation carried.
-    @QtIgnored public private(set) var presentedTick: Tick = 0
+    public private(set) var presentedTick: Tick = 0
 
 
     // MARK: Check-facing state
@@ -314,41 +312,41 @@ public final class AutomationPage: EditorDrawerPage {
     /// is exactly the lane menu's Paste availability.
     @QtIgnored public var laneClipAvailable: Bool { laneClipPoints(activeParameter) != nil }
 
-    weak var session: DocumentSession?
-    var gesture: AutomationGesture?
-    var frozen: AutomationFrozenFacts?
+    @QtIgnored weak var session: DocumentSession?
+    @QtIgnored var gesture: AutomationGesture?
+    @QtIgnored var frozen: AutomationFrozenFacts?
     /// The camera the live gesture froze with its facts. `EditorCamera` is a
     /// value type, so this copy is the gesture's own projection for its whole
     /// life: a camera publication while a stroke is live reprojects the drawn
     /// content, never the gesture's mapping.
-    var frozenCamera: EditorCamera?
-    var ghostPins: Set<AutomationParameter> = []
-    var laneRanges: [AutomationParameter: Int] = [:]
-    let clipboard = GridClipboard()
+    @QtIgnored var frozenCamera: EditorCamera?
+    @QtIgnored var ghostPins: Set<AutomationParameter> = []
+    @QtIgnored var laneRanges: [AutomationParameter: Int] = [:]
+    @QtIgnored let clipboard: GridClipboard = GridClipboard()
     /// Lane-menu copy is deliberately separate from the system selection clipboard.
-    var laneClipboardPoints: [AutomationLanePoint] = []
-    var publishedPointerGestureActive = false
-    var band: AutomationRangeBand?
-    var panActive = false
+    @QtIgnored var laneClipboardPoints: [AutomationLanePoint] = []
+    @QtIgnored var publishedPointerGestureActive: Bool = false
+    @QtIgnored var band: AutomationRangeBand?
+    @QtIgnored var panActive: Bool = false
     var previousX: Double = 0
-    var menu: AutomationMenuState?
-    var laneDelete: AutomationLaneDeleteConfirmation?
-    var tapSession = AutomationTapTempoSession()
+    @QtIgnored var menu: AutomationMenuState?
+    @QtIgnored var laneDelete: AutomationLaneDeleteConfirmation?
+    @QtIgnored var tapSession: AutomationTapTempoSession = AutomationTapTempoSession()
     /// The guard a tap session commits against: the revision and parameter the
     /// first tap captured. A replaced document or parameter ends the session
     /// instead of landing its draft somewhere else.
-    var tapGuard: (revision: UInt64, parameter: AutomationParameter)?
-    let tapClock = AutomationMonotonicClock()
+    @QtIgnored var tapGuard: (revision: UInt64, parameter: AutomationParameter)?
+    @QtIgnored let tapClock: AutomationMonotonicClock = AutomationMonotonicClock()
     var hoverX: Double = 0
     var hoverY: Double = 0
-    var lastPresentation: (tick: Tick, playing: Bool)?
+    @QtIgnored var lastPresentation: (tick: Tick, playing: Bool)?
 
     // Published-model snapshots: the lane reads the same values the QML renders.
-    var tabSnapshots: [AutomationTabHandle] = []
-    var nodeSnapshots: [AutomationNodeHandle] = []
-    var curveRunSnapshots: [SceneRect] = []
-    var menuRowSnapshots: [AutomationMenuRowHandle] = []
-    let projectionFacts = AutomationProjectionCache()
+    @QtIgnored var tabSnapshots: [AutomationTabHandle] = []
+    @QtIgnored var nodeSnapshots: [AutomationNodeHandle] = []
+    @QtIgnored var curveRunSnapshots: [SceneRect] = []
+    @QtIgnored var menuRowSnapshots: [AutomationMenuRowHandle] = []
+    @QtIgnored let projectionFacts: AutomationProjectionCache = AutomationProjectionCache()
 
     public init(baseFontPx: Double = AutomationPagePolicy.seedBaseFontPx) {
         bodyPolicy = EditorDrawerBodyPolicy { hostHeight, metrics in
@@ -702,7 +700,7 @@ public final class AutomationPage: EditorDrawerPage {
     }
 
     @discardableResult
-    public func pasteTimeSelection(at cursor: Tick) -> Tick? {
+    public func pasteTimeSelection(at cursor: Tick) -> Optional<Tick> {
         return pasteCapturedTimeSelection(at: cursor)
     }
 

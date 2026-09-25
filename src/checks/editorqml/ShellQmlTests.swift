@@ -213,7 +213,7 @@ enum ShellQmlLane {
 @MainActor
 @QtBridgeable
 public final class ShellQmlBootstrap: QmlInstantiableStatus {
-    @QtIgnored private static var stagedProjectRoot = ""
+    private static var stagedProjectRoot = ""
 
     public var projectRoot: String = ShellQmlBootstrap.stagedProjectRoot
     public var settingsApplicationName: String = "porydaw-shell-checks-\(UUID().uuidString.lowercased())"

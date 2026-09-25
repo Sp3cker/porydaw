@@ -227,11 +227,6 @@ ThemedWindow {
         function onAboutRequested() { aboutDialog.open() }
         function onSettingsRequested(songFirst) { settingsDialog.showSettings(songFirst) }
         function onQuitRequested() { root.close() }
-        function onInformationRequested(title, message) {
-            informationDialog.text = title
-            informationDialog.informativeText = message
-            informationDialog.open()
-        }
         function onCriticalRequested(title, message) {
             criticalDialog.text = title
             criticalDialog.informativeText = message
@@ -742,11 +737,6 @@ ThemedWindow {
         objectName: "shellProjectPicker"
         title: qsTr("Open Project")
         onAccepted: shell.chooseProject(selectedFolder.toString())
-    }
-    MessageDialog {
-        id: informationDialog
-        objectName: "shellInformationDialog"
-        buttons: MessageDialog.Ok
     }
     MessageDialog {
         id: criticalDialog

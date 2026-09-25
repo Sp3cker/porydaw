@@ -71,36 +71,6 @@ public final class AutomationNodeHandle {
     }
 }
 
-/// One published ramp segment: the drawn span from its start to the next value.
-@MainActor
-@QtBridgeable
-public final class AutomationRampHandle {
-    public var x0: Double = 0
-    public var y0: Double = 0
-    public var dx: Double = 0
-    public var dy: Double = 0
-    public var color: String = ""
-    public var primitiveName = "automationRamp"
-
-    public init() {}
-
-    init(x0: Double, y0: Double, dx: Double, dy: Double, color: String,
-         primitiveName: String) {
-        self.x0 = x0
-        self.y0 = y0
-        self.dx = dx
-        self.dy = dy
-        self.color = color
-        self.primitiveName = primitiveName
-    }
-
-    @QtIgnored
-    func matches(_ other: AutomationRampHandle) -> Bool {
-        x0 == other.x0 && y0 == other.y0 && dx == other.dx && dy == other.dy
-            && color == other.color && primitiveName == other.primitiveName
-    }
-}
-
 /// One published menu row: the captured action, its label and its availability.
 /// A separator carries no action and is never activatable.
 @MainActor

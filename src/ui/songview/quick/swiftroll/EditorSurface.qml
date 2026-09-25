@@ -115,7 +115,6 @@ Item {
     Connections {
         target: root.gridModel
         function onContextMenuRequested(x, y) {
-            root.applicationSession.requestGridContextMenu(x, y)
             if (root.shellRouter) {
                 const position = rollInput.mapToItem(null, x, y)
                 root.contextMenuAt(position.x, position.y)

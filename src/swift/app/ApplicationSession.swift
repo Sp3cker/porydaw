@@ -26,8 +26,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigMenuOpen = false
     @QtTracked public var timeSigPromptInitialNumerator = 4
     @QtTracked public var timeSigPromptInitialDenominatorPow2 = 2
-    @QtTracked public var timeSigPromptAppearance: [String: QVariantSettable] = [:]
-    @QtTracked public var timeSigPromptFont: [String: QVariantSettable] = [:]
+    public var timeSigPromptAppearance: [String: QVariantSettable] = [:]
+    public var timeSigPromptFont: [String: QVariantSettable] = [:]
     @QtTracked public var timeSigPromptMinimumNumerator = 1
     @QtTracked public var timeSigPromptMaximumNumerator = 32
     @QtTracked public var timeSigPromptMinimumDenominatorPow2 = 0
@@ -423,7 +423,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
-    @QtIgnored
     private var commandRouter: EditorCommandRouter? {
         guard let workspace else { return nil }
         return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
@@ -496,21 +495,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    @QtSignal public func aboutToReleaseGrid()
-    public func requestGridContextMenu(x: Double, y: Double) {
-        gridContextMenuRequested(x: x, y: y)
-    }
-
-    @QtSignal public func gridContextMenuRequested(x: Double, y: Double)
     @QtSignal public func gridCommandAvailabilityChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
     @QtSignal public func allTabsClosed()
     @QtSignal public func closeCancelled()
-    @QtSignal public func headerContextMenuRequested(x: Double, y: Double)
-    @QtSignal public func addTrackRequested()
     @QtSignal public func changeTrackVoiceRequested(track: Int)
-    @QtSignal public func revealTrackVoiceRequested(track: Int)
 
     /// The host's existing picker returns a program, or -1 on cancellation.
     /// The presenter rechecks the captured document identity and revision.
@@ -560,9 +550,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         if songTabs.tabCount == 0 {
             emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)
         }
-        // The whole scene goes with this window: the host detaches it and
-        // acknowledges, and that acknowledgment releases every tab's workspace.
-        aboutToReleaseGrid()
     }
 
     /// Releases every document-bound owner after the host removed the scene.
@@ -956,21 +943,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// The callbacks every tab's workspace reports through. They are the
-    /// session's own notices: the window's track and context-menu requests, the
-    /// grid's command availability, and the state the strip and the window flags
-    /// publish.
     private func makeCallbacks(for session: DocumentSession) -> DocumentWorkspace.Callbacks {
         DocumentWorkspace.Callbacks(
-            addTrackRequested: { [weak self] in self?.addTrackRequested() },
             changeTrackVoiceRequested: { [weak self] track in
                 self?.changeTrackVoiceRequested(track: track)
-            },
-            revealTrackVoiceRequested: { [weak self] track in
-                self?.revealTrackVoiceRequested(track: track)
-            },
-            headerContextMenuRequested: { [weak self] x, y in
-                self?.headerContextMenuRequested(x: x, y: y)
             },
             gridCommandAvailabilityChanged: { [weak self, weak session] in
                 guard let self, let session, self.selectedDocument === session else { return }

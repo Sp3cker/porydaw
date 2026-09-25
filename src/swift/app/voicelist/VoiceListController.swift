@@ -15,12 +15,12 @@ import QtBridge
 @QtBridgeable
 public final class VoiceListRowHandle {
     public var slot: Int
-    @QtTracked public var title: String
-    @QtTracked public var typeName: String
-    @QtTracked public var adsr: String
-    @QtTracked public var typeIconKey: Int
-    @QtTracked public var altChip: Bool
-    @QtTracked public var used: Bool
+    public var title: String
+    public var typeName: String
+    public var adsr: String
+    public var typeIconKey: Int
+    public var altChip: Bool
+    public var used: Bool
     /// The Swift-side glyph identity; QML reads typeIconKey instead.
     @QtIgnored public var glyph: VoiceListGlyph?
 
@@ -162,12 +162,12 @@ public final class VoiceListController {
 
     // MARK: Bound model
 
-    @QtIgnored private var slots: [BankSlotView] = []
-    @QtIgnored private var usedVoices: Set<Int> = []
+    private var slots: [BankSlotView] = []
+    private var usedVoices: Set<Int> = []
     /// The arg the selector currently stands at (native m_vgArg).
-    @QtIgnored private var currentArg = ""
+    private var currentArg = ""
     /// Last list handed to setVoicegroupChoices (native m_vgChoices).
-    @QtIgnored private var knownArgs: [String] = []
+    private var knownArgs: [String] = []
 
     /// Project-scoped catalogs the bank view cannot carry, injected by the
     /// owner exactly like setSource's symbol lists. The sample list feeds
@@ -203,7 +203,7 @@ public final class VoiceListController {
     public func drumkitChoices() -> [String] { drumkitSymbols }
     public func synthCatalogChoices() -> [String] { synthChoices }
 
-    @QtIgnored private weak var session: DocumentSession?
+    private weak var session: DocumentSession?
 
     public init() {
         rows.reset(to: (0..<VoiceListController.slotCount).map { slot in
@@ -468,7 +468,7 @@ public final class VoiceListController {
     /// symbol, and the project-typical envelope); read-only and broken
     /// slots — and slots the bank view doesn't cover — have none.
     @QtIgnored
-    public func voiceDraft(_ slot: Int) -> VoiceListDraft? {
+    public func voiceDraft(_ slot: Int) -> Optional<VoiceListDraft> {
         guard slots.indices.contains(slot) else { return nil }
         switch slots[slot].kind {
         case BankSlotKind.editable:
@@ -530,7 +530,7 @@ public final class VoiceListController {
     }
 
     @QtIgnored
-    public func synthDescriptor(symbol: String) -> VgSynthDesc? {
+    public func synthDescriptor(symbol: String) -> Optional<VgSynthDesc> {
         synthDefinitions[symbol] ?? mintedSynthDesc(symbol: symbol)
     }
 

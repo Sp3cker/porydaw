@@ -87,7 +87,6 @@ FocusScope {
         readonly property var tabs: []
         readonly property var nodes: []
         readonly property var curveRuns: []
-        readonly property var ramps: []
         readonly property var gridLines: []
         readonly property var valueLines: []
         readonly property var valueLabels: []
@@ -334,31 +333,10 @@ FocusScope {
             rects: (page.pageModel ? page.pageModel.selectionRects : [])
         }
 
-        // The step curve's runs (ghost pins first, the active curve second, in
-        // the order the page publishes them) and the ramp segments.
         TimelineQuickItem {
             objectName: "automationCurveRuns"
             anchors.fill: parent
             rects: (page.pageModel ? page.pageModel.curveRuns : [])
-        }
-
-        Repeater {
-            model: (page.pageModel ? page.pageModel.ramps : [])
-
-            delegate: Rectangle {
-                required property var model
-
-                objectName: model.primitiveName
-                x: model.x0
-                y: model.y0
-                width: Math.max(1, Math.sqrt(model.dx * model.dx + model.dy * model.dy))
-                height: 1
-                color: model.color
-                transformOrigin: Item.TopLeft
-                rotation: model.dx !== 0
-                          ? Math.atan2(model.dy, model.dx) * 180 / Math.PI : 0
-                Accessible.ignored: true
-            }
         }
 
         // One drawn node per published entry, plus the origin phantom at the plot

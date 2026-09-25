@@ -112,7 +112,6 @@ extension AutomationPage {
             syncTexts(valueLabels, [])
             syncRects(curveRuns, [])
             curveRunSnapshots = []
-            syncRamps([])
             syncNodes([])
             syncRects(selectionRects, [])
             return
@@ -123,14 +122,12 @@ extension AutomationPage {
         publishGrid(session)
         publishValueAxis(lane)
         var runs: [SceneRect] = []
-        var segments: [AutomationRampHandle] = []
         for ghost in ghostProjections(session) {
-            appendCurve(ghost, projection: projection, isGhost: true, into: &runs, ramps: &segments)
+            appendCurve(ghost, projection: projection, isGhost: true, into: &runs)
         }
-        appendCurve(lane, projection: projection, isGhost: false, into: &runs, ramps: &segments)
+        appendCurve(lane, projection: projection, isGhost: false, into: &runs)
         syncRects(curveRuns, runs)
         curveRunSnapshots = runs
-        syncRamps(segments)
         syncNodes(nodeHandles(lane, projection: projection))
         syncRects(selectionRects, selectionBand(lane, projection: projection))
     }
@@ -148,16 +145,14 @@ extension AutomationPage {
         projection = lane
         publishGrid(session)
         var runs: [SceneRect] = []
-        var segments: [AutomationRampHandle] = []
         for ghost in ghostProjections(session) {
             appendCurve(ghost, projection: cameraProjection, isGhost: true,
-                        into: &runs, ramps: &segments)
+                        into: &runs)
         }
         appendCurve(lane, projection: cameraProjection, isGhost: false,
-                    into: &runs, ramps: &segments)
+                    into: &runs)
         syncRects(curveRuns, runs)
         curveRunSnapshots = runs
-        syncRamps(segments)
         syncNodes(nodeHandles(lane, projection: cameraProjection))
         syncRects(selectionRects, selectionBand(lane, projection: cameraProjection))
         publishOverlays()
@@ -229,13 +224,8 @@ extension AutomationPage {
         syncTexts(valueLabels, labels)
     }
 
-    /// One lane's step curve and ramps as drawn primitives: a horizontal run per
-    /// segment with the vertical connector the next value needs, and the sloped
-    /// line a ramp interpolates. `stroke` is production's two-single-pixel curve
-    /// width.
     func appendCurve(_ lane: AutomationLaneProjection, projection: AutomationProjection,
-                             isGhost: Bool, into runs: inout [SceneRect],
-                             ramps: inout [AutomationRampHandle]) {
+                     isGhost: Bool, into runs: inout [SceneRect]) {
         guard !lane.points.isEmpty else { return }
         let stroke = 2.0
         let color = isGhost ? palette.outline : palette.primaryText
@@ -248,18 +238,9 @@ extension AutomationPage {
             let x1 = min(max(0, segment.tickEnd.map(x) ?? limit), limit)
             guard x1 >= x0 else { continue }
             let fromY = y(segment.fromValue)
-            switch segment.kind {
-            case .step:
-                if x1 > x0 {
-                    runs.append(SceneRect(x: x0, y: (fromY - stroke / 2).rounded(), width: x1 - x0,
-                                          height: stroke, fillColor: color, primitiveName: name))
-                }
-            case .ramp:
-                if x1 > x0 {
-                    ramps.append(AutomationRampHandle(
-                        x0: x0, y0: (fromY - stroke / 2).rounded(), dx: x1 - x0,
-                        dy: y(segment.toValue) - fromY, color: color, primitiveName: name))
-                }
+            if x1 > x0 {
+                runs.append(SceneRect(x: x0, y: (fromY - stroke / 2).rounded(), width: x1 - x0,
+                                      height: stroke, fillColor: color, primitiveName: name))
             }
             let next = index + 1 < lane.segments.count ? lane.segments[index + 1] : nil
             if segment.kind == .step, let next, next.fromValue != segment.fromValue,

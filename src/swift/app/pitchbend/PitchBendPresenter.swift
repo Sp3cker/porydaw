@@ -12,22 +12,22 @@ public final class PitchBendPresenter {
     @QtTracked public var lfoSpeed = 22
     @QtTracked public var noteDescription = ""
     @QtTracked public var description = ""
-    @QtTracked public var metrics: [String: QVariantSettable] = [:]
-    @QtTracked public var appearance: [String: QVariantSettable] = [:]
+    public var metrics: [String: QVariantSettable] = [:]
+    public var appearance: [String: QVariantSettable] = [:]
     @QtTracked public var anchorX = 0.0
     @QtTracked public var anchorY = 0.0
     @QtTracked public var anchorWidth = 0.0
     @QtTracked public var anchorHeight = 0.0
-    @QtIgnored private let session: DocumentSession
-    @QtIgnored private let grid: PianoGrid
-    @QtIgnored private let palette: GridPalette
-    @QtIgnored private var geometry: PitchBendGeometry
-    @QtIgnored private var note: Note?
-    @QtIgnored private var noteEnd = 0
-    @QtIgnored private var endRange = 2
-    @QtIgnored private var endSpeed = 22
-    @QtIgnored private var currentPitch: PitchBendLane?
-    @QtIgnored private var currentMod: PitchBendLane?
+    private let session: DocumentSession
+    private let grid: PianoGrid
+    private let palette: GridPalette
+    private var geometry: PitchBendGeometry
+    private var note: Note?
+    private var noteEnd = 0
+    private var endRange = 2
+    private var endSpeed = 22
+    private var currentPitch: PitchBendLane?
+    private var currentMod: PitchBendLane?
 
     public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette) {
         self.session = session

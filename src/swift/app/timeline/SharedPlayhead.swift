@@ -210,34 +210,34 @@ public final class SharedPlayheadPresenter {
     /// The transport raw value `ApplicationSession.playPause()` calls playing.
     public var playing: Bool = false
     /// Left bloom extent from the core to the outer edge.
-    @QtTracked public var glowLeft: Double =
+    public var glowLeft: Double =
         SharedPlayheadAppearance.glowLeftExtent(
             baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
     /// Right bloom extent from the core to the outer edge.
-    @QtTracked public var glowRight: Double =
+    public var glowRight: Double =
         SharedPlayheadAppearance.glowRightExtent(
             baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
     /// Peak opacity at the core-facing edge of each bloom.
-    @QtTracked public var peakAlpha: Double = SharedPlayheadAppearance.peakAlpha(playing: false)
+    public var peakAlpha: Double = SharedPlayheadAppearance.peakAlpha(playing: false)
     /// One logical device pixel, matching layout::singlePixel().
-    @QtTracked public var lineWidthPx: Double = SharedPlayheadAppearance.lineWidth
-    @QtTracked public var triangleHalfWidthPx: Double =
+    public var lineWidthPx: Double = SharedPlayheadAppearance.lineWidth
+    public var triangleHalfWidthPx: Double =
         SharedPlayheadAppearance.triangleHalfWidth(
             baseFontPx: GridCameraPolicy.seedBaseFontPx)
-    @QtTracked public var triangleHeightPx: Double =
+    public var triangleHeightPx: Double =
         SharedPlayheadAppearance.triangleHeight(
             baseFontPx: GridCameraPolicy.seedBaseFontPx)
     /// Retained for parity with the native overlay; the Swift roll points down.
-    @QtTracked public var trianglePointsUp: Bool = SharedPlayheadAppearance.trianglePointsUp
+    public var trianglePointsUp: Bool = SharedPlayheadAppearance.trianglePointsUp
 
     /// Distinct published presentations, for coverage and performance checks.
     /// `UInt64` is not a bridge type, so this diagnostic stays Swift-only.
-    @QtIgnored public private(set) var presentationCount: UInt64 = 0
+    public private(set) var presentationCount: UInt64 = 0
     /// Follow is enabled by default and has no user-facing command; this switch
     /// exists for deterministic policy checks.
-    @QtIgnored public private(set) var followEnabled = true
+    public private(set) var followEnabled = true
     /// Raised by a page that owns a prompt or a drag outside the grid/drawer.
-    @QtIgnored public private(set) var explicitSuspension = false
+    public private(set) var explicitSuspension = false
     /// One Swift-only notification per distinct presentation. `ApplicationSession`
     /// installs it to fan the shared clock into document-bound pages in Swift;
     /// reading the presenter from QML and calling a page's mutator back through
@@ -253,20 +253,20 @@ public final class SharedPlayheadPresenter {
     /// carries the token of the generation that produced it. A task from a
     /// cancelled generation is refused, so it can never publish into a
     /// replacement document.
-    @QtIgnored public private(set) var lifecycleToken: UInt64 = 0
+    public private(set) var lifecycleToken: UInt64 = 0
     @QtIgnored public var isPolling: Bool { pollTask != nil }
 
     /// One display cadence for every transport state. Cancellation does not wait
     /// out the sleep: `Task.sleep` throws as soon as the task is cancelled.
     private static let pollInterval: Duration = .milliseconds(16)
 
-    @QtIgnored private weak var session: DocumentSession?
-    @QtIgnored private weak var audio: NativeAudio?
-    @QtIgnored private weak var grid: PianoGrid?
-    @QtIgnored private weak var drawer: EditorDrawerPresenter?
-    @QtIgnored private var pollTask: Task<Void, Never>?
-    @QtIgnored private var retained: SharedPlayheadObservation?
-    @QtIgnored private var published: SharedPlayheadPresentation?
+    private weak var session: DocumentSession?
+    private weak var audio: NativeAudio?
+    private weak var grid: PianoGrid?
+    private weak var drawer: EditorDrawerPresenter?
+    private var pollTask: Task<Void, Never>?
+    private var retained: SharedPlayheadObservation?
+    private var published: SharedPlayheadPresentation?
 
     public init() {}
 
@@ -412,7 +412,6 @@ public final class SharedPlayheadPresenter {
                                    drawerActive: drawer?.interactionActive ?? false,
                                    explicitSuspension: explicitSuspension)
     }
-    @QtIgnored
     private var currentBaseFontPx: Double {
         grid?.baseFontPx ?? GridCameraPolicy.seedBaseFontPx
     }

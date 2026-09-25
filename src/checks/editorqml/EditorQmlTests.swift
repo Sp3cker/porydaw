@@ -87,7 +87,7 @@ enum EditorQmlLane {
             component: "src/ui/songview/quick/drawer/AutomationPage.qml",
             drawnRoot: "automationPage"),
         "track-headers": ReferencePaneIdentity(
-            component: "src/ui/songview/quick/TrackHeaderBand.qml",
+            component: "src/ui/songview/quick/swiftroll/TrackHeaderBand.qml",
             drawnRoot: "timelineQuickTrackHeaders"),
     ]
 
@@ -534,13 +534,13 @@ enum EditorQmlLane {
 @MainActor
 @QtBridgeable
 public final class EditorQmlBootstrap: QmlInstantiableStatus {
-    @QtIgnored private static var stagedProjectRoot = ""
-    @QtIgnored private static var stagedSongLabel = ""
-    @QtIgnored private static var stagedProfile = ""
-    @QtIgnored private static var stagedProfileDpr = 0.0
-    @QtIgnored private static var stagedProfileFontPx = 0
-    @QtIgnored private static var stagedProfilePanes: [String] = []
-    @QtIgnored private static var stagedPhase = ""
+    private static var stagedProjectRoot = ""
+    private static var stagedSongLabel = ""
+    private static var stagedProfile = ""
+    private static var stagedProfileDpr = 0.0
+    private static var stagedProfileFontPx = 0
+    private static var stagedProfilePanes: [String] = []
+    private static var stagedPhase = ""
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
@@ -738,7 +738,7 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// cases reach the same object through `applicationSession.velocityPage()`,
     /// which is the production accessor.
     @QtIgnored
-    public func velocityPage() -> VelocityPage? { session?.velocityPage() }
+    public func velocityPage() -> Optional<VelocityPage> { session?.velocityPage() }
 
     /// `EditCommand.setVelocity`'s canonical value, so no case copies the table.
     public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }
@@ -789,7 +789,7 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// The QML cases reach the same object through
     /// `applicationSession.voiceChangesPage()`, which is the production accessor.
     @QtIgnored
-    public func voiceChangesPage() -> VoiceChangesPage? { session?.voiceChangesPage() }
+    public func voiceChangesPage() -> Optional<VoiceChangesPage> { session?.voiceChangesPage() }
 
     /// The page's content-build diagnostic: `UInt64` is not a bridge type, so the
     /// lane reads it as a number it can compare.
@@ -813,9 +813,9 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         session?.voiceChangesPage().presentedContextSlot ?? -1
     }
 
-    @QtIgnored private var auditionEvents: [String] = []
-    @QtIgnored private var auditionObserverInstalled = false
-    @QtIgnored private var auditionForward: ((UInt8, UInt8, UInt8) -> Void)?
+    private var auditionEvents: [String] = []
+    private var auditionObserverInstalled = false
+    private var auditionForward: ((UInt8, UInt8, UInt8) -> Void)?
 
     /// Observes production pointer delivery while retaining the real audio sink.
     /// Callback evidence is not proof of audible native output.
@@ -851,7 +851,7 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// QML cases reach the same object through
     /// `applicationSession.automationPage()`, which is the production accessor.
     @QtIgnored
-    public func automationPage() -> AutomationPage? { session?.automationPage() }
+    public func automationPage() -> Optional<AutomationPage> { session?.automationPage() }
 
     /// The page's content-build diagnostic: `UInt64` is not a bridge type, so the
     /// lane reads it as a number it can compare. A shared-playhead-only update
@@ -1085,10 +1085,10 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
 
     /// Every `cancelSectionInteraction()` the container performed on a test
     /// page this bootstrap created, detach-cancels included.
-    @QtTracked public var pageCancelCount: Int = 0
+    public var pageCancelCount: Int = 0
 
-    @QtIgnored private var testPages: [DrawerSectionKind: DrawerTestPage] = [:]
-    @QtIgnored private var testMaximums: [DrawerSectionKind: Int] = [:]
+    private var testPages: [DrawerSectionKind: DrawerTestPage] = [:]
+    private var testMaximums: [DrawerSectionKind: Int] = [:]
 
     public required init() {}
 
@@ -1192,7 +1192,7 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         testPages[sectionKind]?.setMaximumBodyHeight(maximum > 0 ? maximum : nil)
     }
 
-    @QtIgnored private var session: ApplicationSession? {
+    private var session: ApplicationSession? {
         qmlChildren.compactMap { $0 as? ApplicationSession }.first
     }
 

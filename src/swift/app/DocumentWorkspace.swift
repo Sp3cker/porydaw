@@ -8,28 +8,19 @@ import PorydawCore
 @MainActor
 public final class DocumentWorkspace {
     public struct Callbacks {
-        public var addTrackRequested: () -> Void
         public var changeTrackVoiceRequested: (Int) -> Void
-        public var revealTrackVoiceRequested: (Int) -> Void
-        public var headerContextMenuRequested: (Double, Double) -> Void
         public var gridCommandAvailabilityChanged: () -> Void
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
 
-        public init(addTrackRequested: @escaping () -> Void,
-                    changeTrackVoiceRequested: @escaping (Int) -> Void,
-                    revealTrackVoiceRequested: @escaping (Int) -> Void,
-                    headerContextMenuRequested: @escaping (Double, Double) -> Void,
+        public init(changeTrackVoiceRequested: @escaping (Int) -> Void,
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
                     publicationFailed: @escaping (String) -> Void,
                     timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
-            self.addTrackRequested = addTrackRequested
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
-            self.revealTrackVoiceRequested = revealTrackVoiceRequested
-            self.headerContextMenuRequested = headerContextMenuRequested
             self.gridCommandAvailabilityChanged = gridCommandAvailabilityChanged
             self.sessionStateChanged = sessionStateChanged
             self.publicationFailed = publicationFailed
@@ -103,10 +94,7 @@ public final class DocumentWorkspace {
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)
         }
-        headers.onAddTrackRequested = callbacks.addTrackRequested
         headers.onChangeTrackVoiceRequested = callbacks.changeTrackVoiceRequested
-        headers.onRevealTrackVoiceRequested = callbacks.revealTrackVoiceRequested
-        headers.onContextMenuRequested = callbacks.headerContextMenuRequested
         grid.onAudition = { [weak audio] track, key, velocity in
             guard let audio, (0...15).contains(track), (0...127).contains(key),
                   (0...127).contains(velocity) else { return }

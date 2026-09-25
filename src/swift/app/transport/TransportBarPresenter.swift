@@ -7,7 +7,7 @@ import QtBridge
 @MainActor
 @QtBridgeable
 public final class TransportBarPresenter {
-    @QtIgnored private weak var session: ApplicationSession?
+    private weak var session: ApplicationSession?
 
     @QtTracked public var state = 0 // unavailable, stopped, paused, playing
     @QtTracked public var timeText = "0:00.0 / 0:00.0"
@@ -25,9 +25,9 @@ public final class TransportBarPresenter {
     @QtTracked public var scaleNames = ScaleID.displayOrder.map(\.displayName)
     @QtTracked public var followPlayhead = true
     @QtTracked public var resonanceSuppression = false
-    @QtIgnored private weak var keyDocument: SongDocument?
-    @QtIgnored private var keyRevision: UInt64 = 0
-    @QtIgnored private var keyEvents: [(tick: Tick, label: String)] = []
+    private weak var keyDocument: SongDocument?
+    private var keyRevision: UInt64 = 0
+    private var keyEvents: [(tick: Tick, label: String)] = []
 
     public init() {}
 

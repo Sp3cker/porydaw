@@ -9,8 +9,8 @@ import QtBridge
 public final class PolyphonyShellProbe: QmlInstantiableStatus {
     public var profileName: String =
         ProcessInfo.processInfo.environment["PORYDAW_POLYPHONY_PROFILE"] ?? ""
-    @QtIgnored private let fixture = PolyphonyPanelPresenter()
-    @QtIgnored private var jumpedTick = -1
+    private let fixture = PolyphonyPanelPresenter()
+    private var jumpedTick = -1
 
     public init() {
         fixture.onJump = { [weak self] tick, _, _, _ in

@@ -67,17 +67,17 @@ public final class PolyphonyPanelPresenter {
     @QtTracked public var counterCount = 0
     @QtTracked public var eventCount = 0
 
-    @QtIgnored private weak var audio: NativeAudio?
-    @QtIgnored private var visible = false
-    @QtIgnored private var seenTotal: UInt32 = 0
-    @QtIgnored private var eventRows: [PolyphonyEventRow] = []
-    @QtIgnored private var previousCounters: [(UInt32, UInt32, UInt32)] = []
-    @QtIgnored private var flashUntil: [ContinuousClock.Instant] = []
-    @QtIgnored private var trackNames: [String] = []
-    @QtIgnored private var voiceNames: [String] = []
-    @QtIgnored private var ticksPerBeat: UInt32 = 24
-    @QtIgnored private var signatures: [TimeSignature] = []
-    @QtIgnored private var lastChannelSnapshot: AudioPolySnapshot?
+    private weak var audio: NativeAudio?
+    private var visible = false
+    private var seenTotal: UInt32 = 0
+    private var eventRows: [PolyphonyEventRow] = []
+    private var previousCounters: [(UInt32, UInt32, UInt32)] = []
+    private var flashUntil: [ContinuousClock.Instant] = []
+    private var trackNames: [String] = []
+    private var voiceNames: [String] = []
+    private var ticksPerBeat: UInt32 = 24
+    private var signatures: [TimeSignature] = []
+    private var lastChannelSnapshot: AudioPolySnapshot?
     @QtIgnored public var onJump: ((UInt32, Int, Int, Double) -> Void)?
 
     public init() {}

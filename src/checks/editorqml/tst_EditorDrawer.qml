@@ -3198,12 +3198,6 @@ TestCase {
                                        ["automationCurve", "automationGhostCurve"], [])
     }
 
-    /// The drawn ramps, in tree order.
-    function automationRampItems() {
-        return testCase.collectByNames(testCase.automationPageItem(),
-                                       ["automationRamp", "automationGhostRamp"], [])
-    }
-
     /// The drawn menu rows of the *open* menu, and the separators beside them: a
     /// closed menu keeps its last delegates in the tree, and a stale delegate is
     /// not a row a case may click.

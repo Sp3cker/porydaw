@@ -26,7 +26,7 @@ public final class VoiceEditorController {
     @QtTracked public var modDepth = 0
     @QtTracked public var phase = 0
     @QtIgnored public weak var owner: VoiceListController?
-    @QtIgnored private var pending: Task<Void, Never>?
+    private var pending: Task<Void, Never>?
 
     public init() {}
 

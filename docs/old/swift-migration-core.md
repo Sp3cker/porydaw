@@ -175,3 +175,36 @@ Deleted (20): `swift-core-rewrite/plan.md`, `spec.md`, `task-1..8-brief.md`,
 Retained: all `src/checks/**/proof.*.txt` and sources; active
 `docs/plans/swift-feature-parity/`. `coverage-ledger.json` was the sole
 non-Markdown file owned and removed (disposition §5).
+
+## 9. QtBridge declaration cleanup integration (2026-09-25)
+
+Incoming commits `91727ce7` and `cf990a1c` implement the declaration guard,
+annotation normalization, dead signals/QML/ramp-presentation removal and
+unused context-property seam deletion. Their commit messages record green
+native and QML lanes; those reports do not replace checks on the merged tree.
+The live convention is `.omp/rules/qtbridge-surface.md`, with its normative
+contract in `docs/plans/qtbridge-surface/spec.md`. This preserves the new
+pointer added to the retired integration-contract document without restoring
+that obsolete execution authority.
+
+The incoming audit, amendments, deletion evidence and task briefs are
+historical implementation records, not another work queue. The sole active
+plan is `docs/plans/swift-feature-parity/plan.md`.
+
+Preservation decisions: inferred `@QtTracked` members already register;
+class/custom types still require tracking; sugar-optional object slot returns
+do not register. The guard has an empty baseline, line-free keys and
+shrink-only regeneration unless growth is explicitly requested. Its
+name-global observer matching cannot prove a signal dead, and unresolved
+QML targets/role chains remain outside its coverage.
+
+Live automation `.ramp` math remains; only unreachable presentation was
+removed. Map replacement and a `property var` sweep remain deferred rather
+than newly required rewrites; keep equality gating and the load-bearing
+`Qt.labs.qmlmodels` import. Remaining layout/lifetime work stays in the active
+plan. The incoming PolyphonyPanel flash-ink change has a recorded contrast
+calculation, but its actual flash state still needs AU04 surface coverage.
+
+Merge-specific callback ruling: the newly live Swift
+`sessionStateChanged` callback and selected-document origin guards remain.
+Retired unobserved Qt signals and their reveal/header forwarding do not return.

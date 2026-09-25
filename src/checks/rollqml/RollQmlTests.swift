@@ -201,12 +201,12 @@ enum RollQmlLane {
 @MainActor
 @QtBridgeable
 public final class RollQmlBootstrap: QmlInstantiableStatus {
-    @QtIgnored private static var stagedProjectRoot = ""
+    private static var stagedProjectRoot = ""
 
     /// The native settings this lane or its mounted drawer may write. QtCore
     /// Settings owns the writes and reads; Foundation is used only for key
     /// removal unavailable from QML, and for preserving the caller's settings.
-    @QtIgnored private static let settingKeys = [
+    private static let settingKeys = [
         "keymap.roll.transpose_up", "keymap.transport.play_pause",
         "keymap.roll.velocity_drag", "keymap.velocity.detent_unlock",
         "theme.mode", "theme.primary", "theme.accent", "theme.grid-line-contrast",
@@ -215,10 +215,10 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         "editorDrawer.voiceChangesVisible", "editorDrawer.voiceChangesHeight",
         "editorDrawer.activePage",
     ]
-    @QtIgnored private var originalSettings: [String: Data] = [:]
-    @QtIgnored private var absentKeys: Set<String> = []
-    @QtIgnored private var hasSnapshot = false
-    @QtIgnored private var timeSigFixtureIdentity: DocumentIdentity?
+    private var originalSettings: [String: Data] = [:]
+    private var absentKeys: Set<String> = []
+    private var hasSnapshot = false
+    private var timeSigFixtureIdentity: DocumentIdentity?
 
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
@@ -232,13 +232,13 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     public func componentComplete() {}
 
     /// The suite's production session, declared as this object's QML child.
-    @QtIgnored private var session: ApplicationSession? {
+    private var session: ApplicationSession? {
         qmlChildren.compactMap { $0 as? ApplicationSession }.first
     }
 
     /// The selected tab's document session: the document's own timeline and
     /// camera, for the deterministic drive seams below.
-    @QtIgnored private var document: DocumentSession? {
+    private var document: DocumentSession? {
         session?.selectedDocument
     }
 

@@ -209,7 +209,7 @@ Item {
                                     required property bool flash
                                     width: rows.width
                                     height: Math.round(panel.em * 30 / 12)
-                                    color: flash ? "#D88985" : panel.colors.buttonBackground
+                                    color: flash ? panel.colors.polyphonyFlashBackground : panel.colors.buttonBackground
                                     border.color: panel.colors.outline
                                     border.width: 0.5
                                     Row {
@@ -232,7 +232,7 @@ Item {
                                                     text: parent.modelData
                                                     elide: Text.ElideRight
                                                     verticalAlignment: Text.AlignVCenter
-                                                    color: panel.colors.windowText
+                                                    color: counterRow.flash ? panel.colors.polyphonyFlashText : panel.colors.windowText
                                                     font: panel.applicationFont
                                                 }
                                             }

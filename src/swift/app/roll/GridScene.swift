@@ -143,10 +143,10 @@ public final class GridScene {
     public var pianoLoadingTextModel: QListModel<SceneText> = QListModel()
     public var rulerTextModel: QListModel<SceneText> = QListModel()
 
-    @QtIgnored private var rulerTextSignatures: [String] = []
-    @QtIgnored private var keyboardTextSignatures: [String] = []
-    @QtIgnored private var noteTextSignatures: [String] = []
-    @QtIgnored private var loadingTextSignatures: [String] = []
+    private var rulerTextSignatures: [String] = []
+    private var keyboardTextSignatures: [String] = []
+    private var noteTextSignatures: [String] = []
+    private var loadingTextSignatures: [String] = []
 
     /// QListModel.reset always emits modelReset, which tears down every text
     /// delegate. Rebuilds run per pointer sample, so skip the reset when the

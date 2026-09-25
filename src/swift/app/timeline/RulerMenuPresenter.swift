@@ -42,8 +42,8 @@ public final class RulerMenuPresenter {
     public var rows: QListModel<RulerMenuRow> = QListModel()
     @QtTracked public var menuKind = 0 // 1: ruler background; 2: selected time range
     @QtTracked public var insertTimePromptOpen = false
-    @QtTracked public var insertTimePromptAppearance: [String: QVariantSettable] = [:]
-    @QtTracked public var insertTimePromptFont: [String: QVariantSettable] = [:]
+    public var insertTimePromptAppearance: [String: QVariantSettable] = [:]
+    public var insertTimePromptFont: [String: QVariantSettable] = [:]
     public var insertTimePromptTitle: String = "Insert Time"
     public var insertTimePromptInitialBars: Int = 1
     public var insertTimePromptInitialBeats: Int = 0

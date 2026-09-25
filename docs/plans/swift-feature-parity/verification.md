@@ -19,6 +19,7 @@ Commands below exist at the inspected revision. Reuse them in surface briefs; ch
 
 | Key | Exact command | What it covers / does not establish |
 | --- | --- | --- |
+| BRIDGE | `deno task verify:bridge` | Pinned-macro Swift/QML declaration guard with an empty baseline; also runs before every `verify*` lane. Its name-global observer matching and unresolved-target exclusions are not behavioral proof or complete signal-liveness analysis. |
 | CORE | `deno task verify --filter swiftcore --verbose` | Registered Swift domain, presenter, project, audio and editing suites on macOS. Not automatically real-window interaction or every legacy assertion. |
 | PROJECT | `deno task verify --filter projectstore --verbose` | Registered project-store entry points. Several manifest names alias the same Swift slot; count predicates, not entry names. |
 | IDENTITY | `deno task verify --filter projectidentitycheck --verbose` | Project identity behavior. |
