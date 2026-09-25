@@ -26,14 +26,27 @@ must be a message-anchored predicate.
   the new predicates land in a workspace file
 - `src/checks/workspace/session_view_state.swift` (new, or the nearest
   existing `session_*.swift` — implementer picks, stays under 400 lines)
-- `src/swift/app/SongTabsController.swift`, `DocumentSession.swift`,
-  `DocumentWorkspace.swift`, `ApplicationSession.swift` — **only** if a
-  CHECK-GAP proves the production path is actually missing (scout found none;
-  any such find escalates to controller before editing)
+- `src/swift/app/SongTabsController.swift`, `ApplicationSession.swift` —
+  **reload repair authorized** (BEHAVIOR-GAP confirmed during
+  implementation: `closeTab → reloadApproved → openTab` drops the tab's
+  view state and tab identity; the C++ contract retains both). Scope is
+  `closeTab`'s reopen path, `reloadApproved`, `startOpen`/`openTab`, plus a
+  minimal view-state capture/apply on `DocumentSession`/`DocumentWorkspace`
+  if no existing surface suffices. Any other BEHAVIOR-GAP stops and
+  escalates — no additional production edits.
 
 Controller owns the ledger handoff: `proof.tabs_lifecycle.txt` and
 `proof.tabs_persistence.txt` remaps happen after the implementer's checks
 pass, via the ledger agent; implementer does not edit proof files.
+
+Confirmed coverage corrections (from the implementer's row audit):
+`test_kStartupRestoresTabsAndFreshCamera` does NOT cover persistence
+A041–A042 (it sets a lane range but never compares the restored tabs'
+`laneRanges`); lifecycle A081 needs an actual `requestUndo` on the untouched
+sibling (test_e only asserts `!canUndo` without requesting); A119 needs a
+`canUndo` assert **after** Cancel; A128/A129 need explicit clean+`!canUndo`
+asserts on the reopened saved song; A083/A084 need a real two-tab song undo
+with the sibling observed clean — none of those exist as predicates.
 
 # Interface contract
 
@@ -55,17 +68,35 @@ pass, via the ledger agent; implementer does not edit proof files.
   (not a fresh `openShell`), assert `openTabCount`/`tabCount` stays 1, the
   label tracks the replacement, and `songTabFor(old)`/page identity resolves
   to the replacement.
-- Reload retention (A091, A093–A098): seed a view-state bundle, reload through
-  `requestReload`/`reloadApproved`, assert count/selection/`songTabFor`
-  unchanged, undo stack cleared, `sameViewState` preserved.
+- Reload retention (A091, A093–A098): the C++ contract
+  (`reloadRetainsCameraAndFreshOpenResetsIt`) keeps the **same SongTab
+  pointer** and the seeded view state (`sameViewState`: pxPerBeat, keyHeight,
+  scroll, selectedTrack, editCursorTick, gridSelection, triplet, eventList)
+  while resetting the undo stack. Implement the repair: `closeTab`'s reload
+  path hands the outgoing tab's view-state bundle and tab id to
+  `reloadApproved`/`startOpen`/`openTab`; `openTab` applies it to the new
+  `DocumentSession`'s camera before the tab installs. Assertions: count/label
+  stable, `selectedSongTab`/`songTabFor` resolve to the same tab identity
+  (same `tabId`, not just same index), undo stack empty, `sameViewState`
+  preserved. The seed-and-land sequence mirrors the original: apply a seeded
+  `EditorViewState`, reload, compare `viewState()` for equality.
 - Transport stop on switch (A077): play on tab A, selectTab to B, assert
   transport stopped (DocumentWorkspace.deactivate → audio.stop()).
 - Undo-after-Cancel (A120–A121): extend the dirty-close journey — after
   Cancel on the gate, perform the undo the site describes and assert the
   dirty/canUndo outcomes.
+- Two-tab undo isolation (A081, A083–A084): requestUndo on the untouched
+  sibling is a no-op (no inherited history); undo on the edited tab leaves
+  the sibling clean and keeps its own history.
+- Reopen-clean (A128–A129): after Save+close+reopen, assert the reopened
+  document starts clean with `!canUndo`.
 - editorViewState (persistence A006, A008, A041–A042): per-tab set/propagate
   and post-relaunch equality — through whichever shell/workspace surface can
   observe it without new debug seams.
+- Coverage audit is part of the work: the scout's per-row table is
+  directional, not authoritative. Verify every claimed predicate by reading
+  it; any row whose claimed predicate doesn't assert the site moves to
+  CHECK-GAP and gets a new predicate.
 - Every assertion a ledger row maps to must have a message anchor the
   controller's ledger agent can cite (message-literal or function anchor is
   **not** sufficient post-R20; prefer `expect*` calls whose `message:`/`what:`
@@ -73,19 +104,25 @@ pass, via the ledger agent; implementer does not edit proof files.
 
 # Implementation steps
 
-1. Add the CHECK-GAP predicates first (both lanes as needed), run them once
-   to confirm they pass — these are missing checks, not missing behavior;
-   a failure here is a BEHAVIOR-GAP → stop, report, do not patch production.
-2. Report the new predicate functions with exact `message:`/`what:` strings
+1. Reload repair first: the view-state capture/apply + tabId preservation in
+   `closeTab`/`reloadApproved`/`openTab`, verified by its new assertions —
+   this is the one authorized production change.
+2. Add the CHECK-GAP predicates (both lanes as needed), run them once to
+   confirm they pass. A failure outside the authorized reload repair is a
+   BEHAVIOR-GAP → stop, report, do not patch production.
+3. Report the new predicate functions with exact `message:`/`what:` strings
    and the file+line each lives at — the controller's ledger agent needs
    verbatim anchors.
-3. Report which already-existing predicates cover the 71 COVERED-UNMAPPED
-   rows (the scout's table names them; the implementer verifies each by
-   reading the predicate, not by trusting the table).
+4. Report which already-existing predicates cover the COVERED-UNMAPPED rows
+   — verify each by reading the predicate, not by trusting the scout table;
+   rows whose claimed predicate doesn't assert the site move to CHECK-GAP
+   and get new predicates.
 
 # Acceptance predicate
 
-- All 39 previously-unproved rows now have executing predicates.
+- All previously-GAP rows in both ledgers now have executing predicates, and
+  the reload repair is verified by A091/A094/A096/A098-anchored assertions
+  (same tabId + retained view state + cleared undo).
 - `deno task verify:shell --filter shell-tabs` — new QML tests pass.
 - `deno task verify --filter swiftcore` — workspace predicates pass.
 - `deno task verify:bridge` — clean.
@@ -102,9 +139,9 @@ Controller-run named checks after the writer freezes:
 
 # Task-specific constraints
 
-No production edits unless a CHECK-GAP exposes a real behavior gap (then stop
-and escalate — this task proves surfaces, it does not repair them). No ledger
-edits by the implementer. No new lanes/registrations — reuse shell-tabs and
+Production edits are limited to the reload repair named in the write set;
+any other suspected BEHAVIOR-GAP stops and escalates. No ledger edits by the
+implementer. No new lanes/registrations — reuse shell-tabs and
 swiftcore. No sleeps/timing hacks; `waitForNative` polling only. Do not touch
 `proof.tabchecks.txt` (it already owns the shell-tabs ↔ tabchecks mapping);
 the two ledgers in scope are `proof.tabs_lifecycle.txt` and
