@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "sourcekit-lsp": {
+      "command": "sourcekit-lsp",
+      "args": [],
+      "fileTypes": [".swift"],
+      "rootMarkers": [".git"]
+    }
+  }
+}
