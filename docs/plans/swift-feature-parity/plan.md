@@ -1,6 +1,6 @@
 # Swift rewrite: feature-parity roadmap
 
-Status: **PAUSED AT THE USER-REQUESTED HANDOFF; the overall objective is not complete.** Tasks 12/13 are accepted after their bounded runtime/proof/review gates. [handoff.md](handoff.md) records the checkpoint, protected work and exact continuation. Task 14 and BANK-CLOSE remain unstarted; the rest of this inventory is preserved, not cancelled.
+Status: **The overall objective is not complete; the plan continues past the earlier user-requested handoff.** Tasks 12 (R07), 13 (R24), 14 (R08 at `563a3540`), 15 (BANK-CLOSE at `92894399`) and 18 (PJ06: `935c6846` + `5c2d04b2`, merged with the R22/R26/R27 + R15-R18/R23/R25 evidence repairs at `b593f20d`) are accepted and pushed at `b5c5d397` (= `origin/feature/swift-qml-grid`). [handoff.md](handoff.md) records the tasks-12/13 checkpoint only; this plan is authoritative for everything landed after it. The rest of this inventory is preserved, not cancelled.
 
 Current authorization: **details of existing surfaces first, with no extra UI beyond C++ checks/proofs.** Reuse/adapt original QML; do not redesign old features. Sample Studio, WAV export, onboarding and other absent surfaces are deferred, not completed or removed from the inventory.
 
@@ -63,6 +63,7 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R26 | pending | Incoming cleanup removes unreachable ramp presentation while retaining live `.ramp` math. Hidden-tab lifetime, repeated clipping and band-audition projection still need assessment and demonstrated-risk repairs. |
 | R27 | pending | [Task 10](task-10-brief.md) link ownership accepted: all three QML executables relinked and executed without duplicate-library warnings. Missing fonts, zero-pixel font warnings, QTP0004 and usable QML lint imports remain pending. Zero-size source candidate: the add-track snapshot retains two zero-sized fonts and `TrackHeaderBand.qml` constructs their hidden Text items; isolate that runtime path before repair. |
 | R28 | blocked | New bank and sample callbacks cannot implement deferred workflows; requires VG03/SA01 scope authorization. |
+| R29 | pending | 2026-09-25 ED06/ED07/ED08 gap-assertion provenance: `feature/swift-drawer-reactive` carries authored portable `*_gap.swift` assertion files for the velocity, automation and voice-change presenter surfaces (25 files, incl. a velocity gap-support fixture helper) plus residual gap-check specs. Ported into this tree, compiled and wired into `runProjectSessionSuite`, they produced 241 failing assertions — concentrated in `VelocityPageTest::portableGapPredicates` (104), `voicePortableGapPredicates` (101) and one `publishedLayoutAndZoom` gutter mismatch (expected 584, actual 640). The page APIs exist (`publishedMarkers`, `pickerOpen`, `hoverTick`, `setPickerFilter` on VoiceChangesPage/AutomationPage); the failures are a publication-contract divergence, not a missing surface. The port was reverted the same day (user decision) pending presenter-parity repair — re-port these ready-made assertions and fix the presenter contract before ED06/ED07/ED08 can land green. That branch also holds 241 `proof.*.txt` ledgers vs this tree's 186 (55+ unique: retired legacy C++ `tst_*` ledgers kept there under this tree's POLICY deletion); useful provenance when re-porting, not a correctness advantage. |
 
 ### Complete product inventory
 
@@ -104,9 +105,9 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | ED03 | pending | Track mutations/remaps/mute/solo/voices/activity/budget. |
 | ED04 | pending | Ruler/loop/signature/time menus and playing-state seek. |
 | ED05 | pending | Per-tab scale/fold/highlight and scale-aware motion. |
-| ED06 | pending | Velocity scope/grouping/PSG detents/prompts/history. |
-| ED07 | pending | Automation/strokes/clipboard/delete/tap tempo/opaque events. |
-| ED08 | pending | Voice-change picker/preview/commit/cancel/remaps/persistence. |
+| ED06 | pending | Velocity scope/grouping/PSG detents/prompts/history. See R29 (2026-09-25): ready-made portable gap assertions exist on `feature/swift-drawer-reactive` but need a presenter-contract fix first. |
+| ED07 | pending | Automation/strokes/clipboard/delete/tap tempo/opaque events. See R29 (2026-09-25): ready-made portable gap assertions exist on `feature/swift-drawer-reactive` but need a presenter-contract fix first. |
+| ED08 | pending | Voice-change picker/preview/commit/cancel/remaps/persistence. See R29 (2026-09-25): ready-made portable gap assertions exist on `feature/swift-drawer-reactive` but need a presenter-contract fix first. |
 | ED09 | pending | Event payload/order/tempo/EOT/unknown-data preservation. |
 | ED10 | pending | Pitch-bend curve/input/accept/cancel/lifetime. |
 | ED11 | pending | Clipboard interoperability/precedence/paste/remap/text ownership. |
