@@ -81,9 +81,13 @@ public final class SceneText {
 }
 
 private func sceneTextDictSignature(_ dict: [String: QVariantSettable]) -> String {
-    dict.keys.sorted().map { key in
-        "\(key)=\(dict[key].map { "\($0)" } ?? "")"
-    }.joined(separator: ",")
+    var parts: [String] = []
+    parts.reserveCapacity(dict.count)
+    for key in dict.keys.sorted() {
+        let value = dict[key].map { "\($0)" } ?? ""
+        parts.append("\(key)=\(value)")
+    }
+    return parts.joined(separator: ",")
 }
 
 // Everything a scene rebuild needs, projected out of PianoGrid once per
