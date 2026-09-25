@@ -406,7 +406,11 @@ if(NOT APPLE)
 endif()
 # Retain Swift @main and the original editor qrc from their archives
 # while linking native LTO objects with the C++ driver.
-set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX
+    # autoresearch: the exe's only C++ source has no Q_OBJECT — AUTOMOC adds a
+    # serial stamp+compile edge before the link with nothing to generate.
+    # AUTORCC stays ON: resources/fonts.qrc feeds the exe.
+    AUTOMOC OFF AUTOUIC OFF)
 target_link_libraries(porydaw PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_shell_entry>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
