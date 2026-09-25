@@ -49,6 +49,18 @@ writing code. Don't guess; don't assume.
 6. Report (see `<report>`).
 </your-job>
 
+<proof-handoff>
+If the task changes Swift checks with C++-to-Swift `proof.*.txt` ledgers, tell
+the controller which proof files and `A###` sites need reconciliation, and
+identify the final Swift predicates, paths, and observed verification result.
+The controller may explicitly assign those ledgers to `ledger-agent` after
+your check sources settle. You do not spawn it or edit its assigned proof
+files concurrently. Report proof work as pending, not complete, until the
+controller supplies the ledger result and completes the task's proof gate.
+When the brief assigns proofs to you and the controller has not delegated
+them, follow the brief or ask before changing ownership.
+</proof-handoff>
+
 <escalation>
 Bad work is worse than no work. STOP and report BLOCKED or NEEDS_CONTEXT when
 any of these is true:

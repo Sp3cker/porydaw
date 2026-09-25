@@ -408,22 +408,6 @@ FocusScope {
                       : 0
         }
 
-        // The capability diagnostic: an unknown exact map keeps rendering and
-        // navigation live while every exact-map edit is refused.
-        Text {
-            objectName: "velocityContextDiagnostic"
-
-            visible: (page.pageModel ? page.pageModel.contextUnsupported : false)
-            x: 4
-            y: 4
-            width: Math.max(0, plot.width - 8)
-            text: (page.pageModel ? page.pageModel.contextDiagnostic : "")
-            color: page.gridPalette.primaryText
-            font.pixelSize: Math.max(1, page.baseFontPx)
-            textFormat: Text.PlainText
-            wrapMode: Text.WordWrap
-        }
-
         MouseArea {
             id: plotInput
 

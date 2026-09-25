@@ -199,8 +199,6 @@ Item {
                         padding: 0
                         width: Math.round(titleMetrics.advanceWidth) + 2 * (root.tabPadding + 1) + root.closeExtent + 4
                         height: root.tabHeight
-                        ToolTip.visible: hovered && !closeButton.hovered
-                        ToolTip.text: session.title
                         onClicked: root.controller.selectTab(tabId)
 
                         TextMetrics {
