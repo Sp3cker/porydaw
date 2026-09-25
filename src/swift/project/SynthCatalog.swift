@@ -37,47 +37,120 @@ public struct VgDirectSoundScan: Sendable {
 }
 
 private enum CatalogLines {
-    static let label = regex(#"^(\w+)::?"#)
-    static let incbin = regex(#"^\s*\.incbin\s+"([^"]+)""#)
-    static let macro = regex(#"^\s*\.macro\s+(set_synth_\w+)"#)
-    static let groupMacro = regex(#"^\s*voice_group\s+(\w+)"#)
-    static let groupLabel = regex(#"^\s*(voicegroup\w+)::"#)
-    static let keysplit = regex(#"^\s*voice_keysplit\s+(\w+)\s*,\s*(\w+)"#)
-    static let drumkit = regex(#"^\s*voice_keysplit_all\s+(\w+)"#)
+    static let incbinDirective = Array(".incbin".utf8)
+    static let macroDirective = Array(".macro".utf8)
+    static let synthMacroPrefix = Array("set_synth_".utf8)
+    static let voiceGroup = Array("voice_group".utf8)
+    static let voicegroupPrefix = Array("voicegroup".utf8)
+    static let keysplit = Array("voice_keysplit".utf8)
+    static let drumkit = Array("voice_keysplit_all".utf8)
+    static let doubleColon = Array("::".utf8)
+    static let cries = Array("cries/".utf8)
+    static let voiceMacros: [(type: VgMacro, word: [UInt8], spaced: Bool)] = [
+        (.directSoundNoResample, Array("voice_directsound_no_resample".utf8), true),
+        (.directSoundAlt, Array("voice_directsound_alt".utf8), true),
+        (.directSound, Array("voice_directsound".utf8), true),
+        (.square1Alt, Array("voice_square_1_alt".utf8), true), (.square1, Array("voice_square_1".utf8), true),
+        (.square2Alt, Array("voice_square_2_alt".utf8), true), (.square2, Array("voice_square_2".utf8), true),
+        (.progWaveAlt, Array("voice_programmable_wave_alt".utf8), false),
+        (.progWave, Array("voice_programmable_wave".utf8), false),
+        (.noiseAlt, Array("voice_noise_alt".utf8), true), (.noise, Array("voice_noise".utf8), true),
+    ]
 
-    static func regex(_ pattern: String) -> NSRegularExpression {
-        guard let value = try? NSRegularExpression(pattern: pattern) else {
-            preconditionFailure("Invalid catalog source pattern: \(pattern)")
+    static func label(_ line: AsmLine.Bytes) -> String? {
+        var cursor = AsmLine(line)
+        guard let name = cursor.word(), cursor.consume(UInt8(58)) else { return nil }
+        return AsmLine.text(name)
+    }
+
+    static func incbin(_ line: AsmLine.Bytes) -> AsmLine.Bytes? {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(incbinDirective), cursor.skipSpaces(), cursor.consume(UInt8(34)),
+              let binary = cursor.until(34), !binary.isEmpty else { return nil }
+        return binary
+    }
+
+    static func synthMacroWord(_ line: AsmLine.Bytes) -> String? {
+        var cursor = AsmLine(line)
+        cursor.skipSpaces()
+        guard cursor.consume(macroDirective), cursor.skipSpaces(), let word = cursor.word(),
+              word.count > synthMacroPrefix.count, AsmLine.hasPrefix(word, synthMacroPrefix) else { return nil }
+        return AsmLine.text(word)
+    }
+
+    static func decimal(_ field: AsmLine.Bytes) -> Int? {
+        let number = AsmLine.trimmed(field)
+        guard !number.isEmpty else { return nil }
+        let first = number[number.startIndex]
+        let negative = first == 45
+        var index = negative || first == 43 ? number.startIndex + 1 : number.startIndex
+        guard index < number.endIndex else { return nil }
+        var value = 0
+        var overflowed = false
+        while index < number.endIndex {
+            let digit = number[index]
+            guard digit >= 48 && digit <= 57 else { return nil }
+            let step = Int(digit - 48)
+            let (scaled, scaleOverflow) = value.multipliedReportingOverflow(by: 10)
+            let (next, stepOverflow) = negative
+                ? scaled.subtractingReportingOverflow(step) : scaled.addingReportingOverflow(step)
+            overflowed = overflowed || scaleOverflow || stepOverflow
+            value = next
+            index += 1
         }
-        return value
+        return overflowed ? 0 : value
     }
 
-    static func captures(_ expression: NSRegularExpression, in line: String) -> [String]? {
-        let range = NSRange(line.startIndex..<line.endIndex, in: line)
-        guard let match = expression.firstMatch(in: line, range: range) else { return nil }
-        return (1..<match.numberOfRanges).compactMap {
-            Range(match.range(at: $0), in: line).map { String(line[$0]) }
+    static func voiceMacro(_ text: AsmLine.Bytes) -> (type: VgMacro, arguments: AsmLine.Bytes)? {
+        var index = 0
+        while index < voiceMacros.count {
+            let candidate = voiceMacros[index]
+            if AsmLine.hasPrefix(text, candidate.word) {
+                let next = text.startIndex + candidate.word.count
+                if !candidate.spaced || (next < text.endIndex && text[next] == 32) {
+                    return (candidate.type, text[next...])
+                }
+            }
+            index += 1
         }
+        return nil
     }
 
-    static func lines(_ bytes: Data) -> [String] {
-        // Swift's Character split treats CRLF as one grapheme; split on the LF
-        // scalar so CRLF files yield the same lines as the byte split upstream.
-        String(decoding: bytes, as: UTF8.self).unicodeScalars
-            .split(separator: Unicode.Scalar(10), omittingEmptySubsequences: false)
-            .map { String(String.UnicodeScalarView($0)) }
-    }
-
-    static func content(_ line: String) -> String {
-        var end = line.endIndex
-        if let at = line.firstIndex(of: "@") { end = min(end, at) }
-        if let comment = line.range(of: "//") { end = min(end, comment.lowerBound) }
-        return String(line[..<end].trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    static func readLines(_ path: String) -> [String]? {
-        guard let data = try? ProjectFileStore.read(path) else { return nil }
-        return lines(data)
+    static func voiceFields(_ arguments: AsmLine.Bytes, count expected: Int)
+        -> (symbol: AsmLine.Bytes, attack: Int, decay: Int, sustain: Int, release: Int)? {
+        var commas = 0
+        var index = arguments.startIndex
+        while index < arguments.endIndex {
+            if arguments[index] == 44 { commas += 1 }
+            index += 1
+        }
+        guard commas + 1 == expected else { return nil }
+        var symbol = arguments[arguments.startIndex..<arguments.startIndex]
+        var envelope = (0, 0, 0, 0)
+        var field = 0
+        var start = arguments.startIndex
+        index = arguments.startIndex
+        while index <= arguments.endIndex {
+            if index == arguments.endIndex || arguments[index] == 44 {
+                let value = arguments[start..<index]
+                if field == 2 { symbol = AsmLine.trimmed(value) }
+                let slot = field - (expected - 4)
+                if slot >= 0 {
+                    guard let number = decimal(value) else { return nil }
+                    switch slot {
+                    case 0: envelope.0 = number
+                    case 1: envelope.1 = number
+                    case 2: envelope.2 = number
+                    default: envelope.3 = number
+                    }
+                }
+                field += 1
+                start = index + 1
+            }
+            index += 1
+        }
+        return (symbol, envelope.0, envelope.1, envelope.2, envelope.3)
     }
 
     static func files(_ directory: String, recursive: Bool) -> [String] {
@@ -136,24 +209,23 @@ private enum CatalogLines {
         var samples: [String] = []
         var result = VgDirectSoundScan()
         for path in ["\(root)/sound/direct_sound_data.inc", "\(root)/sound/direct_sound_synth_data.inc"] {
-            guard let lines = readLines(path) else { continue }
+            guard let lines = AsmLine.lines(path) else { continue }
             var samplePending: String?
             var synthPending: String?
             for raw in lines {
-                let line = raw
-                if let label = captures(label, in: line)?.first {
+                if let name = label(raw) {
                     if let samplePending { samples.append(samplePending) }
-                    samplePending = label
-                } else if let incbin = captures(incbin, in: line)?.first, let symbol = samplePending {
-                    if !incbin.contains("cries/") { samples.append(symbol) }
+                    samplePending = name
+                } else if let binary = incbin(raw), let symbol = samplePending {
+                    if !AsmLine.contains(binary, cries) { samples.append(symbol) }
                     samplePending = nil
                 }
-                let text = content(raw)
-                if let label = captures(label, in: text)?.first {
-                    synthPending = label
-                } else if synthPending != nil && text.contains(".incbin") {
+                let text = AsmLine.content(raw)
+                if let name = label(text) {
+                    synthPending = name
+                } else if synthPending != nil && AsmLine.contains(text, incbinDirective) {
                     synthPending = nil
-                } else if let symbol = synthPending, let descriptor = synthDescriptor(text) {
+                } else if let symbol = synthPending, let descriptor = synthDescriptor(AsmLine.text(text)) {
                     result.synths.defs.append((symbol, descriptor))
                     synthPending = nil
                 }
@@ -166,9 +238,9 @@ private enum CatalogLines {
             sorted.filter { !synthNames.contains($0) && $0.contains("Phoneme") }
         var seen: Set<String> = []
         for path in files("\(root)/asm/macros", recursive: false) {
-            guard let lines = readLines(path) else { continue }
+            guard let lines = AsmLine.lines(path) else { continue }
             for line in lines {
-                guard let word = captures(macro, in: String(line))?.first, seen.insert(word).inserted else { continue }
+                guard let word = synthMacroWord(line), seen.insert(word).inserted else { continue }
                 result.synths.macroWords.append(word)
             }
         }
@@ -182,56 +254,49 @@ private enum CatalogLines {
         var drums: Set<String> = []
         var families: [Int: [UInt32: Int]] = [:]
         var symbols: [String: [UInt32: Int]] = [:]
-        let macros: [(VgMacro, String, Bool)] = [
-            (.directSoundNoResample, "voice_directsound_no_resample", true),
-            (.directSoundAlt, "voice_directsound_alt", true), (.directSound, "voice_directsound", true),
-            (.square1Alt, "voice_square_1_alt", true), (.square1, "voice_square_1", true),
-            (.square2Alt, "voice_square_2_alt", true), (.square2, "voice_square_2", true),
-            (.progWaveAlt, "voice_programmable_wave_alt", false),
-            (.progWave, "voice_programmable_wave", false),
-            (.noiseAlt, "voice_noise_alt", true), (.noise, "voice_noise", true),
-        ]
         for path in voicegroupFiles(root) {
-            guard let lines = readLines(path) else { continue }
+            guard let lines = AsmLine.lines(path) else { continue }
             for raw in lines {
-                let line = String(raw)
-                if let name = captures(groupMacro, in: line)?.first {
-                    groups.insert("voicegroup_" + name)
-                } else if let name = captures(groupLabel, in: line)?.first {
-                    groups.insert(name)
+                var cursor = AsmLine(raw)
+                cursor.skipSpaces()
+                if let head = cursor.word() {
+                    if AsmLine.equals(head, voiceGroup) {
+                        if cursor.skipSpaces(), let name = cursor.word() {
+                            groups.insert("voicegroup_" + AsmLine.text(name))
+                        }
+                    } else if head.count > voicegroupPrefix.count, AsmLine.hasPrefix(head, voicegroupPrefix),
+                              cursor.consume(doubleColon) {
+                        groups.insert(AsmLine.text(head))
+                    } else if AsmLine.equals(head, keysplit) {
+                        if cursor.skipSpaces(), let symbol = cursor.word() {
+                            cursor.skipSpaces()
+                            if cursor.consume(UInt8(44)) {
+                                cursor.skipSpaces()
+                                if let table = cursor.word() {
+                                    let key = AsmLine.text(symbol)
+                                    if pairs[key] == nil { pairs[key] = AsmLine.text(table) }
+                                }
+                            }
+                        }
+                    } else if AsmLine.equals(head, drumkit) {
+                        if cursor.skipSpaces(), let name = cursor.word() { drums.insert(AsmLine.text(name)) }
+                    }
                 }
-                if let pair = captures(keysplit, in: line), pairs[pair[0]] == nil {
-                    pairs[pair[0]] = pair[1]
-                }
-                if let name = captures(drumkit, in: line)?.first { drums.insert(name) }
-                let text = content(raw)
-                guard let (type, word, _) = macros.first(where: { candidate in
-                    text.hasPrefix(candidate.1) &&
-                        (!candidate.2 || text.dropFirst(candidate.1.count).first == " ")
-                }) else { continue }
-                let args = text.dropFirst(word.count).split(separator: ",", omittingEmptySubsequences: false)
-                let expected = type == .square1 || type == .square1Alt ? 8 : 7
-                guard args.count == expected else { continue }
-                let values = args.suffix(4).compactMap { arg -> Int? in
-                    let number = arg.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !number.isEmpty else { return nil }
-                    let digits = number.dropFirst(number.first == "-" || number.first == "+" ? 1 : 0)
-                    guard !digits.isEmpty, digits.allSatisfy({ ("0"..."9").contains($0) }) else { return nil }
-                    return Int(number) ?? 0 // QByteArray::toInt returns zero on overflow.
-                }
-                guard values.count == 4 else { continue }
+                guard let (type, arguments) = voiceMacro(AsmLine.content(raw)),
+                      let fields = voiceFields(arguments,
+                                               count: type == .square1 || type == .square1Alt ? 8 : 7)
+                else { continue }
                 let cgb = vgMacroIsCgb(type)
-                let attack = cgb ? values[0] & 7 : values[0] & 255
-                let decay = cgb ? values[1] & 7 : values[1] & 255
-                let sustain = cgb ? values[2] & 15 : values[2] & 255
-                let release = cgb ? values[3] & 7 : values[3] & 255
+                let attack = cgb ? fields.attack & 7 : fields.attack & 255
+                let decay = cgb ? fields.decay & 7 : fields.decay & 255
+                let sustain = cgb ? fields.sustain & 15 : fields.sustain & 255
+                let release = cgb ? fields.release & 7 : fields.release & 255
                 guard release != 0, cgb || attack != 0 else { continue }
                 let code = UInt32(attack) << 24 | UInt32(decay) << 16 |
                     UInt32(sustain) << 8 | UInt32(release)
                 families[vgAdsrFamily(type), default: [:]][code, default: 0] += 1
-                if vgMacroHasSymbol(type) {
-                    let symbol = args[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !symbol.isEmpty { symbols[symbol, default: [:]][code, default: 0] += 1 }
+                if vgMacroHasSymbol(type), !fields.symbol.isEmpty {
+                    symbols[AsmLine.text(fields.symbol), default: [:]][code, default: 0] += 1
                 }
             }
         }
@@ -259,17 +324,15 @@ extension VoicegroupSource {
     }
 
     public static func progWaveSymbols(_ projectRoot: String) -> [String] {
-        guard let lines = CatalogLines.readLines("\(projectRoot)/sound/programmable_wave_data.inc") else { return [] }
+        guard let lines = AsmLine.lines("\(projectRoot)/sound/programmable_wave_data.inc") else { return [] }
         var symbols: [String] = []
         var pending: String?
         for line in lines {
-            let text = String(line)
-            if let label = CatalogLines.captures(CatalogLines.label, in: text)?.first {
+            if let label = CatalogLines.label(line) {
                 if let pending { symbols.append(pending) }
                 pending = label
-            } else if let incbin = CatalogLines.captures(CatalogLines.incbin, in: text)?.first,
-                      let symbol = pending {
-                if !incbin.contains("cries/") { symbols.append(symbol) }
+            } else if let binary = CatalogLines.incbin(line), let symbol = pending {
+                if !AsmLine.contains(binary, CatalogLines.cries) { symbols.append(symbol) }
                 pending = nil
             }
         }

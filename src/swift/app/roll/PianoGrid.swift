@@ -1028,16 +1028,7 @@ public final class PianoGrid {
 
     @QtIgnored
     private func updateTimeAxis() {
-        let timeline = session.timeline
-        metrics.timeAxis = TimeAxis(map: TimeMap(
-            ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
-            lengthTicks: timeline.lengthTicks,
-            loopStartTick: timeline.loopStartTick,
-            loopEndTick: timeline.loopEndTick,
-            timeSigs: session.document.timeSignatures.map {
-                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                             denomPow2: $0.denominatorPower)
-            }))
+        metrics.timeAxis = session.projectionCache.timeAxis
     }
 
     @QtIgnored

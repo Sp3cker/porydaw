@@ -16,6 +16,7 @@ add_library(PorydawProject STATIC
     VoicegroupSource.swift
     VoiceEdits.swift
     VoicegroupSave.swift
+    AsmLine.swift
     SynthCatalog.swift
     VoicegroupStore.swift
     ProjectStore.swift
