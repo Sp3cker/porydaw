@@ -13,6 +13,8 @@ For each inventory ID, require all four:
 
 A feature can be present but under-proven. An unresolved proof row is not automatically a missing feature. Neither a green aggregate suite nor a ledger disposition percentage proves product parity.
 
+Every new or rewritten MATCHED row must cite at least one predicate whose anchor is a `message` anchor; a `Mapping:` line citing only `function`/`deleted` anchors, or no mapping at all, does not count. `deno task proof check --strict-mappings` lists and fails on the remaining debt; run it before claiming a ledger closed. `check` has no `--area`, so a ledger counts as closed when none of its sites appear in the strict list, not when the command exits 0.
+
 ## Existing commands and their limits
 
 Commands below exist at the inspected revision. Reuse them in surface briefs; change a command only when its scope changes or the command proves stale/unavailable, recording the mismatch. The controller serializes builds and runtime lanes after parallel writers settle; writers may inspect source locally. No shared-tree build, formatter, or test runs mid-flight.
@@ -32,6 +34,7 @@ Commands below exist at the inspected revision. Reuse them in surface briefs; ch
 | RENDER-BUILD | `deno task build:render` | Builds the development render CLI; building is not an audio comparison or a GUI export check. |
 | PROOF | `deno task proof check` | Proof structure and source-anchor resolution only. |
 | EXECUTED | `deno task proof check --executed` | Classifies predicate anchors against runner evidence and rejects certain unsupported matches. Inspect “not executed” and “unverifiable”; exit zero alone is not complete parity, and does not close GAP/PARTIAL rows. |
+| STRICT-MAPPINGS | `deno task proof check --strict-mappings` | Fails on MATCHED sites citing no message-anchored predicate; plain `check` reports the same list as a warning. Required before treating a ledger as closed. |
 
 Sources: `deno.json`, `tools/cli.ts`, `src/checks/checkcatalog.cpp`, `src/checks/editorqml/ShellQmlTests.swift`, `src/checks/projectstore/ExportChecks.swift`, `tools/proof_reader.ts`.
 

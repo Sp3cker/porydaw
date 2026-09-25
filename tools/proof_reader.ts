@@ -21,10 +21,14 @@ const HELP = `usage: deno task proof <command> [options]
   search <literal> [--area <path>] [--status <label>] [--no-swift]
       Search C++ sites, Swift predicates, and proof preambles. With --status,
       search only C++ sites of that disposition.
-  check [--executed [dir]]
+  check [--executed [dir]] [--strict-mappings]
       Check proof structure and resolve every anchor against its source file.
       With --executed, also classify each anchor against the JSON evidence in
       dir (default build/proof-evidence) written by the verify lanes.
+      With --strict-mappings, additionally fail on every MATCHED site that
+      cites no predicate whose anchor is a message anchor (a Mapping line
+      citing only function/deleted anchors, or no mapping at all, fails).
+      Without it, the same sites are counted in a non-fatal debt warning.
 
 An S entry names its predicate without a line number and carries one Anchor: line:
   S012 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayout.swift
@@ -320,13 +324,20 @@ interface Options {
   full: boolean;
   offset?: number;
   executed?: string;
+  strictMappings: boolean;
 }
 
 function options(args: string[]): Options {
-  const parsed: Options = { positionals: [], noSwift: false, full: false };
+  const parsed: Options = {
+    positionals: [],
+    noSwift: false,
+    full: false,
+    strictMappings: false,
+  };
   for (let i = 0; i < args.length; ++i) {
     const arg = args[i];
     if (arg === "--no-swift") parsed.noSwift = true;
+    else if (arg === "--strict-mappings") parsed.strictMappings = true;
     else if (arg === "--full") parsed.full = true;
     else if (arg === "--executed") {
       const value = args[i + 1];
@@ -411,12 +422,26 @@ function citedPredicateIds(text: string): string[] {
   for (const match of text.matchAll(/S\d+/g)) ids.add(match[0]);
   return [...ids];
 }
-
 function mappingIds(site: Site): string[] {
   const mapping = site.text.split("\n").filter((line) =>
     /^(?:Mapping|Mapping\/reason):/.test(line)
   ).join("\n");
   return citedPredicateIds(mapping);
+}
+
+function hasMeaningfulMapping(
+  site: Site,
+  predicates: Map<string, Predicate>,
+): boolean {
+  const lines = site.text.split("\n").filter((line) =>
+    /^(?:Mapping|Mapping\/reason|Swift):/.test(line)
+  );
+  if (!lines.length) return false;
+  return citedPredicateIds(lines.join("\n")).some((id) => {
+    const anchor = predicates.get(id)?.anchor;
+    return anchor !== undefined && anchor.kind !== "function" &&
+      anchor.kind !== "deleted";
+  });
 }
 
 function resolveProof(proofs: Proof[], requested: string): Proof {
@@ -897,32 +922,40 @@ async function main(args: string[]): Promise<void> {
   if (!["list", "show", "sites", "search", "check"].includes(command)) {
     throw new Error(`unknown command ${command}`);
   }
-  const { positionals, area, status, noSwift, full, offset, executed } =
-    options(
-      rest,
-    );
-  let invalid = false;
+  const {
+    positionals,
+    area,
+    status,
+    noSwift,
+    full,
+    offset,
+    executed,
+    strictMappings,
+  } = options(
+    rest,
+  );
+  let invalid = command !== "check" && strictMappings;
   switch (command) {
     case "check":
-      invalid = !!(positionals.length || area || status || noSwift || full ||
+      invalid ||= !!(positionals.length || area || status || noSwift || full ||
         offset !== undefined);
       break;
     case "list":
-      invalid = !!(positionals.length || full || offset !== undefined ||
+      invalid ||= !!(positionals.length || full || offset !== undefined ||
         executed !== undefined);
       break;
     case "show":
-      invalid = positionals.length < 1 || positionals.length > 2 ||
+      invalid ||= positionals.length < 1 || positionals.length > 2 ||
         !!area || noSwift || offset !== undefined || executed !== undefined ||
         (full && positionals.length !== 2);
       break;
     case "sites":
-      invalid = positionals.length > 1 ||
+      invalid ||= positionals.length > 1 ||
         (positionals.length === 1) === (area !== undefined) ||
         noSwift || full || executed !== undefined;
       break;
     case "search":
-      invalid = positionals.length !== 1 || full || offset !== undefined ||
+      invalid ||= positionals.length !== 1 || full || offset !== undefined ||
         executed !== undefined;
       break;
   }
@@ -940,6 +973,7 @@ async function main(args: string[]): Promise<void> {
       proof.errors.map((error) => `${proof.path}: ${error}`)
     );
     const cache = new Map<string, string | undefined>();
+    const debt: string[] = [];
     let anchors = 0;
     let deleted = 0;
     for (const proof of proofs) {
@@ -962,6 +996,7 @@ async function main(args: string[]): Promise<void> {
         if (resolution.ok) ++anchors;
         else errors.push(`${proof.path} ${predicate.id}: ${resolution.reason}`);
       }
+      const strictDebt: string[] = [];
       for (const site of proof.sites) {
         if (site.status !== "MATCHED" && site.status !== "PARTIAL") continue;
         for (const cited of mappingIds(site)) {
@@ -971,6 +1006,16 @@ async function main(args: string[]): Promise<void> {
             );
           }
         }
+        if (site.status === "MATCHED" && !hasMeaningfulMapping(site, byId)) {
+          strictDebt.push(
+            `${proof.path} ${site.id}: MATCHED without a message-anchored predicate`,
+          );
+        }
+      }
+      if (strictMappings) {
+        errors.push(...strictDebt);
+      } else {
+        debt.push(...strictDebt);
       }
     }
     if (errors.length) {
@@ -982,6 +1027,9 @@ async function main(args: string[]): Promise<void> {
     console.log(
       `${proofs.length} proof files; ${sites} indexed C++ sites; ${anchors} anchors resolved (${deleted} historical)`,
     );
+    if (debt.length) {
+      console.log(`warning: strict-mapping debt: ${debt.length} site(s)`);
+    }
     if (executed !== undefined) {
       const evidence = await loadEvidence(executed);
       const verdicts = classifyPredicates(proofs, evidence);
