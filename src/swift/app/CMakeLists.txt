@@ -173,6 +173,7 @@ target_compile_options(PorydawApp PUBLIC
 
 target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProject QtBridge Qt6::Gui)
 
+
 # The -load-plugin-executable genex in compile options does not create a
 # Ninja edge, so PorydawApp can be scheduled before the plugin binary exists.
 # Declare it explicitly; in-tree QtBridgeMacros is the executable target and

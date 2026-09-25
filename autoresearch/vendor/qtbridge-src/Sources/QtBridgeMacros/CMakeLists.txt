@@ -23,11 +23,34 @@ message(STATUS "swift-syntax version: ${SWIFT_SYNTAX_VERSION}")
 
 include(FetchContent)
 # autoresearch harness: consume the vendored swift-syntax tree so the
-# benchmark configure/build performs no network access.
+# benchmark configure/build performs no network access. AUTOMOC is
+# inherited ON from the vendored QtBridge root; every swift-syntax module is
+# pure Swift, so each target pays a useless autogen step + mocs compile.
+# Off for the subtree and stay Debug-line-tables-only — full -g DWARF on
+# SwiftSyntax's 18s module edge is dead weight nobody debugs.
+set(CMAKE_AUTOMOC OFF)
+set(CMAKE_AUTOUIC OFF)
+set(CMAKE_AUTORCC OFF)
 FetchContent_Declare(SwiftSyntax
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../swiftsyntax-src"
 )
 FetchContent_MakeAvailable(SwiftSyntax)
+
+foreach(syntax_target
+        SwiftSyntax SwiftDiagnostics SwiftBasicFormat SwiftParser
+        SwiftParserDiagnostics SwiftOperators SwiftSyntaxBuilder
+        SwiftSyntaxMacros SwiftSyntaxMacroExpansion
+        SwiftCompilerPluginMessageHandling SwiftCompilerPlugin
+        _SwiftSyntaxCShims)
+    if(TARGET ${syntax_target})
+        get_target_property(_st_type ${syntax_target} TYPE)
+        if(NOT _st_type STREQUAL "INTERFACE_LIBRARY")
+            target_compile_options(${syntax_target} PRIVATE
+                "$<$<COMPILE_LANGUAGE:Swift>:-gline-tables-only>"
+            )
+        endif()
+    endif()
+endforeach()
 
 add_executable(QtBridgeMacros
     Extensions.swift
