@@ -242,16 +242,18 @@ public final class RulerMenuPresenter {
     }
 
     public func acceptInsertTimePrompt(bars: Int, beats: Int, fractions: Int) {
-        guard let pendingInsert,
-              (insertTimePromptMinimumBars...insertTimePromptMaximumBars).contains(bars),
-              (insertTimePromptMinimumBeats...insertTimePromptMaximumBeats).contains(beats),
-              (insertTimePromptMinimumBeatFractions...insertTimePromptMaximumBeatFractions).contains(fractions)
-        else { return }
+        let barsOK = insertTimePromptMinimumBars <= bars && bars <= insertTimePromptMaximumBars
+        let beatsOK = insertTimePromptMinimumBeats <= beats && beats <= insertTimePromptMaximumBeats
+        let fracsOK = insertTimePromptMinimumBeatFractions <= fractions
+            && fractions <= insertTimePromptMaximumBeatFractions
+        guard let pendingInsert, barsOK, beatsOK, fracsOK else { return }
         cancelInsertTimePrompt()
         guard session.document.revision == pendingInsert.revision else { return }
         let beat = UInt64(pendingInsert.beatTicks)
-        let span = UInt64(bars) * beat * UInt64(pendingInsert.beatsPerBar)
-            + UInt64(beats) * beat + (UInt64(fractions) * beat + 3) / 4
+        let barTicks = UInt64(bars) * beat * UInt64(pendingInsert.beatsPerBar)
+        let beatTicks = UInt64(beats) * beat
+        let fracTicks = (UInt64(fractions) * beat + 3) / 4
+        let span = barTicks + beatTicks + fracTicks
         guard span > 0, span <= UInt64(TimeDefaults.maxTick - pendingInsert.tick) else { return }
         _ = session.document.insertBlankTime(
             TimeRange(startTick: pendingInsert.tick, endTick: pendingInsert.tick + Tick(span)),
