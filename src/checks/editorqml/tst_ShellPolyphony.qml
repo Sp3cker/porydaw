@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -20,12 +21,7 @@ TestCase {
     Component { id: referenceComponent; PolyphonyPanel {} }
 
     function waitForNative(predicate, timeoutMs) {
-        var until = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < until) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function createShell() {

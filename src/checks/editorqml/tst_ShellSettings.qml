@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtTest
 import ShellQmlCheck 1.0
 import "../../ui/shell"
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -36,12 +37,7 @@ TestCase {
         verify(bootstrap.clearSettings(), "settings fixture remains isolated")
     }
     function waitForNative(predicate, timeoutMs) {
-        const deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
     function cleanup() {
         if (!shell)

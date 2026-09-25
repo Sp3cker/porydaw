@@ -19,6 +19,7 @@ import RollQmlCheck 1.0
 // same file the application's resource engine loads. A directory import keeps
 // one composition root -- the lane never copies, forks or re-declares it.
 import Porydaw.Ui
+import "../editorqml/NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -75,12 +76,7 @@ TestCase {
     // production session calls intact and service the native event loop while
     // observing the same state the original checks require.
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function initTestCase() {

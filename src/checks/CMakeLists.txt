@@ -349,6 +349,12 @@ if(APPLE)
     # `<build>/editor_qml_tests` as a file, so no bundle or symlink wrapper.
     add_executable(editor_qml_tests
         editorqml/EditorQmlPaths.swift.in
+        # Shared waitForNative loop (editorqml/NativeWait.js): the QML lanes run
+        # with -input under the source directories themselves, so Qt Quick Test
+        # resolves each suite's relative "NativeWait.js" import against the
+        # importing file's directory at runtime — no fixture staging or qrc
+        # needed. Listed here so the build tracks the helper every suite imports.
+        editorqml/NativeWait.js
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(editor_qml_tests PROPERTIES
@@ -400,6 +406,10 @@ if(APPLE)
 
     add_executable(roll_qml_tests
         rollqml/RollQmlPaths.swift.in
+        # Same shared waitForNative loop the editor lane lists above; rollqml
+        # suites import it as "../editorqml/NativeWait.js", which Qt Quick Test
+        # resolves against the importing file's source directory at runtime.
+        editorqml/NativeWait.js
         "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
     )
     set_target_properties(roll_qml_tests PROPERTIES

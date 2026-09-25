@@ -6,6 +6,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import "../../ui/shell"
 import "TextContrastAudit.js" as Audit
+import "NativeWait.js" as NativeWait
 
 // Text legibility is the product's first visual requirement
 // (docs/design/text-contrast.md). Every text item the production shell
@@ -58,12 +59,7 @@ TestCase {
     }
 
     function waitForNative(predicate, timeoutMs) {
-        const deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function cleanup() {

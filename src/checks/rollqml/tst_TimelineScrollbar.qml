@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
 import Porydaw.Ui
+import "../editorqml/NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -30,12 +31,7 @@ TestCase {
     }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function surface() { return overlay ? findChild(overlay, "swiftRollOverlay") : null }

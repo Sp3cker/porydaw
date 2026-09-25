@@ -5,6 +5,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -68,12 +69,7 @@ TestCase {
     }
 
     function waitForNative(predicate, timeoutMs) {
-        var deadline = Date.now() + timeoutMs
-        while (!predicate() && Date.now() < deadline) {
-            bootstrap.pumpMainRunLoop()
-            wait(10)
-        }
-        return predicate()
+        return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function openDiagnostics(session) {
