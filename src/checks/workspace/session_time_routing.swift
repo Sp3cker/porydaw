@@ -57,8 +57,8 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     let originalIndex = document.history.undoIndex
 
     func expectSingleRevisionEntry(revision: UInt64, revisionWhat: String, undoWhat: String, cppID: String) {
-        report.expectEqual(revision + 1, document.revision, cppID: cppID, what: revisionWhat)
-        report.expectEqual(originalIndex + 1, document.history.undoIndex, cppID: cppID, what: undoWhat)
+        report.expectEqual(expected: revision + 1, actual: document.revision, cppID: cppID, what: revisionWhat)
+        report.expectEqual(expected: originalIndex + 1, actual: document.history.undoIndex, cppID: cppID, what: undoWhat)
     }
     func expectUndoRestoresBytes(cppID: String, message: String) {
         report.expect(document.history.undoDocument() &&
@@ -86,7 +86,7 @@ internal func runTimeRoutingChecks(report: CheckReport, suite: DocumentSession,
     page.applyTimeSelection(AutomationTimeSelection(range: scopedRange, scope: .tracks([0])))
     session.editCursor = 0
     page.refreshPlayhead(tick: 96, playing: true)
-    report.expectEqual(Tick(96), page.contextTick, cppID: selectionID,
+    report.expectEqual(expected: Tick(96), actual: page.contextTick, cppID: selectionID,
                        what: "advancing playback context stays away from the selected insertion seam")
     let scopedRevision = document.revision
     report.expect(router.isAvailable(.insertTime), cppID: selectionID,

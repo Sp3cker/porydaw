@@ -71,9 +71,9 @@ private func coreRangeExpectRejected(_ document: SongDocument, _ report: CheckRe
         document.history.canRedo == canRedo && document.engineTracks.usedTrackCount == tracks &&
         document.notes(in: 0) == notes, cppID: id,
         message: "rejected range preserves state, revision, save identity, clean flag, redo, tracks and notes")
-    report.expectEqual(bytes, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: bytes, actual: try document.state.file.encoded(), cppID: id,
                        what: "rejected range preserves exact MIDI bytes")
-    report.expectEqual(position, coreRangeHistoryPosition(document, report, id), cppID: id,
+    report.expectEqual(expected: position, actual: coreRangeHistoryPosition(document, report, id), cppID: id,
                        what: "rejected range preserves history count and cursor")
 }
 
@@ -156,14 +156,14 @@ private func coreRangeCollisionChecks(_ report: CheckReport) throws {
     report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
                   message: "clipped move retains consistent on/off pairs")
     for (tick, duration): (Tick, Tick) in [(60, 20), (20, 10), (0, 20)] {
-        report.expectEqual(duration, document.notes(in: 0).first { $0.tick == tick && $0.pitch == 60 }?.duration,
+        report.expectEqual(expected: duration, actual: document.notes(in: 0).first { $0.tick == tick && $0.pitch == 60 }?.duration,
                            cppID: id, what: "note at\(tick) exists with original expected duration")
     }
     let after = try document.state.file.encoded()
     _ = document.history.undoDocument()
-    report.expectEqual(before, try document.state.file.encoded(), cppID: id, what: "clipped move undo bytes")
+    report.expectEqual(expected: before, actual: try document.state.file.encoded(), cppID: id, what: "clipped move undo bytes")
     _ = document.history.redoDocument()
-    report.expectEqual(after, try document.state.file.encoded(), cppID: id, what: "clipped move redo bytes")
+    report.expectEqual(expected: after, actual: try document.state.file.encoded(), cppID: id, what: "clipped move redo bytes")
     report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
                   message: "redo retains consistent on/off pairs")
 }
@@ -197,11 +197,11 @@ private func coreRangeEditRow(_ report: CheckReport, _ document: SongDocument,
     _ = document.applyRangeEdit(edit)
     report.expect(note(30, 60) == nil && note(32, 62) == nil && note(40, 65) != nil,
                   cppID: id, message: "old notes removed and replacement present")
-    report.expectEqual(70, document.lanePoints(track: track, lane: .controller(7))
+    report.expectEqual(expected: 70, actual: document.lanePoints(track: track, lane: .controller(7))
         .first { $0.tick == tick(40) }?.value, cppID: id, what: "replacement lane exists with value70")
     report.expect(document.state.tempo.contains(coreRangeTempo(tick(41), 155)),
                   cppID: id, message: "replacement tempo exists")
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "mixed edit adds one history entry")
     _ = document.history.undoDocument()
     report.expect(note(30, 60) != nil && note(32, 62) != nil && note(40, 65) == nil &&
@@ -234,18 +234,18 @@ private func coreRangeMoveRow(_ report: CheckReport, _ document: SongDocument,
     let before = try coreEditHistoryCountAtTip(document, report: report, cppID: id)
     _ = document.moveRange(notes: [first, second], points: [lane], by: Int64(step) * 3,
                            tempo: [coreRangeTempo(tick(81), 140)])
-    report.expectEqual(step * 2, note(83, 60)?.duration, cppID: id, what: "first moved note duration")
-    report.expectEqual(step * 2, note(85, 64)?.duration, cppID: id, what: "second moved note duration")
-    report.expectEqual(45, point(83)?.value, cppID: id, what: "moved lane point value")
+    report.expectEqual(expected: step * 2, actual: note(83, 60)?.duration, cppID: id, what: "first moved note duration")
+    report.expectEqual(expected: step * 2, actual: note(85, 64)?.duration, cppID: id, what: "second moved note duration")
+    report.expectEqual(expected: 45, actual: point(83)?.value, cppID: id, what: "moved lane point value")
     report.expect(document.state.tempo.contains(coreRangeTempo(tick(84), 140)),
                   cppID: id, message: "tempo moves with the range")
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "range move adds one history entry")
     guard let moved = note(83, 60), let movedLane = point(83) else {
         report.fail(id, "moved first note and lane must exist"); return
     }
     _ = document.moveRange(notes: [moved], points: [movedLane], by: 0, tempo: [])
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "zero delta adds no history entry")
     _ = document.history.undoDocument()
     report.expect(note(80, 60) != nil && note(82, 64) != nil, cppID: id, message: "undo restores source notes")
@@ -278,19 +278,19 @@ private func coreRangeLaneRow(_ report: CheckReport, _ document: SongDocument,
     if converge {
         let destination = document.lanePoints(track: track, lane: .controller(7)).filter { $0.tick == tick(97) }
         for lane in destination {
-            report.expectEqual(72, lane.value, cppID: id, what: "every converged destination has later value")
+            report.expectEqual(expected: 72, actual: lane.value, cppID: id, what: "every converged destination has later value")
         }
-        report.expectEqual(1, destination.count, cppID: id, what: "one converged destination")
+        report.expectEqual(expected: 1, actual: destination.count, cppID: id, what: "one converged destination")
     } else {
-        report.expectEqual(25, point(93)?.value, cppID: id, what: "first moved lane exists with value25")
-        report.expectEqual(45, point(94)?.value, cppID: id, what: "second moved lane exists with value45")
-        report.expectEqual(60, point(92)?.value, cppID: id, what: "stationary lane exists with value60")
+        report.expectEqual(expected: 25, actual: point(93)?.value, cppID: id, what: "first moved lane exists with value25")
+        report.expectEqual(expected: 45, actual: point(94)?.value, cppID: id, what: "second moved lane exists with value45")
+        report.expectEqual(expected: 60, actual: point(92)?.value, cppID: id, what: "stationary lane exists with value60")
     }
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "bulk lane move adds one history entry")
     _ = document.history.undoDocument()
-    report.expectEqual(values[0], point(90)?.value, cppID: id, what: "undo restores first source")
-    report.expectEqual(values[1], point(91)?.value, cppID: id, what: "undo restores second source")
+    report.expectEqual(expected: values[0], actual: point(90)?.value, cppID: id, what: "undo restores first source")
+    report.expectEqual(expected: values[1], actual: point(91)?.value, cppID: id, what: "undo restores second source")
     report.expect(point(converge ? 97 : 93) == nil, cppID: id, message: "undo removes destination")
     if !converge {
         _ = document.history.redoDocument()

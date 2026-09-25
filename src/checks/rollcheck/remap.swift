@@ -26,7 +26,7 @@ func runRemapChecks(_ report: CheckReport, session: DocumentSession) {
         session.setSelectedNotes(originalNotes)
         session.mutedTracks = originalMute
         session.soloedTracks = originalSolo
-        report.expectEqual(originalState, document.state,
+        report.expectEqual(expected: originalState, actual: document.state,
                            cppID: "swiftcore/PianoRollTest::trackRemapMove",
                            what: "remap fixture leaves the supplied song unchanged")
     }
@@ -138,7 +138,7 @@ private func checkRemapMove(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.redoDocument(), cppID: id, message: "move redo succeeds")
     probe.expectPublication(report, cppID: id, phase: "move redo", remapped: true,
                             selected: 0, scope: [0, 1], muted: [1], soloed: [0])
-    report.expectEqual(moved, document.state, cppID: id, what: "redo restores moved note owners")
+    report.expectEqual(expected: moved, actual: document.state, cppID: id, what: "redo restores moved note owners")
     _ = document.history.undoDocument()
     probe.clear()
 }
@@ -175,7 +175,7 @@ private func checkRemapInsert(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.redoDocument(), cppID: id, message: "insert redo succeeds")
     probe.expectPublication(report, cppID: id, phase: "insert redo", remapped: true,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
-    report.expectEqual(added, document.state, cppID: id, what: "redo reinstates the inserted track")
+    report.expectEqual(expected: added, actual: document.state, cppID: id, what: "redo reinstates the inserted track")
     _ = document.history.undoDocument()
     probe.clear()
 }
@@ -214,7 +214,7 @@ private func checkRemapDuplicate(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.redoDocument(), cppID: id, message: "duplicate redo succeeds")
     probe.expectPublication(report, cppID: id, phase: "duplicate redo", remapped: true,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
-    report.expectEqual(duplicated, document.state, cppID: id, what: "redo reinstates the duplicate")
+    report.expectEqual(expected: duplicated, actual: document.state, cppID: id, what: "redo reinstates the duplicate")
     _ = document.history.undoDocument()
     probe.clear()
 }
@@ -252,7 +252,7 @@ private func checkRemapDelete(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.redoDocument(), cppID: id, message: "delete redo succeeds")
     probe.expectPublication(report, cppID: id, phase: "delete redo", remapped: true,
                             selected: 0, scope: [0], muted: [0], soloed: [])
-    report.expectEqual(deleted, document.state, cppID: id, what: "redo removes the owner again")
+    report.expectEqual(expected: deleted, actual: document.state, cppID: id, what: "redo removes the owner again")
     _ = document.history.undoDocument()
     probe.clear()
 }
@@ -285,7 +285,7 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     report.expect(document.history.redoDocument(), cppID: id, message: "metadata redo succeeds")
     probe.expectPublication(report, cppID: id, phase: "metadata redo", remapped: false,
                             selected: 1, scope: [0, 1], muted: [0], soloed: [1])
-    report.expectEqual(renamed, document.state, cppID: id, what: "redo restores the metadata name")
+    report.expectEqual(expected: renamed, actual: document.state, cppID: id, what: "redo restores the metadata name")
     _ = document.history.undoDocument()
     probe.clear()
 }

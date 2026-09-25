@@ -21,7 +21,7 @@ private func coreNoteMoveCollisionRejections(_ report: CheckReport, _ baseID: St
         for reverse in [false, true] {
             let id = baseID + "[scenario=\(scenario)][\(reverse ? "reverse" : "forward")]"
             let document = try coreNoteDocument(trackCount: 1)
-            report.expectEqual(1, document.engineTracks.usedTrackCount, cppID: id,
+            report.expectEqual(expected: 1, actual: document.engineTracks.usedTrackCount, cppID: id,
                                what: "A001 fixture loads with one editable track")
             if scenario == 1 || scenario == 4 {
                 _ = try document.addNotes([
@@ -69,10 +69,10 @@ private func coreNoteMoveCollisionRejections(_ report: CheckReport, _ baseID: St
             report.expect(mismatch == nil, cppID: id,
                           message: "A004 rejection preserves every saved-state invariant"
                               + mismatchDetail)
-            report.expectEqual(saved.position, coreRangeHistoryPosition(document, report, id),
+            report.expectEqual(expected: saved.position, actual: coreRangeHistoryPosition(document, report, id),
                                cppID: id,
                                what: "A004 rejection preserves history count and cursor")
-            report.expectEqual(saved.canRedo, document.history.canRedo, cppID: id,
+            report.expectEqual(expected: saved.canRedo, actual: document.history.canRedo, cppID: id,
                                what: "A004 rejection preserves the staged redo branch")
 
             let redid = document.history.redoDocument()
@@ -80,7 +80,7 @@ private func coreNoteMoveCollisionRejections(_ report: CheckReport, _ baseID: St
                           message: "A005 staged redo succeeds with consistent on/off pairs")
             let undid = document.history.undoDocument()
             report.expect(undid, cppID: id, message: "A006 staged edit can be undone again")
-            report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
+            report.expectEqual(expected: saved.bytes, actual: try document.state.file.encoded(), cppID: id,
                                what: "A006 undo restores the exact saved bytes")
         }
     }
@@ -89,7 +89,7 @@ private func coreNoteMoveCollisionRejections(_ report: CheckReport, _ baseID: St
 @MainActor
 private func coreNoteIncrementalTransactions(_ report: CheckReport, _ id: String) throws {
     let fixture = try coreNoteDocument(trackCount: 1)
-    report.expectEqual(1, fixture.engineTracks.usedTrackCount, cppID: id,
+    report.expectEqual(expected: 1, actual: fixture.engineTracks.usedTrackCount, cppID: id,
                        what: "A007 fixture loads with one editable track")
     _ = try fixture.addNotes([
         NewNote(track: 0, tick: 20, pitch: 1, duration: 10, velocity: 81),
@@ -108,20 +108,20 @@ private func coreNoteIncrementalTransactions(_ report: CheckReport, _ id: String
     document.nudgeNotes(document.notes(in: 0).map(\.id), byTicks: 1, byKeys: 0)
     report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
                   message: "A009 second incremental move keeps consistent on/off pairs")
-    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id), cppID: id,
+    report.expectEqual(expected: [1, 1], actual: coreRangeHistoryPosition(document, report, id), cppID: id,
                        what: "A010 compatible incremental moves merge into one entry")
 
     let moved = try document.state.file.encoded()
     document.nudgeNotes(document.notes(in: 0).map(\.id), byTicks: -100, byKeys: -2)
-    report.expectEqual(moved, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: moved, actual: try document.state.file.encoded(), cppID: id,
                        what: "A011 rejected later move preserves the merged bytes")
-    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id), cppID: id,
+    report.expectEqual(expected: [1, 1], actual: coreRangeHistoryPosition(document, report, id), cppID: id,
                        what: "A011 rejected later move preserves the merged history entry")
     _ = document.history.undoDocument()
-    report.expectEqual(before, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: before, actual: try document.state.file.encoded(), cppID: id,
                        what: "A012 undo restores the pre-move bytes")
     _ = document.history.redoDocument()
-    report.expectEqual(moved, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: moved, actual: try document.state.file.encoded(), cppID: id,
                        what: "A013 redo restores the merged move bytes")
     report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
                   message: "A014 redo keeps consistent on/off pairs")
@@ -152,13 +152,13 @@ private func coreNoteIncrementalTransactions(_ report: CheckReport, _ id: String
     boundary.nudgeNotes([clamped.id], byTicks: 1, byKeys: 0)
     report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
                   message: "A019 reversed move keeps consistent on/off pairs")
-    report.expectEqual([2, 2], coreRangeHistoryPosition(boundary, report, id), cppID: id,
+    report.expectEqual(expected: [2, 2], actual: coreRangeHistoryPosition(boundary, report, id), cppID: id,
                        what: "A020 clamped reversal splits into two history entries")
     let reversed = boundary.note(clamped.id)
     report.expect(reversed != nil, cppID: id,
                   message: "A021 identity lookup succeeds after the reversed move")
     guard let reversed else { return }
-    report.expectEqual(Tick(1), reversed.tick, cppID: id,
+    report.expectEqual(expected: Tick(1), actual: reversed.tick, cppID: id,
                        what: "A022 clamped reversal moves from zero to tick one")
 }
 
@@ -174,7 +174,7 @@ private func coreNoteMoveAdmissionChecks(_ report: CheckReport) throws {
     let negativeMismatch = try coreNoteStateMismatch(document, before)
     report.expect(negativeMismatch == nil, cppID: id,
                   message: "out-of-domain negative movement rejects without clamping or publication")
-    report.expectEqual(before.position, coreRangeHistoryPosition(document, report, id),
+    report.expectEqual(expected: before.position, actual: coreRangeHistoryPosition(document, report, id),
                        cppID: id, what: "rejected negative movement preserves history")
 
     let unterminated = SongDocument(file: try MidiFile.decode(MidiFile(division: 24, chunks: [
@@ -205,7 +205,7 @@ private func coreNoteMoveAdmissionChecks(_ report: CheckReport) throws {
     let duplicateMismatch = try coreNoteStateMismatch(duplicates, duplicateBefore)
     report.expect(duplicateMismatch == nil, cppID: id,
                   message: "admitted duplicate no-op changes no bytes, identities, or publication")
-    report.expectEqual(duplicateBefore.position, coreRangeHistoryPosition(duplicates, report, id),
+    report.expectEqual(expected: duplicateBefore.position, actual: coreRangeHistoryPosition(duplicates, report, id),
                        cppID: id, what: "admitted duplicate no-op adds no history")
 }
 

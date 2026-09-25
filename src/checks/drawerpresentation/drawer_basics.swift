@@ -3,21 +3,21 @@ import PorydawApp
 @MainActor
 func drawerLayoutCheckDrawerMetricsAndKinds(_ report: CheckReport) {
     let metrics = drawerLayoutDrawerMetrics()
-    report.expectEqual(
+    report.expectEqual(expected: 
         EditorDrawerMetrics(barHeight: drawerLayoutDrawerBarHeight, handleHeight: drawerLayoutDrawerHandleHeight,
                             minimumBody: drawerLayoutDrawerMinimumBody, pianoRollReserve: 130,
-                            toggleInset: 3, resizeStep: drawerLayoutDrawerResizeStep, pixel: 1),
+                            toggleInset: 3, resizeStep: drawerLayoutDrawerResizeStep, pixel: 1), actual: 
         metrics, cppID: drawerLayoutMetricsID,
         what: "resolved metrics derive the production bar row, handle, body floor, reserve, inset, step and hairline")
-    report.expectEqual(
-        6, EditorDrawerMetrics.resolve(baseFontPx: 13, appFontLineSpacing: -8).barHeight,
+    report.expectEqual(expected: 
+        6, actual: EditorDrawerMetrics.resolve(baseFontPx: 13, appFontLineSpacing: -8).barHeight,
         cppID: drawerLayoutMetricsID,
         what: "a negative application line spacing does not shrink the bar below its own padding")
-    report.expectEqual(270, metrics.maximumDefaultBodyHeight(hostHeight: 400), cppID: drawerLayoutMetricsID,
+    report.expectEqual(expected: 270, actual: metrics.maximumDefaultBodyHeight(hostHeight: 400), cppID: drawerLayoutMetricsID,
                        what: "the piano-roll reserve bounds a default body height")
-    report.expectEqual(173, metrics.maximumDefaultBodyHeight(hostHeight: 173), cppID: drawerLayoutMetricsID,
+    report.expectEqual(expected: 173, actual: metrics.maximumDefaultBodyHeight(hostHeight: 173), cppID: drawerLayoutMetricsID,
                        what: "a host shorter than reserve plus floor keeps the whole host height")
-    report.expectEqual(44, metrics.maximumDefaultBodyHeight(hostHeight: 174), cppID: drawerLayoutMetricsID,
+    report.expectEqual(expected: 44, actual: metrics.maximumDefaultBodyHeight(hostHeight: 174), cppID: drawerLayoutMetricsID,
                        what: "the reserve bound meets the body floor exactly at its boundary")
 
     report.expect(DrawerSectionKind.automation.rawValue == 0 &&

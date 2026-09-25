@@ -31,7 +31,7 @@ private func editingExpect(_ row: String, _ result: Bool, _ report: CheckReport,
 
 private func editingEqual<T: Equatable>(_ row: String, _ expected: T, _ actual: T,
                                          _ report: CheckReport, _ message: String) {
-    report.expectEqual(expected, actual, cppID: "voicegroupsourceediting/\(row)",
+    report.expectEqual(expected: expected, actual: actual, cppID: "voicegroupsourceediting/\(row)",
                        what: "\(row): \(message)")
 }
 

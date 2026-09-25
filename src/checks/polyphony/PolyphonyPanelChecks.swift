@@ -27,22 +27,22 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     snapshot.steal[2] = 2
     snapshot.tailCut[2] = 3
     panel.update(snapshot)
-    report.expectEqual(5, panel.pcm.count, cppID: id, what: "PCM allocation follows the configured limit")
-    report.expectEqual(4, panel.cgb.count, cppID: id, what: "four CGB channels are displayed")
-    report.expectEqual(1, panel.pcm[0].state, cppID: id, what: "sounding PCM has active ink")
-    report.expectEqual(2, panel.pcm[1].state, cppID: id, what: "released PCM has tail ink")
-    report.expectEqual(3, panel.shadowPcm[0].state, cppID: id, what: "lost note has shadow ink")
+    report.expectEqual(expected: 5, actual: panel.pcm.count, cppID: id, what: "PCM allocation follows the configured limit")
+    report.expectEqual(expected: 4, actual: panel.cgb.count, cppID: id, what: "four CGB channels are displayed")
+    report.expectEqual(expected: 1, actual: panel.pcm[0].state, cppID: id, what: "sounding PCM has active ink")
+    report.expectEqual(expected: 2, actual: panel.pcm[1].state, cppID: id, what: "released PCM has tail ink")
+    report.expectEqual(expected: 3, actual: panel.shadowPcm[0].state, cppID: id, what: "lost note has shadow ink")
     report.expect(panel.showingShadow, cppID: id, message: "engine invert snapshot displays shadow pool")
-    report.expectEqual(2, panel.counterCount, cppID: id, what: "only overflowing tracks are listed")
-    report.expectEqual(1, panel.counters[0].dropped, cppID: id, what: "drop counter projects unchanged")
-    report.expectEqual(2, panel.counters[1].cutOff, cppID: id, what: "steal counter projects unchanged")
-    report.expectEqual(3, panel.counters[1].tailCut, cppID: id, what: "tail counter projects unchanged")
+    report.expectEqual(expected: 2, actual: panel.counterCount, cppID: id, what: "only overflowing tracks are listed")
+    report.expectEqual(expected: 1, actual: panel.counters[0].dropped, cppID: id, what: "drop counter projects unchanged")
+    report.expectEqual(expected: 2, actual: panel.counters[1].cutOff, cppID: id, what: "steal counter projects unchanged")
+    report.expectEqual(expected: 3, actual: panel.counters[1].tailCut, cppID: id, what: "tail counter projects unchanged")
     snapshot.steal[2] += 1
     panel.update(snapshot)
     report.expect(panel.counters[1].flash, cppID: id, message: "counter increase highlights its track")
     snapshot.invert = false
     panel.update(snapshot)
-    report.expectEqual(0, panel.shadowPcm.count, cppID: id, what: "normal mode hides shadow allocation")
+    report.expectEqual(expected: 0, actual: panel.shadowPcm.count, cppID: id, what: "normal mode hides shadow allocation")
     report.expect(!panel.showingShadow, cppID: id, message: "normal snapshot hides shadow pool")
 
     let eventID = "swiftcore/PolyphonyPanel::ringAndJump"
@@ -54,7 +54,7 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     snapshot.events[1] = newest
     snapshot.eventTotal = 2
     panel.update(snapshot)
-    report.expectEqual(2, panel.eventCount, cppID: eventID, what: "ring drains oldest first")
+    report.expectEqual(expected: 2, actual: panel.eventCount, cppID: eventID, what: "ring drains oldest first")
     report.expect(panel.events[0].text.contains("live") && panel.events[0].text.contains("dropped"),
                   cppID: eventID, message: "newest live drop appears first")
     report.expect(panel.events[1].text.contains("2:1.0")
@@ -73,7 +73,7 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
     snapshot.eventTotal = 1
     snapshot.events[0] = oldest
     panel.update(snapshot)
-    report.expectEqual(1, panel.eventCount, cppID: eventID,
+    report.expectEqual(expected: 1, actual: panel.eventCount, cppID: eventID,
                        what: "smaller ring total rebases an old run")
     for burst in 0..<10 {
         for offset in 0..<60 {
@@ -85,9 +85,9 @@ func runPolyphonyPanelChecks(_ report: CheckReport) {
         snapshot.eventTotal = UInt32((burst + 1) * 60 + 1)
         panel.update(snapshot)
     }
-    report.expectEqual(500, panel.eventCount, cppID: eventID,
+    report.expectEqual(expected: 500, actual: panel.eventCount, cppID: eventID,
                        what: "ten 60-event bursts retain only the latest 500")
-    report.expectEqual(Double(600), panel.events[0].tick, cppID: eventID,
+    report.expectEqual(expected: Double(600), actual: panel.events[0].tick, cppID: eventID,
                        what: "newest retained event is first")
 
     let invertID = "swiftcore/PolyphonyPanel::invertVisibilityGate"

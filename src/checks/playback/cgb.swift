@@ -17,7 +17,7 @@ func checkControllerCgbPublication(_ report: CheckReport) throws {
         let id = preview ? "transportcheck/TransportTest::rebuildKeepsCgbNotePreview" :
             "transportcheck/TransportTest::rebuildKeepsSoundingCgbSongNote"
         report.expect(cgbRig.renderer.songLoaded, cppID: id, message: "original CGB note song loaded")
-        report.expectEqual(1, original.usedTrackCount, cppID: id, what: "one original CGB song track")
+        report.expectEqual(expected: 1, actual: original.usedTrackCount, cppID: id, what: "one original CGB song track")
         report.expect(cgbRig.sustaining(60), cppID: id, message: "CGB fixture must sound before replacement")
         report.expect(cgbRig.renderer.activeCgbChannels >= 1, cppID: id,
                       message: "CGB channel count confirms sounding precondition")
@@ -35,7 +35,7 @@ func checkControllerCgbPublication(_ report: CheckReport) throws {
         } else {
             cgbRig.renderer.stop()
             _ = cgbRig.render(cgbRig.settle + cgbRig.ramp * 3)
-            report.expectEqual(UInt64(0), cgbRig.renderer.playheadSamples, cppID: id,
+            report.expectEqual(expected: UInt64(0), actual: cgbRig.renderer.playheadSamples, cppID: id,
                               what: "stop after CGB replacement resets cursor")
         }
     }
@@ -70,7 +70,7 @@ func checkCgbReplacementRows(_ report: CheckReport) {
     var cgbSong = Sequencer()
     renderPlaybackCheckFrames(&cgbSong, engine: cgbSongEngine.pointer, timeline: cgbOriginal, frames: 1)
     cgbSong.replaceTimeline(cgbSong.position, timeline: cgbReplacement)
-    report.expectEqual([UInt8(60)], playbackCheckCgbKeys(cgbSongEngine.pointer),
+    report.expectEqual(expected: [UInt8(60)], actual: playbackCheckCgbKeys(cgbSongEngine.pointer),
                        cppID: cgbSongReplacementID,
                        what: "sounding CGB song notes after replacement")
 
@@ -82,10 +82,10 @@ func checkCgbReplacementRows(_ report: CheckReport) {
     m4a_engine_note_on(cgbPreviewEngine.pointer, 0, 60, 127)
     var cgbPreview = Sequencer()
     cgbPreview.replaceTimeline(0, timeline: cgbReplacement)
-    report.expectEqual([UInt8(60)], playbackCheckCgbKeys(cgbPreviewEngine.pointer),
+    report.expectEqual(expected: [UInt8(60)], actual: playbackCheckCgbKeys(cgbPreviewEngine.pointer),
                        cppID: cgbPreviewReplacementID,
                        what: "CGB preview notes after replacement")
     m4a_engine_note_off(cgbPreviewEngine.pointer, 0, 60)
-    report.expectEqual([UInt8](), playbackCheckCgbKeys(cgbPreviewEngine.pointer),
+    report.expectEqual(expected: [UInt8](), actual: playbackCheckCgbKeys(cgbPreviewEngine.pointer),
                        cppID: cgbPreviewReplacementID, what: "released CGB preview notes")
 }

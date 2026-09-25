@@ -11,7 +11,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     // 3. Architecture Amendment: State-to-Playback factory verification
     // Verify initial timeline matches canonical state factory projection
     let initialExpectedTimeline = PlaybackTimeline.build(state: session.document.state, sampleRate: 48_000)
-    report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
+    report.expectEqual(expected: initialExpectedTimeline.sample(for: 24), actual: session.timeline.sample(for: 24),
                        cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
                        what: "initial timeline matches canonical state factory projection")
 
@@ -27,13 +27,13 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     report.expect(chunkMetasStripped,
                   cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                   message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
-    report.expectEqual(1, session.document.state.tempo.count,
+    report.expectEqual(expected: 1, actual: session.document.state.tempo.count,
                        cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
                        what: "authoritative tempo point count in state")
 
     // At 120 BPM (500_000 us/quarter note) and division 24, 24 ticks = 0.5s -> 24000 samples at 48kHz
     let initialSampleAt24 = session.timeline.sample(for: 24)
-    report.expectEqual(UInt64(24_000), initialSampleAt24,
+    report.expectEqual(expected: UInt64(24_000), actual: initialSampleAt24,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
                        what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
 
@@ -67,7 +67,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
 
     // At 150 BPM (400_000 us/quarter note), 24 ticks = 0.4s -> exactly 19200 samples at 48kHz
     let editedSampleAt24 = session.timeline.sample(for: 24)
-    report.expectEqual(UInt64(19_200), editedSampleAt24,
+    report.expectEqual(expected: UInt64(19_200), actual: editedSampleAt24,
                        cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
                        what: "state factory projection computes exact 19200 samples for edited tempo")
 
@@ -78,7 +78,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     extendedState.config.extendedClocks = true
     extendedState.config.exactGate = false
     let extendedTimeline = PlaybackTimeline.build(state: extendedState, sampleRate: 48_000)
-    report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+    report.expectEqual(expected: UInt64(48_000), actual: noteOffSample(extendedTimeline, key: 64),
                        cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
                        what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
     report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
@@ -90,7 +90,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     updatedCfg.exactGate = true
     session.document.setConfig(updatedCfg)
     let configuredGate60 = noteOffSample(session.timeline, key: 60)
-    report.expectEqual(UInt64(20_000), configuredGate60,
+    report.expectEqual(expected: UInt64(20_000), actual: configuredGate60,
                        cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                        what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
     report.expect(defaultGate60 != configuredGate60,
@@ -102,30 +102,30 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
+        report.expectEqual(expected: defaultGate60, actual: noteOffSample(session.timeline, key: 60),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "undo config restores default gate release scheduling")
-        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+        report.expectEqual(expected: UInt64(19_200), actual: session.timeline.sample(for: 24),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "timeline remains at 150 BPM prior to tempo undo")
 
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
+        report.expectEqual(expected: UInt64(24_000), actual: session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
                            what: "undo tempo restores initial 120 BPM timing")
 
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+        report.expectEqual(expected: UInt64(19_200), actual: session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
                            what: "redo tempo restores 150 BPM timing")
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
+        report.expectEqual(expected: configuredGate60, actual: noteOffSample(session.timeline, key: 60),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "redo config reproduces exact-gate event timing")
     } catch {
@@ -153,7 +153,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
         message: "cursor-only mutation publishes exactly the cursor domain")
     publicationStart = publishedChangeCount
     session.editCursor = 48
-    report.expectEqual(publicationStart, publishedChangeCount,
+    report.expectEqual(expected: publicationStart, actual: publishedChangeCount,
                        cppID: statePublicationID,
                        what: "equal cursor assignment publishes nothing")
 
@@ -174,7 +174,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     publicationStart = publishedChangeCount
     session.mutedTracks = [1]
     session.soloedTracks = [1]
-    report.expectEqual(publicationStart, publishedChangeCount,
+    report.expectEqual(expected: publicationStart, actual: publishedChangeCount,
                        cppID: statePublicationID,
                        what: "equal mute and solo assignments publish nothing")
 
@@ -223,7 +223,7 @@ internal func sessionPlaybackProjectionAndStatePublication(report: CheckReport, 
     if note1.isAssigned {
         session.addSelectedNote(note1)
         session.document.deleteNotes([note1])
-        report.expectEqual(false, session.selectedNotes.contains(note1),
+        report.expectEqual(expected: false, actual: session.selectedNotes.contains(note1),
                            cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
                            what: "selection reconciler prunes dead note IDs when notes are deleted")
     }

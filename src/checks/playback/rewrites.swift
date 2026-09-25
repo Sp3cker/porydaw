@@ -8,17 +8,17 @@ internal func xcmdPairedRewrite(_ report: CheckReport) {
         Xcmd.Event(index: 2, tick: 3, stream: 0, controller: 0x1D, value: 35),
     ]
     let patch = Xcmd.rewrite(events, removing: [1], writing: [])
-    report.expectEqual([0, 1, 2], patch?.removeEvents,
+    report.expectEqual(expected: [0, 1, 2], actual: patch?.removeEvents,
                        cppID: "xcmdcheck/XcmdTest::deleteSharedPointRebuildsSurvivorAsPair",
                        what: "touched epoch is wholly removed")
-    report.expectEqual([UInt8(0x08), 35], patch?.inserts.map(\.value),
+    report.expectEqual(expected: [UInt8(0x08), 35], actual: patch?.inserts.map(\.value),
                        cppID: "xcmdcheck/XcmdTest::deleteSharedPointRebuildsSurvivorAsPair",
                        what: "survivor is a canonical pair")
     let duplicate = Xcmd.rewrite([], removing: [], writing: [
         Xcmd.PointWrite(tick: 5, lane: 0xFB, value: 40, stream: 0, channel: 4),
         Xcmd.PointWrite(tick: 5, lane: 0xFB, value: 55, stream: 0, channel: 4),
     ])
-    report.expectEqual(UInt8(55), duplicate?.inserts.last?.value,
+    report.expectEqual(expected: UInt8(55), actual: duplicate?.inserts.last?.value,
                        cppID: "xcmdcheck/XcmdTest::unknownLaneRejectedAndDuplicatesCollapse",
                        what: "later duplicate write wins")
     report.expect(Xcmd.rewrite([], removing: [], writing: [
@@ -36,7 +36,7 @@ internal func xcmdPairedRewrite(_ report: CheckReport) {
     let inSpan = Xcmd.rewrite(events, removing: [], writing: [
         Xcmd.PointWrite(tick: 2, lane: 0xFB, value: 50, stream: 0, channel: 0),
     ])
-    report.expectEqual([UInt8(0x08), 50, 0x08, 35], inSpan?.inserts.map(\.value),
+    report.expectEqual(expected: [UInt8(0x08), 50, 0x08, 35], actual: inSpan?.inserts.map(\.value),
                        cppID: "xcmdcheck/XcmdTest::inSpanWriteRebuildsAffectedEpoch",
                        what: "in-span write rebuilds canonical pairs")
 }

@@ -13,35 +13,35 @@ internal func mouseHintOwnershipChecks(_ report: CheckReport) {
     let first = hints.allocateSourceToken()
     let second = hints.allocateSourceToken()
     hints.claim(sourceToken: first, profile: 15)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "inactive windows reject hint claims")
     hints.setWindowActive(active: true)
     hints.claim(sourceToken: first, profile: 15)
     let nodeHint = hints.text
     hints.claim(sourceToken: second, profile: 15)
     hints.clear(sourceToken: first)
-    report.expectEqual(nodeHint, hints.text, cppID: id,
+    report.expectEqual(expected: nodeHint, actual: hints.text, cppID: id,
                        what: "replaced source cannot clear an identical-profile new owner")
     hints.claim(sourceToken: first, profile: 0)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "empty profile replaces and clears prior visible hint")
     hints.clear(sourceToken: second)
     hints.claim(sourceToken: first, profile: 26)
     report.expect(hints.text != nodeHint, cppID: id,
                   message: "replacing the node profile changes the presented instructions")
     hints.clear(sourceToken: first)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "current source lifecycle clear removes hint")
     hints.claim(sourceToken: second, profile: 21)
     hints.setWindowActive(active: false)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "window deactivation clears an owned hint")
     hints.setWindowActive(active: true)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "reactivation never resurrects cached ownership")
     hints.claim(sourceToken: second, profile: 21)
     hints.claim(sourceToken: first, profile: -1)
-    report.expectEqual("", hints.text, cppID: id,
+    report.expectEqual(expected: "", actual: hints.text, cppID: id,
                        what: "unknown profile clears rather than retaining unrelated instructions")
 }
 
@@ -74,34 +74,34 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
                   && router.isAvailable(.cut), cppID: id,
                   message: "automation range owns semantic edit availability")
-    report.expectEqual(EditKeyDecision.execute.rawValue,
-                       router.route(.delete, autoRepeat: true).rawValue,
+    report.expectEqual(expected: EditKeyDecision.execute.rawValue,
+                       actual: router.route(.delete, autoRepeat: true).rawValue,
                        cppID: id, what: "range Delete retains canonical repeat execution")
-    report.expectEqual(revision, document.revision, cppID: id,
+    report.expectEqual(expected: revision, actual: document.revision, cppID: id,
                        what: "availability and key arbitration never mutate the document")
-    report.expectEqual(EditKeyDecision.consume.rawValue,
-                       router.route(.transposeUp, autoRepeat: false).rawValue,
+    report.expectEqual(expected: EditKeyDecision.consume.rawValue,
+                       actual: router.route(.transposeUp, autoRepeat: false).rawValue,
                        cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
     router.perform(.transposeUp)
-    report.expectEqual(revision, document.revision, cppID: id,
+    report.expectEqual(expected: revision, actual: document.revision, cppID: id,
                        what: "lane transpose does not mutate a simultaneous note selection")
     router.perform(.delete)
-    report.expectEqual([Tick(72)], document.lanePoints(
+    report.expectEqual(expected: [Tick(72)], actual: document.lanePoints(
         track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
         cppID: id, what: "range Delete removes only points in the selected interval")
     report.expect(document.note(selectedNote.id) != nil, cppID: id,
                   message: "time selection deletion leaves simultaneously selected notes intact")
     let afterDelete = document.revision
     router.perform(.delete)
-    report.expectEqual(afterDelete, document.revision, cppID: id,
+    report.expectEqual(expected: afterDelete, actual: document.revision, cppID: id,
                        what: "empty selected range deletion never falls through to notes")
     report.expect(document.note(selectedNote.id) != nil, cppID: id,
                   message: "empty range still owns the operation target")
     router.perform(.clearTimeSelection)
     report.expect(page.selection == nil, cppID: id,
                   message: "canonical clear-selection command clears the automation range")
-    report.expectEqual(EditKeyDecision.execute.rawValue,
-                       router.route(.delete, autoRepeat: false).rawValue,
+    report.expectEqual(expected: EditKeyDecision.execute.rawValue,
+                       actual: router.route(.delete, autoRepeat: false).rawValue,
                        cppID: id, what: "note selection becomes the target after range clear")
     router.perform(.delete)
     report.expect(document.note(selectedNote.id) == nil, cppID: id,
@@ -125,11 +125,11 @@ internal func editorSelectionCommandChecks(_ report: CheckReport, suite: Documen
     session.addSelectedNote(remaining.id)
     grid.beginRightPointer(x: 0, y: 0)
     let beforeGestureCommand = document.revision
-    report.expectEqual(EditKeyDecision.consume.rawValue,
-                       router.route(.delete, autoRepeat: false).rawValue,
+    report.expectEqual(expected: EditKeyDecision.consume.rawValue,
+                       actual: router.route(.delete, autoRepeat: false).rawValue,
                        cppID: id, what: "a live pointer gesture consumes semantic deletion")
     router.perform(.delete)
-    report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
+    report.expectEqual(expected: beforeGestureCommand, actual: document.revision, cppID: id,
                        what: "direct activation cannot bypass pointer gesture arbitration")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
 }

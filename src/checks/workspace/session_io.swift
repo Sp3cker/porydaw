@@ -21,7 +21,7 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
         let detached = try runBlocking {
             try await service.openSong(label: "mus_session_test")
         }
-        report.expectEqual("mus_session_test", detached.source.label,
+        report.expectEqual(expected: "mus_session_test", actual: detached.source.label,
                            cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
                            what: "published project snapshot survives source registry replacement")
     } catch {
@@ -42,7 +42,7 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
             let retained = try runBlocking {
                 try await service.openSong(label: "mus_session_test")
             }
-            report.expectEqual("mus_session_test", retained.source.label,
+            report.expectEqual(expected: "mus_session_test", actual: retained.source.label,
                                cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
                                what: "failed replacement open retains the worker's prior project")
         } catch {
@@ -71,7 +71,7 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
         session = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test", sampleRate: 48_000)
         }
-        report.expectEqual("mus_session_test", session.document.source.label,
+        report.expectEqual(expected: "mus_session_test", actual: session.document.source.label,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
                            what: "DocumentSession adopts the requested song source")
     } catch {
@@ -80,7 +80,7 @@ internal func sessionOpenAndRecovery(report: CheckReport, projectDir: String) ->
         return nil
     }
 
-    report.expectEqual(false, session.document.isDirty,
+    report.expectEqual(expected: false, actual: session.document.isDirty,
                        cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
                        what: "opened session starts clean")
     let openDocument = session.document
@@ -128,13 +128,13 @@ internal func sessionFailureStages(report: CheckReport, session: DocumentSession
     let midiBeforeFailures = bytes(at: midiPath)
     let bankBeforeFailures = bytes(at: bankPath)
     let assertFailureIntegrity: (String) -> Void = { cppID in
-        report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+        report.expectEqual(expected: midiBeforeFailures, actual: bytes(at: midiPath), cppID: cppID,
                            what: "failed stage preserves MIDI file bytes")
-        report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+        report.expectEqual(expected: bankBeforeFailures, actual: bytes(at: bankPath), cppID: cppID,
                            what: "failed stage preserves voicegroup file bytes")
-        report.expectEqual(true, session.document.isDirty, cppID: cppID,
+        report.expectEqual(expected: true, actual: session.document.isDirty, cppID: cppID,
                            what: "failed stage leaves document dirty")
-        report.expectEqual(true, session.bankDirty, cppID: cppID,
+        report.expectEqual(expected: true, actual: session.bankDirty, cppID: cppID,
                            what: "failed stage leaves bank dirty")
     }
 
@@ -234,10 +234,10 @@ internal func sessionFailureStages(report: CheckReport, session: DocumentSession
         let normalized = try runBlocking {
             try await service.openSong(label: "mus_session_test")
         }
-        report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+        report.expectEqual(expected: "sound/voicegroups/test_vg.inc", actual: normalized.bank.sourcePath,
                            cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
                            what: "native service publishes a project-relative normalized bank identity")
-        report.expectEqual("mus_session_test", normalized.source.label,
+        report.expectEqual(expected: "mus_session_test", actual: normalized.source.label,
                            cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
                            what: "native service round-trips the accepted playable song label")
     } catch {
@@ -255,13 +255,13 @@ internal func sessionLifetime(report: CheckReport, session: DocumentSession, ser
         let firstDocumentClosed = try runBlocking {
             await session.close()
         }
-        report.expectEqual(true, firstDocumentClosed,
+        report.expectEqual(expected: true, actual: firstDocumentClosed,
                            cppID: lifetimeID,
                            what: "first document closes cleanly")
     } catch {
         report.fail(lifetimeID, "first document close timed out: \(error)")
     }
-    report.expectEqual(true, session.isClosed,
+    report.expectEqual(expected: true, actual: session.isClosed,
                        cppID: lifetimeID,
                        what: "first document marks isClosed without closing its project service")
 
@@ -286,10 +286,10 @@ internal func sessionLifetime(report: CheckReport, session: DocumentSession, ser
             let closed = await secondSession.close()
             return (label, closed)
         }
-        report.expectEqual("mus_session_test2", secondLabel,
+        report.expectEqual(expected: "mus_session_test2", actual: secondLabel,
                            cppID: lifetimeID,
                            what: "same project service opens a second document without reopening")
-        report.expectEqual(true, secondDocumentClosed,
+        report.expectEqual(expected: true, actual: secondDocumentClosed,
                            cppID: lifetimeID,
                            what: "second document closes cleanly")
     } catch {
@@ -310,7 +310,7 @@ internal func sessionLifetime(report: CheckReport, session: DocumentSession, ser
         }
         report.fail(lifetimeID, "explicit project service close must stop the worker")
     } catch let error as ProjectServiceError {
-        report.expectEqual(ProjectServiceError.serviceClosed, error,
+        report.expectEqual(expected: ProjectServiceError.serviceClosed, actual: error,
                            cppID: lifetimeID,
                            what: "explicit project service close owns worker shutdown")
     } catch {

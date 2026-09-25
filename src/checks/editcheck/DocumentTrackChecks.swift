@@ -30,10 +30,10 @@ private func documentDuplicationOwnershipContract(_ report: CheckReport) {
     let document = SongDocument(file: MidiFile(division: 24, chunks: chunks))
     var changes: [DocumentChange] = []
     document.onChange = { changes.append($0) }
-    report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
+    report.expectEqual(expected: UInt8(1), actual: document.engineTracks.tracks[0].channel,
                        cppID: id, what: "A110 source owns channel one")
     let source = document.notes(in: 0)
-    report.expectEqual(1, source.count, cppID: id, what: "A111 foreign channel is not a second note")
+    report.expectEqual(expected: 1, actual: source.count, cppID: id, what: "A111 foreign channel is not a second note")
     report.expect(source.first?.tick == 0 && source.first?.pitch == 60 &&
         source.first?.duration == 24 && source.first?.velocity == 100,
         cppID: id, message: "A112-A115 only the channel-one note is projected")
@@ -41,33 +41,33 @@ private func documentDuplicationOwnershipContract(_ report: CheckReport) {
         report.fail(id, "A121 source note or duplicate missing")
         return
     }
-    report.expectEqual(UInt8(0), document.engineTracks.tracks[copy].channel,
+    report.expectEqual(expected: UInt8(0), actual: document.engineTracks.tracks[copy].channel,
                        cppID: id, what: "A122 duplicate receives the lowest free channel")
     let copied = document.notes(in: copy)
-    report.expectEqual(1, copied.count, cppID: id, what: "A123 copied track has one note")
+    report.expectEqual(expected: 1, actual: copied.count, cppID: id, what: "A123 copied track has one note")
     report.expect(copied.first?.tick == sourceNote.tick &&
         copied.first?.pitch == sourceNote.pitch &&
         copied.first?.duration == sourceNote.duration &&
         copied.first?.velocity == sourceNote.velocity &&
         copied.first?.id != sourceNote.id && sourceNote.id.isAssigned,
         cppID: id, message: "A116/A124-A128 duplicate preserves the owned assigned note and mints its identity")
-    report.expectEqual(1, changes.count, cppID: id, what: "A129 duplication publishes once")
-    report.expectEqual(TrackRemap(chunkMap: Array(0..<16).map(Optional.some),
+    report.expectEqual(expected: 1, actual: changes.count, cppID: id, what: "A129 duplication publishes once")
+    report.expectEqual(expected: TrackRemap(chunkMap: Array(0..<16).map(Optional.some),
                                   engineTrackMap: Array(0..<15).map(Optional.some),
                                   newChunkCount: 17, newEngineTrackCount: 16),
-                       changes.last?.trackRemap, cppID: id,
+                       actual: changes.last?.trackRemap, cppID: id,
                        what: "A130-A135 duplication publishes complete identity maps and new counts")
     guard let copiedChunk = document.engineTracks.tracks[copy].midiChunk else {
         report.fail(id, "A136 duplicate has no raw chunk")
         return
     }
     let events = document.rawChunks[copiedChunk].events
-    report.expectEqual([
+    report.expectEqual(expected: [
         MidiEvent.channel(status: 0xC0, data0: 7),
         .channel(status: 0x90, data0: 60, data1: 100),
         .channel(tick: 24, status: 0x80, data0: 60),
-    ], events, cppID: id, what: "A136-A139 duplicate copies only owned channel events")
-    report.expectEqual(document.trackBudget, document.engineTracks.usedTrackCount,
+    ], actual: events, cppID: id, what: "A136-A139 duplicate copies only owned channel events")
+    report.expectEqual(expected: document.trackBudget, actual: document.engineTracks.usedTrackCount,
                        cppID: id, what: "A140 duplication reaches the track budget")
     report.expect(!document.canAddTrack && document.addTrack(voice: 3) == nil &&
         document.duplicateTrack(0) == nil,
@@ -80,7 +80,7 @@ private func documentDuplicationOwnershipContract(_ report: CheckReport) {
         report.fail(id, "A143-A144 duplication undo/redo failed")
         return
     }
-    report.expectEqual(sourceNote.tick, document.note(copiedID)?.tick,
+    report.expectEqual(expected: sourceNote.tick, actual: document.note(copiedID)?.tick,
                        cppID: id, what: "A143-A144 copied identity remains findable at its tick")
 }
 
@@ -104,12 +104,12 @@ private func trackRemapPublicationContract(_ report: CheckReport) {
     document.onChange = { changes.append($0) }
     func expectRemap(_ chunk: [Int?], _ engine: [Int?],
                      _ chunkCount: Int, _ engineCount: Int, _ site: String) {
-        report.expectEqual(1, changes.count, cppID: id,
+        report.expectEqual(expected: 1, actual: changes.count, cppID: id,
                            what: "\(site) publishes exactly one change")
-        report.expectEqual(TrackRemap(chunkMap: chunk, engineTrackMap: engine,
+        report.expectEqual(expected: TrackRemap(chunkMap: chunk, engineTrackMap: engine,
                                       newChunkCount: chunkCount,
                                       newEngineTrackCount: engineCount),
-                           changes.last?.trackRemap, cppID: id,
+                           actual: changes.last?.trackRemap, cppID: id,
                            what: "\(site) publishes the exact track remap")
         changes.removeAll()
     }
@@ -119,7 +119,7 @@ private func trackRemapPublicationContract(_ report: CheckReport) {
     expectRemap([0, 2, 1], [1, 0], 3, 2, "A076 move undo")
     guard document.history.redoDocument() else { report.fail(id, "A077 move redo failed"); return }
     expectRemap([0, 2, 1], [1, 0], 3, 2, "A077 move redo")
-    report.expectEqual(2, document.addTrack(voice: 3), cppID: id, what: "A078 added slot")
+    report.expectEqual(expected: 2, actual: document.addTrack(voice: 3), cppID: id, what: "A078 added slot")
     expectRemap([0, 1, 2], [0, 1], 4, 3, "A079 add")
     guard document.history.undoDocument() else { report.fail(id, "A080 add undo failed"); return }
     expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A080 add undo")
@@ -131,7 +131,7 @@ private func trackRemapPublicationContract(_ report: CheckReport) {
     expectRemap([0, 1, 2], [0, 1], 4, 3, "A083 delete undo")
     guard document.history.redoDocument() else { report.fail(id, "A084 delete redo failed"); return }
     expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A084 delete redo")
-    report.expectEqual(2, document.duplicateTrack(0), cppID: id, what: "A085 duplicate slot")
+    report.expectEqual(expected: 2, actual: document.duplicateTrack(0), cppID: id, what: "A085 duplicate slot")
     expectRemap([0, 1, 2], [0, 1], 4, 3, "A086 duplicate")
     guard document.history.undoDocument() else { report.fail(id, "A087 duplicate undo failed"); return }
     expectRemap([0, 1, 2, nil], [0, 1, nil], 3, 2, "A087 duplicate undo")
@@ -145,7 +145,7 @@ private func trackRemapPublicationContract(_ report: CheckReport) {
     let beforeNoOp = document.revision
     report.expect(!document.moveTrack(0, to: 0), cppID: id,
                   message: "A098 same-slot track move rejects")
-    report.expectEqual(beforeNoOp, document.revision, cppID: id,
+    report.expectEqual(expected: beforeNoOp, actual: document.revision, cppID: id,
                        what: "A099 same-slot move leaves revision unchanged")
     report.expect(changes.isEmpty, cppID: id,
                   message: "A100 same-slot move publishes no change")
@@ -195,22 +195,22 @@ private func documentGlobalMetadataContract(_ report: CheckReport) {
         report.fail(id, "A147 duplicate failed")
         return
     }
-    report.expectEqual(UInt8(2), document.engineTracks.tracks[copy].channel,
+    report.expectEqual(expected: UInt8(2), actual: document.engineTracks.tracks[copy].channel,
                        cppID: id, what: "A148 copy receives channel two")
     guard let chunk = document.engineTracks.tracks[copy].midiChunk else {
         report.fail(id, "A149 duplicate has no raw chunk")
         return
     }
     let events = document.rawChunks[chunk].events
-    report.expectEqual(3, events.count, cppID: id,
+    report.expectEqual(expected: 3, actual: events.count, cppID: id,
                        what: "A149 copy has exactly three channel events and no globals")
-    report.expectEqual(MidiEvent.channel(status: 0xC2, data0: 6), events.first,
+    report.expectEqual(expected: MidiEvent.channel(status: 0xC2, data0: 6), actual: events.first,
                        cppID: id, what: "A150 rechanneled program")
-    report.expectEqual(MidiEvent.channel(status: 0x92, data0: 60, data1: 100),
-                       events.indices.contains(1) ? events[1] : nil,
+    report.expectEqual(expected: MidiEvent.channel(status: 0x92, data0: 60, data1: 100),
+                       actual: events.indices.contains(1) ? events[1] : nil,
                        cppID: id, what: "A151 rechanneled note on")
-    report.expectEqual(MidiEvent.channel(tick: 24, status: 0x82, data0: 60),
-                       events.indices.contains(2) ? events[2] : nil,
+    report.expectEqual(expected: MidiEvent.channel(tick: 24, status: 0x82, data0: 60),
+                       actual: events.indices.contains(2) ? events[2] : nil,
                        cppID: id, what: "A152 rechanneled note off")
     report.expect(globalsOriginal(), cppID: id, message: "A153 globals survive duplication")
     guard document.moveTrack(copy, to: 0) else { report.fail(id, "A154 move failed"); return }

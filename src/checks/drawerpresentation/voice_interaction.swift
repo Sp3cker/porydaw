@@ -21,17 +21,17 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
         let incremental = page.publishedMarkers
         page.refreshCamera()
         let redrawn = page.publishedMarkers
-        report.expectEqual(incremental.map(\.identity), redrawn.map(\.identity),
+        report.expectEqual(expected: incremental.map(\.identity), actual: redrawn.map(\.identity),
                            cppID: drawerVoiceMoveID, what: "drag and redraw preserve tied marker order")
-        report.expectEqual(incremental.map(\.label), redrawn.map(\.label),
+        report.expectEqual(expected: incremental.map(\.label), actual: redrawn.map(\.label),
                            cppID: drawerVoiceMoveID, what: "drag and redraw agree on label elision")
         for (before, after) in zip(incremental, redrawn) {
             for component in ["x", "y", "width", "height"] {
-                report.expectEqual(before.labelRect[component] as? Double,
+                report.expectEqual(expected: before.labelRect[component] as? Double, actual: 
                                    after.labelRect[component] as? Double, cppID: drawerVoiceMoveID,
                                    what: "drag and redraw agree on label \(component)")
             }
-            report.expectEqual(before.offscreen, after.offscreen, cppID: drawerVoiceMoveID,
+            report.expectEqual(expected: before.offscreen, actual: after.offscreen, cppID: drawerVoiceMoveID,
                                what: "drag and redraw agree on offscreen labels")
         }
     }
@@ -44,15 +44,15 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     report.expect(!page.dragActive, cppID: drawerVoiceMoveID,
                   message: "a move below the activation distance stays pending")
     _ = page.pointerRelease(x: startX + 4, y: 10, button: 1)
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceMoveID,
                        what: "a drag below the activation distance commits nothing")
-    report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceMoveID,
                        what: "the untouched occurrence keeps its tick")
 
     // An activated drag commits exactly one move at the tick it previewed.
     _ = page.pointerPress(x: startX, y: 10, surface: 1, button: 1, modifiers: 0)
     report.expect(page.hasGesture, cppID: drawerVoiceMoveID, message: "the press owns a gesture")
-    report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: 48, actual: page.frozenOccurrence?.tick, cppID: drawerVoiceMoveID,
                        what: "the frozen occurrence is the pressed marker")
     report.expect(page.interactionActive, cppID: drawerVoiceMoveID,
                   message: "the live gesture reports an active interaction")
@@ -65,16 +65,16 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     }
     report.expect(preview != 48, cppID: drawerVoiceMoveID,
                   message: "the preview tick drafts away from the frozen tick")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceMoveID,
                        what: "motion is preview only and mutates nothing")
-    report.expectEqual(preview, page.markerTicks[1], cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: preview, actual: page.markerTicks[1], cppID: drawerVoiceMoveID,
                        what: "the projection draws the marker at the preview tick")
     _ = page.pointerRelease(x: startX + 60, y: 10, button: 1)
     report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceMoveID,
                   message: "the release ends the gesture and its interaction")
-    report.expectEqual(preview, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: preview, actual: fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
                        what: "the release commits the preview tick")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceMoveID,
                        what: "the move is one revision")
     report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceMoveID,
                   message: "the move records one history entry")
@@ -87,9 +87,9 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
         report.fail(drawerVoiceMoveID, "undo failed: \(error)")
         return
     }
-    report.expectEqual(48, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: 48, actual: fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
                        what: "undo restores the moved occurrence's tick")
-    report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceMoveID,
                        what: "undo rebuilds the projection at the restored tick")
     do {
         _ = try drawerVoiceRunBlocking { try await fixture.session.redo() }
@@ -97,7 +97,7 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
         report.fail(drawerVoiceMoveID, "redo failed: \(error)")
         return
     }
-    report.expectEqual(preview, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: preview, actual: fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
                        what: "redo reapplies the move")
 
     // A release back on the frozen tick is a no-op.
@@ -106,10 +106,10 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     _ = page.pointerPress(x: movedX, y: 10, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: movedX + 60, y: 10, buttons: 1)
     _ = page.pointerMove(x: movedX, y: 10, buttons: 1)
-    report.expectEqual(preview, page.dragPreviewTick, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: preview, actual: page.dragPreviewTick, cppID: drawerVoiceMoveID,
                        what: "the draft returns to the frozen tick")
     _ = page.pointerRelease(x: movedX, y: 10, button: 1)
-    report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: settled, actual: fixture.snapshot, cppID: drawerVoiceMoveID,
                        what: "a release back on the frozen tick commits nothing")
 
     // A drag whose document moved under it refuses the commit instead of
@@ -123,9 +123,9 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     _ = page.pointerRelease(x: movedX + 60, y: 10, button: 1)
     report.expect(staleDraft != nil && staleDraft != preview, cppID: drawerVoiceMoveID,
                   message: "the stale drag had drafted another tick before the release")
-    report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMoveID,
+    report.expectEqual(expected: rewritten, actual: fixture.snapshot, cppID: drawerVoiceMoveID,
                        what: "a drag whose revision moved under it commits nothing")
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: 0, in: fixture.lanePoints())?.value,
                        cppID: drawerVoiceMoveID, what: "the concurrent rewrite is the one that stands")
 }
@@ -144,7 +144,7 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
                   message: "the container's cancellation closes the picker")
     report.expect(!page.interactionActive, cppID: drawerVoiceCancellationID,
                   message: "cancellation releases the follow-scroll gate")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "the cancelled picker wrote nothing")
 
     // A live drag cancelled mid-motion restores presentation and commits nothing.
@@ -155,14 +155,14 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
     page.cancelSectionInteraction()
     report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceCancellationID,
                   message: "cancellation ends the live drag")
-    report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceCancellationID,
                        what: "the cancelled drag restores the projection from the document")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "the cancelled drag commits nothing")
 
     // The canvas keeps drawing after a cancellation.
     fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 20) }
-    report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: 3, actual: page.publishedMarkers.count, cppID: drawerVoiceCancellationID,
                        what: "the projection survives the cancellation")
 
     // A track switch invalidates an open modal instead of retargeting it.
@@ -174,9 +174,9 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
                   message: "a track switch cancels the captured menu")
     report.expect(!page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
                   cppID: drawerVoiceCancellationID, message: "the cancelled menu fires no row")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "the track switch wrote nothing")
-    report.expectEqual([0], page.markerTicks, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: [0], actual: page.markerTicks, cppID: drawerVoiceCancellationID,
                        what: "the projection re-derives for the new track")
     fixture.session.selectedTrack = 0
     page.refreshFromDocument()
@@ -187,7 +187,7 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
     page.cancelSectionInteraction()
     report.expect(!page.dragActive, cppID: drawerVoiceCancellationID,
                   message: "a hide cancels the in-flight drag")
-    report.expectEqual(48, page.markerTicks[1], cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: 48, actual: page.markerTicks[1], cppID: drawerVoiceCancellationID,
                        what: "the hidden page's projection is back on the document")
 
     // Detach ends everything and publishes no marker.
@@ -195,11 +195,11 @@ func drawerVoiceCancellationPaths(_ report: CheckReport, suite: DocumentSession,
     page.detach()
     report.expect(!page.hasPicker && !page.hasMenu && !page.hasGesture, cppID: drawerVoiceCancellationID,
                   message: "detach cancels every interaction")
-    report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: 0, actual: page.markerIdentities.count, cppID: drawerVoiceCancellationID,
                        what: "detach publishes no marker")
-    report.expectEqual(0, page.heldSpans.count, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: 0, actual: page.heldSpans.count, cppID: drawerVoiceCancellationID,
                        what: "detach publishes no held span")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceCancellationID,
                        what: "detach wrote nothing")
 
     // The gutter never edits and opens no modal.
@@ -221,29 +221,29 @@ func drawerVoiceAltFineClockLattice(_ report: CheckReport, suite: DocumentSessio
                                  service: ProjectService, programs: [Int]) {
     // `SongDocument::ticksPerClock`: one clock is `division / (24 * (extended ? 2 : 1))`
     // ticks, floored at one.
-    report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 24, extendedClocks: false),
+    report.expectEqual(expected: 1, actual: TimelineSnapPolicy.clockTicks(division: 24, extendedClocks: false),
                        cppID: drawerVoiceFineSnapID,
                        what: "a 24-tick division names one tick per clock")
-    report.expectEqual(4, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: false),
+    report.expectEqual(expected: 4, actual: TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: false),
                        cppID: drawerVoiceFineSnapID,
                        what: "a 96-tick division names four ticks per clock")
-    report.expectEqual(2, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: true),
+    report.expectEqual(expected: 2, actual: TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: true),
                        cppID: drawerVoiceFineSnapID,
                        what: "extended clocks halve the ticks per clock")
-    report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 1, extendedClocks: false),
+    report.expectEqual(expected: 1, actual: TimelineSnapPolicy.clockTicks(division: 1, extendedClocks: false),
                        cppID: drawerVoiceFineSnapID, what: "the clock stride never falls below one tick")
 
     // `Grid::snapTick(tick, fine: true)`: the absolute clock lattice, rounded
     // half-up, clamped to the song's tick domain.
-    report.expectEqual(4, TimelineSnapPolicy.fineSnap(5.9, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+    report.expectEqual(expected: 4, actual: TimelineSnapPolicy.fineSnap(5.9, clockTicks: 4), cppID: drawerVoiceFineSnapID,
                        what: "a position inside a clock cell snaps to its floor")
-    report.expectEqual(8, TimelineSnapPolicy.fineSnap(6, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+    report.expectEqual(expected: 8, actual: TimelineSnapPolicy.fineSnap(6, clockTicks: 4), cppID: drawerVoiceFineSnapID,
                        what: "an exact tie rounds up, as the legacy lattice does")
-    report.expectEqual(8, TimelineSnapPolicy.fineSnap(6.1, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+    report.expectEqual(expected: 8, actual: TimelineSnapPolicy.fineSnap(6.1, clockTicks: 4), cppID: drawerVoiceFineSnapID,
                        what: "a position past the midpoint snaps up")
-    report.expectEqual(0, TimelineSnapPolicy.fineSnap(-3, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+    report.expectEqual(expected: 0, actual: TimelineSnapPolicy.fineSnap(-3, clockTicks: 4), cppID: drawerVoiceFineSnapID,
                        what: "the lattice is anchored at zero")
-    report.expectEqual(TimeDefaults.maxTick,
+    report.expectEqual(expected: TimeDefaults.maxTick, actual: 
                        TimelineSnapPolicy.fineSnap(Double(TimeDefaults.maxTick), clockTicks: 4),
                        cppID: drawerVoiceFineSnapID, what: "the lattice clamps to the song's tick domain")
 
@@ -263,13 +263,13 @@ func drawerVoiceAltFineClockLattice(_ report: CheckReport, suite: DocumentSessio
     let altX = startX + 60
     _ = page.pointerMove(x: altX, y: 10, buttons: 1, modifiers: VoiceModifier.alt)
     let raw = fixture.session.camera.tickAtContentX(altX)
-    report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), page.dragPreviewTick,
+    report.expectEqual(expected: TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), actual: page.dragPreviewTick,
                        cppID: drawerVoiceFineSnapID,
                        what: "the alt drag previews the legacy clock lattice")
     report.expect((page.dragPreviewTick ?? 1) % Tick(clock) == 0, cppID: drawerVoiceFineSnapID,
                   message: "the alt preview lands on the clock lattice itself")
     _ = page.pointerRelease(x: altX, y: 10, button: 1)
-    report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock),
+    report.expectEqual(expected: TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), actual: 
                        fixture.lanePoints().first { $0.value == dragged.value }?.tick,
                        cppID: drawerVoiceFineSnapID,
                        what: "the released alt drag commits the clock-lattice tick")
@@ -287,19 +287,19 @@ func drawerVoiceCollisionDragOutcome(_ report: CheckReport, suite: DocumentSessi
 
     _ = page.pointerPress(x: startX, y: 10, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: fixture.markerX(occupied.tick), y: 10, buttons: 1)
-    report.expectEqual(occupied.tick, page.dragPreviewTick, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: occupied.tick, actual: page.dragPreviewTick, cppID: drawerVoiceCollisionID,
                        what: "the dragged preview lands on the occupied tick")
     _ = page.pointerRelease(x: fixture.markerX(occupied.tick), y: 10, button: 1)
 
     let points = fixture.lanePoints()
-    report.expectEqual(2, points.count, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: 2, actual: points.count, cppID: drawerVoiceCollisionID,
                        what: "a move onto an occupied tick leaves one occurrence there")
-    report.expectEqual(moving.value,
+    report.expectEqual(expected: moving.value, actual: 
                        VoiceLanePolicy.occurrence(at: occupied.tick, in: points)?.value,
                        cppID: drawerVoiceCollisionID, what: "the moved occurrence wins the destination")
     report.expect(VoiceLanePolicy.occurrence(at: moving.tick, in: points) == nil,
                   cppID: drawerVoiceCollisionID, message: "the source tick no longer holds a change")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceCollisionID,
                        what: "the collision is one revision")
     report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceCollisionID,
                   message: "the collision records exactly one history entry")
@@ -313,11 +313,11 @@ func drawerVoiceCollisionDragOutcome(_ report: CheckReport, suite: DocumentSessi
         return
     }
     let restored = fixture.lanePoints()
-    report.expectEqual(3, restored.count, cppID: drawerVoiceCollisionID,
+    report.expectEqual(expected: 3, actual: restored.count, cppID: drawerVoiceCollisionID,
                        what: "a single undo restores both occurrences")
-    report.expectEqual(programs[1], VoiceLanePolicy.occurrence(at: 48, in: restored)?.value,
+    report.expectEqual(expected: programs[1], actual: VoiceLanePolicy.occurrence(at: 48, in: restored)?.value,
                        cppID: drawerVoiceCollisionID, what: "the moved occurrence is back at its tick")
-    report.expectEqual(programs[2],
+    report.expectEqual(expected: programs[2], actual: 
                        VoiceLanePolicy.occurrence(at: occupied.tick, in: restored)?.value,
                        cppID: drawerVoiceCollisionID, what: "the displaced occurrence is back too")
 }

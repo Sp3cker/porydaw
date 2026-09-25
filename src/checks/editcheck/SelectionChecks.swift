@@ -43,7 +43,7 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
     defer { session.onChange = nil }
 
     session.setSelectedNotes([invalid, ids[0], ids[0], ids[1]])
-    report.expectEqual([ids[0], ids[1]], session.selectedNoteOrder, cppID: sanitize,
+    report.expectEqual(expected: [ids[0], ids[1]], actual: session.selectedNoteOrder, cppID: sanitize,
                        what: "A001 unassigned and duplicate IDs are removed without changing order")
     report.expect(session.selectedNotes.contains(ids[0]), cppID: sanitize,
                   message: "A002 first selected note is indexed")
@@ -53,18 +53,18 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
                   message: "A004 unselected note is not indexed")
     report.expect(!session.selectedNotes.contains(invalid), cppID: sanitize,
                   message: "A005 unassigned note is not indexed")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: sanitize,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: sanitize,
                        what: "A006 note selection publishes exactly once")
     changes.removeAll()
     session.setSelectedNotes([invalid, ids[0], ids[1], ids[1]])
     report.expect(changes.isEmpty, cppID: sanitize,
                   message: "A007 equivalent normalized selection publishes nothing")
     session.clearSelectedNotes()
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: sanitize,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: sanitize,
                        what: "A020 clearing notes publishes exactly once")
     report.expect(session.selectedNoteOrder.isEmpty, cppID: clear,
                   message: "A045 clearing populated note selection removes every note")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: clear,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: clear,
                        what: "A046 clearing populated note selection publishes once")
     changes.removeAll()
     session.clearSelectedNotes()
@@ -74,7 +74,7 @@ private func clipboardNoteSelectionChecks(_ report: CheckReport, session: Docume
     session.setSelectedNotes([ids[2], ids[0], ids[1]])
     changes.removeAll()
     document.deleteNotes([ids[1]])
-    report.expectEqual([ids[2], ids[0]], session.selectedNoteOrder, cppID: reconcile,
+    report.expectEqual(expected: [ids[2], ids[0]], actual: session.selectedNoteOrder, cppID: reconcile,
                        what: "A048 reconciliation preserves reverse selection order rather than sorting by document order")
     report.expect(changes.count == 1 && changes[0].contains(.selection), cppID: reconcile,
                   message: "A049 one selection publication accompanies deletion reconciliation")
@@ -106,40 +106,40 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     session.onChange = { changes.append($0.domains) }
     defer { session.onChange = nil }
     session.selectedTrack = 1
-    report.expectEqual(1, session.selectedTrack, cppID: gestures,
+    report.expectEqual(expected: 1, actual: session.selectedTrack, cppID: gestures,
                        what: "A001 primary track transition chooses track one")
-    report.expectEqual(Set([1]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([1]), actual: session.selectedTracks, cppID: gestures,
                        what: "A002 primary transition selects its track scope")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A003 one primary transition publication")
     changes.removeAll()
     session.adjustTrackScope(track: 3, action: .toggle)
-    report.expectEqual(Set([1, 3]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([1, 3]), actual: session.selectedTracks, cppID: gestures,
                        what: "A004 toggle adds the secondary track")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A005 toggle publishes once")
     changes.removeAll()
     session.adjustTrackScope(track: 1, action: .toggle)
-    report.expectEqual(3, session.selectedTrack, cppID: gestures,
+    report.expectEqual(expected: 3, actual: session.selectedTrack, cppID: gestures,
                        what: "A006 removing primary hands off to the surviving track")
-    report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([3]), actual: session.selectedTracks, cppID: gestures,
                        what: "A007 removing primary preserves surviving scope")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A009 primary handoff publishes atomically")
     session.adjustTrackScope(track: 4, action: .toggle)
     changes.removeAll()
     session.adjustTrackScope(track: 3, action: .plain)
-    report.expectEqual(3, session.selectedTrack, cppID: gestures,
+    report.expectEqual(expected: 3, actual: session.selectedTrack, cppID: gestures,
                        what: "A016 plain gesture keeps its primary")
-    report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([3]), actual: session.selectedTracks, cppID: gestures,
                        what: "A017 plain gesture collapses multi-track scope")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A019 collapsed scope publishes once")
     changes.removeAll()
     session.adjustTrackScope(track: 5, action: .range)
-    report.expectEqual(Set([3, 4, 5]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([3, 4, 5]), actual: session.selectedTracks, cppID: gestures,
                        what: "A022 range expands inclusively from primary to target")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A023 range publishes once")
 
     session.adjustTrackScope(track: 1, action: .plain)
@@ -153,18 +153,18 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     session.setSelectedNotes([note])
     changes.removeAll()
     session.adjustTrackScope(track: 1, action: .toggle)
-    report.expectEqual(3, session.selectedTrack, cppID: gestures,
+    report.expectEqual(expected: 3, actual: session.selectedTrack, cppID: gestures,
                        what: "A026 note handoff chooses the surviving primary")
-    report.expectEqual(Set([3]), session.selectedTracks, cppID: gestures,
+    report.expectEqual(expected: Set([3]), actual: session.selectedTracks, cppID: gestures,
                        what: "A027 note handoff keeps surviving scope")
     report.expect(session.selectedNotes.isEmpty, cppID: gestures,
                   message: "A028 changing the selected note's primary clears it")
-    report.expectEqual([SessionChangeDomains.selection], changes, cppID: gestures,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: changes, cppID: gestures,
                        what: "A029 note and track transition publish together")
 
     changes.removeAll()
     session.adjustTrackScope(track: 16, action: .toggle)
-    report.expectEqual(Set([3]), session.selectedTracks, cppID: bounds,
+    report.expectEqual(expected: Set([3]), actual: session.selectedTracks, cppID: bounds,
                        what: "A060 out-of-range track cannot join the scope")
     report.expect(changes.isEmpty, cppID: bounds,
                   message: "A061 ignored out-of-range action publishes nothing")
@@ -179,11 +179,11 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
         report.fail(remapID, "selection remap fixture could not move tracks 1 and 0")
         return
     }
-    report.expectEqual(4, session.selectedTrack, cppID: remapID,
+    report.expectEqual(expected: 4, actual: session.selectedTrack, cppID: remapID,
                        what: "A080 primary follows track 1 to track 4")
-    report.expectEqual(Set([2, 4]), session.selectedTracks, cppID: remapID,
+    report.expectEqual(expected: Set([2, 4]), actual: session.selectedTracks, cppID: remapID,
                        what: "A081 scope follows tracks 0 and 1 to tracks 2 and 4")
-    report.expectEqual([note], session.selectedNoteOrder, cppID: remapID,
+    report.expectEqual(expected: [note], actual: session.selectedNoteOrder, cppID: remapID,
                        what: "A082 selected note identity survives structural track moves")
     report.expect(changes.count == 1 && changes[0].contains(.document)
                   && changes[0].contains(.selection), cppID: remapID,
@@ -194,9 +194,9 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     session.adjustTrackScope(track: 0, action: .toggle)
     changes.removeAll()
     document.deleteTrack(2)
-    report.expectEqual(2, session.selectedTrack, cppID: remapID,
+    report.expectEqual(expected: 2, actual: session.selectedTrack, cppID: remapID,
                        what: "deleting a primary track falls back to its numeric position")
-    report.expectEqual(Set([0, 2]), session.selectedTracks, cppID: remapID,
+    report.expectEqual(expected: Set([0, 2]), actual: session.selectedTracks, cppID: remapID,
                        what: "deleting a primary track keeps surviving remapped scope plus fallback primary")
     report.expect(changes.count == 1 && changes[0].contains(.selection)
                   && changes[0].contains(.document), cppID: remapID,
@@ -206,9 +206,9 @@ private func clipboardTrackSelectionChecks(_ report: CheckReport, session: Docum
     document.deleteTrack(2)
     changes.removeAll()
     document.deleteTrack(1)
-    report.expectEqual(0, session.selectedTrack, cppID: remapID,
+    report.expectEqual(expected: 0, actual: session.selectedTrack, cppID: remapID,
                        what: "A093 deleting every track above the fallback clamps the primary to track zero")
-    report.expectEqual(Set([0]), session.selectedTracks, cppID: remapID,
+    report.expectEqual(expected: Set([0]), actual: session.selectedTracks, cppID: remapID,
                        what: "A094 deleting every track above the fallback leaves the scope on track zero")
 }
 
@@ -247,7 +247,7 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
     let selection = AutomationTimeSelection(range: range, scope: .lanes,
                                             lanes: [volume, modulation], tempo: true)
     let covered = stack(selection)
-    report.expectEqual(range, covered.activeTickRange, cppID: lanesID,
+    report.expectEqual(expected: range, actual: covered.activeTickRange, cppID: lanesID,
                        what: "A013 lane-scoped range keeps its tick endpoints")
     for (site, parameter) in [("A014-A015", AutomationParameter.tempo),
                               ("A016-A017", volume), ("A018-A019", modulation)] {
@@ -260,7 +260,7 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   cppID: lanesID, message: "A020-A021 unselected supported controller stays uncovered")
     report.expect(covered.row(for: .controlChange(track: 0, controller: 99)) == nil,
                   cppID: lanesID, message: "A022-A023 unsupported controller has no row")
-    report.expectEqual([volume, modulation], visibleSelectedLanes(covered), cppID: lanesID,
+    report.expectEqual(expected: [volume, modulation], actual: visibleSelectedLanes(covered), cppID: lanesID,
                        what: "A024 only selected supported lanes are visible in catalog order")
     let noTempo = stack(AutomationTimeSelection(range: range, scope: .lanes,
                                                  lanes: [volume], tempo: false))
@@ -298,7 +298,7 @@ private func clipboardLaneSelectionChecks(_ report: CheckReport, session: Docume
                   message: "A038 ready unselected CC10 lane is uncovered")
     report.expect(ready.row(for: pan)?.coversNodes == false, cppID: hiddenID,
                   message: "A039 ready unselected CC10 nodes are uncovered")
-    report.expectEqual([volume], visibleSelectedLanes(ready), cppID: hiddenID,
+    report.expectEqual(expected: [volume], actual: visibleSelectedLanes(ready), cppID: hiddenID,
                        what: "A042 ready model exposes only selected supported lanes")
 
     let hidden = stack(AutomationTimeSelection(range: range, scope: .lanes,
@@ -368,7 +368,7 @@ private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: D
                   message: "A009 committed time selection is active")
     report.expect(changes.isEmpty && session.selectedNoteOrder.isEmpty, cppID: sanitize,
                   message: "A010 time commit notifies through the page while the session stays silent")
-    report.expectEqual(1, availability, cppID: sanitize,
+    report.expectEqual(expected: 1, actual: availability, cppID: sanitize,
                        what: "A010 time commit publishes one page availability change")
     session.setSelectedNotes([invalid])
     report.expect(page.selection?.isActive == true, cppID: sanitize,
@@ -409,21 +409,21 @@ private func clipboardUnifiedTimeSelectionChecks(_ report: CheckReport, suite: D
                   message: "A024 clearing time publishes one page availability change")
     page.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: 40, endTick: 80), scope: .tracks([0, 20])))
-    report.expectEqual(TimeRange(startTick: 40, endTick: 80), page.selection?.range, cppID: commit,
+    report.expectEqual(expected: TimeRange(startTick: 40, endTick: 80), actual: page.selection?.range, cppID: commit,
                        what: "A025-A026 track-scoped commit keeps its tick endpoints")
     let committed = page.selection
     report.expect(committed?.covers(.controlChange(track: 0, controller: 7), usedTracks: [0]) == true
                   && committed?.covers(.controlChange(track: 20, controller: 7), usedTracks: [0]) == false,
                   cppID: commit, message: "A027 resolved scope drops the out-of-range track")
-    report.expectEqual(5, availability, cppID: commit,
+    report.expectEqual(expected: 5, actual: availability, cppID: commit,
                        what: "A028 track-scoped commit publishes one page availability change")
     page.applyTimeSelection(AutomationTimeSelection(
         range: TimeRange(startTick: 50, endTick: 90), scope: .tracks([0])))
-    report.expectEqual(TimeRange(startTick: 50, endTick: 90), page.selection?.range, cppID: commit,
+    report.expectEqual(expected: TimeRange(startTick: 50, endTick: 90), actual: page.selection?.range, cppID: commit,
                        what: "A035-A036 second track-scoped commit keeps its tick endpoints")
-    report.expectEqual(AutomationTimeSelection.Scope.tracks([0]), page.selection?.scope, cppID: commit,
+    report.expectEqual(expected: AutomationTimeSelection.Scope.tracks([0]), actual: page.selection?.scope, cppID: commit,
                        what: "A034 second commit stores its track scope")
-    report.expectEqual(6, availability, cppID: commit,
+    report.expectEqual(expected: 6, actual: availability, cppID: commit,
                        what: "A037 second track-scoped commit publishes one page availability change")
     session.clearSelectedNotes()
     report.expect(page.selection?.isActive == true, cppID: clear,

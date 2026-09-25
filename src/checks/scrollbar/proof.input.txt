@@ -3,7 +3,7 @@ Assertion correspondence: scrollbar/input.cpp
 Reference revision: 6b7e1fd989441360d234026c2d744218684966ce
 Original: src/checks/scrollbar/input.cpp
 Original SHA-256: 4a78343b01b892bfed84f1758538155a650775aec2543a0028ef9a3dbdc15a69
-Swift counterpart: none identified
+Swift counterpart: src/checks/scrollbar/ScrollbarChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -271,7 +271,7 @@ Original expression:
 
 A017 | ScrollbarTest::wheelScrolling | src/checks/scrollbar/input.cpp:226
 Disposition: PARTIAL
-Mapping/reason: tst_TimelineScrollbar.qml::test_wheelAndResizeRebase exercises wheel scrolling on both mounted bars and ScrollbarChecks.swift::runTimelineScrollbarChecks asserts pixel-over-angle precedence; full 16-case native wheel matrix remains unproved; verify:qml-roll and swiftcore passed.
+Mapping/reason: S001, S002 — tst_TimelineScrollbar.qml::test_wheelAndResizeRebase exercises wheel scrolling on both mounted bars and ScrollbarChecks.swift::runTimelineScrollbarChecks asserts pixel-over-angle precedence; full 16-case native wheel matrix remains unproved; verify:qml-roll and swiftcore passed.
 Source context since previous assertion:
       double expected = midpoint;
       switch (behavior) {
@@ -505,6 +505,10 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-No Swift counterpart was identified, so no S entries exist.
+S001 | runTimelineScrollbarChecks | src/checks/scrollbar/ScrollbarChecks.swift
+Anchor: message "wheel favors pixel then axis angle and retains natural sign"
+
+S002 | test_wheelAndResizeRebase | src/checks/rollqml/tst_TimelineScrollbar.qml
+Anchor: message "horizontal track wheel advances camera time"
 
 Shared helper: none (no Swift fixture files carrying expects were identified).

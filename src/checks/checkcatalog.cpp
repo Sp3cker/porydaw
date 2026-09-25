@@ -72,6 +72,18 @@ const std::vector<CheckDefinition> &catalog()
         const QStringList bank =
             project + strings({"sound/songs/midi/mus_gym.mid", "sound/songs/midi/mus_oldale.mid"}) +
             rich;
+        // Fixture union for the per-suite swiftcore entries below. Every suite
+        // previously ran under the retired bare `swiftcore` entry with exactly
+        // this set, so each split entry keeps it verbatim.
+        const QStringList swiftCoreFixtures =
+            project + fixtures::decompMidiFiles() +
+            strings({"test_midis/external_import.mid", "test_midis/duplicate_setters.mid",
+                     "test_midis/smf/valid/opaque_sysex.mid",
+                     "test_midis/smf/valid/vlq_running_status.mid",
+                     "test_midis/smf/valid/note_lifecycle.mid",
+                     "test_midis/smf/malformed/duplicate_eot.mid",
+                     "test_midis/smf/stress/automation_burst.mid"}) +
+            rich + editor + strings({"include/constants/songs.h", "sound/music_player_table.inc"});
 
         std::vector<CheckDefinition> result;
         result.push_back({.name = "production-startup",
@@ -88,23 +100,31 @@ const std::vector<CheckDefinition> &catalog()
              .argv = strings({"--audiocheck-backend"}),
              .handler = qtOnly<runAudioBackendCheck>,
              .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}});
-        result.push_back(
-            {.name = "swiftcore",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}"}),
-             .handler = swiftCore,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles =
-                 project + fixtures::decompMidiFiles() +
-                 strings({"test_midis/external_import.mid", "test_midis/duplicate_setters.mid",
-                          "test_midis/smf/valid/opaque_sysex.mid",
-                          "test_midis/smf/valid/vlq_running_status.mid",
-                          "test_midis/smf/valid/note_lifecycle.mid",
-                          "test_midis/smf/malformed/duplicate_eot.mid",
-                          "test_midis/smf/stress/automation_burst.mid"}) +
-                 rich + editor +
-                 strings({"include/constants/songs.h", "sound/music_player_table.inc"}),
-             .platforms = Platform::MacOS});
+        // The suites below had no dedicated entry and previously ran only
+        // inside the bare `swiftcore` entry, whose unfiltered QTest::qExec
+        // executed every slot — re-running each suite that also has a
+        // dedicated entry. Each slot now runs exactly once via its filter.
+        const auto swiftSuite = [&](const char *name, const char *suite) {
+            result.push_back({.name = name,
+                              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", suite}),
+                              .handler = swiftCore,
+                              .scratchKind = ScratchKind::ExistingDirectory,
+                              .fixtureRootKind = FixtureRootKind::DecompProject,
+                              .fixtureFiles = swiftCoreFixtures,
+                              .platforms = Platform::MacOS});
+        };
+        swiftSuite("swiftcore-midicodec", "midiCodec");
+        swiftSuite("swiftcore-musicalsemantics", "musicalSemantics");
+        swiftSuite("swiftcore-playback", "playback");
+        swiftSuite("swiftcore-noteedits", "noteEdits");
+        swiftSuite("swiftcore-documenthistory", "documentHistory");
+        swiftSuite("swiftcore-eventedits", "eventEdits");
+        swiftSuite("swiftcore-xcmdedits", "xcmdEdits");
+        swiftSuite("swiftcore-midiimport", "midiImport");
+        swiftSuite("swiftcore-timeedits", "timeEdits");
+        swiftSuite("swiftcore-projectsession", "projectSession");
+        swiftSuite("swiftcore-bankhistory", "bankHistory");
+        swiftSuite("swiftcore-themecolor", "themeColor");
         result.push_back(
             {.name = "projectidentitycheck",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectIdentity"}),
@@ -173,14 +193,6 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = project + editor,
              .platforms = Platform::MacOS});
         result.push_back(
-            {.name = "projectstore-incopen",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
-             .handler = swiftCore,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
-        result.push_back(
             {.name = "projectstore-open",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreOpen"}),
              .handler = swiftCore,
@@ -191,21 +203,6 @@ const std::vector<CheckDefinition> &catalog()
                  strings({"include/constants/songs.h", "sound/music_player_table.inc"}) +
                  fixtures::decompMidiFiles(),
              .platforms = Platform::MacOS});
-        result.push_back(
-            {.name = "projectstore-edits",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupEditing"}),
-             .handler = swiftCore,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
-        result.push_back({.name = "projectstore-save",
-                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "saveCore"}),
-                          .handler = swiftCore,
-                          .scratchKind = ScratchKind::ExistingDirectory,
-                          .fixtureRootKind = FixtureRootKind::DecompProject,
-                          .fixtureFiles = project + editor,
-                          .platforms = Platform::MacOS});
         result.push_back(
             {.name = "projectstore-checks",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "projectStoreChecks"}),
@@ -224,14 +221,6 @@ const std::vector<CheckDefinition> &catalog()
              .platforms = Platform::MacOS});
         result.push_back(
             {.name = "projectstore-context",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
-             .handler = swiftCore,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
-        result.push_back(
-            {.name = "projectstore-fileio",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
              .handler = swiftCore,
              .scratchKind = ScratchKind::ExistingDirectory,
@@ -299,16 +288,6 @@ const std::vector<CheckDefinition> &catalog()
                  fixtures::decompMidiFiles(),
              .platforms = Platform::MacOS});
         result.push_back({.name = "bankleases",
-                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankLeases"}),
-                          .handler = swiftCore,
-                          .scratchKind = ScratchKind::ExistingDirectory,
-                          .fixtureRootKind = FixtureRootKind::DecompProject,
-                          .fixtureFiles = project + editor +
-                                          strings({"include/constants/songs.h",
-                                                   "sound/music_player_table.inc"}) +
-                                          fixtures::decompMidiFiles(),
-                          .platforms = Platform::MacOS});
-        result.push_back({.name = "projectstore-parity",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "bankLeases"}),
                           .handler = swiftCore,
                           .scratchKind = ScratchKind::ExistingDirectory,

@@ -240,14 +240,14 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
                   message: "Set Velocity becomes available with a selection")
 
     grid.performCommand(command: setVelocity)
-    report.expectEqual(1, requested, cppID: drawerVelocityCommandID,
+    report.expectEqual(expected: 1, actual: requested, cppID: drawerVelocityCommandID,
                        what: "the existing command row asks its owner for the prompt")
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                   message: "the command commits no value before prompt acceptance")
 
     page = fixture.page
     grid.performCommand(command: setVelocity)
-    report.expectEqual(2, requested, cppID: drawerVelocityCommandID,
+    report.expectEqual(expected: 2, actual: requested, cppID: drawerVelocityCommandID,
                        what: "the command routes every execution through the same owner")
     report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                   message: "the routed command opened the page's captured prompt")
@@ -256,10 +256,10 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
                   message: "cancelling the routed prompt still commits nothing")
 
     let row = editCommandTable.first { $0.command == .setVelocity }
-    report.expectEqual(EditNotesOperation.setVelocity.rawValue,
+    report.expectEqual(expected: EditNotesOperation.setVelocity.rawValue, actual: 
                        row?.notesOperation.rawValue ?? -1, cppID: drawerVelocityCommandID,
                        what: "the command table keeps Set Velocity on the notes arm")
-    report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
+    report.expectEqual(expected: EditKeyRoute.alwaysConsume.rawValue, actual: row?.keyRoute.rawValue ?? -1,
                        cppID: drawerVelocityCommandID,
                        what: "the command table keeps Set Velocity's consume route")
 }

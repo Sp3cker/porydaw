@@ -24,30 +24,30 @@ func selectionAndVoiceRouteThroughHeaders(
     }
     let unselected = h.rows[1].baseColor
     fx.click(report, .title, row: 1, cppID: id)
-    report.expectEqual(1, fx.session.selectedTrack, cppID: id, what: "title selects primary track")
+    report.expectEqual(expected: 1, actual: fx.session.selectedTrack, cppID: id, what: "title selects primary track")
     report.expect(h.rows[1].baseColor != unselected && h.rows[1].titleBold,
                   cppID: id, message: "selection changes the visible title and base color")
     report.expect(!h.rows[0].titleBold, cppID: id, message: "old primary loses bold title")
-    report.expectEqual([1], revealed, cppID: id, what: "title click reveals its voice once")
-    report.expectEqual([42], revealedPrograms, cppID: id,
+    report.expectEqual(expected: [1], actual: revealed, cppID: id, what: "title click reveals its voice once")
+    report.expectEqual(expected: [42], actual: revealedPrograms, cppID: id,
                        what: "track-addressed title request resolves to the current program, not track ID")
 
     let voice = fx.point(.voice)
     report.expect(h.beginPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0),
                   cppID: id, message: "voice line accepts press")
-    report.expectEqual(0, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id,
                        what: "voice line selects at press, before release")
     report.expect(h.endPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0),
                   cppID: id, message: "voice line accepts release")
-    report.expectEqual([1, 0], revealed, cppID: id, what: "voice click reveals its own track")
-    report.expectEqual([42, 17], revealedPrograms, cppID: id,
+    report.expectEqual(expected: [1, 0], actual: revealed, cppID: id, what: "voice click reveals its own track")
+    report.expectEqual(expected: [42, 17], actual: revealedPrograms, cppID: id,
                        what: "voice-line request resolves the clicked track's current program")
 
     // The title line of the voice track behaves the same way.
     fx.click(report, .title, row: 0, cppID: id)
-    report.expectEqual([1, 0, 0], revealed, cppID: id,
+    report.expectEqual(expected: [1, 0, 0], actual: revealed, cppID: id,
                        what: "voice-row title click reveals its own track")
-    report.expectEqual(0, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id,
                        what: "voice-row title click retains its selection")
 
     _ = h.beginPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0)
@@ -59,15 +59,15 @@ func selectionAndVoiceRouteThroughHeaders(
     report.expect(!h.endPointer(x: voice.x, y: 0, button: 1, modifiers: 0),
                   cppID: id, message: "cancelled drag leaves no pending release")
     report.expect(!h.reorderIndicatorVisible, cppID: id, message: "cancel removes reorder marker")
-    report.expectEqual([1, 0, 0], revealed, cppID: id, what: "drag release never reveals a voice")
+    report.expectEqual(expected: [1, 0, 0], actual: revealed, cppID: id, what: "drag release never reveals a voice")
     let scoped = fx.point(.title, row: 1)
     let beforeScope = fx.session.selectedTracks
     _ = h.beginPointer(x: scoped.x, y: scoped.y, button: 1, modifiers: 0x0400_0000)
     _ = h.endPointer(x: scoped.x, y: scoped.y, button: 1, modifiers: 0x0400_0000)
-    report.expectEqual([1, 0, 0], revealed, cppID: id, what: "modified selection never reveals a voice")
-    report.expectEqual(beforeScope.symmetricDifference([1]), fx.session.selectedTracks,
+    report.expectEqual(expected: [1, 0, 0], actual: revealed, cppID: id, what: "modified selection never reveals a voice")
+    report.expectEqual(expected: beforeScope.symmetricDifference([1]), actual: fx.session.selectedTracks,
                        cppID: id, what: "Ctrl-click toggles exactly the clicked track in scope")
-    report.expectEqual(0, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id,
                        what: "Ctrl-click of another track retains the primary")
     report.expect(h.rows[1].overlayColor != "#00000000", cppID: id,
                   message: "secondary scope renders the original selection overlay")
@@ -83,7 +83,7 @@ func headerSelectionTargetsResolve(
     let h = fx.headers
     let rows = (0..<h.rows.count).map { h.rows[$0] }
     let trackRows = rows.filter { !$0.isAddTrack }
-    report.expectEqual(1, rows.count - trackRows.count, cppID: id,
+    report.expectEqual(expected: 1, actual: rows.count - trackRows.count, cppID: id,
                        what: "exactly one add row follows the tracks")
     report.expect(trackRows.allSatisfy { $0.track >= 0 }, cppID: id,
                   message: "every track row resolves an engine track")
@@ -115,33 +115,33 @@ func trackHeaderScopeTransitions(_ report: CheckReport, suite: DocumentSession,
     let id = "TrackHeadersTest::selectionAndVoiceRouteThroughHeaders"
     let baseline = HeaderDocumentBaseline(fx.document)
     session.adjustTrackScope(track: 1, action: .toggle)
-    report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Ctrl adds secondary scope")
+    report.expectEqual(expected: Set([0, 1]), actual: session.selectedTracks, cppID: id, what: "Ctrl adds secondary scope")
     session.adjustTrackScope(track: 0, action: .toggle)
-    report.expectEqual(1, session.selectedTrack, cppID: id, what: "removing primary chooses first surviving track")
-    report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "removed primary leaves surviving scope")
+    report.expectEqual(expected: 1, actual: session.selectedTrack, cppID: id, what: "removing primary chooses first surviving track")
+    report.expectEqual(expected: Set([1]), actual: session.selectedTracks, cppID: id, what: "removed primary leaves surviving scope")
     session.adjustTrackScope(track: 1, action: .toggle)
-    report.expectEqual(Set([1]), session.selectedTracks, cppID: id, what: "last scoped track cannot be removed")
+    report.expectEqual(expected: Set([1]), actual: session.selectedTracks, cppID: id, what: "last scoped track cannot be removed")
     session.adjustTrackScope(track: 0, action: .range)
-    report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "Shift extends range from primary")
-    report.expectEqual(1, session.selectedTrack, cppID: id, what: "range keeps primary")
+    report.expectEqual(expected: Set([0, 1]), actual: session.selectedTracks, cppID: id, what: "Shift extends range from primary")
+    report.expectEqual(expected: 1, actual: session.selectedTrack, cppID: id, what: "range keeps primary")
     let grid = PianoGrid(session: session)
     grid.performCommand(command: EditCommand.muteTracks.rawValue)
-    report.expectEqual(Set([0, 1]), session.mutedTracks, cppID: id, what: "mute command uses entire track scope")
+    report.expectEqual(expected: Set([0, 1]), actual: session.mutedTracks, cppID: id, what: "mute command uses entire track scope")
     grid.performCommand(command: EditCommand.muteTracks.rawValue)
     report.expect(session.mutedTracks.isEmpty, cppID: id, message: "all-muted scope toggles off together")
     grid.performCommand(command: EditCommand.soloTracks.rawValue)
-    report.expectEqual(Set([0, 1]), session.soloedTracks, cppID: id, what: "solo command uses entire track scope")
+    report.expectEqual(expected: Set([0, 1]), actual: session.soloedTracks, cppID: id, what: "solo command uses entire track scope")
     grid.performCommand(command: EditCommand.soloTracks.rawValue)
     report.expect(session.soloedTracks.isEmpty, cppID: id, message: "all-soloed scope toggles off together")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "track scope and mix commands")
     report.expect(fx.document.moveTrack(1, to: 0), cppID: id, message: "move scoped track")
-    report.expectEqual(0, session.selectedTrack, cppID: id, what: "primary follows moved identity")
-    report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "scope follows both moved identities")
+    report.expectEqual(expected: 0, actual: session.selectedTrack, cppID: id, what: "primary follows moved identity")
+    report.expectEqual(expected: Set([0, 1]), actual: session.selectedTracks, cppID: id, what: "scope follows both moved identities")
     report.expect(fx.document.history.undoDocument(), cppID: id, message: "undo scoped move")
-    report.expectEqual(1, session.selectedTrack, cppID: id, what: "undo restores primary identity")
-    report.expectEqual(Set([0, 1]), session.selectedTracks, cppID: id, what: "undo restores scope identities")
+    report.expectEqual(expected: 1, actual: session.selectedTrack, cppID: id, what: "undo restores primary identity")
+    report.expectEqual(expected: Set([0, 1]), actual: session.selectedTracks, cppID: id, what: "undo restores scope identities")
     session.adjustTrackScope(track: 0, action: .plain)
-    report.expectEqual(Set([0]), session.selectedTracks, cppID: id, what: "plain click collapses scope")
+    report.expectEqual(expected: Set([0]), actual: session.selectedTracks, cppID: id, what: "plain click collapses scope")
 }
 
 @MainActor
@@ -209,8 +209,8 @@ func muteAndSoloHonorCancellationAndButtons(
     h.refreshFromDocument()
     report.expect(h.rows[0].muteChecked, cppID: id, message: "external session mute reaches header")
     report.expect(h.rows[1] === unaffected, cppID: id, message: "mask changes retain unrelated row")
-    report.expectEqual(rebuilds, h.rowRebuildCount, cppID: id, what: "toggles never rebuild rows")
-    report.expectEqual(1, fx.session.selectedTrack, cppID: id, what: "toggles preserve primary track")
+    report.expectEqual(expected: rebuilds, actual: h.rowRebuildCount, cppID: id, what: "toggles never rebuild rows")
+    report.expectEqual(expected: 1, actual: fx.session.selectedTrack, cppID: id, what: "toggles preserve primary track")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "session-only masks")
 }
 
@@ -225,25 +225,25 @@ func scrollClampsAndRoutesKeyboardAndWheelInput(
     let maximum = h.maximumScrollY
     report.expect(maximum > 0, cppID: id, message: "one-row viewport has a scroll range")
     h.scrollY = maximum + Double(h.rowHeight)
-    report.expectEqual(maximum, h.scrollY, cppID: id, what: "scrollbar overshoot clamps at bottom")
+    report.expectEqual(expected: maximum, actual: h.scrollY, cppID: id, what: "scrollbar overshoot clamps at bottom")
     h.scrollY = -Double(h.rowHeight)
-    report.expectEqual(0, h.scrollY, cppID: id, what: "scrollbar undershoot clamps at top")
+    report.expectEqual(expected: 0, actual: h.scrollY, cppID: id, what: "scrollbar undershoot clamps at top")
     // TimelineScrollbar's Down key writes one row to this public scroll property.
     h.scrollY += Double(h.rowHeight)
     let afterKey = min(Double(h.rowHeight), maximum)
-    report.expectEqual(afterKey, h.scrollY, cppID: id, what: "keyboard step scrolls one row")
+    report.expectEqual(expected: afterKey, actual: h.scrollY, cppID: id, what: "keyboard step scrolls one row")
     report.expect(!h.handleWheel(angleDeltaX: 120, angleDeltaY: 0, pixelDeltaX: 0,
                                 pixelDeltaY: 0, modifiers: 0, phase: 0),
                   cppID: id, message: "horizontal wheel is rejected")
-    report.expectEqual(afterKey, h.scrollY, cppID: id, what: "horizontal wheel leaves scroll alone")
+    report.expectEqual(expected: afterKey, actual: h.scrollY, cppID: id, what: "horizontal wheel leaves scroll alone")
     h.scrollY = 0
     report.expect(h.handleWheel(angleDeltaX: 0, angleDeltaY: -120, pixelDeltaX: 0,
                                pixelDeltaY: 0, modifiers: 0, phase: 0),
                   cppID: id, message: "vertical wheel is accepted")
-    report.expectEqual(afterKey, h.scrollY, cppID: id, what: "one wheel notch scrolls one row")
+    report.expectEqual(expected: afterKey, actual: h.scrollY, cppID: id, what: "one wheel notch scrolls one row")
     _ = h.handleWheel(angleDeltaX: 0, angleDeltaY: -120, pixelDeltaX: 0,
                       pixelDeltaY: 7, modifiers: 0, phase: 0)
-    report.expectEqual(afterKey - 7, h.scrollY, cppID: id,
+    report.expectEqual(expected: afterKey - 7, actual: h.scrollY, cppID: id,
                        what: "trackpad pixel delta takes precedence over angle delta")
 }
 
@@ -260,7 +260,7 @@ func emptyTrackHeadersRejectInputWithoutMutation(
     fx.document.deleteTrack(1)
     fx.document.deleteTrack(0)
     let empty = HeaderDocumentBaseline(fx.document)
-    report.expectEqual(0, fx.headers.rows.count, cppID: id, what: "empty song publishes zero rows")
+    report.expectEqual(expected: 0, actual: fx.headers.rows.count, cppID: id, what: "empty song publishes zero rows")
     report.expect(!fx.headers.beginPointer(x: 1, y: 1, button: 1, modifiers: 0),
                   cppID: id, message: "empty header rejects press")
     report.expect(!fx.headers.endPointer(x: 1, y: 1, button: 1, modifiers: 0),

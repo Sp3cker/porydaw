@@ -313,20 +313,20 @@ fileprivate func devicePixelRect(_ logicalRect: PlayheadDeviceRect, dpr: Double,
 @MainActor
 private func checkPlayheadDevicePixelRect(_ report: CheckReport) {
     let logicalRect = PlayheadDeviceRect(x: 3, y: 2, width: 5, height: 4)
-    report.expectEqual(logicalRect,
-                       devicePixelRect(logicalRect, dpr: 1.0, imageWidth: 16, imageHeight: 10),
+    report.expectEqual(expected: logicalRect,
+                       actual: devicePixelRect(logicalRect, dpr: 1.0, imageWidth: 16, imageHeight: 10),
                        cppID: playheadCppID(playheadMathID, "A001"),
                        what: "DPR 1 preserves the logical rectangle")
-    report.expectEqual(PlayheadDeviceRect(x: 6, y: 4, width: 10, height: 8),
-                       devicePixelRect(logicalRect, dpr: 2.0, imageWidth: 32, imageHeight: 20),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 6, y: 4, width: 10, height: 8),
+                       actual: devicePixelRect(logicalRect, dpr: 2.0, imageWidth: 32, imageHeight: 20),
                        cppID: playheadCppID(playheadMathID, "A002"),
                        what: "DPR 2 doubles position and extent")
-    report.expectEqual(PlayheadDeviceRect(x: 4, y: 3, width: 8, height: 6),
-                       devicePixelRect(logicalRect, dpr: 1.5, imageWidth: 12, imageHeight: 14),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 4, y: 3, width: 8, height: 6),
+                       actual: devicePixelRect(logicalRect, dpr: 1.5, imageWidth: 12, imageHeight: 14),
                        cppID: playheadCppID(playheadMathID, "A003"),
                        what: "fractional DPR floors the origin and ceils the far edge")
-    report.expectEqual(PlayheadDeviceRect(x: 1, y: 1, width: 4, height: 4),
-                       devicePixelRect(PlayheadDeviceRect(x: 1, y: 1, width: 2, height: 2),
+    report.expectEqual(expected: PlayheadDeviceRect(x: 1, y: 1, width: 4, height: 4),
+                       actual: devicePixelRect(PlayheadDeviceRect(x: 1, y: 1, width: 2, height: 2),
                                        dpr: 1.5, imageWidth: 12, imageHeight: 14),
                        cppID: playheadCppID(playheadMathID, "A004"),
                        what: "fractional DPR rounds a second logical rectangle outward")

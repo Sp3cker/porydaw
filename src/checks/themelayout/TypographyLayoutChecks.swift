@@ -43,14 +43,14 @@ func runTypographyLayoutChecks(_ report: CheckReport) {
 private func typographyLayoutCheckScaleTables(_ report: CheckReport) {
     for (lane, base) in typographyLayoutBases.enumerated() {
         for (row, multiplier) in typographyLayoutFontPxMultipliers.enumerated() {
-            report.expectEqual(
-                typographyLayoutFontPxExpected[lane][row], fontPx(base, multiplier),
+            report.expectEqual(expected:
+                typographyLayoutFontPxExpected[lane][row], actual: fontPx(base, multiplier),
                 cppID: typographyLayoutScaleID,
                 what: "fontPx pins clamped row \(row) at base \(Int(base))")
         }
         for (token, multiplier) in typographyLayoutSpaceMultipliers.enumerated() {
-            report.expectEqual(
-                typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier),
+            report.expectEqual(expected:
+                typographyLayoutSpaceExpected[lane][token], actual: fontPx(base, multiplier),
                 cppID: typographyLayoutScaleID,
                 what: "space token \(token) pins its multiplier row at base \(Int(base))")
         }
@@ -62,12 +62,12 @@ private func typographyLayoutCheckScaleTables(_ report: CheckReport) {
         }
     }
     for base in typographyLayoutBases {
-        report.expectEqual(
-            1, EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
+        report.expectEqual(expected:
+            1, actual: EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
             cppID: typographyLayoutScaleID,
             what: "drawer metrics keep the unit hairline at base \(Int(base))")
-        report.expectEqual(
-            1.0, GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0).pixel,
+        report.expectEqual(expected:
+            1.0, actual: GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0).pixel,
             cppID: typographyLayoutScaleID,
             what: "grid metrics keep the unit device pixel at base \(Int(base))")
     }
@@ -77,14 +77,14 @@ private func typographyLayoutCheckScaleTables(_ report: CheckReport) {
 private func typographyLayoutCheckBasePropagation(_ report: CheckReport) {
     for base in typographyLayoutBases {
         let metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
-        report.expectEqual(
-            base, metrics.baseFontPx, cppID: typographyLayoutBaseID,
+        report.expectEqual(expected:
+            base, actual: metrics.baseFontPx, cppID: typographyLayoutBaseID,
             what: "the lane base reaches the grid metrics unchanged")
-        report.expectEqual(
-            fontPx(base, 0.125), metrics.spaceHalf, cppID: typographyLayoutBaseID,
+        report.expectEqual(expected:
+            fontPx(base, 0.125), actual: metrics.spaceHalf, cppID: typographyLayoutBaseID,
             what: "grid Half spacing derives from the same base")
-        report.expectEqual(
-            fontPx(base, 0.5), metrics.spaceTwo, cppID: typographyLayoutBaseID,
+        report.expectEqual(expected:
+            fontPx(base, 0.5), actual: metrics.spaceTwo, cppID: typographyLayoutBaseID,
             what: "grid Two spacing derives from the same base")
         let again = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
         report.expect(
@@ -94,21 +94,21 @@ private func typographyLayoutCheckBasePropagation(_ report: CheckReport) {
             message: "re-resolving base \(Int(base)) reproduces the identical metrics")
     }
     let seed = GridCameraPolicy.seedBaseFontPx
-    report.expectEqual(13.0, seed, cppID: typographyLayoutBaseID,
+    report.expectEqual(expected: 13.0, actual: seed, cppID: typographyLayoutBaseID,
                        what: "the grid carries the single base seed")
-    report.expectEqual(seed, VelocityPagePolicy.seedBaseFontPx, cppID: typographyLayoutBaseID,
+    report.expectEqual(expected: seed, actual: VelocityPagePolicy.seedBaseFontPx, cppID: typographyLayoutBaseID,
                        what: "the velocity page seeds from the same base")
-    report.expectEqual(seed, AutomationPagePolicy.seedBaseFontPx, cppID: typographyLayoutBaseID,
+    report.expectEqual(expected: seed, actual: AutomationPagePolicy.seedBaseFontPx, cppID: typographyLayoutBaseID,
                        what: "the automation page seeds from the same base")
     let seeded = EditorDrawerMetrics.resolve(baseFontPx: seed, appFontLineSpacing: 0)
     for degenerate in [0.0, -4.0, Double.nan, Double.infinity] {
-        report.expectEqual(
-            seeded, EditorDrawerMetrics.resolve(baseFontPx: degenerate, appFontLineSpacing: 0),
+        report.expectEqual(expected:
+            seeded, actual: EditorDrawerMetrics.resolve(baseFontPx: degenerate, appFontLineSpacing: 0),
             cppID: typographyLayoutBaseID,
             what: "a degenerate base resolves to the seeded metrics")
     }
-    report.expectEqual(
-        seed, VelocityPage(baseFontPx: 0).baseFontPx, cppID: typographyLayoutBaseID,
+    report.expectEqual(expected:
+        seed, actual: VelocityPage(baseFontPx: 0).baseFontPx, cppID: typographyLayoutBaseID,
         what: "a degenerate page base falls back to the seed")
 }
 
@@ -228,14 +228,14 @@ private func typographyLayoutCheckTabularFeatures(_ report: CheckReport) {
             message: "the mono face enables tabular figures")
     }
     let measured = NativeFontMetrics(chip)
-    report.expectEqual(
-        measured.advance("1"), measured.advance("8"), cppID: typographyLayoutFeaturesID,
+    report.expectEqual(expected:
+        measured.advance("1"), actual: measured.advance("8"), cppID: typographyLayoutFeaturesID,
         what: "single digits share one advance")
-    report.expectEqual(
-        measured.advance("111"), measured.advance("777"), cppID: typographyLayoutFeaturesID,
+    report.expectEqual(expected:
+        measured.advance("111"), actual: measured.advance("777"), cppID: typographyLayoutFeaturesID,
         what: "equal-length digit runs share one advance")
-    report.expectEqual(
-        measured.advance("2026"), measured.advance("1975"), cppID: typographyLayoutFeaturesID,
+    report.expectEqual(expected:
+        measured.advance("2026"), actual: measured.advance("1975"), cppID: typographyLayoutFeaturesID,
         what: "year-like digit runs share one advance")
 }
 
@@ -247,8 +247,8 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
     }
     let full = NativeFontMetrics(spec(size: 16))
     let fullHeight = full.extents.height
-    report.expectEqual(
-        16, full.fittedSize(rowHeight: fullHeight), cppID: typographyLayoutFittedID,
+    report.expectEqual(expected:
+        16, actual: full.fittedSize(rowHeight: fullHeight), cppID: typographyLayoutFittedID,
         what: "a generous height keeps the full face size")
     for height in 1...(Int(fullHeight.rounded(.up)) + 4) {
         let fitted = full.fittedSize(rowHeight: Double(height))
@@ -262,7 +262,7 @@ private func typographyLayoutCheckFittedMaximality(_ report: CheckReport) {
                 message: "one pixel larger overflows height \(height)")
         }
     }
-    report.expectEqual(
-        1, full.fittedSize(rowHeight: 0), cppID: typographyLayoutFittedID,
+    report.expectEqual(expected:
+        1, actual: full.fittedSize(rowHeight: 0), cppID: typographyLayoutFittedID,
         what: "a zero height floors at the minimum size")
 }

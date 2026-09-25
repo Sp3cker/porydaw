@@ -88,7 +88,7 @@ private func checkSuppressionSongStartUnity(_ report: CheckReport) throws {
     guard audio.transportState.applied == .playing else { return }
     report.expect(audio.transportState.cutGain >= 0.999, cppID: id,
                   message: "initial play began below full output gain")
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: id,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: id,
                        what: "initial play advanced before reaching full output gain")
     let playingAudio = rig.render(3 * rig.rate)
     report.expect(audioControllerCheckPeak(playingAudio[...]) >= 0.01 && rig.deepestGain() < -0.1,
@@ -171,7 +171,7 @@ private func checkSuppressionSecondSongStart(_ report: CheckReport) throws {
     guard audio.transportState.applied == .playing else { return }
     report.expect(audio.transportState.cutGain >= 0.999, cppID: id,
                   message: "second song-start play began below full output gain")
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: id,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: id,
                        what: "second song-start play advanced before reaching full output gain")
 }
 
@@ -207,7 +207,7 @@ private func checkSuppressionResumeParksSequencer(_ report: CheckReport) throws 
                   message: "resume advanced the player during the zero-gain settle")
     report.expect(audio.transportState.cutGain >= 0.999, cppID: id,
                   message: "resume entered Playing below unity cut-fade gain")
-    report.expectEqual(resumeCursor, audio.playheadSamples, cppID: id,
+    report.expectEqual(expected: resumeCursor, actual: audio.playheadSamples, cppID: id,
                        what: "resume consumed timeline audio before full output gain")
     _ = rig.render(1)
     report.expect(audio.playheadSamples > resumeCursor, cppID: id,

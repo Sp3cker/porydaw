@@ -36,11 +36,11 @@ private func drawerVelocityRollCoreRollGrid(_ session: DocumentSession) -> Piano
 func drawerVelocityRollCoreFixtureFacts(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let notes = fixture.notes
-    report.expectEqual(3, notes.count, cppID: drawerVelocityRollCoreFixtureID, what: "the fixture track carries exactly three notes")
+    report.expectEqual(expected: 3, actual: notes.count, cppID: drawerVelocityRollCoreFixtureID, what: "the fixture track carries exactly three notes")
     guard notes.count >= 3 else { return }
-    report.expectEqual([0, 24, 96], notes.map { Int($0.tick) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes resolve in SMF event order")
-    report.expectEqual([60, 67, 72], notes.map { Int($0.pitch) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry the staged keys")
-    report.expectEqual([100, 64, 32], notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
+    report.expectEqual(expected: [0, 24, 96], actual: notes.map { Int($0.tick) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes resolve in SMF event order")
+    report.expectEqual(expected: [60, 67, 72], actual: notes.map { Int($0.pitch) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry the staged keys")
+    report.expectEqual(expected: [100, 64, 32], actual: notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
     report.expect(notes[0].id != notes[1].id && notes[0].id != notes[2].id && notes[1].id != notes[2].id, cppID: drawerVelocityRollCoreFixtureID, message: "the three fixture notes hold distinct identities")
     report.expect(fixture.page.axisModel.drawableSpan > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the axis resolves a positive drawable span")
     report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the configured body publishes a non-empty plot extent")
@@ -71,13 +71,13 @@ func drawerVelocityRollCoreDragDefersAndCommits(_ report: CheckReport, session: 
     report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityRollCoreDragID, message: "the unselected note stages no preview")
     report.expect(page.interactionActive, cppID: drawerVelocityRollCoreDragID, message: "the staged drag reports an active interaction")
     if let quiet = firstQuiet, let later = firstLater {
-        report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "one relative delta covers every frozen note at once")
+        report.expectEqual(expected: Int(quiet) - Int(notes[0].velocity), actual: Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "one relative delta covers every frozen note at once")
     }
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreDragID, message: "the first held move writes no document state")
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the first held move leaves history depth and song bytes frozen")
-    report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the first document value alone")
-    report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the second document value alone")
-    report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the unselected document value alone")
+    report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the first document value alone")
+    report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the second document value alone")
+    report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the unselected document value alone")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "staging preserves the drag pair selection")
     _ = page.pointerMove(x: first.x, y: first.y + 16, buttons: 1)
     let secondQuiet = page.frozenPreview[notes[0].id]
@@ -87,31 +87,31 @@ func drawerVelocityRollCoreDragDefersAndCommits(_ report: CheckReport, session: 
         report.expect(before != after, cppID: drawerVelocityRollCoreDragID, message: "the preview is live, not stuck: the second move changed it")
     }
     if let quiet = secondQuiet, let later = secondLater {
-        report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "the updated previews still share one relative delta")
+        report.expectEqual(expected: Int(quiet) - Int(notes[0].velocity), actual: Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "the updated previews still share one relative delta")
     }
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the second held move still defers everything")
     _ = page.pointerRelease(x: first.x, y: first.y + 16, button: 1)
     let committed = drawerVelocityDocumentSnapshot(document)
     let committedBytes = coreTimeBytes(document)
-    report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreDragID, what: "one release advances the revision once")
+    report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityRollCoreDragID, what: "one release advances the revision once")
     report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreDragID, message: "one release makes exactly one undoable history entry")
     report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreDragID, message: "one release records one history entry")
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreDragID, message: "the released gesture clears its preview")
     if let quiet = secondQuiet, let later = secondLater {
-        report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged first value")
-        report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged second value")
+        report.expectEqual(expected: Int(quiet), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged first value")
+        report.expectEqual(expected: Int(later), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged second value")
     }
-    report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the unselected note keeps its literal velocity")
+    report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the unselected note keeps its literal velocity")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "the selection survives the commit")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
-    report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the first literal")
-    report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the second literal")
+    report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the first literal")
+    report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the second literal")
     report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "undo restores the exact pre-drag song bytes")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "undo keeps the selection identities")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.redo() }
     if let quiet = secondQuiet, let later = secondLater {
-        report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged first value")
-        report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged second value")
+        report.expectEqual(expected: Int(quiet), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged first value")
+        report.expectEqual(expected: Int(later), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged second value")
     }
     report.expect(coreTimeBytes(document) == committedBytes, cppID: drawerVelocityRollCoreDragID, message: "redo restores the exact committed song bytes")
 }
@@ -138,7 +138,7 @@ func drawerVelocityRollCoreEscapeCancels(_ report: CheckReport, session: Documen
     let stagedLater = page.frozenPreview[notes[1].id]
     report.expect(stagedQuiet != nil && stagedLater != nil, cppID: drawerVelocityRollCoreCancelID, message: "the drag staged before Escape")
     if let quiet = stagedQuiet, let later = stagedLater {
-        report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreCancelID, what: "the staged previews share one relative delta")
+        report.expectEqual(expected: Int(quiet) - Int(notes[0].velocity), actual: Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreCancelID, what: "the staged previews share one relative delta")
     }
     _ = page.pointerMove(x: first.x, y: first.y + 16, buttons: 1)
     let restagedQuiet = page.frozenPreview[notes[0].id]
@@ -152,9 +152,9 @@ func drawerVelocityRollCoreEscapeCancels(_ report: CheckReport, session: Documen
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreCancelID, message: "Escape writes nothing at all")
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreCancelID, message: "Escape leaves history depth and song bytes frozen")
     report.expect(fixture.session.selectedNoteOrder == [notes[1].id, notes[0].id], cppID: drawerVelocityRollCoreCancelID, message: "Escape restores selection membership and insertion order")
-    report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the first literal alone")
-    report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the second literal alone")
-    report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the unselected literal alone")
+    report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the first literal alone")
+    report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the second literal alone")
+    report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the unselected literal alone")
     _ = page.pointerMove(x: first.x, y: first.y - 24, buttons: 1)
     _ = page.pointerRelease(x: first.x, y: first.y - 24, button: 1)
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreCancelID, message: "a move and release after the cancel stages nothing")
@@ -185,8 +185,8 @@ func drawerVelocityRollCoreStationaryPressNoop(_ report: CheckReport, session: D
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreStillID, message: "a stationary press leaves undo depth and song bytes alone")
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreStillID, message: "no preview survives the stationary release")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityRollCoreStillID, message: "the click still selects its own note")
-    report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the pressed literal is untouched")
-    report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the companion literal is untouched")
+    report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the pressed literal is untouched")
+    report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the companion literal is untouched")
 }
 
 @MainActor
@@ -210,7 +210,7 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
     let original = Int(notes[0].velocity)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
     grid.updatePointer(x: center.0, y: center.1 - 11)
-    report.expectEqual(original + 11, grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll drag stages the integral pixel delta on the pressed note")
+    report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll drag stages the integral pixel delta on the pressed note")
     report.expect(original + 11 > 1 && original + 11 < 127, cppID: drawerVelocityRollCoreRollID, message: "the staged preview stays exact inside the domain")
     report.expect(grid.previewVelocity(notes[1].id) == Int(notes[1].velocity) + 11 && grid.previewVelocity(notes[2].id) == nil, cppID: drawerVelocityRollCoreRollID, message: "the selected companion previews its integral delta while the unselected note stages nothing")
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "the staged roll drag writes no document state")
@@ -218,13 +218,13 @@ func drawerVelocityRollCoreRollCommit(_ report: CheckReport, session: DocumentSe
     report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity) && Int(document.note(notes[2].id)?.velocity ?? 0) == Int(notes[2].velocity), cppID: drawerVelocityRollCoreRollID, message: "the staged drag leaves all three document values alone")
     grid.endPointer(x: center.0, y: center.1 - 11)
     let committed = drawerVelocityDocumentSnapshot(document)
-    report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreRollID, what: "one roll release advances the revision once")
+    report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityRollCoreRollID, what: "one roll release advances the revision once")
     report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreRollID, message: "one roll release makes exactly one undoable history entry")
     report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreRollID, message: "one roll release records one history entry")
     report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "the released roll gesture clears every preview")
-    report.expectEqual(original + 11, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the roll commit wrote the staged value")
-    report.expectEqual(Int(notes[1].velocity) + 11, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the selected companion commits the same delta")
-    report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the unselected note keeps its literal velocity")
+    report.expectEqual(expected: original + 11, actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the roll commit wrote the staged value")
+    report.expectEqual(expected: Int(notes[1].velocity) + 11, actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the selected companion commits the same delta")
+    report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the unselected note keeps its literal velocity")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreRollID, message: "the roll commit preserves the selection")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
     report.expect(Int(document.note(notes[0].id)?.velocity ?? 0) == original && Int(document.note(notes[1].id)?.velocity ?? 0) == Int(notes[1].velocity), cppID: drawerVelocityRollCoreRollID, message: "undo restores both selected literals")
@@ -254,7 +254,7 @@ func drawerVelocityRollCoreRollEscape(_ report: CheckReport, session: DocumentSe
     let original = Int(notes[0].velocity)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
     grid.updatePointer(x: center.0, y: center.1 - 11)
-    report.expectEqual(original + 11, grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before Escape")
+    report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before Escape")
     report.expect(grid.handleEscape(), cppID: drawerVelocityRollCoreRollID, message: "Escape is claimed while the roll gesture is live")
     report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "Escape clears every roll preview")
     report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreRollID, message: "Escape writes no document state")
@@ -290,7 +290,7 @@ func drawerVelocityRollCoreRollControllerCancel(_ report: CheckReport, session: 
     let original = Int(notes[0].velocity)
     grid.beginPointer(x: center.0, y: center.1, modifiers: 0x0400_0000)
     grid.updatePointer(x: center.0, y: center.1 - 11)
-    report.expectEqual(original + 11, grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before controller cancellation")
+    report.expectEqual(expected: original + 11, actual: grid.previewVelocity(notes[0].id) ?? -1, cppID: drawerVelocityRollCoreRollID, what: "the roll gesture staged before controller cancellation")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
     report.expect(grid.previewVelocity(notes[0].id) == nil && grid.previewVelocity(notes[1].id) == nil && grid.previewVelocity(notes[2].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "controller cancellation clears every roll preview")
     report.expect(grid.lastCancelReason == GridCancelReason.pointerUngrabbed.rawValue, cppID: drawerVelocityRollCoreRollID, message: "the controller reason is recorded")
@@ -327,7 +327,7 @@ func drawerVelocityRollCoreRollStationaryNoop(_ report: CheckReport, session: Do
     report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreRollID, message: "a stationary control press leaves undo depth and song bytes alone")
     report.expect(grid.previewVelocity(notes[0].id) == nil && !grid.interactionActive, cppID: drawerVelocityRollCoreRollID, message: "no preview survives the stationary release")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityRollCoreRollID, message: "the stationary press selects exactly its own note")
-    report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the pressed literal is untouched")
+    report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreRollID, what: "the pressed literal is untouched")
 }
 
 @MainActor
@@ -346,19 +346,19 @@ func drawerVelocityRollCoreOctaveShortcut(_ report: CheckReport, session: Docume
     let baselineBytes = coreTimeBytes(document)
     let baselineCount = document.history.undoCount
     grid.performCommand(command: EditCommand.transposeUpOctave.rawValue)
-    report.expectEqual(Int(notes[0].pitch) + 12, Int(document.note(notes[0].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves the first selected note up twelve")
-    report.expectEqual(Int(notes[1].pitch) + 12, Int(document.note(notes[1].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves every selected note up twelve")
-    report.expectEqual(Int(notes[2].pitch), Int(document.note(notes[2].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the unselected note keeps its pitch")
-    report.expectEqual([100, 64, 32], [document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity, document.note(notes[2].id)?.velocity].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut preserves every velocity")
-    report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRollCoreOctaveID, what: "the shortcut makes one revision")
+    report.expectEqual(expected: Int(notes[0].pitch) + 12, actual: Int(document.note(notes[0].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves the first selected note up twelve")
+    report.expectEqual(expected: Int(notes[1].pitch) + 12, actual: Int(document.note(notes[1].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut moves every selected note up twelve")
+    report.expectEqual(expected: Int(notes[2].pitch), actual: Int(document.note(notes[2].id)?.pitch ?? 0), cppID: drawerVelocityRollCoreOctaveID, what: "the unselected note keeps its pitch")
+    report.expectEqual(expected: [100, 64, 32], actual: [document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity, document.note(notes[2].id)?.velocity].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "the octave shortcut preserves every velocity")
+    report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRollCoreOctaveID, what: "the shortcut makes one revision")
     report.expect(document.history.undoCount == baselineCount + 1 && document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRollCoreOctaveID, message: "the shortcut makes exactly one history entry")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreOctaveID, message: "the shortcut preserves the selection")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
-    report.expectEqual([Int(notes[0].pitch), Int(notes[1].pitch), Int(notes[2].pitch)], [document.note(notes[0].id)?.pitch, document.note(notes[1].id)?.pitch, document.note(notes[2].id)?.pitch].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "undo restores every pitch")
+    report.expectEqual(expected: [Int(notes[0].pitch), Int(notes[1].pitch), Int(notes[2].pitch)], actual: [document.note(notes[0].id)?.pitch, document.note(notes[1].id)?.pitch, document.note(notes[2].id)?.pitch].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "undo restores every pitch")
     report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreOctaveID, message: "undo restores the exact pre-shortcut song bytes")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.redo() }
-    report.expectEqual([Int(notes[0].pitch) + 12, Int(notes[1].pitch) + 12, Int(notes[2].pitch)], [document.note(notes[0].id)?.pitch, document.note(notes[1].id)?.pitch, document.note(notes[2].id)?.pitch].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo reapplies the octave move")
-    report.expectEqual([100, 64, 32], [document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity, document.note(notes[2].id)?.velocity].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo still preserves every velocity")
+    report.expectEqual(expected: [Int(notes[0].pitch) + 12, Int(notes[1].pitch) + 12, Int(notes[2].pitch)], actual: [document.note(notes[0].id)?.pitch, document.note(notes[1].id)?.pitch, document.note(notes[2].id)?.pitch].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo reapplies the octave move")
+    report.expectEqual(expected: [100, 64, 32], actual: [document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity, document.note(notes[2].id)?.velocity].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo still preserves every velocity")
 }
 
 @MainActor

@@ -94,7 +94,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
             // cppID suffix proves both rows execute, like corpus [label] rows.
             let id = id + (reverse ? "[reverse]" : "[forward]")
             let document = try coreNoteDocument(trackCount: 2)
-            report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: id,
+            report.expectEqual(expected: 2, actual: document.engineTracks.usedTrackCount, cppID: id,
                                what: "A001 fixture loads with two editable tracks")
             _ = try document.addNotes([
                 NewNote(track: 0, tick: 0, pitch: 60, duration: 10, velocity: 81),
@@ -105,7 +105,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
             let originals = document.notes(in: 0)
             let planned = document.resizeNotesDurations(originals.span, byTicks: 20)
             report.expect(planned != nil, cppID: id, message: "A003 +20 duration plan exists")
-            report.expectEqual([Tick(20), Tick(30)], planned, cppID: id,
+            report.expectEqual(expected: [Tick(20), Tick(30)], actual: planned, cppID: id,
                                what: "A004 +20 plan caps at the next selected start")
             // A005/A006: the original mutates DocNote copies to durations {20, 30}.
             // Note is immutable in Swift, so a synthetic document supplies notes with
@@ -120,7 +120,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
             let adjacentPlan = document.resizeNotesDurations(adjacentNotes.span, byTicks: 10)
             report.expect(adjacentPlan != nil, cppID: id,
                           message: "A005 adjacent +10 duration plan exists")
-            report.expectEqual([Tick(20), Tick(40)], adjacentPlan, cppID: id,
+            report.expectEqual(expected: [Tick(20), Tick(40)], actual: adjacentPlan, cppID: id,
                                what: "A006 adjacent +10 plan caps at the next selected start")
             // A007: the original reticks the second copy onto the first's start.
             let zeroCap = try coreNoteDocument(trackCount: 2)
@@ -150,14 +150,14 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
                 report.fail(id, "capped resize changed the note count")
                 return
             }
-            report.expectEqual(Tick(20), notes[0].duration, cppID: id,
+            report.expectEqual(expected: Tick(20), actual: notes[0].duration, cppID: id,
                                what: "A009 first note caps at the next selected start")
-            report.expectEqual(Tick(30), notes[1].duration, cppID: id,
+            report.expectEqual(expected: Tick(30), actual: notes[1].duration, cppID: id,
                                what: "A010 last selected note extends fully")
             for index in notes.indices {
-                report.expectEqual(clearedOriginals[index].id, notes[index].id, cppID: id,
+                report.expectEqual(expected: clearedOriginals[index].id, actual: notes[index].id, cppID: id,
                                    what: "A011 resize preserves note identity")
-                report.expectEqual(clearedOriginals[index].velocity, notes[index].velocity,
+                report.expectEqual(expected: clearedOriginals[index].velocity, actual: notes[index].velocity,
                                    cppID: id, what: "A012 resize preserves velocity")
             }
             report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
@@ -165,7 +165,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
             cleared.resizeNoteLengths(notes.map(\.id), byTicks: 10)
             report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
                           message: "A014 merged extension keeps consistent on/off pairs")
-            report.expectEqual([1, 1], coreRangeHistoryPosition(cleared, report, id),
+            report.expectEqual(expected: [1, 1], actual: coreRangeHistoryPosition(cleared, report, id),
                                cppID: id,
                                what: "A015 compatible cumulative resize merges into one entry")
             notes = cleared.notes(in: 0)
@@ -173,9 +173,9 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
                 report.fail(id, "merged resize changed the note count")
                 return
             }
-            report.expectEqual(Tick(20), notes[0].duration, cppID: id,
+            report.expectEqual(expected: Tick(20), actual: notes[0].duration, cppID: id,
                                what: "A016 merged extension keeps the capped duration")
-            report.expectEqual(Tick(40), notes[1].duration, cppID: id,
+            report.expectEqual(expected: Tick(40), actual: notes[1].duration, cppID: id,
                                what: "A017 merged extension reaches the full duration")
             let extended = try cleared.state.file.encoded()
             cleared.resizeNoteLengths(notes.map(\.id), byTicks: -10)
@@ -186,25 +186,25 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
                 report.fail(id, "reversed resize changed the note count")
                 return
             }
-            report.expectEqual(Tick(10), notes[0].duration, cppID: id,
+            report.expectEqual(expected: Tick(10), actual: notes[0].duration, cppID: id,
                                what: "A019 reversal shortens the first note")
-            report.expectEqual(Tick(30), notes[1].duration, cppID: id,
+            report.expectEqual(expected: Tick(30), actual: notes[1].duration, cppID: id,
                                what: "A020 reversal shortens the second note")
-            report.expectEqual([2, 2], coreRangeHistoryPosition(cleared, report, id),
+            report.expectEqual(expected: [2, 2], actual: coreRangeHistoryPosition(cleared, report, id),
                                cppID: id,
                                what: "A021 capped extension is not additive on reversal")
             let shortened = try cleared.state.file.encoded()
             _ = cleared.history.undoDocument()
-            report.expectEqual(extended, try cleared.state.file.encoded(), cppID: id,
+            report.expectEqual(expected: extended, actual: try cleared.state.file.encoded(), cppID: id,
                                what: "A022 undo restores the extended bytes")
             _ = cleared.history.undoDocument()
-            report.expectEqual(before, try cleared.state.file.encoded(), cppID: id,
+            report.expectEqual(expected: before, actual: try cleared.state.file.encoded(), cppID: id,
                                what: "A023 second undo restores the pre-gesture bytes")
             _ = cleared.history.redoDocument()
             report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
                           message: "A024 redo keeps consistent on/off pairs")
             _ = cleared.history.redoDocument()
-            report.expectEqual(shortened, try cleared.state.file.encoded(), cppID: id,
+            report.expectEqual(expected: shortened, actual: try cleared.state.file.encoded(), cppID: id,
                                what: "A025 second redo restores the shortened bytes")
             report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
                           message: "A026 final state keeps consistent on/off pairs")
@@ -219,7 +219,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
             boundary.resizeNoteLengths(boundary.notes(in: 0).map(\.id), byTicks: 1)
             report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
                           message: "A028 post-save resize keeps consistent on/off pairs")
-            report.expectEqual([2, 2], coreRangeHistoryPosition(boundary, report, id),
+            report.expectEqual(expected: [2, 2], actual: coreRangeHistoryPosition(boundary, report, id),
                                cppID: id,
                                what: "A029 save boundary splits the gesture into two entries")
             _ = boundary.history.undoDocument()
@@ -228,7 +228,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
         }
 
         let multi = try coreNoteDocument(trackCount: 2)
-        report.expectEqual(2, multi.engineTracks.usedTrackCount, cppID: id,
+        report.expectEqual(expected: 2, actual: multi.engineTracks.usedTrackCount, cppID: id,
                            what: "A031 fixture loads with two editable tracks")
         let track0 = try multi.addNotes([
             NewNote(track: 0, tick: 0, pitch: 60, duration: 10, velocity: 81),
@@ -246,23 +246,23 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
                       message: "A033 multitrack resize keeps track 1 pairs consistent")
         report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 60) != nil, cppID: id,
                       message: "A034 note found at track 0 tick 0 pitch 60")
-        report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 0, pitch: 60)?.duration,
+        report.expectEqual(expected: Tick(20), actual: coreNoteFind(multi, track: 0, tick: 0, pitch: 60)?.duration,
                            cppID: id, what: "A035 same-pitch selection caps at tick 20")
         report.expect(coreNoteFind(multi, track: 0, tick: 20, pitch: 60) != nil, cppID: id,
                       message: "A036 note found at track 0 tick 20 pitch 60")
-        report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 20, pitch: 60)?.duration,
+        report.expectEqual(expected: Tick(20), actual: coreNoteFind(multi, track: 0, tick: 20, pitch: 60)?.duration,
                            cppID: id, what: "A037 same-pitch selection caps at tick 40")
         report.expect(coreNoteFind(multi, track: 0, tick: 40, pitch: 60) != nil, cppID: id,
                       message: "A038 note found at track 0 tick 40 pitch 60")
-        report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 40, pitch: 60)?.duration,
+        report.expectEqual(expected: Tick(40), actual: coreNoteFind(multi, track: 0, tick: 40, pitch: 60)?.duration,
                            cppID: id, what: "A039 last same-pitch note extends fully")
         report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 61) != nil, cppID: id,
                       message: "A040 note found at track 0 tick 0 pitch 61")
-        report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 0, pitch: 61)?.duration,
+        report.expectEqual(expected: Tick(40), actual: coreNoteFind(multi, track: 0, tick: 0, pitch: 61)?.duration,
                            cppID: id, what: "A041 different pitch is not capped")
         report.expect(coreNoteFind(multi, track: 1, tick: 0, pitch: 60) != nil, cppID: id,
                       message: "A042 note found at track 1 tick 0 pitch 60")
-        report.expectEqual(Tick(40), coreNoteFind(multi, track: 1, tick: 0, pitch: 60)?.duration,
+        report.expectEqual(expected: Tick(40), actual: coreNoteFind(multi, track: 1, tick: 0, pitch: 60)?.duration,
                            cppID: id, what: "A043 different track is not capped")
 
         // A compatible inverse removes the gesture and restores its stationary victim.
@@ -285,9 +285,9 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
         report.expect(grown != nil, cppID: id, message: "A047 note found by identity")
         guard let grown else { return }
         inverse.resizeNoteLengths([grown.id], byTicks: -5)
-        report.expectEqual(inverseBefore, try inverse.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: inverseBefore, actual: try inverse.state.file.encoded(), cppID: id,
                            what: "A048 compatible inverse restores the exact bytes")
-        report.expectEqual([0, 0], coreRangeHistoryPosition(inverse, report, id), cppID: id,
+        report.expectEqual(expected: [0, 0], actual: coreRangeHistoryPosition(inverse, report, id), cppID: id,
                            what: "A049 compatible inverse removes the gesture")
         report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
                       message: "A050 inverse removal keeps consistent on/off pairs")
@@ -300,7 +300,7 @@ private func coreNoteResizeChecks(_ report: CheckReport) {
         report.expect(noOpMismatch == nil, cppID: id,
                       message: "A052 duration-floor resize leaves full state untouched"
                         + (noOpMismatch.map { " (\($0))" } ?? ""))
-        report.expectEqual(noOp.position, coreRangeHistoryPosition(inverse, report, id),
+        report.expectEqual(expected: noOp.position, actual: coreRangeHistoryPosition(inverse, report, id),
                            cppID: id,
                            what: "A052 duration-floor resize preserves history count and cursor")
     } catch {
@@ -337,7 +337,7 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
     let id = "editcheck/EditCheckTest::noteBatchCollisionRejects"
     do {
         let document = try coreNoteBatchDocument()
-        report.expectEqual(1, document.engineTracks.usedTrackCount, cppID: id,
+        report.expectEqual(expected: 1, actual: document.engineTracks.usedTrackCount, cppID: id,
                            what: "A053 fixture loads with one editable track")
         let saved = try coreNoteCaptureState(document, report, id)
         for (index, batch) in coreNoteConflictingBatches.enumerated() {
@@ -348,7 +348,7 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
                             + "and the staged redo branch"
                             + (mismatch.map { " (\($0))" } ?? ""))
         }
-        report.expectEqual(saved.position, coreRangeHistoryPosition(document, report, id),
+        report.expectEqual(expected: saved.position, actual: coreRangeHistoryPosition(document, report, id),
                            cppID: id,
                            what: "A054 rejected batches preserve history count and cursor")
         // The original asserts undo count/cursor after EACH rejected batch; a
@@ -359,7 +359,7 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
             for batch in coreNoteConflictingBatches.prefix(prefix) {
                 _ = try? probe.addNotes(batch)
             }
-            report.expectEqual([2, 1], coreRangeHistoryPosition(probe, report, id),
+            report.expectEqual(expected: [2, 1], actual: coreRangeHistoryPosition(probe, report, id),
                                cppID: id,
                                what: "A054 rejected batch prefix \(prefix) preserves "
                                 + "history count and cursor")
@@ -373,23 +373,23 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
                       message: "A055 accepted abutting batch keeps consistent pairs")
         let after = try document.state.file.encoded()
         _ = document.history.undoDocument()
-        report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: saved.bytes, actual: try document.state.file.encoded(), cppID: id,
                            what: "A056 undo restores the saved bytes")
         _ = document.history.redoDocument()
-        report.expectEqual(after, try document.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: after, actual: try document.state.file.encoded(), cppID: id,
                            what: "A057 redo restores the batch bytes")
         report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
                       message: "A058 redo keeps consistent on/off pairs")
 
         _ = document.history.undoDocument()
-        report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: saved.bytes, actual: try document.state.file.encoded(), cppID: id,
                            what: "A059 second undo restores the saved bytes")
         _ = try document.addNotes([
             NewNote(track: 0, tick: 110, pitch: 60, duration: 10, velocity: 81),
             NewNote(track: 0, tick: 110, pitch: 60, duration: 10, velocity: 81),
         ])
         let duplicates = document.notes(in: 0)
-        report.expectEqual(3, duplicates.count, cppID: id,
+        report.expectEqual(expected: 3, actual: duplicates.count, cppID: id,
                            what: "A060 exact duplicates insert as two notes")
         guard duplicates.count == 3 else {
             report.fail(id, "duplicate insertion changed the note count")
@@ -404,21 +404,21 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
         report.expect(first.id != second.id, cppID: id,
                       message: "A063 duplicate identities are distinct")
         for note in [first, second] {
-            report.expectEqual(Tick(110), note.tick, cppID: id,
+            report.expectEqual(expected: Tick(110), actual: note.tick, cppID: id,
                                what: "A064 duplicate keeps tick 110")
-            report.expectEqual(Tick(10), note.duration, cppID: id,
+            report.expectEqual(expected: Tick(10), actual: note.duration, cppID: id,
                                what: "A065 duplicate keeps duration 10")
-            report.expectEqual(UInt8(60), note.pitch, cppID: id,
+            report.expectEqual(expected: UInt8(60), actual: note.pitch, cppID: id,
                                what: "A066 duplicate keeps key 60")
-            report.expectEqual(UInt8(81), note.velocity, cppID: id,
+            report.expectEqual(expected: UInt8(81), actual: note.velocity, cppID: id,
                                what: "A067 duplicate keeps velocity 81")
         }
         let duplicateBytes = try document.state.file.encoded()
         _ = document.history.undoDocument()
-        report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: saved.bytes, actual: try document.state.file.encoded(), cppID: id,
                            what: "A068 duplicate undo restores the saved bytes")
         _ = document.history.redoDocument()
-        report.expectEqual(duplicateBytes, try document.state.file.encoded(), cppID: id,
+        report.expectEqual(expected: duplicateBytes, actual: try document.state.file.encoded(), cppID: id,
                            what: "A069 duplicate redo restores the duplicate bytes")
     } catch {
         report.fail(id, "original note batch fixture failed: \(error)")
@@ -465,20 +465,20 @@ private func coreUnterminatedResizeChecks(_ report: CheckReport) {
                 resize(delta)
                 let duration = Tick(max(1, delta))
                 let end = original.tick + duration
-                report.expectEqual(duration, document.note(original.id)?.duration, cppID: id,
+                report.expectEqual(expected: duration, actual: document.note(original.id)?.duration, cppID: id,
                                    what: "nonzero resize supplies the planned duration")
                 report.expect(document.note(original.id)?.endTick == UInt64(end), cppID: id,
                               message: "resized note has an actual endpoint")
                 var expected = before.file
                 expected.chunks[original.chunk].events.append(
                     .channel(tick: end, status: 0x92, data0: 60, data1: 0))
-                report.expectEqual(try expected.encoded(), try document.state.file.encoded(),
+                report.expectEqual(expected: try expected.encoded(), actual: try document.state.file.encoded(),
                     cppID: id, what: "resize preserves note-on bytes and adds the canonical channel end")
                 report.expect(document.note(original.id)?.tick == original.tick &&
                     document.note(original.id)?.pitch == original.pitch &&
                     document.note(original.id)?.velocity == original.velocity,
                     cppID: id, message: "termination preserves identity, tick, pitch, and velocity")
-                report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                report.expectEqual(expected: [1, 1], actual: coreRangeHistoryPosition(document, report, id),
                                    cppID: id, what: "termination records exactly one undo entry")
                 let terminated = document.state
                 _ = document.history.undoDocument()
@@ -492,12 +492,12 @@ private func coreUnterminatedResizeChecks(_ report: CheckReport) {
                     cppID: id, message: "redo restores the same terminated note")
                 if keyboard && delta > 0 {
                     resize(3)
-                    report.expectEqual(Tick(15), document.note(original.id)?.duration, cppID: id,
+                    report.expectEqual(expected: Tick(15), actual: document.note(original.id)?.duration, cppID: id,
                                        what: "next keyboard press extends the newly terminated note")
-                    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                    report.expectEqual(expected: [1, 1], actual: coreRangeHistoryPosition(document, report, id),
                                        cppID: id, what: "compatible keyboard presses merge")
                     _ = document.history.undoDocument()
-                    report.expectEqual(before, document.state, cppID: id,
+                    report.expectEqual(expected: before, actual: document.state, cppID: id,
                                        what: "merged undo restores the original missing endpoint")
                 }
             } catch {
@@ -514,7 +514,7 @@ private func coreUnterminatedResizeChecks(_ report: CheckReport) {
         let before = document.state
         let group = HistoryGroup()
         document.resizeNotes([note.id], edge: .trailing, byTicks: 12, group: group)
-        report.expectEqual(UInt64(20), document.note(note.id)?.endTick, cppID: id,
+        report.expectEqual(expected: UInt64(20), actual: document.note(note.id)?.endTick, cppID: id,
                            what: "cumulative resize creates an endpoint")
         document.resizeNotes([note.id], edge: .trailing, byTicks: 0, group: group)
         report.expect(document.state == before && !document.history.canUndo && !document.isDirty,

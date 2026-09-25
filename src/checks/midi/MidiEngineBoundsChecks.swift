@@ -32,11 +32,11 @@ internal func checkMidiEngineBounds(_ report: CheckReport) {
     let programID = "midienginecheck/MidiEngineBoundsTest::programChangesRejectOutOfRangeValues"
     withKeysplitEngine(report, cppID: programID) { engine in
         m4a_engine_program_change(engine, 0, 5)
-        report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
+        report.expectEqual(expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
                            cppID: programID, what: "valid program selects keysplit voice")
         m4a_engine_program_change(engine, 0, 128)
         m4a_engine_program_change(engine, 0, 255)
-        report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
+        report.expectEqual(expected: UInt8(5), actual: engine.pointee.tracks.0.currentProgram,
                            cppID: programID, what: "invalid programs retain selection")
     }
 

@@ -88,15 +88,15 @@ struct TrackHeadersFixture {
     }
 
     func expectRows(_ report: CheckReport, names: [String], cppID: String, phase: String) {
-        report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
+        report.expectEqual(expected: Array(names.indices), actual: trackRows.map(\.track), cppID: cppID,
                            what: "\(phase): rows follow engine track order")
         let titles = names.enumerated().map { "\($0.offset + 1) · \($0.element)" }
-        report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
+        report.expectEqual(expected: titles, actual: trackRows.map(\.title), cppID: cppID,
                            what: "\(phase): rows display ordered numbered track names")
-        report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
+        report.expectEqual(expected: names.count + 1, actual: headers.rows.count, cppID: cppID,
                            what: "\(phase): one row per track plus add-track row")
         let addRows = (0..<headers.rows.count).filter { headers.rows[$0].isAddTrack }
-        report.expectEqual([names.count], addRows, cppID: cppID,
+        report.expectEqual(expected: [names.count], actual: addRows, cppID: cppID,
                            what: "\(phase): add-track row remains last")
     }
 }

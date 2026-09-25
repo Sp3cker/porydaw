@@ -39,7 +39,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
                       && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
                       && session.bankLease !== originalLease,
                       cppID: id, message: "selector binds the alternate source and makes -G undoable")
-        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+        report.expectEqual(expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                            what: "switch to B does not autosave dirty A")
         try runBlocking { _ = try await session.undo() }
@@ -47,14 +47,14 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
                       && session.bankSlots[0].voice == edited && session.bankDirty,
                       cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                       message: "undo of -G rebinds the unsaved home voicegroup")
-        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+        report.expectEqual(expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                            what: "returning to dirty A does not write its source")
         try runBlocking { _ = try await session.redo() }
         report.expect(session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
                       && !session.bankDirty,
                       cppID: id, message: "redo of -G rebinds the alternate bank")
-        report.expectEqual(Optional(homeBytes), bytes(at: homeBankPath),
+        report.expectEqual(expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
                            what: "redoing B still does not write dirty A")
         let beforeFailed = session.bankLease.bankToken

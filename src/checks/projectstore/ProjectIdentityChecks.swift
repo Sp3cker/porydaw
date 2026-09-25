@@ -27,7 +27,7 @@ private func songName(_ report: CheckReport) {
     report.expect(different != nil, cppID: cppID, message: "A004: outro is accepted")
     guard let first, let same, let different else { return }
 
-    report.expectEqual("intro", first.value, cppID: cppID, what: "A005: accepted label round-trips")
+    report.expectEqual(expected: "intro", actual: first.value, cppID: cppID, what: "A005: accepted label round-trips")
     report.expect(first == same, cppID: cppID, message: "A006: equal labels have equal identity")
     report.expect(first != different, cppID: cppID, message: "A007: distinct labels have distinct identity")
     report.expect(first.hashValue == same.hashValue, cppID: cppID,
@@ -54,9 +54,9 @@ private func voicegroupId(_ report: CheckReport) {
     let normalized = VoicegroupId(sourceRelativePath: "./drums//shared/../perc.vg", sectionLabel: "")
     report.expect(normalized != nil, cppID: cppID, message: "A010: relative source is accepted")
     if let normalized {
-        report.expectEqual("drums/perc.vg", normalized.sourceRelativePath, cppID: cppID,
+        report.expectEqual(expected: "drums/perc.vg", actual: normalized.sourceRelativePath, cppID: cppID,
                            what: "A011: source path is lexically normalized")
-        report.expectEqual("", normalized.sectionLabel, cppID: cppID,
+        report.expectEqual(expected: "", actual: normalized.sectionLabel, cppID: cppID,
                            what: "A012: empty section label is preserved")
     }
 
@@ -68,7 +68,7 @@ private func voicegroupId(_ report: CheckReport) {
     report.expect(snare != nil, cppID: cppID, message: "A015: snare section is accepted")
     guard let kick, let sameKick, let snare else { return }
 
-    report.expectEqual("kick", kick.sectionLabel, cppID: cppID,
+    report.expectEqual(expected: "kick", actual: kick.sectionLabel, cppID: cppID,
                        what: "A016: section label round-trips")
     report.expect(kick == sameKick, cppID: cppID,
                   message: "A017: equivalent source paths and sections have equal identity")
@@ -82,22 +82,22 @@ private func savedRecipe(_ report: CheckReport) {
     let cppID = "project-identity/ProjectIdentityTest::savedRecipe_dedupOrderSelection"
     let recipe = normalizeSavedRecipe(projectPath: "/projects/demo",
                                       labels: ["b", "", "a", "b", "c", "a"], selected: "a")
-    report.expectEqual("/projects/demo", recipe.projectPath, cppID: cppID,
+    report.expectEqual(expected: "/projects/demo", actual: recipe.projectPath, cppID: cppID,
                        what: "A020: project path passes through")
-    report.expectEqual(3, recipe.orderedSongs.count, cppID: cppID,
+    report.expectEqual(expected: 3, actual: recipe.orderedSongs.count, cppID: cppID,
                        what: "A021: empty and repeated labels are removed")
     if recipe.orderedSongs.count == 3 {
-        report.expectEqual("b", recipe.orderedSongs[0].value, cppID: cppID,
+        report.expectEqual(expected: "b", actual: recipe.orderedSongs[0].value, cppID: cppID,
                            what: "A022: first surviving label stays first")
-        report.expectEqual("a", recipe.orderedSongs[1].value, cppID: cppID,
+        report.expectEqual(expected: "a", actual: recipe.orderedSongs[1].value, cppID: cppID,
                            what: "A023: second surviving label stays second")
-        report.expectEqual("c", recipe.orderedSongs[2].value, cppID: cppID,
+        report.expectEqual(expected: "c", actual: recipe.orderedSongs[2].value, cppID: cppID,
                            what: "A024: third surviving label stays third")
     }
     report.expect(recipe.selected != nil, cppID: cppID,
                   message: "A025: matching selection survives")
     if let selected = recipe.selected {
-        report.expectEqual("a", selected.value, cppID: cppID,
+        report.expectEqual(expected: "a", actual: selected.value, cppID: cppID,
                            what: "A026: matching selected label is preserved")
     }
 
@@ -108,29 +108,29 @@ private func savedRecipe(_ report: CheckReport) {
     report.expect(missing.selected != nil, cppID: fallbackID,
                   message: "A027: missing selection falls back")
     if let selected = missing.selected {
-        report.expectEqual("a", selected.value, cppID: fallbackID,
+        report.expectEqual(expected: "a", actual: selected.value, cppID: fallbackID,
                            what: "A028: missing selection picks the first label")
     }
     let emptySelection = normalizeSavedRecipe(projectPath: "", labels: ["a", "b"], selected: "")
     report.expect(emptySelection.selected != nil, cppID: fallbackID,
                   message: "A029: empty selection falls back")
     if let selected = emptySelection.selected {
-        report.expectEqual("a", selected.value, cppID: fallbackID,
+        report.expectEqual(expected: "a", actual: selected.value, cppID: fallbackID,
                            what: "A030: empty selection picks the first label")
     }
 
     let legacyID = "swiftproject/ProjectIdentityChecks::savedRecipe_legacySingleLabelAndEmpty"
     let legacy = normalizeSavedRecipe(projectPath: "", labels: ["", ""], selected: "solo")
-    report.expectEqual(1, legacy.orderedSongs.count, cppID: legacyID,
+    report.expectEqual(expected: 1, actual: legacy.orderedSongs.count, cppID: legacyID,
                        what: "A031: lone selected label creates one tab")
     if legacy.orderedSongs.count == 1 {
-        report.expectEqual("solo", legacy.orderedSongs[0].value, cppID: legacyID,
+        report.expectEqual(expected: "solo", actual: legacy.orderedSongs[0].value, cppID: legacyID,
                            what: "A032: selected-alone tab retains its label")
     }
     report.expect(legacy.selected != nil, cppID: legacyID,
                   message: "A033: selected-alone label remains selected")
     if let selected = legacy.selected {
-        report.expectEqual("solo", selected.value, cppID: legacyID,
+        report.expectEqual(expected: "solo", actual: selected.value, cppID: legacyID,
                            what: "A034: selected-alone selection retains its label")
     }
     let empty = normalizeSavedRecipe(projectPath: "", labels: [], selected: "")

@@ -2,8 +2,6 @@
 // Used only for LPT ordering — heaviest first minimizes makespan — so coarse
 // values are fine; they churn between machines and runs.
 export const WALL_ESTIMATE: Record<string, number> = {
-  "selftest-transport": 1.45,
-  "selftest-timeline": 1.27,
   "selftest-workspace": 0.3,
   samplecheck: 9.66,
   resonancecheck: 9.23,
@@ -13,6 +11,12 @@ export const WALL_ESTIMATE: Record<string, number> = {
   tabcheck: 2.35,
   "exportcheck-tail": 1.44,
   "exportcheck-loop": 1.3,
+  // swiftcore family: split of the former bare-swiftcore single-process run
+  // (all QTest slots via one unfiltered qExec) into per-suite entries. Each
+  // entry stages the full swiftcore fixture union, so they schedule with the
+  // export family instead of the 0.3 fallback. Re-measure per suite on the
+  // next verbose run.
+  swiftcore: 1.2,
   onboardcheck: 1.18,
   "host-integration": 1.1,
   rollcheck: 0.99,
@@ -64,5 +68,15 @@ export const WALL_ESTIMATE: Record<string, number> = {
 };
 
 export function wallEstimate(name: string): number {
-  return WALL_ESTIMATE[name] ?? 0.3;
+  const direct = WALL_ESTIMATE[name];
+  if (direct !== undefined) return direct;
+  // Family fallback: per-suite splits (e.g. `swiftcore-<suite>`) share the
+  // measured family row so LPT still orders them as heavy. Only fires when
+  // the pre-dash prefix is itself a table key; all other names keep 0.3.
+  const dash = name.indexOf("-");
+  if (dash > 0) {
+    const family = WALL_ESTIMATE[name.slice(0, dash)];
+    if (family !== undefined) return family;
+  }
+  return 0.3;
 }

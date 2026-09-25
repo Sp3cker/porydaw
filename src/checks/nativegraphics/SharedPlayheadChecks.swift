@@ -214,31 +214,31 @@ private func checkCompoundCommandPublication(
 
     let expectedCursor = Tick(120) + max(1, source.duration)
     let inserted = session.selectedNoteOrder.compactMap(session.document.note)
-    report.expectEqual(1, publications.count, cppID: compoundCommandID,
+    report.expectEqual(expected: 1, actual: publications.count, cppID: compoundCommandID,
                        what: "paste publishes one completed session change")
-    report.expectEqual(
+    report.expectEqual(expected:
         [.document, .selection, .dirty, .history, .cursor],
-        publications.first?.domains ?? [],
+        actual: publications.first?.domains ?? [],
         cppID: compoundCommandID,
         what: "paste publication aggregates document, selection, and cursor domains")
-    report.expectEqual([expectedCursor], observedCursors, cppID: compoundCommandID,
+    report.expectEqual(expected: [expectedCursor], actual: observedCursors, cppID: compoundCommandID,
                        what: "the only observer sees the completed paste cursor")
-    report.expectEqual([session.selectedNoteOrder], observedSelections, cppID: compoundCommandID,
+    report.expectEqual(expected: [session.selectedNoteOrder], actual: observedSelections, cppID: compoundCommandID,
                        what: "the only observer sees the completed pasted selection")
-    report.expectEqual([1], observedPlaybackCounts, cppID: compoundCommandID,
+    report.expectEqual(expected: [1], actual: observedPlaybackCounts, cppID: compoundCommandID,
                        what: "playback is published before the completed session state")
-    report.expectEqual(Int(expectedCursor), grid.editCursorTick, cppID: compoundCommandID,
+    report.expectEqual(expected: Int(expectedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
                        what: "cursor-domain routing updates the lightweight grid presentation")
-    report.expectEqual(1, inserted.count, cppID: compoundCommandID,
+    report.expectEqual(expected: 1, actual: inserted.count, cppID: compoundCommandID,
                        what: "paste selects one inserted note")
     report.expect(inserted.first?.tick == 120 && inserted.first?.id != source.id,
                   cppID: compoundCommandID,
                   message: "the completed selection names the inserted destination note")
-    report.expectEqual(revision + 1, session.document.revision, cppID: compoundCommandID,
+    report.expectEqual(expected: revision + 1, actual: session.document.revision, cppID: compoundCommandID,
                        what: "paste commits one document revision")
     report.expect(session.document.history.currentIdentity != history, cppID: compoundCommandID,
                   message: "paste commits one history state")
-    report.expectEqual(1, playbackCount, cppID: compoundCommandID,
+    report.expectEqual(expected: 1, actual: playbackCount, cppID: compoundCommandID,
                        what: "paste rebuilds and publishes playback exactly once")
 
     publications.removeAll()
@@ -253,18 +253,18 @@ private func checkCompoundCommandPublication(
 
     session.editCursor = movedCursor
 
-    report.expectEqual([.cursor], publications.map(\.domains), cppID: compoundCommandID,
+    report.expectEqual(expected: [.cursor], actual: publications.map(\.domains), cppID: compoundCommandID,
                        what: "a cursor-only move publishes only the cursor domain")
-    report.expectEqual(Int(movedCursor), grid.editCursorTick, cppID: compoundCommandID,
+    report.expectEqual(expected: Int(movedCursor), actual: grid.editCursorTick, cppID: compoundCommandID,
                        what: "cursor publication updates the grid without a content refresh")
     report.expect(session.document.revision == cursorRevision
                       && session.document.isDirty == cursorDirty,
                   cppID: compoundCommandID,
                   message: "cursor-only publication preserves revision and dirty state")
-    report.expectEqual(cursorHistory, session.document.history.currentIdentity,
+    report.expectEqual(expected: cursorHistory, actual: session.document.history.currentIdentity,
                        cppID: compoundCommandID,
                        what: "cursor-only publication creates no history entry")
-    report.expectEqual(0, playbackCount, cppID: compoundCommandID,
+    report.expectEqual(expected: 0, actual: playbackCount, cppID: compoundCommandID,
                        what: "cursor-only publication rebuilds no playback timeline")
 }
 

@@ -9,7 +9,7 @@ func checkControllerPublication(_ report: CheckReport) throws {
     let rig = try AudioControllerCheckFixture()
     let audio = rig.renderer
     for target in [UInt64(1000), 2000, 3000] { audio.seek(target) }
-    report.expectEqual(UInt64(0), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::seekPublishesWithoutBlocking", what: "seek remains pending before callback")
     let replacement = rig.timeline(changed: true)
     audio.publish(replacement)
@@ -18,7 +18,7 @@ func checkControllerPublication(_ report: CheckReport) throws {
         cppID: "transportcheck/TransportTest::updateTimelineCarriesPendingSeek", message: "replacement must carry latest seek")
     for _ in 0..<64 { audio.publish(rig.timeline()) }
     _ = rig.render(1)
-    report.expectEqual(UInt64(3000), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(3000), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::timelineHandoffOwnership", what: "coalescing preserves current cursor and live publication")
     report.expect(audio.timeline?.events == rig.timeline().events,
         cppID: "transportcheck/TransportTest::timelineHandoffOwnership", message: "callback adopts newest coalesced timeline")
@@ -27,7 +27,7 @@ func checkControllerPublication(_ report: CheckReport) throws {
     audio.seek(12345)
     audio.stop()
     _ = rig.render(rig.settle + rig.ramp * 3)
-    report.expectEqual(UInt64(0), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::stopCancelsPendingSeek", what: "stop cancels pending seek")
 }
 
@@ -37,7 +37,7 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
     let timeline = playbackCheckSilentTimeline()
     audio.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
     report.expect(audio.songLoaded, cppID: seekID, message: "original silent song loads")
-    report.expectEqual(2, timeline.usedTrackCount, cppID: seekID, what: "original two-track fixture")
+    report.expectEqual(expected: 2, actual: timeline.usedTrackCount, cppID: seekID, what: "original two-track fixture")
     let midpoint = timeline.lengthSamples / 2
     let clock = ContinuousClock()
     for row in 0..<5 {
@@ -46,10 +46,10 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
                       message: "seek row \(row) publishes within 20 ms")
     }
     _ = rig.render(1)
-    report.expectEqual(midpoint, audio.playheadSamples, cppID: seekID, what: "callback applies latest seek")
+    report.expectEqual(expected: midpoint, actual: audio.playheadSamples, cppID: seekID, what: "callback applies latest seek")
     audio.seek(0)
     _ = rig.render(1)
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: seekID, what: "callback applies reset seek")
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: seekID, what: "callback applies reset seek")
 
     let pendingReplacement = playbackCheckSilentTimeline(program: 1)
     audio.seek(midpoint)
@@ -65,7 +65,7 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
     audio.seek(midpoint)
     audio.stop()
     _ = rig.render(rig.settle + rig.ramp * 3)
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: stopSeekID, what: "stop cancels midpoint seek")
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: stopSeekID, what: "stop cancels midpoint seek")
 
     audio.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
     let liveReplacement = playbackCheckSilentTimeline(finalTick: 4700)
@@ -81,7 +81,7 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
                   cppID: playbackCheckLiveReplacementID, message: "callback adopts live event layout and advances")
     audio.stop()
     _ = rig.render(rig.settle + rig.ramp * 3)
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: playbackCheckLiveReplacementID,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: playbackCheckLiveReplacementID,
                        what: "stop after live replacement resets cursor")
 }
 
@@ -103,24 +103,24 @@ func checkReplacementRows(original: PlaybackTimeline, replacement: PlaybackTimel
     let handoffPosition = handoff.position
     handoff.replaceTimeline(handoffPosition, timeline: replacement)
     renderPlaybackCheckFrames(&handoff, engine: handoffEngine.pointer, timeline: replacement, frames: 4_000)
-    report.expectEqual([UInt8(60), 67], playbackCheckPcmKeys(handoffEngine.pointer), cppID: handoffID,
+    report.expectEqual(expected: [UInt8(60), 67], actual: playbackCheckPcmKeys(handoffEngine.pointer), cppID: handoffID,
                        what: "replacement source keyed-on notes")
 
     var seek = Sequencer()
     seek.seek(12_000, timeline: original)
-    report.expectEqual(UInt64(12_000), seek.position, cppID: seekID,
+    report.expectEqual(expected: UInt64(12_000), actual: seek.position, cppID: seekID,
                        what: "published seek position")
 
     var stopped = Sequencer()
     stopped.seek(12_000, timeline: original)
     stopped.reset()
-    report.expectEqual(UInt64(0), stopped.position, cppID: stopSeekID,
+    report.expectEqual(expected: UInt64(0), actual: stopped.position, cppID: stopSeekID,
                        what: "reset position after pending seek")
 
     var carried = Sequencer()
     carried.seek(5_000, timeline: original)
     carried.replaceTimeline(carried.position, timeline: replacement)
-    report.expectEqual(UInt64(5_000), carried.position, cppID: updateSeekID,
+    report.expectEqual(expected: UInt64(5_000), actual: carried.position, cppID: updateSeekID,
                        what: "replacement position after seek")
 
     guard let liveEngine = PlaybackCheckEngine() else {
@@ -131,9 +131,9 @@ func checkReplacementRows(original: PlaybackTimeline, replacement: PlaybackTimel
     renderPlaybackCheckFrames(&live, engine: liveEngine.pointer, timeline: original, frames: 5_000)
     live.replaceTimeline(live.position, timeline: replacement)
     renderPlaybackCheckFrames(&live, engine: liveEngine.pointer, timeline: replacement, frames: 4_000)
-    report.expectEqual(UInt64(9_000), live.position, cppID: playbackCheckLiveReplacementID,
+    report.expectEqual(expected: UInt64(9_000), actual: live.position, cppID: playbackCheckLiveReplacementID,
                        what: "position after live replacement")
-    report.expectEqual([UInt8(60), 67], playbackCheckPcmKeys(liveEngine.pointer),
+    report.expectEqual(expected: [UInt8(60), 67], actual: playbackCheckPcmKeys(liveEngine.pointer),
                        cppID: playbackCheckLiveReplacementID, what: "live replacement keyed-on notes")
 
     return true

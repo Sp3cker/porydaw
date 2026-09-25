@@ -14,7 +14,7 @@ func checkControllerCuts(_ report: CheckReport) throws {
                   onsetRig.renderer.transportState.cutGain >= 0.999,
         cppID: "clickcheck/ClickTest::songStartReachesFullGain",
         message: "callback applies initial playing state at unity gain")
-    report.expectEqual(UInt64(0), onsetRig.renderer.playheadSamples,
+    report.expectEqual(expected: UInt64(0), actual: onsetRig.renderer.playheadSamples,
         cppID: "clickcheck/ClickTest::songStartReachesFullGain", what: "first note remains unconsumed at unity onset")
     let onset = onsetRig.render(onsetRig.settle + 1024)
     report.expect(audioControllerCheckPeak(onset[...]) >= 64 / 32768 && onsetRig.sustaining(60),
@@ -72,10 +72,10 @@ func checkControllerCuts(_ report: CheckReport) throws {
     audio.audition.previewNoteTimed(track: 0, key: 60, velocity: 100, durationSamples: 1025)
     audio.play()
     _ = rig.render(512)
-    report.expectEqual(0, audio.audition.timed.count,
+    report.expectEqual(expected: 0, actual: audio.audition.timed.count,
         cppID: "clickcheck/ClickTest::timedPreviewCutDefersCommands", what: "cut immediately drains active timed previews")
-    report.expectEqual(audio.audition.timed.write.load(ordering: .acquiring),
-        audio.audition.timed.read.load(ordering: .acquiring),
+    report.expectEqual(expected: audio.audition.timed.write.load(ordering: .acquiring),
+        actual: audio.audition.timed.read.load(ordering: .acquiring),
         cppID: "clickcheck/ClickTest::timedPreviewCutDefersCommands", what: "cut immediately drains queued timed previews")
     audio.audition.previewNoteTimed(track: 0, key: 61, velocity: 100, durationSamples: 4096)
     _ = rig.render(rig.settle + 3 * rig.ramp + 1024)
@@ -106,7 +106,7 @@ private func checkReloadAfterInterruptedFadeStartsLoud(_ report: CheckReport) th
     _ = rig.render(rig.ramp / 2)
     audio.unload()
     report.expect(!audio.transportState.cutting, cppID: id, message: "unload clears interrupted fade")
-    report.expectEqual(Float(1), audio.transportState.cutGain, cppID: id, what: "unload restores unity gain")
+    report.expectEqual(expected: Float(1), actual: audio.transportState.cutGain, cppID: id, what: "unload restores unity gain")
     audio.bind(timeline: rig.timeline(), voicegroup: rig.voices, settings: AudioSettings())
     audio.setLoopEnabled(false)
     audio.play()
@@ -119,7 +119,7 @@ private func checkReloadAfterInterruptedFadeStartsLoud(_ report: CheckReport) th
                   message: "playing applies within one second after reload")
     report.expect(audio.transportState.cutGain >= 0.9, cppID: id,
                   message: "reload does not reuse stale cut gain")
-    report.expectEqual(UInt64(0), audio.playheadSamples, cppID: id,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples, cppID: id,
                        what: "reloaded player remains at the first sample")
     let restarted = rig.render(rig.settle + 1024)
     report.expect(audioControllerCheckPeak(restarted[...]) >= 64 / 32768, cppID: id,

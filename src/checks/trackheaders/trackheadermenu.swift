@@ -12,14 +12,14 @@ func headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(
     fx.session.selectedTrack = 1
     let baseline = HeaderDocumentBaseline(fx.document)
     fx.openMenu(report, cppID: id)
-    report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "right press selects target")
-    report.expectEqual([1, 2, 3, 4, 5], (0..<h.menuItems.count).map { h.menuItems[$0].actionId },
+    report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id, what: "right press selects target")
+    report.expectEqual(expected: [1, 2, 3, 4, 5], actual: (0..<h.menuItems.count).map { h.menuItems[$0].actionId },
                        cppID: id, what: "menu exposes all five typed actions in order")
     report.expect((0..<h.menuItems.count).allSatisfy { h.menuItems[$0].enabled },
                   cppID: id, message: "all actions are available below capacity")
     h.dismissHeaderMenu()
     report.expect(!h.menuOpen, cppID: id, message: "dismiss closes menu")
-    report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "dismiss retains selected target")
+    report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id, what: "dismiss retains selected target")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "menu open and dismiss")
     while fx.document.canAddTrack {
         guard fx.document.duplicateTrack(0) != nil else {
@@ -27,11 +27,11 @@ func headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(
             return
         }
     }
-    report.expectEqual(16, fx.document.engineTracks.usedTrackCount, cppID: id,
+    report.expectEqual(expected: 16, actual: fx.document.engineTracks.usedTrackCount, cppID: id,
                        what: "fixture reaches sixteen-track capacity")
-    report.expectEqual(16, h.rows.count, cppID: id, what: "capacity removes add row")
+    report.expectEqual(expected: 16, actual: h.rows.count, cppID: id, what: "capacity removes add row")
     fx.openMenu(report, cppID: id)
-    report.expectEqual([4], (0..<h.menuItems.count).filter { !h.menuItems[$0].enabled }
+    report.expectEqual(expected: [4], actual: (0..<h.menuItems.count).filter { !h.menuItems[$0].enabled }
         .map { h.menuItems[$0].actionId }, cppID: id, what: "only duplicate is disabled at capacity")
     let full = HeaderDocumentBaseline(fx.document)
     h.activateHeaderMenuAction(actionId: 4)
@@ -65,10 +65,10 @@ func headerMenuTargetRowResolvesByTrack(
     report.expect(h.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
                   cppID: id, message: "identity-resolved row accepts right press")
     report.expect(h.menuOpen, cppID: id, message: "identity-resolved header opens menu")
-    report.expectEqual(target, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: target, actual: fx.session.selectedTrack, cppID: id,
                        what: "right press selects identity-resolved target")
     h.activateHeaderMenuAction(actionId: 2)
-    report.expectEqual([target], revealed, cppID: id,
+    report.expectEqual(expected: [target], actual: revealed, cppID: id,
                        what: "menu target resolves to identity-resolved track")
     report.expect(!h.menuOpen, cppID: id, message: "menu action closes first menu")
     report.expect(h.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
@@ -92,23 +92,23 @@ func headerMenuChangeVoiceOpensPickerAfterMenuCloses(
         requests.append(track)
     }
     fx.openMenu(report, track: 1, cppID: id)
-    report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: 1, actual: fx.session.selectedTrack, cppID: id,
                        what: "right press selects the voice track")
     h.activateHeaderMenuAction(actionId: 1)
-    report.expectEqual([1], requests, cppID: id, what: "change voice requests selected track picker")
+    report.expectEqual(expected: [1], actual: requests, cppID: id, what: "change voice requests selected track picker")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "change voice requested")
     h.completeVoiceRequest(program: -1)
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "change voice cancelled")
-    report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+    report.expectEqual(expected: 1, actual: fx.session.selectedTrack, cppID: id,
                        what: "cancelled picker retains the voice track selection")
     fx.openMenu(report, track: 1, cppID: id)
     h.activateHeaderMenuAction(actionId: 1)
     h.completeVoiceRequest(program: 127)
-    report.expectEqual([127], fx.document.lanePoints(track: 1, lane: .voice).map(\.value),
+    report.expectEqual(expected: [127], actual: fx.document.lanePoints(track: 1, lane: .voice).map(\.value),
                        cppID: id, what: "accepted picker edits captured track program")
-    report.expectEqual([0], fx.document.lanePoints(track: 0, lane: .voice).map(\.value),
+    report.expectEqual(expected: [0], actual: fx.document.lanePoints(track: 0, lane: .voice).map(\.value),
                        cppID: id, what: "voice edit leaves other track untouched")
-    report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
+    report.expectEqual(expected: baseline.revision + 1, actual: fx.document.revision, cppID: id,
                        what: "voice acceptance creates one edit")
 }
 
@@ -124,11 +124,11 @@ func headerMenuRenameBeginsAfterCloseAndFocusesEditor(
     h.activateHeaderMenuAction(actionId: 3)
     report.expect(!h.menuOpen && h.renamingTrack == 0, cppID: id,
                   message: "rename editor replaces closed menu synchronously")
-    report.expectEqual("Lead", h.renameDraft, cppID: id, what: "editor starts with editable track name")
+    report.expectEqual(expected: "Lead", actual: h.renameDraft, cppID: id, what: "editor starts with editable track name")
     h.renameDraft = "Discard menu rename"
     h.finishRename(commit: false, restoreRollFocus: true)
     h.finishRename(commit: true, restoreRollFocus: false)
-    report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
+    report.expectEqual(expected: -1, actual: h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "menu rename cancelled")
 }
 
@@ -153,8 +153,8 @@ func headerMenuRowsDispatchRevealDuplicateDelete(
     }
     fx.openMenu(report, track: 1, cppID: id)
     h.activateHeaderMenuAction(actionId: 2)
-    report.expectEqual([1], reveals, cppID: id, what: "reveal addresses requested track")
-    report.expectEqual([42], revealedPrograms, cppID: id,
+    report.expectEqual(expected: [1], actual: reveals, cppID: id, what: "reveal addresses requested track")
+    report.expectEqual(expected: [42], actual: revealedPrograms, cppID: id,
                        what: "track-addressed menu request resolves to current voice program")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "menu reveal")
     let notes = fx.document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)" }
@@ -163,22 +163,22 @@ func headerMenuRowsDispatchRevealDuplicateDelete(
     fx.openMenu(report, cppID: id)
     h.activateHeaderMenuAction(actionId: 4)
     report.expect(!h.menuOpen, cppID: id, message: "duplicate closes menu")
-    report.expectEqual(3, fx.trackRows.count, cppID: id, what: "duplicate adds one track")
-    report.expectEqual(notes, fx.document.notes(in: 2).map {
+    report.expectEqual(expected: 3, actual: fx.trackRows.count, cppID: id, what: "duplicate adds one track")
+    report.expectEqual(expected: notes, actual: fx.document.notes(in: 2).map {
         "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
     }, cppID: id, what: "duplicate copies content rather than creating an empty slot")
-    report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
+    report.expectEqual(expected: baseline.revision + 1, actual: fx.document.revision, cppID: id,
                        what: "duplicate is one edit")
     report.expect(fx.document.history.undoDocument(), cppID: id, message: "duplicate undo succeeds")
-    report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes duplicate")
+    report.expectEqual(expected: baseline.state, actual: fx.document.state, cppID: id, what: "one undo removes duplicate")
     let beforeDelete = fx.document.revision
     fx.openMenu(report, track: 1, cppID: id)
     h.activateHeaderMenuAction(actionId: 5)
     report.expect(!h.menuOpen, cppID: id, message: "delete closes menu")
     fx.expectRows(report, names: ["Lead"], cppID: id, phase: "menu deletion")
-    report.expectEqual(beforeDelete + 1, fx.document.revision, cppID: id, what: "delete is one edit")
+    report.expectEqual(expected: beforeDelete + 1, actual: fx.document.revision, cppID: id, what: "delete is one edit")
     report.expect(fx.document.history.undoDocument(), cppID: id, message: "delete undo succeeds")
-    report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "undo restores deleted music")
+    report.expectEqual(expected: baseline.state, actual: fx.document.state, cppID: id, what: "undo restores deleted music")
     fx.expectRows(report, names: ["Lead", "Bass"], cppID: id, phase: "delete undo")
 }
 
@@ -198,10 +198,10 @@ func headerMenuStaleStructuralChangeCancelsWithoutWrite(
                   message: "structural remap cancels menu without starting editor")
     h.activateHeaderMenuAction(actionId: 1)
     h.completeVoiceRequest(program: 127)
-    report.expectEqual(0, pickers, cppID: id, what: "late stale action cannot open picker")
+    report.expectEqual(expected: 0, actual: pickers, cppID: id, what: "late stale action cannot open picker")
     remapped.expectUnchanged(report, fx.document, cppID: id, phase: "stale menu action")
     fx.openMenu(report, cppID: id)
-    report.expectEqual(5, h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
+    report.expectEqual(expected: 5, actual: h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
     h.dismissHeaderMenu()
 }
 
@@ -241,9 +241,9 @@ func headerMenuOutsidePressDismissesWithoutClickThrough(
         _ = h.beginPointer(x: outside.x, y: outside.y, button: button, modifiers: 0)
         _ = h.endPointer(x: outside.x, y: outside.y, button: button, modifiers: 0)
         report.expect(!h.menuOpen, cppID: id, message: "outside button \(button) dismisses without reopening")
-        report.expectEqual(0, fx.session.selectedTrack, cppID: id,
+        report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id,
                            what: "outside button \(button) never clicks through to selection")
-        report.expectEqual(0, reveals, cppID: id, what: "outside button \(button) never reveals a voice")
+        report.expectEqual(expected: 0, actual: reveals, cppID: id, what: "outside button \(button) never reveals a voice")
         baseline.expectUnchanged(report, fx.document, cppID: id, phase: "outside button \(button)")
     }
 }

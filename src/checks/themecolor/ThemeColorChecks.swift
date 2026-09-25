@@ -121,27 +121,27 @@ private let themeValidationID = "themelayout/ThemeLayoutTest::settingsRepair"
 
 @MainActor
 private func themeModeAndContrastValidation(_ report: CheckReport) {
-    report.expectEqual("vanilla", ShellAppearance.mode("vanilla"),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode("vanilla"),
                        cppID: themeValidationID, what: "vanilla survives validation")
-    report.expectEqual("dark-neutral-high", ShellAppearance.mode("dark-neutral-high"),
+    report.expectEqual(expected: "dark-neutral-high", actual: ShellAppearance.mode("dark-neutral-high"),
                        cppID: themeValidationID, what: "dark-neutral-high survives validation")
-    report.expectEqual("immaterial", ShellAppearance.mode("immaterial"),
+    report.expectEqual(expected: "immaterial", actual: ShellAppearance.mode("immaterial"),
                        cppID: themeValidationID, what: "immaterial survives validation")
-    report.expectEqual("vanilla", ShellAppearance.mode("custom"),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode("custom"),
                        cppID: themeValidationID, what: "unknown mode repairs to vanilla")
-    report.expectEqual("vanilla", ShellAppearance.mode(""),
+    report.expectEqual(expected: "vanilla", actual: ShellAppearance.mode(""),
                        cppID: themeValidationID, what: "empty mode repairs to vanilla")
-    report.expectEqual(80, ShellAppearance.contrast("80"),
+    report.expectEqual(expected: 80, actual: ShellAppearance.contrast("80"),
                        cppID: themeValidationID, what: "stored contrast 80 survives")
-    report.expectEqual(50, ShellAppearance.contrast("banana"),
+    report.expectEqual(expected: 50, actual: ShellAppearance.contrast("banana"),
                        cppID: themeValidationID, what: "unparseable contrast falls back to 50")
-    report.expectEqual(50, ShellAppearance.contrast(""),
+    report.expectEqual(expected: 50, actual: ShellAppearance.contrast(""),
                        cppID: themeValidationID, what: "missing contrast falls back to 50")
-    report.expectEqual(100, ShellAppearance.contrast("200"),
+    report.expectEqual(expected: 100, actual: ShellAppearance.contrast("200"),
                        cppID: themeValidationID, what: "contrast clamps to 100")
-    report.expectEqual(0, ShellAppearance.contrast("-3"),
+    report.expectEqual(expected: 0, actual: ShellAppearance.contrast("-3"),
                        cppID: themeValidationID, what: "contrast clamps to 0")
-    report.expectEqual(80, ShellAppearance.contrast("  80  "),
+    report.expectEqual(expected: 80, actual: ShellAppearance.contrast("  80  "),
                        cppID: themeValidationID, what: "contrast tolerates surrounding whitespace")
 }
 
@@ -247,73 +247,73 @@ private func themePresetValueChecks(_ report: CheckReport) {
         let palette = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
         themeAssertComplete(report, palette, cppID: themeCompletenessID, what: tag)
-        report.expectEqual(row.window, palette.windowBackground,
+        report.expectEqual(expected: row.window, actual: palette.windowBackground,
                            cppID: themeCompletenessID, what: "\(tag): window")
-        report.expectEqual(row.text, palette.windowText,
+        report.expectEqual(expected: row.text, actual: palette.windowText,
                            cppID: themeCompletenessID, what: "\(tag): window text")
-        report.expectEqual(row.text, palette.primaryText,
+        report.expectEqual(expected: row.text, actual: palette.primaryText,
                            cppID: themeCompletenessID, what: "\(tag): primary text aliases window text")
-        report.expectEqual(row.text, palette.buttonText,
+        report.expectEqual(expected: row.text, actual: palette.buttonText,
                            cppID: themeCompletenessID, what: "\(tag): button text")
-        report.expectEqual(row.disabled, palette.disabledText,
+        report.expectEqual(expected: row.disabled, actual: palette.disabledText,
                            cppID: themeCompletenessID, what: "\(tag): disabled text")
-        report.expectEqual(row.outline, palette.outline,
+        report.expectEqual(expected: row.outline, actual: palette.outline,
                            cppID: themeCompletenessID, what: "\(tag): outline")
-        report.expectEqual(palette.outline, palette.focusOutline,
+        report.expectEqual(expected: palette.outline, actual: palette.focusOutline,
                            cppID: themeCompletenessID, what: "\(tag): focus outline aliases outline")
-        report.expectEqual(row.chrome, palette.chromeBackground,
+        report.expectEqual(expected: row.chrome, actual: palette.chromeBackground,
                            cppID: themeCompletenessID, what: "\(tag): chrome")
-        report.expectEqual(row.separator, palette.separator,
+        report.expectEqual(expected: row.separator, actual: palette.separator,
                            cppID: themeCompletenessID, what: "\(tag): separator")
-        report.expectEqual(row.control, palette.buttonBackground,
+        report.expectEqual(expected: row.control, actual: palette.buttonBackground,
                            cppID: themeCompletenessID, what: "\(tag): button surface")
-        report.expectEqual(palette.buttonBackground, palette.tabBackground,
+        report.expectEqual(expected: palette.buttonBackground, actual: palette.tabBackground,
                            cppID: themeCompletenessID, what: "\(tag): tab and button share the control surface")
-        report.expectEqual(row.controlHover, palette.buttonHoverBackground,
+        report.expectEqual(expected: row.controlHover, actual: palette.buttonHoverBackground,
                            cppID: themeCompletenessID, what: "\(tag): button hover surface")
-        report.expectEqual(palette.buttonHoverBackground, palette.tabHoverBackground,
+        report.expectEqual(expected: palette.buttonHoverBackground, actual: palette.tabHoverBackground,
                            cppID: themeCompletenessID, what: "\(tag): tab and button share the hover surface")
-        report.expectEqual(row.controlPressed, palette.buttonPressedBackground,
+        report.expectEqual(expected: row.controlPressed, actual: palette.buttonPressedBackground,
                            cppID: themeCompletenessID, what: "\(tag): button pressed surface")
-        report.expectEqual(palette.buttonPressedBackground, palette.tabPressedBackground,
+        report.expectEqual(expected: palette.buttonPressedBackground, actual: palette.tabPressedBackground,
                            cppID: themeCompletenessID, what: "\(tag): tab and button share the pressed surface")
-        report.expectEqual(row.pressedText, palette.buttonPressedText,
+        report.expectEqual(expected: row.pressedText, actual: palette.buttonPressedText,
                            cppID: themeCompletenessID, what: "\(tag): pressed foreground rule")
-        report.expectEqual(palette.buttonPressedText, palette.selectionText,
+        report.expectEqual(expected: palette.buttonPressedText, actual: palette.selectionText,
                            cppID: themeCompletenessID, what: "\(tag): selection text shares the pressed foreground")
-        report.expectEqual(row.item, palette.menuBackground,
+        report.expectEqual(expected: row.item, actual: palette.menuBackground,
                            cppID: themeCompletenessID, what: "\(tag): menu aliases the item surface")
-        report.expectEqual(row.itemHover, palette.menuHoverBackground,
+        report.expectEqual(expected: row.itemHover, actual: palette.menuHoverBackground,
                            cppID: themeCompletenessID, what: "\(tag): menu hover aliases the item hover surface")
-        report.expectEqual(row.secondary, palette.secondaryText,
+        report.expectEqual(expected: row.secondary, actual: palette.secondaryText,
                            cppID: themeCompletenessID, what: "\(tag): secondary text")
-        report.expectEqual(row.grid, palette.gridLine,
+        report.expectEqual(expected: row.grid, actual: palette.gridLine,
                            cppID: themeCompletenessID, what: "\(tag): pinned grid value")
-        report.expectEqual(row.roll, palette.rollBackground,
+        report.expectEqual(expected: row.roll, actual: palette.rollBackground,
                            cppID: themeCompletenessID, what: "\(tag): piano-roll background")
-        report.expectEqual(row.accidental, palette.accidentalLane,
+        report.expectEqual(expected: row.accidental, actual: palette.accidentalLane,
                            cppID: themeCompletenessID, what: "\(tag): accidental lane")
-        report.expectEqual(row.keyboardSeparator, palette.keyboardSeparator,
+        report.expectEqual(expected: row.keyboardSeparator, actual: palette.keyboardSeparator,
                            cppID: themeCompletenessID, what: "\(tag): keyboard separator")
-        report.expectEqual("#1A1A1A", palette.keyboardLabel,
+        report.expectEqual(expected: "#1A1A1A", actual: palette.keyboardLabel,
                            cppID: themeCompletenessID, what: "\(tag): keyboard label stays fixed")
-        report.expectEqual(row.selection, palette.tabSelectedBackground,
+        report.expectEqual(expected: row.selection, actual: palette.tabSelectedBackground,
                            cppID: themeCompletenessID, what: "\(tag): selected tab fill")
-        report.expectEqual(row.selection, palette.selectionRing,
+        report.expectEqual(expected: row.selection, actual: palette.selectionRing,
                            cppID: themeCompletenessID, what: "\(tag): selection ring")
-        report.expectEqual(row.selection, palette.keyboardActiveKey,
+        report.expectEqual(expected: row.selection, actual: palette.keyboardActiveKey,
                            cppID: themeCompletenessID, what: "\(tag): active keyboard key")
-        report.expectEqual(row.accent, palette.selectionEdge,
+        report.expectEqual(expected: row.accent, actual: palette.selectionEdge,
                            cppID: themeCompletenessID, what: "\(tag): selection edge accents")
-        report.expectEqual(row.text, palette.editCursor,
+        report.expectEqual(expected: row.text, actual: palette.editCursor,
                            cppID: themeCompletenessID, what: "\(tag): edit cursor")
-        report.expectEqual("#E24242", palette.playhead,
+        report.expectEqual(expected: "#E24242", actual: palette.playhead,
                            cppID: themeCompletenessID, what: "\(tag): playhead stays the identity red")
-        report.expectEqual(row.disabled, palette.noteVelocityZero,
+        report.expectEqual(expected: row.disabled, actual: palette.noteVelocityZero,
                            cppID: themeCompletenessID, what: "\(tag): zero-velocity ink")
-        report.expectEqual(row.secondary, palette.implicitSignature,
+        report.expectEqual(expected: row.secondary, actual: palette.implicitSignature,
                            cppID: themeCompletenessID, what: "\(tag): implicit-signature ink aliases secondary")
-        report.expectEqual(row.secondary, palette.rulerDetailText,
+        report.expectEqual(expected: row.secondary, actual: palette.rulerDetailText,
                            cppID: themeCompletenessID, what: "\(tag): ruler-detail ink aliases secondary")
 
         // Menu/control contrast floors (verifyMenuAndControlContracts plus the
@@ -488,7 +488,7 @@ private func themeGridContrastChecks(_ report: CheckReport) {
     for row in themePresetRows {
         let base = themeAppliedPalette(mode: row.mode, contrast: 50)
         let tag = "mode=\(row.mode)"
-        report.expectEqual(row.grid, base.gridLine,
+        report.expectEqual(expected: row.grid, actual: base.gridLine,
                            cppID: themeGridContrastID, what: "\(tag): default contrast is the identity")
         for contrast in [0, 50, 100] {
             let adjusted = themeAppliedPalette(mode: row.mode, contrast: contrast)
@@ -531,7 +531,7 @@ private let themeTrackIdentityID = "themelayout/DeferredThemeLayoutTest::trackId
 
 @MainActor
 private func themeTrackIdentityChecks(_ report: CheckReport) {
-    report.expectEqual(16, PaletteMath.trackIdentityFills.count,
+    report.expectEqual(expected: 16, actual: PaletteMath.trackIdentityFills.count,
                        cppID: themeTrackIdentityID, what: "sixteen identity fills")
     for (index, fill) in PaletteMath.trackIdentityFills.enumerated() {
         let channels = PaletteMath.channels(fill)
@@ -557,19 +557,19 @@ private let themeDialogID = "themelayout/DeferredThemeLayoutTest::dialogCommitAn
 @MainActor
 private func themeCommitPreviewRevertChecks(_ report: CheckReport) {
     let committed = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
-    report.expectEqual("#373737", committed.windowBackground,
+    report.expectEqual(expected: "#373737", actual: committed.windowBackground,
                        cppID: themeDialogID, what: "commit applies the dark window surface")
     report.expect(themeRefChannels(committed.gridLine).a
                   > themeRefChannels("#54030303").a,
                   cppID: themeDialogID, message: "commit applies contrast 80 to the grid")
-    report.expectEqual("#424242", committed.chromeBackground,
+    report.expectEqual(expected: "#424242", actual: committed.chromeBackground,
                        cppID: themeDialogID, what: "dark preview shows the dark chrome")
     let immaterial = themeAppliedPalette(mode: "immaterial", contrast: 50)
-    report.expectEqual("#363941", immaterial.chromeBackground,
+    report.expectEqual(expected: "#363941", actual: immaterial.chromeBackground,
                        cppID: themeDialogID, what: "immaterial preview shows the immaterial chrome")
     let reverted = themeAppliedPalette(mode: "dark-neutral-high", contrast: 80)
-    report.expectEqual("#037384", reverted.selectionEdge,
+    report.expectEqual(expected: "#037384", actual: reverted.selectionEdge,
                        cppID: themeDialogID, what: "revert restores the committed link accent")
-    report.expectEqual(committed.gridLine, reverted.gridLine,
+    report.expectEqual(expected: committed.gridLine, actual: reverted.gridLine,
                        cppID: themeDialogID, what: "revert restores the committed grid value")
 }

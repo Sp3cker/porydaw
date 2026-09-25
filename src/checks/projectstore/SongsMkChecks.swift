@@ -27,14 +27,14 @@ internal func runSongsMkSuite(_ report: CheckReport) {
         try FileManager.default.createDirectory(at: midiDir, withIntermediateDirectories: true)
         try Data(fixture.utf8).write(to: mkFile)
 
-        report.expectEqual(mkFile, root.appendingPathComponent("songs.mk"), cppID: cppID,
+        report.expectEqual(expected: mkFile, actual: root.appendingPathComponent("songs.mk"), cppID: cppID,
                            what: "path appends songs.mk to the root")
         let parsed = SongsMk.parseFlags(mkFile: mkFile)
-        report.expectEqual(["-E", "-R50", "-G_group", "-V080"], parsed[target], cppID: cppID,
+        report.expectEqual(expected: ["-E", "-R50", "-G_group", "-V080"], actual: parsed[target], cppID: cppID,
                            what: "A007: recipe variables expand into concrete option values")
         report.expect(parsed[target]?.allSatisfy { !$0.contains("$") } == true,
                       cppID: cppID, message: "A007: expanded options contain no variable references")
-        report.expectEqual(["-V077"], parsed[other], cppID: cppID,
+        report.expectEqual(expected: ["-V077"], actual: parsed[other], cppID: cppID,
                            what: "literal midi directory rule parses")
         report.expect(parsed["mus.dotted"] == nil && parsed["mus-dashed"] == nil,
                       cppID: cppID, message: "rule labels containing dots or dashes do not match")
@@ -48,11 +48,11 @@ internal func runSongsMkSuite(_ report: CheckReport) {
         let newLines = ProjectFileStore.splitLines(after).lines
         report.expect(!FileManager.default.fileExists(atPath: midiDir.appendingPathComponent("midi.cfg").path),
                       cppID: cppID, message: "A009: routing does not create midi.cfg")
-        report.expectEqual(oldLines.count, newLines.count, cppID: cppID,
+        report.expectEqual(expected: oldLines.count, actual: newLines.count, cppID: cppID,
                            what: "A010: replacing flags retains the line count")
         if oldLines.count == newLines.count {
             let changed = oldLines.indices.filter { oldLines[$0] != newLines[$0] }
-            report.expectEqual([3], changed, cppID: cppID,
+            report.expectEqual(expected: [3], actual: changed, cppID: cppID,
                                what: "A014: exactly one recipe line changes")
             if changed == [3] {
                 let rewritten = String(decoding: newLines[3], as: UTF8.self)
@@ -75,8 +75,8 @@ internal func runSongsMkSuite(_ report: CheckReport) {
         // A spelling with different letter case still occupies the same option slot.
         let caseFlags = ["-E", "-r50", "-G_group", "-v111"]
         try SongsMk.writeRule(mkFile: mkFile, label: target, flags: caseFlags)
-        report.expectEqual(["-E", "-R50", "-G_group", "-V111"],
-                           SongsMk.parseFlags(mkFile: mkFile)[target], cppID: cppID,
+        report.expectEqual(expected: ["-E", "-R50", "-G_group", "-V111"],
+                           actual: SongsMk.parseFlags(mkFile: mkFile)[target], cppID: cppID,
                            what: "case-insensitive value matching retains variable spelling")
         let caseLine = String(decoding: ProjectFileStore.splitLines(try Data(contentsOf: mkFile)).lines[3], as: UTF8.self)
         report.expect(caseLine.contains("-R$(STD_REVERB)") && !caseLine.contains("-R$(STD_REVERB) -r50"),
@@ -94,13 +94,13 @@ internal func runSongsMkSuite(_ report: CheckReport) {
         report.expect(String(decoding: appendedBytes, as: UTF8.self)
                           .contains("\r\n\r\n$(MID_SUBDIR)/mus_mkcheck_new.s: %.s: %.mid\r\n\t$(MID)"),
                       cppID: cppID, message: "A030: new rule appends with blank CRLF separator and tabbed recipe")
-        report.expectEqual(appended, SongsMk.parseFlags(mkFile: mkFile)["mus_mkcheck_new"],
+        report.expectEqual(expected: appended, actual: SongsMk.parseFlags(mkFile: mkFile)["mus_mkcheck_new"],
                            cppID: cppID, what: "A031: appended rule parses back to the written options")
 
         let noRecipe = "$(MID_SUBDIR)/mus_recipe_less.s: %.s: %.mid\r\n\t@echo build\r\n"
         try Data(noRecipe.utf8).write(to: mkFile)
         try SongsMk.writeRule(mkFile: mkFile, label: "mus_recipe_less", flags: ["-V090"])
-        report.expectEqual(["-V090"], SongsMk.parseFlags(mkFile: mkFile)["mus_recipe_less"],
+        report.expectEqual(expected: ["-V090"], actual: SongsMk.parseFlags(mkFile: mkFile)["mus_recipe_less"],
                            cppID: cppID, what: "existing rule without MID recipe receives one")
         let updatedNoRecipe = String(decoding: try Data(contentsOf: mkFile), as: UTF8.self)
         report.expect(updatedNoRecipe.contains("\r\n\t$(MID) $< $@ -V090\r\n\t@echo build\r\n"),

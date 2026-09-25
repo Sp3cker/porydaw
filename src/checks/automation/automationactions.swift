@@ -8,22 +8,22 @@ import PorydawCore
 @MainActor
 func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSession,
                                service: ProjectService) {
-    report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
+    report.expectEqual(expected: AutomationModifiers(), actual: AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
                        what: "no Qt bit arms no policy")
-    report.expectEqual(AutomationModifiers(shift: true),
+    report.expectEqual(expected: AutomationModifiers(shift: true), actual:
                        AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's shift bit arms the ramp and axis-lock policy")
-    report.expectEqual(AutomationModifiers(snapValue: true),
+    report.expectEqual(expected: AutomationModifiers(snapValue: true), actual:
                        AutomationQtModifier.automation(AutomationQtModifier.control),
                        cppID: drawerAutomationModifierMappingID,
                        what: "Qt's control bit arms the value snap")
-    report.expectEqual(AutomationModifiers(fine: true),
+    report.expectEqual(expected: AutomationModifiers(fine: true), actual:
                        AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's alt bit arms the fine lattice")
-    report.expectEqual(AutomationModifiers(),
+    report.expectEqual(expected: AutomationModifiers(), actual:
                        AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's meta bit arms nothing")
-    report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
+    report.expectEqual(expected: AutomationModifiers(fine: true, snapValue: true, shift: true), actual:
                        AutomationQtModifier.automation(AutomationQtModifier.shift
                                                        | AutomationQtModifier.control
                                                        | AutomationQtModifier.alt),
@@ -35,7 +35,7 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
                    AutomationModifiers(fine: true, shift: true),
                    AutomationModifiers(snapValue: true, shift: true),
                    AutomationModifiers(fine: true, snapValue: true, shift: true)] {
-        report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
+        report.expectEqual(expected: policy, actual: AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
                            cppID: drawerAutomationModifierMappingID,
                            what: "the Qt bits that policy composes to map back to it")
     }
@@ -55,7 +55,7 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
     report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
                   cppID: drawerAutomationModifierMappingID,
                   message: "the pointer route took the drag without a Qt modifier bit")
-    report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
+    report.expectEqual(expected: ["24:\(near)"], actual: plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
                        what: "a drag without the Qt control bit keeps the dragged value")
 
     let snapped = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 80)])
@@ -64,7 +64,7 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
                                modifiers: AutomationQtModifier.control),
                   cppID: drawerAutomationModifierMappingID,
                   message: "the pointer route took the drag carrying the Qt control bit")
-    report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
+    report.expectEqual(expected: ["24:64"], actual: snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                        what: "the Qt control bit a QML event carries lands the drag on the neutral")
 }
 
@@ -84,9 +84,9 @@ func drawerAutomationProjectionValueBounds(_ report: CheckReport, suite: Documen
         songEndTick: fixture.songEndTick)
     let yMin = projection.y(0, metadata: metadata)
     let yMax = projection.y(127, metadata: metadata)
-    report.expectEqual(0, projection.value(atY: yMin, metadata: metadata), cppID: id,
+    report.expectEqual(expected: 0, actual: projection.value(atY: yMin, metadata: metadata), cppID: id,
                        what: "the value axis minimum maps back to zero")
-    report.expectEqual(127, projection.value(atY: yMax, metadata: metadata), cppID: id,
+    report.expectEqual(expected: 127, actual: projection.value(atY: yMax, metadata: metadata), cppID: id,
                        what: "the value axis maximum maps back to full scale")
     report.expect(abs(projection.y(64, metadata: metadata) - 60) < 1.0, cppID: id,
                   message: "the neutral value maps within a pixel of the lane midpoint")
@@ -116,9 +116,9 @@ func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, su
     let caretTick = projection.tick(atX: x, fine: true)
     report.expect(rawTick != Double(mappedCell.tickBegin) && rawTick != Double(caretTick),
                   cppID: timingID, message: "the intermediate position is neither the cell begin nor caret")
-    report.expectEqual(mappedCell.tickBegin, projection.insertionTick(atX: x, pencil: true),
+    report.expectEqual(expected: mappedCell.tickBegin, actual: projection.insertionTick(atX: x, pencil: true),
                        cppID: timingID, what: "pencil insertion floors to the half-open cell begin")
-    report.expectEqual(caretTick, projection.insertionTick(atX: x, pencil: false),
+    report.expectEqual(expected: caretTick, actual: projection.insertionTick(atX: x, pencil: false),
                        cppID: timingID, what: "non-pencil insertion uses the fine-grid caret")
 
     fixture.page.isPencilMode = true
@@ -128,7 +128,7 @@ func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, su
                   cppID: clickID, message: "the page starts the pencil click at an intermediate tick")
     report.expect(fixture.page.pointerRelease(x: x, y: y, button: AutomationQtButton.left),
                   cppID: clickID, message: "the page commits the pencil click")
-    report.expectEqual([72], fixture.lanePoints(fixture.panLane)
+    report.expectEqual(expected: [72], actual: fixture.lanePoints(fixture.panLane)
         .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
         cppID: clickID, what: "the first half-open cell holds the clicked value")
 
@@ -143,10 +143,10 @@ func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, su
                   cppID: clickID, message: "the page starts the following cell click")
     report.expect(fixture.page.pointerRelease(x: nextX, y: nextY, button: AutomationQtButton.left),
                   cppID: clickID, message: "the page commits the following cell click")
-    report.expectEqual([72], fixture.lanePoints(fixture.panLane)
+    report.expectEqual(expected: [72], actual: fixture.lanePoints(fixture.panLane)
         .filter { $0.tick == mappedCell.tickBegin }.map(\.value),
         cppID: clickID, what: "the first cell survives the following click")
-    report.expectEqual([96], fixture.lanePoints(fixture.panLane)
+    report.expectEqual(expected: [96], actual: fixture.lanePoints(fixture.panLane)
         .filter { $0.tick == following.tickBegin }.map(\.value),
         cppID: clickID, what: "the following half-open cell holds the second clicked value")
     let biased = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
@@ -163,7 +163,7 @@ func drawerAutomationProjectionInsertionAndPencilClick(_ report: CheckReport, su
     report.expect(biased.page.pointerRelease(x: biasedX, y: biased.y(biased.panLane, 72),
                                              button: AutomationQtButton.left),
                   cppID: clickID, message: "the page commits the late-cell click")
-    report.expectEqual([72], biased.lanePoints(biased.panLane)
+    report.expectEqual(expected: [72], actual: biased.lanePoints(biased.panLane)
         .filter { $0.tick == cell.tickBegin }.map(\.value),
         cppID: clickID, what: "a late-cell click still writes at the half-open cell begin")
 }

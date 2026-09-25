@@ -12,7 +12,7 @@ func checkControllerSuppression(_ report: CheckReport) throws {
     _ = rig.render(rig.ramp + rig.settle, chunk: 1)
     report.expect(audio.transportState.applied == .playing && audio.transportState.cutGain >= 0.999,
         cppID: "transportcheck/TransportTest::songStartEntersAtUnityGain", message: "callback begins initial song at unity")
-    report.expectEqual(UInt64(0), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::songStartEntersAtUnityGain", what: "sequencer parked through exact settle bound")
     let signal = rig.render(144000)
     report.expect(audioControllerCheckPeak(signal[...]) >= 0.01 && rig.deepestGain() < -0.1,
@@ -32,11 +32,11 @@ func checkControllerSuppression(_ report: CheckReport) throws {
     audio.play()
     for _ in 0..<(rig.ramp + rig.settle) {
         _ = rig.render(1)
-        report.expectEqual(cursor, audio.playheadSamples,
+        report.expectEqual(expected: cursor, actual: audio.playheadSamples,
             cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle",
             what: "each settle sample preserves paused cursor")
     }
-    report.expectEqual(cursor, audio.playheadSamples,
+    report.expectEqual(expected: cursor, actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle", what: "resume cursor remains parked until unity")
     report.expect(audio.transportState.applied == .playing && audio.transportState.cutGain >= 0.999,
         cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle", message: "callback applies resume at unity")
@@ -44,7 +44,7 @@ func checkControllerSuppression(_ report: CheckReport) throws {
         cppID: "transportcheck/TransportTest::pausePreservesSuppressorAdaptation",
         message: "resume retains active suppressor adaptation")
     _ = rig.render(1)
-    report.expectEqual(cursor + 1, audio.playheadSamples,
+    report.expectEqual(expected: cursor + 1, actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::resumeParksSequencerThroughSettle", what: "first post-hold frame advances")
     audio.pause()
     _ = rig.render(rig.settle + rig.ramp * 3)
@@ -54,11 +54,11 @@ func checkControllerSuppression(_ report: CheckReport) throws {
     _ = rig.render(rig.ramp + rig.settle, chunk: 1)
     report.expect(audio.transportState.applied == .playing && audio.transportState.cutGain >= 0.999,
         cppID: "transportcheck/TransportTest::secondSongStartDoesNotReuseResumeFade", message: "second callback song-start reaches unity")
-    report.expectEqual(UInt64(0), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::secondSongStartDoesNotReuseResumeFade",
         what: "second start consumes no sequenced interval below full gain")
     _ = rig.render(1)
-    report.expectEqual(UInt64(1), audio.playheadSamples,
+    report.expectEqual(expected: UInt64(1), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::secondSongStartDoesNotReuseResumeFade",
         what: "second start advances immediately after unity onset")
     audio.pause()

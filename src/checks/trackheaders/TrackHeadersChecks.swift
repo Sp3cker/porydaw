@@ -63,7 +63,7 @@ private func commandMixStatePublishesImmediately(
     }
 
     grid.performCommand(command: EditCommand.muteTracks.rawValue)
-    report.expectEqual(Set([0]), session.mutedTracks, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: Set([0]), actual: session.mutedTracks, cppID: trackHeadersMixPublicationID,
                        what: "mute command changes session mix state")
     report.expect(headers.rows[0].muteChecked, cppID: trackHeadersMixPublicationID,
                   message: "mute command updates header in the same publication")
@@ -71,20 +71,20 @@ private func commandMixStatePublishesImmediately(
                   message: "mute publication retains the unrelated row")
 
     grid.performCommand(command: EditCommand.soloTracks.rawValue)
-    report.expectEqual(Set([0]), session.soloedTracks, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: Set([0]), actual: session.soloedTracks, cppID: trackHeadersMixPublicationID,
                        what: "solo command changes session mix state")
     report.expect(headers.rows[0].soloChecked, cppID: trackHeadersMixPublicationID,
                   message: "solo command updates header in the same publication")
-    report.expectEqual(2, publications.count, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: 2, actual: publications.count, cppID: trackHeadersMixPublicationID,
                        what: "each command publishes once without a playhead poll")
     report.expect(publications.allSatisfy { $0 == [.mixState] }, cppID: trackHeadersMixPublicationID,
                   message: "command publications contain only the mix-state domain")
-    report.expectEqual(revision, document.revision, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: revision, actual: document.revision, cppID: trackHeadersMixPublicationID,
                        what: "mix commands do not revise the document")
-    report.expectEqual(history, document.history.currentIdentity, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: history, actual: document.history.currentIdentity, cppID: trackHeadersMixPublicationID,
                        what: "mix commands create no history")
-    report.expectEqual(dirty, document.isDirty, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: dirty, actual: document.isDirty, cppID: trackHeadersMixPublicationID,
                        what: "mix commands do not dirty the document")
-    report.expectEqual(0, playbackPublications, cppID: trackHeadersMixPublicationID,
+    report.expectEqual(expected: 0, actual: playbackPublications, cppID: trackHeadersMixPublicationID,
                        what: "mix commands do not publish a playback timeline")
 }

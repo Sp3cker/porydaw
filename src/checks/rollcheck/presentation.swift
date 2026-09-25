@@ -46,7 +46,7 @@ private func checkHeaderPanFollow(_ report: CheckReport, session: DocumentSessio
         _ = $0.setHScroll(oldCamera.scrollX)
         _ = $0.setVScroll(oldCamera.scrollY)
     }
-    report.expectEqual(oldCamera, session.camera.snapshot, cppID: id,
+    report.expectEqual(expected: oldCamera, actual: session.camera.snapshot, cppID: id,
                        what: "pan probe restores the incoming camera viewport and scroll")
     report.expect(session.document.state == before && session.document.history.currentIdentity == identity,
                   cppID: id, message: "pan and follow do not edit the song or its undo history")
@@ -70,7 +70,7 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
         while document.history.currentIdentity != identity && document.history.undoDocument() {}
         session.onChange = oldChange
         session.selectedTrack = selected
-        report.expectEqual(before, document.state, cppID: id,
+        report.expectEqual(expected: before, actual: document.state, cppID: id,
                            what: "one rename undo restores the original song bytes")
     }
     guard let track = session.selectedTrack,
@@ -79,23 +79,23 @@ private func checkHeaderRename(_ report: CheckReport, session: DocumentSession) 
         return
     }
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "inline rename opens on the selected header")
     headers.renameDraft = "Rolled"
-    report.expectEqual("Rolled", headers.renameDraft, cppID: id,
+    report.expectEqual(expected: "Rolled", actual: headers.renameDraft, cppID: id,
                        what: "header publishes the typed draft")
     headers.finishRename(commit: true, restoreRollFocus: false)
     report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                   cppID: id, message: "Return commits the inline rename and closes the editor")
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "the renamed header can reopen its editor")
     headers.renameDraft = "Discarded"
     headers.finishRename(commit: false, restoreRollFocus: false)
     report.expect(document.trackName(track) == "Rolled" && headers.renamingTrack == -1,
                   cppID: id, message: "Escape discards the draft without changing the name")
     headers.beginRename(track: track)
-    report.expectEqual(track, headers.renamingTrack, cppID: id,
+    report.expectEqual(expected: track, actual: headers.renamingTrack, cppID: id,
                        what: "editor can reopen for the marker-name guard")
     let accepted = document.state
     let acceptedIdentity = document.history.currentIdentity
@@ -133,7 +133,7 @@ private func checkHeaderKeyboardMuteSolo(_ report: CheckReport, session: Documen
         }
         session.mutedTracks = originalMute
         session.soloedTracks = originalSolo
-        report.expectEqual(before, document.state, cppID: id,
+        report.expectEqual(expected: before, actual: document.state, cppID: id,
                            what: "temporary second-track fixture leaves original MIDI intact")
     }
     guard document.engineTracks.usedTrackCount == 1,
@@ -201,7 +201,7 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
         while document.history.currentIdentity != identity && document.history.undoDocument() {}
         session.onChange = oldChange
         session.selectedTrack = selected
-        report.expectEqual(before, document.state, cppID: structuralID,
+        report.expectEqual(expected: before, actual: document.state, cppID: structuralID,
                            what: "header reconciliation restores the supplied song")
     }
     guard document.engineTracks.usedTrackCount == 1,
@@ -241,11 +241,11 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
                   cppID: structuralID,
                   message: "undo restores the last record and trailing add row in one reset")
     headers.beginRename(track: 0)
-    report.expectEqual(0, headers.renamingTrack, cppID: structuralID,
+    report.expectEqual(expected: 0, actual: headers.renamingTrack, cppID: structuralID,
                        what: "rename opens on the retained first record")
     headers.renameDraft = "zzz"
     document.deleteTrack(lastUsed)
-    report.expectEqual(replacement, document.state, cppID: structuralID,
+    report.expectEqual(expected: replacement, actual: document.state, cppID: structuralID,
                        what: "structural replacement recreates the deletion")
     report.expect(headers.renamingTrack == -1 && headers.rowRebuildCount == resets + 3,
                   cppID: structuralID, message: "replacement cancels the open header rename")

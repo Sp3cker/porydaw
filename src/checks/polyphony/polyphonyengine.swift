@@ -98,33 +98,33 @@ private func polyRender(_ engine: UnsafeMutablePointer<M4AEngine>,
 
 private func checkPolyOverflow(_ timeline: PlaybackTimeline, _ report: CheckReport) {
     let id = polyPrefix + "overflowCountersAndRing"
-    report.expectEqual(4, timeline.usedTrackCount, cppID: id, what: "overflow timeline used tracks")
+    report.expectEqual(expected: 4, actual: timeline.usedTrackCount, cppID: id, what: "overflow timeline used tracks")
     guard let engine = polyEngine(report, cppID: id) else { return }
     _ = polyRender(engine.pointer, timeline: timeline)
     let pointer = engine.pointer
-    report.expectEqual(UInt32(3), pointer.pointee.polyEventTotal, cppID: id,
+    report.expectEqual(expected: UInt32(3), actual: pointer.pointee.polyEventTotal, cppID: id,
                        what: "overflow event total")
     let steals = polyCounters(&pointer.pointee.polyStealCount)
     let drops = polyCounters(&pointer.pointee.polyDropCount)
     let tailCuts = polyCounters(&pointer.pointee.polyTailCutCount)
-    report.expectEqual(UInt32(1), steals[1], cppID: id, what: "track 1 steal count")
-    report.expectEqual(UInt32(1), drops[2], cppID: id, what: "track 2 drop count")
-    report.expectEqual(UInt32(1), tailCuts[0], cppID: id, what: "track 0 tail-cut count")
+    report.expectEqual(expected: UInt32(1), actual: steals[1], cppID: id, what: "track 1 steal count")
+    report.expectEqual(expected: UInt32(1), actual: drops[2], cppID: id, what: "track 2 drop count")
+    report.expectEqual(expected: UInt32(1), actual: tailCuts[0], cppID: id, what: "track 0 tail-cut count")
     let total = (0..<Int(MAX_TRACKS)).reduce(UInt64(0)) { sum, track in
         sum + UInt64(steals[track]) + UInt64(drops[track]) + UInt64(tailCuts[track])
     }
-    report.expectEqual(UInt64(3), total, cppID: id, what: "all-track counter total")
+    report.expectEqual(expected: UInt64(3), actual: total, cppID: id, what: "all-track counter total")
     // m4a_engine.h: M4A_POLY_STOLEN=1, DROPPED=0, TAIL_CUT=2.
     let expected: [(type: UInt8, track: UInt8, key: UInt8, byTrack: UInt8, tick: UInt32)] = [
         (1, 1, 62, 0, 96), (0, 2, 64, 2, 120), (2, 0, 60, 3, 148),
     ]
     for (index, event) in polyEvents(pointer, count: expected.count).enumerated() {
         let row = expected[index]
-        report.expectEqual(row.type, event.type, cppID: id, what: "ring \(index) type")
-        report.expectEqual(row.track, event.trackIndex, cppID: id, what: "ring \(index) track")
-        report.expectEqual(row.key, event.midiKey, cppID: id, what: "ring \(index) key")
-        report.expectEqual(row.byTrack, event.byTrack, cppID: id, what: "ring \(index) by-track")
-        report.expectEqual(row.tick, event.tick, cppID: id, what: "ring \(index) tick")
+        report.expectEqual(expected: row.type, actual: event.type, cppID: id, what: "ring \(index) type")
+        report.expectEqual(expected: row.track, actual: event.trackIndex, cppID: id, what: "ring \(index) track")
+        report.expectEqual(expected: row.key, actual: event.midiKey, cppID: id, what: "ring \(index) key")
+        report.expectEqual(expected: row.byTrack, actual: event.byTrack, cppID: id, what: "ring \(index) by-track")
+        report.expectEqual(expected: row.tick, actual: event.tick, cppID: id, what: "ring \(index) tick")
     }
 }
 
@@ -136,9 +136,9 @@ private func checkPolyLiveSentinel(_ report: CheckReport) {
     m4a_engine_program_change(pointer, 1, 0)
     m4a_engine_note_on(pointer, 1, 60, 100)
     m4a_engine_note_on(pointer, 0, 67, 100)
-    report.expectEqual(UInt32(1), pointer.pointee.polyEventTotal, cppID: id,
+    report.expectEqual(expected: UInt32(1), actual: pointer.pointee.polyEventTotal, cppID: id,
                        what: "live event total")
-    report.expectEqual(UInt32.max, polyEvents(pointer, count: 1)[0].tick, cppID: id,
+    report.expectEqual(expected: UInt32.max, actual: polyEvents(pointer, count: 1)[0].tick, cppID: id,
                        what: "live sentinel tick")
 }
 
@@ -163,7 +163,7 @@ private func checkPolyInvert(_ timeline: PlaybackTimeline, _ report: CheckReport
     report.expect(result.shadowOnAfterSteal, cppID: id, message: "shadow pool on after steal")
     m4a_engine_set_poly_debug_invert(pointer, false)
     for (index, status) in polyShadowStatuses(pointer).enumerated() {
-        report.expectEqual(UInt8(0), status, cppID: id, what: "shadow \(index) cleared")
+        report.expectEqual(expected: UInt8(0), actual: status, cppID: id, what: "shadow \(index) cleared")
     }
 }
 

@@ -47,23 +47,23 @@ private func rangeEditing(_ report: CheckReport) {
     report.expect(document.applyRangeEdit(edit),
                   cppID: "editcheck/EditCheckTest::rangeEdit",
                   message: "mixed cross-stream range edit commits")
-    report.expectEqual(3, document.engineTracks.usedTrackCount,
+    report.expectEqual(expected: 3, actual: document.engineTracks.usedTrackCount,
                        cppID: "editcheck/EditCheckTest::rangeEdit",
                        what: "range insertion expands tracks under budget")
-    report.expectEqual(["60:65:8"], document.notes(in: 2).map(noteShape),
+    report.expectEqual(expected: ["60:65:8"], actual: document.notes(in: 2).map(noteShape),
                        cppID: "editcheck/EditCheckTest::rangeEdit",
                        what: "inserted note lands on expanded track")
-    report.expectEqual(["60:60", "60:70"], document.lanePoints(track: 2, lane: .controller(7)).map(coreTimePointShape),
+    report.expectEqual(expected: ["60:60", "60:70"], actual: document.lanePoints(track: 2, lane: .controller(7)).map(coreTimePointShape),
                        cppID: "editcheck/EditCheckTest::rangeEdit",
                        what: "lane insertion shares the atomic candidate")
-    report.expectEqual(2, document.lanePoints(track: 2, lane: .controller(7)).count,
+    report.expectEqual(expected: 2, actual: document.lanePoints(track: 2, lane: .controller(7)).count,
                        cppID: "editcheck/EditCheckTest::rangeEdit",
                        what: "range insertion preserves separate same-tick occurrences")
     report.expect(document.state.tempo.contains {
         $0.tick == 61 && $0.microsecondsPerQuarterNote == 400_000
     }, cppID: "editcheck/EditCheckTest::rangeEdit", message: "tempo replacement is atomic")
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document),
+    report.expectEqual(expected: before, actual: coreTimeBytes(document),
                        cppID: "editcheck/EditCheckTest::rangeEdit",
                        what: "one undo restores every stream and track count")
 
@@ -124,17 +124,17 @@ private func rangeMovement(_ report: CheckReport) {
     report.expect(document.moveRange(notes: notes, points: lane, by: 12, tempo: tempo),
                   cppID: "editcheck/EditCheckTest::rangeMove",
                   message: "mixed range move commits")
-    report.expectEqual(["92:60:8", "104:64:8"], document.notes(in: 0).map(noteShape),
+    report.expectEqual(expected: ["92:60:8", "104:64:8"], actual: document.notes(in: 0).map(noteShape),
                        cppID: "editcheck/EditCheckTest::rangeMove",
                        what: "notes retain duration after exact-byte relocation")
-    report.expectEqual(["92:45"], document.lanePoints(track: 0, lane: .controller(7)).map(coreTimePointShape),
+    report.expectEqual(expected: ["92:45"], actual: document.lanePoints(track: 0, lane: .controller(7)).map(coreTimePointShape),
                        cppID: "editcheck/EditCheckTest::rangeLaneBulk",
                        what: "lane event relocates with the range")
     report.expect(document.state.tempo.contains { $0.tick == 93 },
                   cppID: "editcheck/EditCheckTest::rangeLaneConverge",
                   message: "tempo point relocates in the same history entry")
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document),
+    report.expectEqual(expected: before, actual: coreTimeBytes(document),
                        cppID: "editcheck/EditCheckTest::rangeMove",
                        what: "one undo restores the mixed move")
 
@@ -160,7 +160,7 @@ private func rangeMovement(_ report: CheckReport) {
     report.expect(headTrim.moveRange(notes: [headMover], points: [], by: 50),
                   cppID: "editcheck/EditCheckTest::rangeMove",
                   message: "moving range trims a stationary note head")
-    report.expectEqual(["100:60:20", "120:60:20"], headTrim.notes(in: 0).map(noteShape),
+    report.expectEqual(expected: ["100:60:20", "120:60:20"], actual: headTrim.notes(in: 0).map(noteShape),
                        cppID: "editcheck/EditCheckTest::rangeMove",
                        what: "stationary note starts at the moved note end")
 
@@ -175,7 +175,7 @@ private func rangeMovement(_ report: CheckReport) {
     report.expect(fullCover.moveRange(notes: [coverMover], points: [], by: 50),
                   cppID: "editcheck/EditCheckTest::rangeMove",
                   message: "moving range fully covers a stationary note")
-    report.expectEqual(["100:61:50"], fullCover.notes(in: 0).map(noteShape),
+    report.expectEqual(expected: ["100:61:50"], actual: fullCover.notes(in: 0).map(noteShape),
                        cppID: "editcheck/EditCheckTest::rangeMove",
                        what: "fully covered stationary note is removed")
 }
@@ -196,17 +196,17 @@ private func removalAndSeams(_ report: CheckReport) {
                                       scope: TimeScope(tracks: [0])),
                   cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                   message: "scoped gap removal commits")
-    report.expectEqual(["0:60:80", "80:60:10"], document.notes(in: 0).map(noteShape),
+    report.expectEqual(expected: ["0:60:80", "80:60:10"], actual: document.notes(in: 0).map(noteShape),
                        cppID: "editcheck/EditCheckTest::timeRangeRemove",
                        what: "crossing note trims and later note ripples")
-    report.expectEqual("20:44", document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
+    report.expectEqual(expected: "20:44", actual: document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
                        cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
                        what: "last in-range value survives at the seam")
-    report.expectEqual(untouched?.tick, document.note(ids[2])?.tick,
+    report.expectEqual(expected: untouched?.tick, actual: document.note(ids[2])?.tick,
                        cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                        what: "unscoped track is unchanged")
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document),
+    report.expectEqual(expected: before, actual: coreTimeBytes(document),
                        cppID: "editcheck/EditCheckTest::timeRangeRemove",
                        what: "single undo restores scoped removal")
 
@@ -235,10 +235,10 @@ private func removalAndSeams(_ report: CheckReport) {
         cppID: "editcheck/EditCheckTest::songWholeSongRemove",
         message: "whole-song removal closes every stored end tick")
     _ = whole.history.undoDocument()
-    report.expectEqual(oldEnd, whole.rawChunks.map(\.endTick),
+    report.expectEqual(expected: oldEnd, actual: whole.rawChunks.map(\.endTick),
                        cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                        what: "one undo restores every stored end tick")
-    report.expectEqual(wholeBefore, coreTimeBytes(whole),
+    report.expectEqual(expected: wholeBefore, actual: coreTimeBytes(whole),
                        cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
                        what: "one undo restores globals, events, and end-of-track state")
 
@@ -248,7 +248,7 @@ private func removalAndSeams(_ report: CheckReport) {
         let id = "editcheck/EditCheckTest::timeRangeRemoveRippleTrim[end=\(earlierEnd)]"
         do {
             let trim = try timeRangeDocument()
-            report.expectEqual(2, trim.engineTracks.usedTrackCount, cppID: id,
+            report.expectEqual(expected: 2, actual: trim.engineTracks.usedTrackCount, cppID: id,
                                what: "timeRangeFile fixture loads two editable tracks")
             _ = try trim.addNotes([
                 NewNote(track: 0, tick: 0, pitch: 60, duration: earlierEnd, velocity: 81),
@@ -275,37 +275,37 @@ private func removalAndSeams(_ report: CheckReport) {
             report.expect(coreRangeNotePairsConsistent(trim, track: 1), cppID: id,
                           message: "track 1 on/off pairs consistent after removal")
             let notes = trim.notes(in: 0)
-            report.expectEqual(2, notes.count, cppID: id,
+            report.expectEqual(expected: 2, actual: notes.count, cppID: id,
                                what: "two notes remain after the scoped removal")
-            report.expectEqual(Tick(0), notes.first?.tick, cppID: id,
+            report.expectEqual(expected: Tick(0), actual: notes.first?.tick, cppID: id,
                                what: "crossing note keeps its start tick")
-            report.expectEqual(min(earlierEnd, Tick(80)), notes.first?.duration, cppID: id,
+            report.expectEqual(expected: min(earlierEnd, Tick(80)), actual: notes.first?.duration, cppID: id,
                                what: "crossing note trims to the rippled neighbor")
-            report.expectEqual(Tick(80), notes.last?.tick, cppID: id,
+            report.expectEqual(expected: Tick(80), actual: notes.last?.tick, cppID: id,
                                what: "later note ripples left by the span")
-            report.expectEqual(Tick(10), notes.last?.duration, cppID: id,
+            report.expectEqual(expected: Tick(10), actual: notes.last?.duration, cppID: id,
                                what: "later note keeps its duration")
             for (note, source) in zip(notes, original) {
-                report.expectEqual(source.id, note.id, cppID: id,
+                report.expectEqual(expected: source.id, actual: note.id, cppID: id,
                                    what: "removal preserves note identity")
-                report.expectEqual(source.velocity, note.velocity, cppID: id,
+                report.expectEqual(expected: source.velocity, actual: note.velocity, cppID: id,
                                    what: "removal preserves note velocity")
             }
             if let otherChunk, let other {
-                report.expectEqual(other, trim.rawChunks[otherChunk].events, cppID: id,
+                report.expectEqual(expected: other, actual: trim.rawChunks[otherChunk].events, cppID: id,
                                    what: "unscoped track events are byte-identical")
             } else {
                 report.fail(id, "unscoped engine track has no MIDI chunk")
             }
-            report.expectEqual(trimPosition + 1,
-                               try coreEditHistoryCountAtTip(trim, report: report, cppID: id),
+            report.expectEqual(expected: trimPosition + 1,
+                               actual: try coreEditHistoryCountAtTip(trim, report: report, cppID: id),
                                cppID: id, what: "removal adds one history entry")
             let trimAfter = coreTimeBytes(trim)
             _ = trim.history.undoDocument()
-            report.expectEqual(trimBefore, coreTimeBytes(trim), cppID: id,
+            report.expectEqual(expected: trimBefore, actual: coreTimeBytes(trim), cppID: id,
                                what: "one undo restores the removal")
             _ = trim.history.redoDocument()
-            report.expectEqual(trimAfter, coreTimeBytes(trim), cppID: id,
+            report.expectEqual(expected: trimAfter, actual: coreTimeBytes(trim), cppID: id,
                                what: "one redo restores the removal")
             report.expect(coreRangeNotePairsConsistent(trim, track: 0), cppID: id,
                           message: "track 0 on/off pairs consistent after redo")
@@ -319,7 +319,7 @@ private func removalAndSeams(_ report: CheckReport) {
         let id = "editcheck/EditCheckTest::timeRangeRemoveRippleTrim[\(duplicate ? "duplicate" : "insert")]"
         do {
             let branch = try timeRangeDocument()
-            report.expectEqual(2, branch.engineTracks.usedTrackCount, cppID: id,
+            report.expectEqual(expected: 2, actual: branch.engineTracks.usedTrackCount, cppID: id,
                                what: "timeRangeFile fixture loads two editable tracks")
             _ = try branch.addNotes([
                 NewNote(track: 0, tick: 0, pitch: 60, duration: 30, velocity: 81),
@@ -341,10 +341,10 @@ private func removalAndSeams(_ report: CheckReport) {
                           message: "on/off pairs consistent after the edit")
             let branchAfter = coreTimeBytes(branch)
             _ = branch.history.undoDocument()
-            report.expectEqual(branchBefore, coreTimeBytes(branch), cppID: id,
+            report.expectEqual(expected: branchBefore, actual: coreTimeBytes(branch), cppID: id,
                                what: "one undo restores the branch")
             _ = branch.history.redoDocument()
-            report.expectEqual(branchAfter, coreTimeBytes(branch), cppID: id,
+            report.expectEqual(expected: branchAfter, actual: coreTimeBytes(branch), cppID: id,
                                what: "one redo restores the branch")
             report.expect(coreRangeNotePairsConsistent(branch, track: 0), cppID: id,
                           message: "on/off pairs consistent after redo")
@@ -359,7 +359,7 @@ private func insertionAndBoundaries(_ report: CheckReport) {
     do {
         let document = try timeRangeDocument()
         let splitID = "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit"
-        report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: splitID,
+        report.expectEqual(expected: 2, actual: document.engineTracks.usedTrackCount, cppID: splitID,
                            what: "timeRangeFile fixture loads two editable tracks")
         _ = try document.addNotes([
             NewNote(track: 0, tick: 35, pitch: 60, duration: 10, velocity: 90),
@@ -385,26 +385,26 @@ private func insertionAndBoundaries(_ report: CheckReport) {
                       cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                       message: "blank insertion commits")
         let split = document.notes(in: 0).filter { $0.pitch == 60 }
-        report.expectEqual(["35:60:5", "45:60:5"], split.map(noteShape),
+        report.expectEqual(expected: ["35:60:5", "45:60:5"], actual: split.map(noteShape),
                            cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                            what: "crossing note splits around a silent interval")
         report.expect(split.count == 2 && split[0].id == crossingID && split[1].id != crossingID,
                       cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                       message: "split right half receives a new identity")
-        report.expectEqual(Tick(65), document.note(laterID)?.tick,
+        report.expectEqual(expected: Tick(65), actual: document.note(laterID)?.tick,
                            cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                            what: "later note shifts and preserves identity")
-        report.expectEqual(splitPosition + 1,
-                           try coreEditHistoryCountAtTip(document, report: report,
+        report.expectEqual(expected: splitPosition + 1,
+                           actual: try coreEditHistoryCountAtTip(document, report: report,
                                                          cppID: splitID),
                            cppID: splitID, what: "insertion adds one history entry")
         let splitAfter = coreTimeBytes(document)
         _ = document.history.undoDocument()
-        report.expectEqual(before, coreTimeBytes(document),
+        report.expectEqual(expected: before, actual: coreTimeBytes(document),
                            cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                            what: "one undo restores the split")
         _ = document.history.redoDocument()
-        report.expectEqual(splitAfter, coreTimeBytes(document),
+        report.expectEqual(expected: splitAfter, actual: coreTimeBytes(document),
                            cppID: "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
                            what: "one redo restores the split")
     } catch {
@@ -416,7 +416,7 @@ private func insertionAndBoundaries(_ report: CheckReport) {
     do {
         let lane = try timeRangeDocument()
         let laneID = "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit"
-        report.expectEqual(2, lane.engineTracks.usedTrackCount, cppID: laneID,
+        report.expectEqual(expected: 2, actual: lane.engineTracks.usedTrackCount, cppID: laneID,
                            what: "timeRangeFile fixture loads two editable tracks")
         lane.writeLane(track: 0, lane: .controller(7), from: 300, through: 300,
                        points: [LaneWrite(tick: 300, value: 10)])
@@ -438,25 +438,25 @@ private func insertionAndBoundaries(_ report: CheckReport) {
                                                                     lane: .controller(7)),
                                            ])),
                       cppID: laneID, message: "lane-scoped insertion commits")
-        report.expectEqual("320:10", lane.lanePoints(track: 0, lane: .controller(7))
+        report.expectEqual(expected: "320:10", actual: lane.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == 320 }).map(coreTimePointShape),
             cppID: laneID, what: "scoped lane point shifts right")
-        report.expectEqual("300:20", lane.lanePoints(track: 0, lane: .controller(10))
+        report.expectEqual(expected: "300:20", actual: lane.lanePoints(track: 0, lane: .controller(10))
             .first(where: { $0.tick == 300 }).map(coreTimePointShape),
             cppID: laneID, what: "unscoped lane on the same track stays")
-        report.expectEqual("300:30", lane.lanePoints(track: 1, lane: .controller(7))
+        report.expectEqual(expected: "300:30", actual: lane.lanePoints(track: 1, lane: .controller(7))
             .first(where: { $0.tick == 300 }).map(coreTimePointShape),
             cppID: laneID, what: "same lane on another track stays")
-        report.expectEqual(selectedEnd + 20, lane.rawChunks[selectedChunk].endTick,
+        report.expectEqual(expected: selectedEnd + 20, actual: lane.rawChunks[selectedChunk].endTick,
                            cppID: laneID, what: "selected chunk end tick grows")
-        report.expectEqual(untouchedEnd, lane.rawChunks[untouchedChunk].endTick,
+        report.expectEqual(expected: untouchedEnd, actual: lane.rawChunks[untouchedChunk].endTick,
                            cppID: laneID, what: "untouched chunk end tick stays")
         let laneAfter = coreTimeBytes(lane)
         _ = lane.history.undoDocument()
-        report.expectEqual(laneBefore, coreTimeBytes(lane), cppID: laneID,
+        report.expectEqual(expected: laneBefore, actual: coreTimeBytes(lane), cppID: laneID,
                            what: "one undo restores the lane insertion")
         _ = lane.history.redoDocument()
-        report.expectEqual(laneAfter, coreTimeBytes(lane), cppID: laneID,
+        report.expectEqual(expected: laneAfter, actual: coreTimeBytes(lane), cppID: laneID,
                            what: "one redo restores the lane insertion")
     } catch {
         report.fail("editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
@@ -467,7 +467,7 @@ private func insertionAndBoundaries(_ report: CheckReport) {
     do {
         let track = try timeRangeDocument()
         let trackID = "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit"
-        report.expectEqual(2, track.engineTracks.usedTrackCount, cppID: trackID,
+        report.expectEqual(expected: 2, actual: track.engineTracks.usedTrackCount, cppID: trackID,
                            what: "timeRangeFile fixture loads two editable tracks")
         _ = try track.addNotes([
             NewNote(track: 0, tick: 400, pitch: 62, duration: 5, velocity: 90),
@@ -492,16 +492,16 @@ private func insertionAndBoundaries(_ report: CheckReport) {
                       cppID: trackID, message: "scoped track note shifts right")
         report.expect(track.notes(in: 1).contains { $0.tick == 400 && $0.pitch == 63 },
                       cppID: trackID, message: "unscoped track note stays")
-        report.expectEqual(trackEnd + 20, track.rawChunks[trackChunk].endTick,
+        report.expectEqual(expected: trackEnd + 20, actual: track.rawChunks[trackChunk].endTick,
                            cppID: trackID, what: "scoped chunk end tick grows")
-        report.expectEqual(otherEnd, track.rawChunks[otherChunk].endTick,
+        report.expectEqual(expected: otherEnd, actual: track.rawChunks[otherChunk].endTick,
                            cppID: trackID, what: "unscoped chunk end tick stays")
         let trackAfter = coreTimeBytes(track)
         _ = track.history.undoDocument()
-        report.expectEqual(trackBefore, coreTimeBytes(track), cppID: trackID,
+        report.expectEqual(expected: trackBefore, actual: coreTimeBytes(track), cppID: trackID,
                            what: "one undo restores the track insertion")
         _ = track.history.redoDocument()
-        report.expectEqual(trackAfter, coreTimeBytes(track), cppID: trackID,
+        report.expectEqual(expected: trackAfter, actual: coreTimeBytes(track), cppID: trackID,
                            what: "one redo restores the track insertion")
     } catch {
         report.fail("editcheck/EditCheckTest::timeRangeInsertScopeAndSplit",
@@ -512,7 +512,7 @@ private func insertionAndBoundaries(_ report: CheckReport) {
     do {
         let noopDoc = try timeRangeDocument()
         let noopID = "editcheck/EditCheckTest::timeRangeNoOps"
-        report.expectEqual(2, noopDoc.engineTracks.usedTrackCount, cppID: noopID,
+        report.expectEqual(expected: 2, actual: noopDoc.engineTracks.usedTrackCount, cppID: noopID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let noopTempos = noopDoc.state.tempo
         let noopBefore = coreTimeBytes(noopDoc)
@@ -537,12 +537,12 @@ private func insertionAndBoundaries(_ report: CheckReport) {
         report.expect(!noopDoc.duplicateTime(TimeRange(startTick: 20, endTick: 30),
                                              scope: TimeScope(tracks: [99])),
                       cppID: noopID, message: "invalid track rejects duplicate")
-        report.expectEqual(noopBefore, coreTimeBytes(noopDoc), cppID: noopID,
+        report.expectEqual(expected: noopBefore, actual: coreTimeBytes(noopDoc), cppID: noopID,
                            what: "rejected ranges leave bytes unchanged")
-        report.expectEqual(noopTempos, noopDoc.state.tempo, cppID: noopID,
+        report.expectEqual(expected: noopTempos, actual: noopDoc.state.tempo, cppID: noopID,
                            what: "rejected ranges leave tempo unchanged")
-        report.expectEqual(noopPosition,
-                           try coreEditHistoryCountAtTip(noopDoc, report: report,
+        report.expectEqual(expected: noopPosition,
+                           actual: try coreEditHistoryCountAtTip(noopDoc, report: report,
                                                          cppID: noopID),
                            cppID: noopID, what: "rejected ranges add no history")
         _ = try noopDoc.addNotes([
@@ -563,12 +563,12 @@ private func insertionAndBoundaries(_ report: CheckReport) {
                                                        endTick: TimeDefaults.noTick),
                                              scope: TimeScope(tracks: [0])),
                       cppID: noopID, message: "reserved end tick rejects duplicate")
-        report.expectEqual(sentinelBefore, coreTimeBytes(noopDoc), cppID: noopID,
+        report.expectEqual(expected: sentinelBefore, actual: coreTimeBytes(noopDoc), cppID: noopID,
                            what: "sentinel rejections leave bytes unchanged")
-        report.expectEqual(noopTempos, noopDoc.state.tempo, cppID: noopID,
+        report.expectEqual(expected: noopTempos, actual: noopDoc.state.tempo, cppID: noopID,
                            what: "sentinel rejections leave tempo unchanged")
-        report.expectEqual(sentinelPosition,
-                           try coreEditHistoryCountAtTip(noopDoc, report: report,
+        report.expectEqual(expected: sentinelPosition,
+                           actual: try coreEditHistoryCountAtTip(noopDoc, report: report,
                                                          cppID: noopID),
                            cppID: noopID, what: "sentinel rejections add no history")
     } catch {
@@ -591,7 +591,7 @@ private func insertionAndBoundaries(_ report: CheckReport) {
     do {
         let overflow = try timeRangeDocument()
         let overflowID = "editcheck/EditCheckTest::timeRangeInsertBlankOverflow"
-        report.expectEqual(2, overflow.engineTracks.usedTrackCount, cppID: overflowID,
+        report.expectEqual(expected: 2, actual: overflow.engineTracks.usedTrackCount, cppID: overflowID,
                            what: "timeRangeFile fixture loads two editable tracks")
         guard let overflowChunk = overflow.engineTracks.tracks[0].midiChunk else {
             report.fail(overflowID, "engine track 0 has no MIDI chunk")
@@ -609,10 +609,10 @@ private func insertionAndBoundaries(_ report: CheckReport) {
             overflow.state == overflowBefore,
             cppID: "editcheck/EditCheckTest::timeRangeInsertBlankOverflow",
             message: "maximum-tick overflow rejects before candidate installation")
-        report.expectEqual(overflowBytesBefore, coreTimeBytes(overflow), cppID: overflowID,
+        report.expectEqual(expected: overflowBytesBefore, actual: coreTimeBytes(overflow), cppID: overflowID,
                            what: "rejected overflow leaves bytes unchanged")
-        report.expectEqual(overflowPosition,
-                           try coreEditHistoryCountAtTip(overflow, report: report,
+        report.expectEqual(expected: overflowPosition,
+                           actual: try coreEditHistoryCountAtTip(overflow, report: report,
                                                          cppID: overflowID),
                            cppID: overflowID, what: "rejected overflow adds no history")
     } catch {
@@ -645,7 +645,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     }, cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
     message: "duplicate seeds the effective value at its destination seam")
     _ = document.history.undoDocument()
-    report.expectEqual(before, coreTimeBytes(document),
+    report.expectEqual(expected: before, actual: coreTimeBytes(document),
                        cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
                        what: "one undo restores the duplicated range transaction")
 
@@ -653,7 +653,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let clipID = "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder"
         let clipping = try timeRangeDocument()
-        report.expectEqual(2, clipping.engineTracks.usedTrackCount, cppID: clipID,
+        report.expectEqual(expected: 2, actual: clipping.engineTracks.usedTrackCount, cppID: clipID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let start: Tick = 600
         _ = try clipping.addNotes([
@@ -684,13 +684,13 @@ private func duplicationAndGlobals(_ report: CheckReport) {
             report.fail(clipID, "duplicated notes missing at expected ticks")
             return
         }
-        report.expectEqual(Tick(10), copiedContained.duration, cppID: clipID,
+        report.expectEqual(expected: Tick(10), actual: copiedContained.duration, cppID: clipID,
                            what: "contained copy keeps its duration")
-        report.expectEqual(Tick(10), copiedLeft.duration, cppID: clipID,
+        report.expectEqual(expected: Tick(10), actual: copiedLeft.duration, cppID: clipID,
                            what: "left-crossing copy clips to the range")
-        report.expectEqual(Tick(10), copiedRight.duration, cppID: clipID,
+        report.expectEqual(expected: Tick(10), actual: copiedRight.duration, cppID: clipID,
                            what: "right-crossing copy clips to the range")
-        report.expectEqual(Tick(20), copiedBoth.duration, cppID: clipID,
+        report.expectEqual(expected: Tick(20), actual: copiedBoth.duration, cppID: clipID,
                            what: "both-crossing copy clips to the range")
         let copies = [copiedContained.id, copiedLeft.id, copiedRight.id, copiedBoth.id]
         for (index, copy) in copies.enumerated() {
@@ -705,10 +705,10 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         }
         let clipAfter = coreTimeBytes(clipping)
         _ = clipping.history.undoDocument()
-        report.expectEqual(clipBefore, coreTimeBytes(clipping), cppID: clipID,
+        report.expectEqual(expected: clipBefore, actual: coreTimeBytes(clipping), cppID: clipID,
                            what: "one undo restores the clipping duplication")
         _ = clipping.history.redoDocument()
-        report.expectEqual(clipAfter, coreTimeBytes(clipping), cppID: clipID,
+        report.expectEqual(expected: clipAfter, actual: coreTimeBytes(clipping), cppID: clipID,
                            what: "one redo restores the clipping duplication")
         guard let clipChunk = clipping.engineTracks.tracks[0].midiChunk else {
             report.fail(clipID, "engine track 0 has no MIDI chunk")
@@ -747,7 +747,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let unterminated = try timeRangeDocument()
         let unterminatedID = "editcheck/EditCheckTest::timeRangeUnterminated"
-        report.expectEqual(2, unterminated.engineTracks.usedTrackCount, cppID: unterminatedID,
+        report.expectEqual(expected: 2, actual: unterminated.engineTracks.usedTrackCount, cppID: unterminatedID,
                            what: "timeRangeFile fixture loads two editable tracks")
         guard let unterminatedChunk = unterminated.engineTracks.tracks[0].midiChunk else {
             report.fail(unterminatedID, "engine track 0 has no MIDI chunk")
@@ -779,9 +779,9 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         }
         report.expect(!left.isUnterminated, cppID: unterminatedID,
                       message: "left half is terminated by the insertion")
-        report.expectEqual(Tick(20), left.duration, cppID: unterminatedID,
+        report.expectEqual(expected: Tick(20), actual: left.duration, cppID: unterminatedID,
                            what: "left half ends at the insertion start")
-        report.expectEqual(leftID, left.id, cppID: unterminatedID,
+        report.expectEqual(expected: leftID, actual: left.id, cppID: unterminatedID,
                            what: "left half keeps the source identity")
         report.expect(right.isUnterminated, cppID: unterminatedID,
                       message: "right half resumes unterminated")
@@ -800,11 +800,11 @@ private func duplicationAndGlobals(_ report: CheckReport) {
             message: "blank insertion closes and resumes an unterminated note")
         let unterminatedAfter = coreTimeBytes(unterminated)
         _ = unterminated.history.undoDocument()
-        report.expectEqual(unterminatedBefore, coreTimeBytes(unterminated),
+        report.expectEqual(expected: unterminatedBefore, actual: coreTimeBytes(unterminated),
                            cppID: unterminatedID,
                            what: "one undo restores the unterminated insertion")
         _ = unterminated.history.redoDocument()
-        report.expectEqual(unterminatedAfter, coreTimeBytes(unterminated),
+        report.expectEqual(expected: unterminatedAfter, actual: coreTimeBytes(unterminated),
                            cppID: unterminatedID,
                            what: "one redo restores the unterminated insertion")
     } catch {
@@ -828,7 +828,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let signature = try timeRangeDocument()
         let signatureID = "editcheck/EditCheckTest::timeRangeSignatureAndOrphans"
-        report.expectEqual(2, signature.engineTracks.usedTrackCount, cppID: signatureID,
+        report.expectEqual(expected: 2, actual: signature.engineTracks.usedTrackCount, cppID: signatureID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let seam: Tick = 960
         let bar = 3 * Tick(signature.state.file.division)
@@ -848,10 +848,10 @@ private func duplicationAndGlobals(_ report: CheckReport) {
                       message: "signature copy lands one bar later")
         let signatureAfter = coreTimeBytes(signature)
         _ = signature.history.undoDocument()
-        report.expectEqual(signatureBefore, coreTimeBytes(signature), cppID: signatureID,
+        report.expectEqual(expected: signatureBefore, actual: coreTimeBytes(signature), cppID: signatureID,
                            what: "one undo restores the signature insertion")
         _ = signature.history.redoDocument()
-        report.expectEqual(signatureAfter, coreTimeBytes(signature), cppID: signatureID,
+        report.expectEqual(expected: signatureAfter, actual: coreTimeBytes(signature), cppID: signatureID,
                            what: "one redo restores the signature insertion")
     } catch {
         report.fail("editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
@@ -862,7 +862,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let orphans = try timeRangeDocument()
         let orphanID = "editcheck/EditCheckTest::timeRangeSignatureAndOrphans"
-        report.expectEqual(2, orphans.engineTracks.usedTrackCount, cppID: orphanID,
+        report.expectEqual(expected: 2, actual: orphans.engineTracks.usedTrackCount, cppID: orphanID,
                            what: "timeRangeFile fixture loads two editable tracks")
         guard let orphanChunk = orphans.engineTracks.tracks[0].midiChunk else {
             report.fail(orphanID, "engine track 0 has no MIDI chunk")
@@ -919,14 +919,14 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         }
         report.expect(!paired.isUnterminated, cppID: orphanID,
                       message: "paired note stays terminated")
-        report.expectEqual(Tick(10), paired.duration, cppID: orphanID,
+        report.expectEqual(expected: Tick(10), actual: paired.duration, cppID: orphanID,
                            what: "paired note keeps its duration")
         let orphanAfter = coreTimeBytes(orphans)
         _ = orphans.history.undoDocument()
-        report.expectEqual(orphanBefore, coreTimeBytes(orphans), cppID: orphanID,
+        report.expectEqual(expected: orphanBefore, actual: coreTimeBytes(orphans), cppID: orphanID,
                            what: "one undo restores the orphan removal")
         _ = orphans.history.redoDocument()
-        report.expectEqual(orphanAfter, coreTimeBytes(orphans), cppID: orphanID,
+        report.expectEqual(expected: orphanAfter, actual: coreTimeBytes(orphans), cppID: orphanID,
                            what: "one redo restores the orphan removal")
     } catch {
         report.fail("editcheck/EditCheckTest::timeRangeSignatureAndOrphans",
@@ -937,7 +937,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let autoID = "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults"
         let automation = try timeRangeDocument()
-        report.expectEqual(2, automation.engineTracks.usedTrackCount, cppID: autoID,
+        report.expectEqual(expected: 2, actual: automation.engineTracks.usedTrackCount, cppID: autoID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let seam: Tick = 1000
         automation.writeLane(track: 0, lane: .controller(7), from: seam - 20,
@@ -953,26 +953,26 @@ private func duplicationAndGlobals(_ report: CheckReport) {
                                                          endTick: seam + 40),
                                                scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
                       cppID: autoID, message: "lane-scoped duplication commits")
-        report.expectEqual("1040:33", automation.lanePoints(track: 0, lane: .controller(7))
+        report.expectEqual(expected: "1040:33", actual: automation.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == seam + 40 }).map(coreTimePointShape),
             cppID: autoID, what: "seam copy seeds the effective value")
-        report.expectEqual("1050:44", automation.lanePoints(track: 0, lane: .controller(7))
+        report.expectEqual(expected: "1050:44", actual: automation.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == seam + 50 }).map(coreTimePointShape),
             cppID: autoID, what: "in-range point copies to its shifted tick")
-        report.expectEqual(seamPosition + 1,
-                           try coreEditHistoryCountAtTip(automation, report: report,
+        report.expectEqual(expected: seamPosition + 1,
+                           actual: try coreEditHistoryCountAtTip(automation, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "lane duplication adds one history entry")
         let seamAfter = coreTimeBytes(automation)
         _ = automation.history.undoDocument()
-        report.expectEqual(seamBefore, coreTimeBytes(automation), cppID: autoID,
+        report.expectEqual(expected: seamBefore, actual: coreTimeBytes(automation), cppID: autoID,
                            what: "one undo restores the seam duplication")
         _ = automation.history.redoDocument()
-        report.expectEqual(seamAfter, coreTimeBytes(automation), cppID: autoID,
+        report.expectEqual(expected: seamAfter, actual: coreTimeBytes(automation), cppID: autoID,
                            what: "one redo restores the seam duplication")
 
         let defaults = try timeRangeDocument()
-        report.expectEqual(2, defaults.engineTracks.usedTrackCount, cppID: autoID,
+        report.expectEqual(expected: 2, actual: defaults.engineTracks.usedTrackCount, cppID: autoID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let cases: [(lane: Lane, source: Int, expected: Int)] = [
             (.controller(0x01), 11, 0),
@@ -998,21 +998,21 @@ private func duplicationAndGlobals(_ report: CheckReport) {
                                                            endTick: start + 20),
                                                  scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: entry.lane)])),
                           cppID: autoID, message: "default-seeding duplication commits")
-            report.expectEqual("\(start + 20):\(entry.expected)",
-                               defaults.lanePoints(track: 0, lane: entry.lane)
+            report.expectEqual(expected: "\(start + 20):\(entry.expected)",
+                               actual: defaults.lanePoints(track: 0, lane: entry.lane)
                 .first(where: { $0.tick == start + 20 }).map(coreTimePointShape),
                 cppID: autoID, what: "destination seam seeds the lane default")
-            report.expectEqual(casePosition + 1,
-                               try coreEditHistoryCountAtTip(defaults, report: report,
+            report.expectEqual(expected: casePosition + 1,
+                               actual: try coreEditHistoryCountAtTip(defaults, report: report,
                                                              cppID: autoID),
                                cppID: autoID,
                                what: "default duplication adds one history entry")
             let caseAfter = coreTimeBytes(defaults)
             _ = defaults.history.undoDocument()
-            report.expectEqual(caseBefore, coreTimeBytes(defaults), cppID: autoID,
+            report.expectEqual(expected: caseBefore, actual: coreTimeBytes(defaults), cppID: autoID,
                                what: "one undo restores the default duplication")
             _ = defaults.history.redoDocument()
-            report.expectEqual(caseAfter, coreTimeBytes(defaults), cppID: autoID,
+            report.expectEqual(expected: caseAfter, actual: coreTimeBytes(defaults), cppID: autoID,
                                what: "one redo restores the default duplication")
         }
 
@@ -1035,23 +1035,23 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         let timeline = PlaybackTimeline.build(state: defaults.state, sampleRate: 44_100)
         report.expect(!timeline.tempoMap.isEmpty, cppID: autoID,
                       message: "tempo map is non-empty after duplication")
-        report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute, cppID: autoID,
+        report.expectEqual(expected: 120.0, actual: timeline.tempoMap.first?.beatsPerMinute, cppID: autoID,
                            what: "tempo map starts at 120 bpm")
-        report.expectEqual(tempoPosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
+        report.expectEqual(expected: tempoPosition + 1,
+                           actual: try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "tempo duplication adds one history entry")
         let tempoBytesAfter = coreTimeBytes(defaults)
         let temposAfter = defaults.state.tempo
         _ = defaults.history.undoDocument()
-        report.expectEqual(tempoBytesBefore, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: tempoBytesBefore, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the tempo duplication")
-        report.expectEqual(temposBefore, defaults.state.tempo, cppID: autoID,
+        report.expectEqual(expected: temposBefore, actual: defaults.state.tempo, cppID: autoID,
                            what: "one undo restores the tempo points")
         _ = defaults.history.redoDocument()
-        report.expectEqual(tempoBytesAfter, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: tempoBytesAfter, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the tempo duplication")
-        report.expectEqual(temposAfter, defaults.state.tempo, cppID: autoID,
+        report.expectEqual(expected: temposAfter, actual: defaults.state.tempo, cppID: autoID,
                            what: "one redo restores the tempo points")
 
         defaults.writeLane(track: 0, lane: .voice, from: 1610, through: 1610,
@@ -1062,22 +1062,22 @@ private func duplicationAndGlobals(_ report: CheckReport) {
         report.expect(defaults.duplicateTime(TimeRange(startTick: 1600, endTick: 1620),
                                              scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .voice)])),
                       cppID: autoID, message: "voice-scoped duplication commits")
-        report.expectEqual("1620:1", defaults.lanePoints(track: 0, lane: .voice)
+        report.expectEqual(expected: "1620:1", actual: defaults.lanePoints(track: 0, lane: .voice)
             .first(where: { $0.tick == 1620 }).map(coreTimePointShape),
             cppID: autoID, what: "voice seam seeds the default program")
-        report.expectEqual("1630:12", defaults.lanePoints(track: 0, lane: .voice)
+        report.expectEqual(expected: "1630:12", actual: defaults.lanePoints(track: 0, lane: .voice)
             .first(where: { $0.tick == 1630 }).map(coreTimePointShape),
             cppID: autoID, what: "voice point copies to its shifted tick")
-        report.expectEqual(voicePosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
+        report.expectEqual(expected: voicePosition + 1,
+                           actual: try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID, what: "voice duplication adds one history entry")
         let voiceAfter = coreTimeBytes(defaults)
         _ = defaults.history.undoDocument()
-        report.expectEqual(voiceBefore, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: voiceBefore, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the voice duplication")
         _ = defaults.history.redoDocument()
-        report.expectEqual(voiceAfter, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: voiceAfter, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the voice duplication")
 
         let downstream: Tick = 1700
@@ -1094,23 +1094,23 @@ private func duplicationAndGlobals(_ report: CheckReport) {
                                                        endTick: downstream + 20),
                                              scope: TimeScope(lanes: [TimeScope.ScopedLane(track: 0, lane: .controller(7))])),
                       cppID: autoID, message: "downstream lane duplication commits")
-        report.expectEqual("1720:11", defaults.lanePoints(track: 0, lane: .controller(7))
+        report.expectEqual(expected: "1720:11", actual: defaults.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == downstream + 20 }).map(coreTimePointShape),
             cppID: autoID, what: "downstream seam seeds the effective value")
-        report.expectEqual("1740:99", defaults.lanePoints(track: 0, lane: .controller(7))
+        report.expectEqual(expected: "1740:99", actual: defaults.lanePoints(track: 0, lane: .controller(7))
             .first(where: { $0.tick == downstream + 40 }).map(coreTimePointShape),
             cppID: autoID, what: "downstream point copies to its shifted tick")
-        report.expectEqual(downstreamPosition + 1,
-                           try coreEditHistoryCountAtTip(defaults, report: report,
+        report.expectEqual(expected: downstreamPosition + 1,
+                           actual: try coreEditHistoryCountAtTip(defaults, report: report,
                                                          cppID: autoID),
                            cppID: autoID,
                            what: "downstream duplication adds one history entry")
         let downstreamAfter = coreTimeBytes(defaults)
         _ = defaults.history.undoDocument()
-        report.expectEqual(downstreamBefore, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: downstreamBefore, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one undo restores the downstream duplication")
         _ = defaults.history.redoDocument()
-        report.expectEqual(downstreamAfter, coreTimeBytes(defaults), cppID: autoID,
+        report.expectEqual(expected: downstreamAfter, actual: coreTimeBytes(defaults), cppID: autoID,
                            what: "one redo restores the downstream duplication")
     } catch {
         report.fail("editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
@@ -1121,7 +1121,7 @@ private func duplicationAndGlobals(_ report: CheckReport) {
     do {
         let wholeID = "editcheck/EditCheckTest::timeRangeWholeSong"
         let wholeDuplicate = try timeRangeDocument()
-        report.expectEqual(2, wholeDuplicate.engineTracks.usedTrackCount, cppID: wholeID,
+        report.expectEqual(expected: 2, actual: wholeDuplicate.engineTracks.usedTrackCount, cppID: wholeID,
                            what: "timeRangeFile fixture loads two editable tracks")
         let start: Tick = 1800
         _ = try wholeDuplicate.addNotes([
@@ -1169,11 +1169,11 @@ private func duplicationAndGlobals(_ report: CheckReport) {
             message: "chunk end tick covers the duplicated note")
         let wholeDuplicateAfter = coreTimeBytes(wholeDuplicate)
         _ = wholeDuplicate.history.undoDocument()
-        report.expectEqual(wholeDuplicateBefore, coreTimeBytes(wholeDuplicate),
+        report.expectEqual(expected: wholeDuplicateBefore, actual: coreTimeBytes(wholeDuplicate),
                            cppID: wholeID,
                            what: "one undo restores the whole-song duplication")
         _ = wholeDuplicate.history.redoDocument()
-        report.expectEqual(wholeDuplicateAfter, coreTimeBytes(wholeDuplicate),
+        report.expectEqual(expected: wholeDuplicateAfter, actual: coreTimeBytes(wholeDuplicate),
                            cppID: wholeID,
                            what: "one redo restores the whole-song duplication")
     } catch {
@@ -1285,7 +1285,7 @@ private func crossTpbClipboardPaste(_ report: CheckReport) {
     let forward = target.notes(in: 0).map(clipboardNoteShape)
     let undoDelta = clipboardUndoEntryDelta(target, restoring: before)
     let undone = undoDelta == 1 && coreTimeBytes(target) == before
-    report.expectEqual(1, undoDelta,
+    report.expectEqual(expected: 1, actual: undoDelta,
         cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
         what: "track-expanding paste adds exactly one history entry")
     report.expect(forward == ["0:70:24:90", "24:60:48:100"] &&
@@ -1311,7 +1311,7 @@ private func timeRangeClipboardCopyAndExpansion(_ report: CheckReport) {
         lanes: [ClipLane(track: 0, cc: TimeDefaults.laneCCVoice, points: [
             ClipLanePoint(relTick: 0, value: 0),
         ])])
-    report.expectEqual(singleExpected, singleClip,
+    report.expectEqual(expected: singleExpected, actual: singleClip,
         cppID: "clipcheck/ClipCheckTest::timeSelectionCopy",
         what: "track-scoped range clip including the initial voice seed")
     let singleEnvelope = singleClip.flatMap {
@@ -1373,7 +1373,7 @@ private func timeRangeClipboardCopyAndExpansion(_ report: CheckReport) {
                   message: "the scoped clip retains its 24-TPB MIME envelope and all tracks and lanes")
     let target = clipboardDocument(trackBudget: 3)
     let before = coreTimeBytes(target)
-    report.expectEqual(1, target.engineTracks.usedTrackCount,
+    report.expectEqual(expected: 1, actual: target.engineTracks.usedTrackCount,
                        cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
                        what: "the destination has one engine track before expansion")
     let result = ClipboardSemantics.paste(clip, at: 0, selectedTrack: 0, into: target)
@@ -1390,7 +1390,7 @@ private func timeRangeClipboardCopyAndExpansion(_ report: CheckReport) {
     let pasteHistoryDelta = clipboardUndoEntryDelta(target, restoring: before)
     let oneUndo = pasteHistoryDelta == 1 && target.engineTracks.usedTrackCount == 1 &&
         coreTimeBytes(target) == before
-    report.expectEqual(1, pasteHistoryDelta,
+    report.expectEqual(expected: 1, actual: pasteHistoryDelta,
         cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
         what: "track-expanding paste adds exactly one history entry")
     report.expect(target.notes(in: 0).isEmpty &&
@@ -1456,7 +1456,7 @@ private func timeRangeClipboardMerge(_ report: CheckReport) {
                   } == ["0:500000", "25:600000", "60:700000"],
                   cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
                   message: "undo explicitly restores both notes, all modulation points and all tempo points")
-    report.expectEqual(1, mergeHistoryDelta,
+    report.expectEqual(expected: 1, actual: mergeHistoryDelta,
         cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
         what: "range merge adds exactly one history entry")
     report.expect(merged && oneUndo,
@@ -1510,7 +1510,7 @@ private func emptyAndTiledClipboardPaste(_ report: CheckReport) {
         first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,
         cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
         message: "time paste advances by span and each tile is one undo entry")
-    report.expectEqual(2, (firstUndo ? 1 : 0) + (secondUndo ? 1 : 0),
+    report.expectEqual(expected: 2, actual: (firstUndo ? 1 : 0) + (secondUndo ? 1 : 0),
         cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
         what: "two tiled pastes add exactly two history entries")
 }
@@ -1540,7 +1540,7 @@ private func rangeClipboardDeleteAndCut(_ report: CheckReport) {
             ["96:400000"]
     let deleteHistoryDelta = clipboardUndoEntryDelta(document, restoring: before)
     let deleteUndo = deleteHistoryDelta == 1 && coreTimeBytes(document) == before
-    report.expectEqual(1, deleteHistoryDelta,
+    report.expectEqual(expected: 1, actual: deleteHistoryDelta,
         cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
         what: "range delete adds exactly one history entry")
     let restoredAfterDelete = document.notes(in: 0).map(clipboardNoteShape) ==
@@ -1570,7 +1570,7 @@ private func rangeClipboardDeleteAndCut(_ report: CheckReport) {
             ["96:400000"]
     let cutHistoryDelta = clipboardUndoEntryDelta(document, restoring: before)
     let cutUndo = cutHistoryDelta == 1 && coreTimeBytes(document) == before
-    report.expectEqual(1, cutHistoryDelta,
+    report.expectEqual(expected: 1, actual: cutHistoryDelta,
         cppID: "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo",
         what: "range cut adds exactly one history entry")
     let restoredAfterCut = document.notes(in: 0).map(clipboardNoteShape) ==
@@ -1734,8 +1734,8 @@ func runClipboardCodecSuite(_ report: CheckReport) {
         ])],
         tempo: [ClipTempo(relTick: 12, microsecondsPerQuarterNote: 400_000)])
     report.expectEqual(
-        upExpected,
-        ClipboardCodec.rescale(upInput, sourceTicksPerBeat: 24, destinationTicksPerBeat: 48),
+        expected: upExpected,
+        actual: ClipboardCodec.rescale(upInput, sourceTicksPerBeat: 24, destinationTicksPerBeat: 48),
         cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[up_24_to_48]",
         what: "exact up-scaled clip")
 
@@ -1770,8 +1770,8 @@ func runClipboardCodecSuite(_ report: CheckReport) {
             ClipTempo(relTick: 2, microsecondsPerQuarterNote: 700_000),
         ])
     report.expectEqual(
-        downExpected,
-        ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
+        expected: downExpected,
+        actual: ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
         cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
         what: "half-up down-scaled clip with stable last-wins collisions")
 
@@ -1790,8 +1790,8 @@ func runClipboardCodecSuite(_ report: CheckReport) {
             ClipTempo(relTick: 2, microsecondsPerQuarterNote: 700_000),
         ])
     report.expectEqual(
-        identityInput,
-        ClipboardCodec.rescale(identityInput, sourceTicksPerBeat: 24,
+        expected: identityInput,
+        actual: ClipboardCodec.rescale(identityInput, sourceTicksPerBeat: 24,
                                destinationTicksPerBeat: 24),
         cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[same_tpb_is_exact_identity]",
         what: "same-TPB clip including duplicate ordering")
@@ -1810,8 +1810,8 @@ func runClipboardCodecSuite(_ report: CheckReport) {
     saturationExpected.span = TimeDefaults.maxTick
     saturationExpected.tempo[0].relTick = TimeDefaults.maxTick
     report.expectEqual(
-        saturationExpected,
-        ClipboardCodec.rescale(saturationInput, sourceTicksPerBeat: 1,
+        expected: saturationExpected,
+        actual: ClipboardCodec.rescale(saturationInput, sourceTicksPerBeat: 1,
                                destinationTicksPerBeat: .max),
         cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[saturates_without_wrap]",
         what: "saturated clip without wrapping")

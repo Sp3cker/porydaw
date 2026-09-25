@@ -199,7 +199,7 @@ private func checkControllerControls(_ report: CheckReport) throws {
                   message: "one-channel chord must overflow before reset")
     audio.resetPolyStats()
     _ = rig.render(1)
-    report.expectEqual(UInt64(0), audio.polyLostTotal, cppID: "swiftcore/AudioController::polyReset",
+    report.expectEqual(expected: UInt64(0), actual: audio.polyLostTotal, cppID: "swiftcore/AudioController::polyReset",
                        what: "callback clears existing overflow")
     checkUnloadPlayingSong(rig, report)
 }
@@ -210,7 +210,7 @@ private func checkControllerTailMatrix(_ report: CheckReport) throws {
             let rig = try AudioControllerCheckFixture()
             let timeline = rig.timeline(looped: songLoops)
             let id = "swiftcore/AudioController::tailStop[songLoop=\(songLoops),enabled=\(enabled)]"
-            report.expectEqual(songLoops, timeline.hasLoop, cppID: id, what: "MIDI loop-marker precondition")
+            report.expectEqual(expected: songLoops, actual: timeline.hasLoop, cppID: id, what: "MIDI loop-marker precondition")
             rig.renderer.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
             rig.renderer.setLoopEnabled(enabled)
             rig.renderer.play()
@@ -243,7 +243,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
     let quietPeak = audioControllerCheckPeak(quiet.suffix(4096))
     report.expect(loud > 0.01 && quietPeak > 0 && quietPeak < loud * 0.6,
         cppID: "swiftcore/AudioController::settingsVolume", message: "cold song volume changes actual sustained output")
-    report.expectEqual(cursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: cursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::settingsVolume", what: "settings preserve playing cursor")
     settings.pcmMixRate = 18157
     let rateCursor = audio.playheadSamples
@@ -253,7 +253,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::settingsMixRate", message: "mix-rate update preserves the sounding song")
     // Native rate reconfiguration resets the PCM FIFO; it is a cold discontinuity,
     // not a promised click-free crossfade. The sequence itself must not restart.
-    report.expectEqual(rateCursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: rateCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::settingsMixRate", what: "mix-rate change preserves sequence position")
 
     let squareBank = try AudioControllerCheckFixture(square: true)
@@ -264,7 +264,7 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
         let beforeSwap = audio.playheadSamples
         audio.updateVoicegroup(squareBank.voices)
         let swapped = rig.render(rig.rate * 2)
-        report.expectEqual(beforeSwap + UInt64(rig.rate * 2), audio.playheadSamples,
+        report.expectEqual(expected: beforeSwap + UInt64(rig.rate * 2), actual: audio.playheadSamples,
             cppID: "swiftcore/AudioController::bankRebind", what: "bank swap preserves sequence cursor")
         report.expect(rig.sustaining(60) && audioControllerCheckPeak(swapped.suffix(4096)) > 0.01 &&
                       audioControllerCheckStep(swapped, from: rig.rate * 2 - 2048, to: rig.rate * 2) >
@@ -288,7 +288,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
                   rig.sustaining(60) && !rig.sustaining(67),
         cppID: "swiftcore/AudioController::voicePreviewIsolation",
         message: "voice preview adds audible output without replacing the song engine's held note")
-    report.expectEqual(cursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: cursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::voicePreviewIsolation", what: "sequence advances during voice preview")
     audio.audition.previewVoice(program: 0, key: 67, velocity: 0)
     audio.setMuteMask(1)
@@ -308,7 +308,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     let sampled = rig.render(rig.rate)
     report.expect(audioControllerCheckPeak(sampled.suffix(4096)) > 0.01 && audio.activePcmChannels == 0,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sample sounds exclusively through preview engine")
-    report.expectEqual(sampleCursor + UInt64(rig.rate), audio.playheadSamples,
+    report.expectEqual(expected: sampleCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", what: "sample preview does not park sequence")
     audio.audition.sampleOff()
     let sampleReleased = rig.render(rig.rate)

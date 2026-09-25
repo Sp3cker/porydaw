@@ -129,10 +129,10 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     report.expect(session.bankSlots.count >= 4,
                   cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                   message: "published bank has slot views")
-    report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
+    report.expectEqual(expected: BankSlotKind.editable, actual: session.bankSlots[0].kind,
                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                        what: "slot 0 is editable square 1")
-    report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
+    report.expectEqual(expected: BankSlotKind.none, actual: session.bankSlots[3].kind,
                        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                        what: "slot 3 is initially blank")
 
@@ -156,16 +156,16 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let result = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: editedVoice, expected: originalVoice)
         }
-        report.expectEqual(true, session.bankDirty,
+        report.expectEqual(expected: true, actual: session.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "bank edit dirties bank")
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
+        report.expectEqual(expected: scalarEditedSlots, actual: session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "scalar edit changes the requested voice and preserves every other slot")
         report.expect(result.lease.bankToken != oldToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "applied bank edit mints a fresh lease")
-        report.expectEqual(oldToken, oldLease.bankToken,
+        report.expectEqual(expected: oldToken, actual: oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
         report.expect(
@@ -179,7 +179,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(originalSlots, session.bankSlots,
+        report.expectEqual(expected: originalSlots, actual: session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "undo restores the complete original bank view")
         report.expect(
@@ -193,7 +193,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(scalarEditedSlots, session.bankSlots,
+        report.expectEqual(expected: scalarEditedSlots, actual: session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "redo restores the scalar edit without changing other slots")
         report.expect(
@@ -228,10 +228,10 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         try runBlocking {
             try await session.save()
         }
-        report.expectEqual(false, session.document.isDirty,
+        report.expectEqual(expected: false, actual: session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the song clean")
-        report.expectEqual(false, session.bankDirty,
+        report.expectEqual(expected: false, actual: session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the bank clean")
         report.expect(
@@ -253,10 +253,10 @@ internal func runBankHistorySuite(_ report: CheckReport) {
         let reopened = try runBlocking {
             try await DocumentSession.open(service: reopenedService, label: "mus_session_test")
         }
-        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
+        report.expectEqual(expected: expectedUnifiedFile, actual: reopened.document.state.file,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified song edit from disk")
-        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
+        report.expectEqual(expected: expectedUnifiedSlots, actual: reopened.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified bank edits and preserved slots from disk")
     } catch {

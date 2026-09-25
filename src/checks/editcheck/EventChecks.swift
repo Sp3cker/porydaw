@@ -73,21 +73,21 @@ private func trackEditing(_ report: CheckReport) {
     document.onChange = { changes.append($0) }
 
     let added = document.addTrack(voice: 200)
-    report.expectEqual(2, added,
+    report.expectEqual(expected: 2, actual: added,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "new track occupies the next engine slot")
-    report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
+    report.expectEqual(expected: 127, actual: document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                        cppID: "editcheck/EditCheckTest::voiceLanePoint",
                        what: "new track voice is clamped and seeded")
-    report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
+    report.expectEqual(expected: [0, 1], actual: changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "add publishes old engine-track identities")
     _ = document.history.undoDocument()
-    report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
+    report.expectEqual(expected: 2, actual: changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "undo publishes the inverse track remap")
     _ = document.history.redoDocument()
-    report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
+    report.expectEqual(expected: 3, actual: changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "redo republishes the forward track remap")
 
@@ -95,8 +95,8 @@ private func trackEditing(_ report: CheckReport) {
         report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
         return
     }
-    report.expectEqual(["8:60:4"],
-                       document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
+    report.expectEqual(expected: ["8:60:4"],
+                       actual: document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                        cppID: "editcheck/EditCheckTest::trackDuplicate",
                        what: "duplicate preserves the fixture's literal note")
     report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
@@ -120,17 +120,17 @@ private func trackEditing(_ report: CheckReport) {
         event.tick == 16 && MidiFile.metaIsMarker(event)
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "winning loop marker is rescued")
-    report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
+    report.expectEqual(expected: chunksBeforeChunkZeroDelete, actual: document.rawChunks.count,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "deleting the chunk-zero track retains the conductor chunk")
 
     let revision = document.revision
     document.renameTrack(0, to: "  Bass  ")
-    report.expectEqual("Bass", document.trackName(0),
+    report.expectEqual(expected: "Bass", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename trims the stored display name")
     document.renameTrack(0, to: "[")
-    report.expectEqual(revision + 1, document.revision,
+    report.expectEqual(expected: revision + 1, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "loop-marker-shaped name is rejected")
 
@@ -161,7 +161,7 @@ private func trackNameRoles(_ report: CheckReport) {
         .meta(type: 0x03, data: Array("BareAfterChannel".utf8)),
     ])])
     let document = SongDocument(file: file)
-    report.expectEqual("Bare", document.trackName(0),
+    report.expectEqual(expected: "Bare", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "document query ignores a channel-prefixed name")
 
@@ -170,12 +170,12 @@ private func trackNameRoles(_ report: CheckReport) {
         guard case let .meta(type, data) = event.payload, type == 0x03 else { return nil }
         return String(bytes: data, encoding: .isoLatin1)
     }
-    report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
+    report.expectEqual(expected: ["Scoped", "Lead", "ScopedAfterBare"], actual: names,
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "rename changes only bare names after empty-prefix or channel clearing")
 
     let imported = MidiImport.analyze(file)
-    report.expectEqual("Bare", imported.tracks.first?.name,
+    report.expectEqual(expected: "Bare", actual: imported.tracks.first?.name,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                        what: "import and document queries select the same bare name")
 }
@@ -192,7 +192,7 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
     coreRawEventEditing(report, document: document)
     let beforeTempoRaw = document.revision
     document.insertRawEvent(chunk: 0, event: .meta(type: 0x51, data: [1, 2, 3]))
-    report.expectEqual(beforeTempoRaw, document.revision,
+    report.expectEqual(expected: beforeTempoRaw, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                        what: "raw tempo meta is rejected")
 
@@ -200,25 +200,25 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
         TempoPoint(tick: 8, microsecondsPerQuarterNote: 1),
         TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000),
     ]))
-    report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
-                       document.state.tempo,
+    report.expectEqual(expected: [TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
+                       actual: document.state.tempo,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "tempo normalization keeps the last same-tick value")
     let rawCount = document.rawChunks[0].events.count
     document.editRawAndTempo(chunk: 0, deleting: [0],
         tempo: TempoEdit(remove: document.state.tempo),
         inserting: .meta(tick: 8, type: 0x01, data: [65]))
-    report.expectEqual(rawCount, document.rawChunks[0].events.count,
+    report.expectEqual(expected: rawCount, actual: document.rawChunks[0].events.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "mixed raw and tempo replacement is atomic")
     _ = document.history.undoDocument()
-    report.expectEqual(1, document.state.tempo.count,
+    report.expectEqual(expected: 1, actual: document.state.tempo.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "one undo restores both domains")
 
     document.setTimeSignature(tick: 20, numerator: 7, denominatorPower: 2)
     document.setTimeSignature(tick: 20, numerator: 3, denominatorPower: 3)
-    report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
+    report.expectEqual(expected: 1, actual: document.timeSignatures.filter { $0.tick == 20 }.count,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "same-tick signature is replaced")
     document.moveTimeSignature(from: 20, to: 24)
@@ -239,7 +239,7 @@ private func rawTempoAndSignatureEditing(_ report: CheckReport) {
         ]),
     ]))
     crossChunk.moveTimeSignature(from: 20, to: 24)
-    report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
+    report.expectEqual(expected: [3, 5], actual: crossChunk.timeSignatures.filter { $0.tick == 24 }
         .map { Int($0.numerator) }.sorted(),
         cppID: "editcheck/EditCheckTest::songTimeSignature",
         what: "move preserves every cross-chunk source signature")
@@ -254,15 +254,15 @@ private func laneEditing(_ report: CheckReport) {
     ])]))
     document.writeLane(track: 0, lane: .controller(7), from: 4, through: 8,
                        points: [LaneWrite(tick: 6, value: 200)])
-    report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
-                       document.lanePoints(track: 0, lane: .controller(7)),
+    report.expectEqual(expected: [LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
+                       actual: document.lanePoints(track: 0, lane: .controller(7)),
                        cppID: "editcheck/EditCheckTest::automationLanePoints",
                        what: "span write replaces and clamps points")
     let point = document.lanePoints(track: 0, lane: .controller(7))[0]
     document.moveLanePoints(track: 0, lane: .controller(7), moves: [
         LanePointMove(point: point, tick: 9, value: 40),
     ])
-    report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: ["9:40"], actual: document.lanePoints(track: 0, lane: .controller(7))
         .map { "\($0.tick):\($0.value)" },
         cppID: "automation-domain/laneMoveDestinationCollision",
         what: "lane move relocates the selected identity")
@@ -275,7 +275,7 @@ private func laneEditing(_ report: CheckReport) {
     let beforeForeignDelete = xcmdDocument.rawChunks
     xcmdDocument.deleteLanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane),
                                   points: [foreign])
-    report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
+    report.expectEqual(expected: beforeForeignDelete, actual: xcmdDocument.rawChunks,
                        cppID: "automation-domain/laneDeleteForeignChunk",
                        what: "foreign-chunk XCMD point cannot delete a local event")
 }
@@ -292,13 +292,13 @@ private func importAnalysis(_ report: CheckReport) {
         .channel(tick: 2, status: 0x80, data0: 60),
     ])])
     let analysis = MidiImport.analyze(file, trackBudget: 0, playerName: "MUSIC_PLAYER_SE2")
-    report.expectEqual(2, analysis.xcmd.first?.count,
+    report.expectEqual(expected: 2, actual: analysis.xcmd.first?.count,
                        cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                        what: "import counts logical XCMD points")
-    report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
+    report.expectEqual(expected: .notExported, actual: analysis.controllers.first { $0.controller == 0x4B }?.support,
                        cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                        what: "unknown controller is not exported")
-    report.expectEqual(1, analysis.silentTracks,
+    report.expectEqual(expected: 1, actual: analysis.silentTracks,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis",
                        what: "player track budget identifies silent tracks")
     report.expect(analysis.tracks[0].notesBeforeProgram,
@@ -315,29 +315,29 @@ private func importAnalysis(_ report: CheckReport) {
             let row = "budget \(budget)"
             let result = MidiImport.analyze(external, trackBudget: budget,
                                             playerName: "MUSIC_PLAYER_BGM")
-            report.expectEqual(2, result.mappedTracks, cppID: importID,
+            report.expectEqual(expected: 2, actual: result.mappedTracks, cppID: importID,
                                what: "\(row) maps two tracks")
-            report.expectEqual(7, result.peakConcurrentNotes, cppID: importID,
+            report.expectEqual(expected: 7, actual: result.peakConcurrentNotes, cppID: importID,
                                what: "\(row) peak concurrent notes")
-            report.expectEqual(5, result.sampleNoteLimit, cppID: importID,
+            report.expectEqual(expected: 5, actual: result.sampleNoteLimit, cppID: importID,
                                what: "\(row) sample note limit")
             report.expect(result.warnings.contains { $0.contains("note timing") },
                           cppID: importID, message: "\(row) warns of timing adjustment")
             report.expect(result.warnings.contains { $0.contains("same time") },
                           cppID: importID, message: "\(row) warns of polyphony")
-            report.expectEqual(budget == 1 ? 1 : 0, result.silentTracks, cppID: importID,
+            report.expectEqual(expected: budget == 1 ? 1 : 0, actual: result.silentTracks, cppID: importID,
                                what: "\(row) silent tracks")
-            report.expectEqual(budget == 1, result.warnings.contains {
+            report.expectEqual(expected: budget == 1, actual: result.warnings.contains {
                 $0.contains("MUSIC_PLAYER_BGM") && $0.contains("will not play")
             }, cppID: importID, what: "\(row) budget warning")
-            report.expectEqual(2, result.tracks.count, cppID: importID,
+            report.expectEqual(expected: 2, actual: result.tracks.count, cppID: importID,
                                what: "\(row) analyzed tracks")
-            report.expectEqual(2, result.tracks.dropFirst().first?.programs.count,
+            report.expectEqual(expected: 2, actual: result.tracks.dropFirst().first?.programs.count,
                                cppID: importID, what: "\(row) second track programs")
-            report.expectEqual(.supported, result.controllers.first {
+            report.expectEqual(expected: .supported, actual: result.controllers.first {
                 $0.controller == 1
             }?.support, cppID: importID, what: "\(row) modulation exports")
-            report.expectEqual(.notExported, result.controllers.first {
+            report.expectEqual(expected: .notExported, actual: result.controllers.first {
                 $0.controller == 91
             }?.support, cppID: importID, what: "\(row) reverb is not exported")
         }
@@ -392,28 +392,28 @@ private func importSmfReportRows(_ report: CheckReport) {
             MidiChunk(events: row.events, endTick: row.events.last?.tick ?? 0),
         ])
         let analysis = MidiImport.analyze(file)
-        report.expectEqual(row.controllers.count, analysis.controllers.count,
+        report.expectEqual(expected: row.controllers.count, actual: analysis.controllers.count,
                            cppID: cppID, what: "ordinary controller histogram size")
-        report.expectEqual(row.xcmd.count, analysis.xcmd.count,
+        report.expectEqual(expected: row.xcmd.count, actual: analysis.xcmd.count,
                            cppID: cppID, what: "XCMD histogram size")
         for (index, expected) in row.controllers.enumerated() {
             guard analysis.controllers.indices.contains(index) else { break }
             let actual = analysis.controllers[index]
-            report.expectEqual(expected.0, actual.controller, cppID: cppID,
+            report.expectEqual(expected: expected.0, actual: actual.controller, cppID: cppID,
                                what: "ordinary controller \(index) number")
-            report.expectEqual(expected.1, actual.count, cppID: cppID,
+            report.expectEqual(expected: expected.1, actual: actual.count, cppID: cppID,
                                what: "ordinary controller \(index) count")
-            report.expectEqual(expected.2, actual.support, cppID: cppID,
+            report.expectEqual(expected: expected.2, actual: actual.support, cppID: cppID,
                                what: "ordinary controller \(index) support")
         }
         for (index, expected) in row.xcmd.enumerated() {
             guard analysis.xcmd.indices.contains(index) else { break }
             let actual = analysis.xcmd[index]
-            report.expectEqual(expected.0, actual.label, cppID: cppID,
+            report.expectEqual(expected: expected.0, actual: actual.label, cppID: cppID,
                                what: "XCMD \(index) label")
-            report.expectEqual(expected.1, actual.count, cppID: cppID,
+            report.expectEqual(expected: expected.1, actual: actual.count, cppID: cppID,
                                what: "XCMD \(index) count")
-            report.expectEqual(expected.2, actual.support, cppID: cppID,
+            report.expectEqual(expected: expected.2, actual: actual.support, cppID: cppID,
                                what: "XCMD \(index) support")
         }
         report.expect(analysis.controllers.allSatisfy {
@@ -429,10 +429,10 @@ private func importTransforms(_ report: CheckReport) {
         .channel(tick: 3, status: 0xB0, data0: 0x1E, data1: 8),
         .channel(tick: 3, status: 0xB0, data0: 0x1E, data1: 9),
     ], endTick: 7)])
-    report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
+    report.expectEqual(expected: 1, actual: MidiImport.removeRedundantSetters(&file),
                        cppID: "onboardcheck/OnboardingTest::importDedup",
                        what: "only eligible same-tick setter is removed")
-    report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
+    report.expectEqual(expected: [UInt8(2), 8, 9], actual: file.chunks[0].events.map {
         if case let .channel(status, data0, data1) = $0.payload {
             return status >> 4 == 0xC ? data0 : data1
         }
@@ -440,10 +440,10 @@ private func importTransforms(_ report: CheckReport) {
     }, cppID: "onboardcheck/OnboardingTest::importDedup",
     what: "action-like XCMD selectors are preserved")
     try? MidiImport.rescaleDivision(&file, to: 24)
-    report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
+    report.expectEqual(expected: [Tick(0), 0, 0], actual: file.chunks[0].events.map(\.tick),
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "rescale uses floor arithmetic")
-    report.expectEqual(Tick(1), file.chunks[0].endTick,
+    report.expectEqual(expected: Tick(1), actual: file.chunks[0].endTick,
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "end tick uses the same floor arithmetic")
 
@@ -454,7 +454,7 @@ private func importTransforms(_ report: CheckReport) {
         report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
                     "overflowing rescale unexpectedly succeeded")
     } catch {
-        report.expectEqual(baseline, overflow,
+        report.expectEqual(expected: baseline, actual: overflow,
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
     }
@@ -464,20 +464,20 @@ private func importTransforms(_ report: CheckReport) {
         do {
             var imported = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
             try MidiImport.rescaleDivision(&imported, to: 24)
-            report.expectEqual(UInt16(24), imported.division, cppID: rescaleID,
+            report.expectEqual(expected: UInt16(24), actual: imported.division, cppID: rescaleID,
                                what: "external import division after rescale")
             guard imported.chunks.count > 2, imported.chunks[1].events.count > 11,
                   !imported.chunks[2].events.isEmpty else {
                 report.fail(rescaleID, "external import has missing chunks or events")
                 return
             }
-            report.expectEqual(Tick(28), imported.chunks[1].events[4].tick,
+            report.expectEqual(expected: Tick(28), actual: imported.chunks[1].events[4].tick,
                                cppID: rescaleID, what: "external import event 4 tick")
-            report.expectEqual(Tick(57), imported.chunks[1].events[11].tick,
+            report.expectEqual(expected: Tick(57), actual: imported.chunks[1].events[11].tick,
                                cppID: rescaleID, what: "external import event 11 tick")
-            report.expectEqual(Tick(230), imported.chunks[1].endTick,
+            report.expectEqual(expected: Tick(230), actual: imported.chunks[1].endTick,
                                cppID: rescaleID, what: "external import second chunk end")
-            report.expectEqual(Tick(0), imported.chunks[2].events[0].tick,
+            report.expectEqual(expected: Tick(0), actual: imported.chunks[2].events[0].tick,
                                cppID: rescaleID, what: "external import third chunk first tick")
             for (chunkIndex, chunk) in imported.chunks.enumerated() {
                 var previous: Tick = 0
@@ -490,11 +490,11 @@ private func importTransforms(_ report: CheckReport) {
             do {
                 let serialized = try imported.encoded()
                 let reread = try MidiFile.decode(serialized)
-                report.expectEqual(serialized, try reread.encoded(), cppID: roundtripID,
+                report.expectEqual(expected: serialized, actual: try reread.encoded(), cppID: roundtripID,
                                    what: "rescaled fixture re-encodes byte-identically")
-                report.expectEqual(UInt16(24), reread.division, cppID: roundtripID,
+                report.expectEqual(expected: UInt16(24), actual: reread.division, cppID: roundtripID,
                                    what: "rescaled fixture reload division")
-                report.expectEqual(imported.chunks.count, reread.chunks.count,
+                report.expectEqual(expected: imported.chunks.count, actual: reread.chunks.count,
                                    cppID: roundtripID, what: "rescaled fixture reload chunk count")
             } catch {
                 report.fail(roundtripID, "rescaled fixture roundtrip failed: \(error)")
@@ -511,9 +511,9 @@ private func importTransforms(_ report: CheckReport) {
     if let path = CheckEnvironment.fixturePath("test_midis/duplicate_setters.mid") {
         do {
             var duplicate = try MidiFile.decode(Array(Data(contentsOf: URL(fileURLWithPath: path))))
-            report.expectEqual(8, MidiImport.removeRedundantSetters(&duplicate),
+            report.expectEqual(expected: 8, actual: MidiImport.removeRedundantSetters(&duplicate),
                                cppID: dedupID, what: "duplicate fixture removes eight setters")
-            report.expectEqual(0, MidiImport.removeRedundantSetters(&duplicate),
+            report.expectEqual(expected: 0, actual: MidiImport.removeRedundantSetters(&duplicate),
                                cppID: dedupID, what: "duplicate fixture second pass is idempotent")
             guard duplicate.chunks.count > 1 else {
                 report.fail(dedupID, "duplicate fixture has no lead chunk")
@@ -534,18 +534,18 @@ private func importTransforms(_ report: CheckReport) {
                 (0x9, nil, 2, "note on"), (0x8, nil, 2, "note off"),
             ]
             for (type, controller, expected, name) in expectedCounts {
-                report.expectEqual(expected, count(type, controller), cppID: dedupID,
+                report.expectEqual(expected: expected, actual: count(type, controller), cppID: dedupID,
                                    what: "deduplicated \(name) event count")
             }
             let conductor = duplicate.chunks[0].events
             let tempos = conductor.filter { $0.metaType == 0x51 }
             for tempo in tempos {
                 guard case let .meta(_, data) = tempo.payload else { continue }
-                report.expectEqual([UInt8(0x07), 0xA1, 0x20], data, cppID: dedupID,
+                report.expectEqual(expected: [UInt8(0x07), 0xA1, 0x20], actual: data, cppID: dedupID,
                                    what: "tempo meta payload remains intact")
             }
-            report.expectEqual(1, tempos.count, cppID: dedupID, what: "tempo event count")
-            report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
+            report.expectEqual(expected: 1, actual: tempos.count, cppID: dedupID, what: "tempo event count")
+            report.expectEqual(expected: 2, actual: conductor.filter { $0.metaType == 0x01 }.count,
                                cppID: dedupID, what: "text event count")
             var labelCount = 0
             var previousLabel: UInt8 = 0
@@ -569,8 +569,8 @@ private func importTransforms(_ report: CheckReport) {
             }
             report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
                           message: "tick-zero program, volume and bend survive")
-            report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
-            report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
+            report.expectEqual(expected: 2, actual: labelCount, cppID: dedupID, what: "tick-zero label count")
+            report.expectEqual(expected: UInt8(3), actual: previousLabel, cppID: dedupID,
                                what: "last tick-zero label value")
             report.expect(programIndex.flatMap { program in
                 firstNote.map { program < $0 }
@@ -592,12 +592,12 @@ private func importTransforms(_ report: CheckReport) {
         try MidiImport.rescaleDivision(&boundary, to: 48)
         report.fail(overflowID, "boundary rescale unexpectedly succeeded")
     } catch {
-        report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
+        report.expectEqual(expected: UInt16(24), actual: boundary.division, cppID: overflowID,
                            what: "overflow keeps original division")
-        report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
+        report.expectEqual(expected: TimeDefaults.maxTick, actual: boundary.chunks[0].events[0].tick,
                            cppID: overflowID, what: "overflow keeps boundary event tick")
-        report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
-                           String(describing: error), cppID: overflowID,
+        report.expectEqual(expected: "Tick rescale to division 48 exceeds 32-bit tick range",
+                           actual: String(describing: error), cppID: overflowID,
                            what: "overflow describes the division and tick limit")
     }
 }
@@ -651,10 +651,10 @@ private func trackCreateDeleteContract(_ report: CheckReport) {
     report.expect(!voices.isEmpty,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "new track seeds a voice lane point")
-    report.expectEqual(Tick(0), voices.first?.tick,
+    report.expectEqual(expected: Tick(0), actual: voices.first?.tick,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "seeded voice lane point sits at tick zero")
-    report.expectEqual(7, voices.first?.value,
+    report.expectEqual(expected: 7, actual: voices.first?.value,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "seeded voice lane point carries the requested voice")
     _ = try? document.addNotes([NewNote(track: added, tick: 40, pitch: 72,
@@ -691,7 +691,7 @@ private func trackDuplicateContract(_ report: CheckReport) {
     report.expect(copy != 0,
                   cppID: "editcheck/EditCheckTest::trackDuplicate",
                   message: "duplicate occupies a different engine slot")
-    report.expectEqual(source, document.notes(in: copy)
+    report.expectEqual(expected: source, actual: document.notes(in: copy)
         .map { "\($0.tick):\($0.pitch):\($0.duration)" },
         cppID: "editcheck/EditCheckTest::trackDuplicate",
         what: "duplicate carries the same notes")
@@ -728,20 +728,20 @@ private func trackMoveContract(_ report: CheckReport) {
     report.expect(!document.moveTrack(0, to: 0),
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "same-slot move is a no-op")
-    report.expectEqual(before, document.revision,
+    report.expectEqual(expected: before, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::trackMove",
                        what: "no-op move records no history entry")
     report.expect(document.moveTrack(0, to: last),
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "move to the last slot succeeds")
-    report.expectEqual(before + 1, document.revision,
+    report.expectEqual(expected: before + 1, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::trackMove",
                        what: "real move records one history entry")
-    report.expectEqual(source, document.notes(in: last)
+    report.expectEqual(expected: source, actual: document.notes(in: last)
         .map { "\($0.tick):\($0.pitch):\($0.duration)" },
         cppID: "editcheck/EditCheckTest::trackMove",
         what: "notes move with their track")
-    report.expectEqual(sourceChannel, document.engineTracks.tracks[last].channel,
+    report.expectEqual(expected: sourceChannel, actual: document.engineTracks.tracks[last].channel,
                        cppID: "editcheck/EditCheckTest::trackMove",
                        what: "channel assignment follows the moved track")
     report.expect(document.state.tempo.contains(
@@ -752,14 +752,14 @@ private func trackMoveContract(_ report: CheckReport) {
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "staged signature survives the move")
     let movedTimeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(4), movedTimeline.loopStartTick,
+    report.expectEqual(expected: Tick(4), actual: movedTimeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::trackMove",
                        what: "loop start survives the move")
-    report.expectEqual(Tick(16), movedTimeline.loopEndTick,
+    report.expectEqual(expected: Tick(16), actual: movedTimeline.loopEndTick,
                        cppID: "editcheck/EditCheckTest::trackMove",
                        what: "loop end survives the move")
     _ = document.history.undoDocument()
-    report.expectEqual(source, document.notes(in: 0)
+    report.expectEqual(expected: source, actual: document.notes(in: 0)
         .map { "\($0.tick):\($0.pitch):\($0.duration)" },
         cppID: "editcheck/EditCheckTest::trackMove",
         what: "undo restores the notes to track zero")
@@ -767,7 +767,7 @@ private func trackMoveContract(_ report: CheckReport) {
     report.expect(document.moveTrack(last, to: 0),
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "move back to the first slot succeeds")
-    report.expectEqual(source, document.notes(in: 0)
+    report.expectEqual(expected: source, actual: document.notes(in: 0)
         .map { "\($0.tick):\($0.pitch):\($0.duration)" },
         cppID: "editcheck/EditCheckTest::trackMove",
         what: "notes return with the track")
@@ -789,7 +789,7 @@ private func trackMarkerNameContract(_ report: CheckReport) {
     report.expect(document.engineTracks.usedTrackCount >= 2,
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "A038 marker-name fixture exposes two engine tracks")
-    report.expectEqual(0, document.engineTracks.tracks[0].midiChunk,
+    report.expectEqual(expected: 0, actual: document.engineTracks.tracks[0].midiChunk,
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "A039 first engine track belongs to SMF chunk zero")
     let bytesBefore = try? document.state.file.encoded()
@@ -803,14 +803,14 @@ private func trackMarkerNameContract(_ report: CheckReport) {
     report.expect(document.moveTrack(0, to: last),
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "move succeeds for the renamed track")
-    report.expectEqual("[", document.trackName(last),
+    report.expectEqual(expected: "[", actual: document.trackName(last),
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "marker-shaped track name moves with its track")
     let afterMove = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(loopStart, afterMove.loopStartTick,
+    report.expectEqual(expected: loopStart, actual: afterMove.loopStartTick,
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "loop start survives the move")
-    report.expectEqual(loopEnd, afterMove.loopEndTick,
+    report.expectEqual(expected: loopEnd, actual: afterMove.loopEndTick,
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "loop end survives the move")
     report.expect(document.rawChunks[0].events.contains {
@@ -818,17 +818,17 @@ private func trackMarkerNameContract(_ report: CheckReport) {
     }, cppID: "editcheck/EditCheckTest::trackMarkerName",
     message: "exact ][ marker blob stays in the front track")
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(bytesBefore, try? document.state.file.encoded(),
+    report.expectEqual(expected: bytesBefore, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "undo restores the pre-edit bytes")
-    report.expectEqual(nameBefore, document.trackName(0),
+    report.expectEqual(expected: nameBefore, actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "undo restores the prior track name")
     let restored = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(loopStart, restored.loopStartTick,
+    report.expectEqual(expected: loopStart, actual: restored.loopStartTick,
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "undo restores the loop start")
-    report.expectEqual(loopEnd, restored.loopEndTick,
+    report.expectEqual(expected: loopEnd, actual: restored.loopEndTick,
                        cppID: "editcheck/EditCheckTest::trackMarkerName",
                        what: "undo restores the loop end")
     report.expect(chunksSortedByTick(document.state.file),
@@ -850,18 +850,18 @@ private func trackDeleteRescueContract(_ report: CheckReport) {
     ]))
     document.deleteTrack(0)
     var timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(4), timeline.loopStartTick,
+    report.expectEqual(expected: Tick(4), actual: timeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                        what: "loop start survives the track delete")
-    report.expectEqual(Tick(16), timeline.loopEndTick,
+    report.expectEqual(expected: Tick(16), actual: timeline.loopEndTick,
                        cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                        what: "loop end survives the track delete")
     _ = document.history.undoDocument()
     timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(4), timeline.loopStartTick,
+    report.expectEqual(expected: Tick(4), actual: timeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                        what: "undo restores the loop start")
-    report.expectEqual(Tick(16), timeline.loopEndTick,
+    report.expectEqual(expected: Tick(16), actual: timeline.loopEndTick,
                        cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                        what: "undo restores the loop end")
 }
@@ -876,42 +876,42 @@ private func trackRenameContract(_ report: CheckReport) {
         ], endTick: 48),
     ]))
     document.renameTrack(0, to: "editcheck name")
-    report.expectEqual("editcheck name", document.trackName(0),
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename stores the exact name")
-    report.expectEqual(1, document.state.file.chunks.first.map(bareTrackNameCount),
+    report.expectEqual(expected: 1, actual: document.state.file.chunks.first.map(bareTrackNameCount),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "exactly one bare name meta remains")
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual("editcheck name", timeline.tracks.first?.name,
+    report.expectEqual(expected: "editcheck name", actual: timeline.tracks.first?.name,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "timeline reports the renamed track")
     let before = document.revision
     document.renameTrack(0, to: "  editcheck name  ")
-    report.expectEqual(before, document.revision,
+    report.expectEqual(expected: before, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "trimmed same-name rename records no entry")
     document.renameTrack(0, to: "[")
     document.renameTrack(0, to: " ][ ")
-    report.expectEqual(before, document.revision,
+    report.expectEqual(expected: before, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "marker-shaped renames record no entry")
-    report.expectEqual("editcheck name", document.trackName(0),
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "name survives the rejected renames")
     document.renameTrack(0, to: "")
-    report.expectEqual("", document.trackName(0),
+    report.expectEqual(expected: "", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename clears the stored name")
-    report.expectEqual(0, document.state.file.chunks.first.map(bareTrackNameCount),
+    report.expectEqual(expected: 0, actual: document.state.file.chunks.first.map(bareTrackNameCount),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "no bare name meta remains")
     _ = document.history.undoDocument()
-    report.expectEqual("editcheck name", document.trackName(0),
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "undo restores the stored name")
     _ = document.history.redoDocument()
-    report.expectEqual("", document.trackName(0),
+    report.expectEqual(expected: "", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "redo clears the name again")
 }
@@ -926,23 +926,23 @@ private func songTimeSignatureContract(_ report: CheckReport) {
     report.expect(document.timeSignatures.contains { $0.tick == 96 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature exists at the staged tick")
-    report.expectEqual(3, document.timeSignatures.first { $0.tick == 96 }?.numerator,
+    report.expectEqual(expected: 3, actual: document.timeSignatures.first { $0.tick == 96 }?.numerator,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "staged numerator is stored")
-    report.expectEqual(3, document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
+    report.expectEqual(expected: 3, actual: document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "staged denominator power is stored")
     document.setTimeSignature(tick: 96, numerator: 7, denominatorPower: 2)
     report.expect(document.timeSignatures.contains { $0.tick == 96 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature still exists after replacement")
-    report.expectEqual(7, document.timeSignatures.first { $0.tick == 96 }?.numerator,
+    report.expectEqual(expected: 7, actual: document.timeSignatures.first { $0.tick == 96 }?.numerator,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "replacement numerator is stored")
-    report.expectEqual(2, document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
+    report.expectEqual(expected: 2, actual: document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "replacement denominator power is stored")
-    report.expectEqual(before + 1, document.timeSignatures.count,
+    report.expectEqual(expected: before + 1, actual: document.timeSignatures.count,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "same-tick replacement grows the count by one")
     document.moveTimeSignature(from: 96, to: 192)
@@ -952,7 +952,7 @@ private func songTimeSignatureContract(_ report: CheckReport) {
     report.expect(document.timeSignatures.contains { $0.tick == 192 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature exists at the destination tick")
-    report.expectEqual(7, document.timeSignatures.first { $0.tick == 192 }?.numerator,
+    report.expectEqual(expected: 7, actual: document.timeSignatures.first { $0.tick == 192 }?.numerator,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "moved signature keeps its numerator")
     document.deleteTimeSignature(at: 192)
@@ -978,10 +978,10 @@ private func loopCfgUndoRedoContract(_ report: CheckReport) {
     config.masterVolume = config.masterVolume == 80 ? 90 : 80
     document.setConfig(config)
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(baseline, try? document.state.file.encoded(),
+    report.expectEqual(expected: baseline, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
                        what: "undo-all restores the baseline bytes")
-    report.expectEqual(originalVolume, document.state.config.masterVolume,
+    report.expectEqual(expected: originalVolume, actual: document.state.config.masterVolume,
                        cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
                        what: "undo-all restores the original master volume")
     while document.history.canRedo { _ = document.history.redoDocument() }
@@ -990,7 +990,7 @@ private func loopCfgUndoRedoContract(_ report: CheckReport) {
                   cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
                   message: "redo-all reapplies the edits")
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(baseline, try? document.state.file.encoded(),
+    report.expectEqual(expected: baseline, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
                        what: "second undo-all restores the baseline bytes")
 }
@@ -1089,19 +1089,19 @@ private func xcmdSaveSnapshotContract(_ report: CheckReport) {
         report.fail("editcheck/EditCheckTest::xcmdSaveSnapshot", "captureSave failed")
         return
     }
-    report.expectEqual(liveBytes, try? document.state.file.encoded(),
+    report.expectEqual(expected: liveBytes, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "capture leaves live bytes untouched")
-    report.expectEqual(revision, document.revision,
+    report.expectEqual(expected: revision, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "capture records no history entry")
-    report.expectEqual(dirty, document.isDirty,
+    report.expectEqual(expected: dirty, actual: document.isDirty,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "capture leaves the dirty flag untouched")
     report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                   message: "capture leaves the undo cursor at the tip")
-    report.expectEqual(historyDepth, try? coreEditHistoryCountAtTip(
+    report.expectEqual(expected: historyDepth, actual: try? coreEditHistoryCountAtTip(
         document, report: report, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot"),
         cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
         what: "capture leaves the undo depth unchanged")
@@ -1119,20 +1119,20 @@ private func xcmdSaveSnapshotContract(_ report: CheckReport) {
         guard $0.tick == base + 2, let fields = channelFields($0) else { return false }
         return fields.data0 == Xcmd.selectorController || fields.data0 == Xcmd.payloadController
     }
-    report.expectEqual(2, payload.count,
+    report.expectEqual(expected: 2, actual: payload.count,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "canonical selector/payload pair is saved")
     guard payload.count == 2 else { return }
-    report.expectEqual(Xcmd.selectorController, channelFields(payload[0])?.data0,
+    report.expectEqual(expected: Xcmd.selectorController, actual: channelFields(payload[0])?.data0,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "saved pair leads with the selector controller")
-    report.expectEqual(UInt8(0x08), channelFields(payload[0])?.data1,
+    report.expectEqual(expected: UInt8(0x08), actual: channelFields(payload[0])?.data1,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "saved selector carries its value")
-    report.expectEqual(Xcmd.payloadController, channelFields(payload[1])?.data0,
+    report.expectEqual(expected: Xcmd.payloadController, actual: channelFields(payload[1])?.data0,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "saved pair follows with the payload controller")
-    report.expectEqual(UInt8(34), channelFields(payload[1])?.data1,
+    report.expectEqual(expected: UInt8(34), actual: channelFields(payload[1])?.data1,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "saved payload carries its value")
     report.expect(!events.contains {
@@ -1150,43 +1150,43 @@ private func formatZeroCoercionContract(_ report: CheckReport) {
     }
     let document = SongDocument(file: file)
     let encodedHeader = (try? file.encoded()).map { Array($0.prefix(10)) }
-    report.expectEqual([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1], encodedHeader,
+    report.expectEqual(expected: [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1], actual: encodedHeader,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "converted file encodes as format 1")
-    report.expectEqual(3, document.engineTracks.usedTrackCount,
+    report.expectEqual(expected: 3, actual: document.engineTracks.usedTrackCount,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "three channel streams map to engine tracks")
-    report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
+    report.expectEqual(expected: UInt8(1), actual: document.engineTracks.tracks[0].channel,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "first engine track keeps channel 1")
-    report.expectEqual(UInt8(4), document.engineTracks.tracks[1].channel,
+    report.expectEqual(expected: UInt8(4), actual: document.engineTracks.tracks[1].channel,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "second engine track keeps channel 4")
-    report.expectEqual(UInt8(7), document.engineTracks.tracks[2].channel,
+    report.expectEqual(expected: UInt8(7), actual: document.engineTracks.tracks[2].channel,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "third engine track keeps channel 7")
-    report.expectEqual(1, document.engineTracks.tracks[0].midiChunk,
+    report.expectEqual(expected: 1, actual: document.engineTracks.tracks[0].midiChunk,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "first engine track maps to chunk 1")
-    report.expectEqual(UInt8(60), document.notes(in: 0).first?.pitch,
+    report.expectEqual(expected: UInt8(60), actual: document.notes(in: 0).first?.pitch,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "first track keeps its note key")
-    report.expectEqual(Tick(24), document.notes(in: 0).first?.duration,
+    report.expectEqual(expected: Tick(24), actual: document.notes(in: 0).first?.duration,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "first track keeps its note duration")
-    report.expectEqual(UInt8(64), document.notes(in: 1).first?.pitch,
+    report.expectEqual(expected: UInt8(64), actual: document.notes(in: 1).first?.pitch,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "second track keeps its note key")
-    report.expectEqual(UInt8(67), document.notes(in: 2).first?.pitch,
+    report.expectEqual(expected: UInt8(67), actual: document.notes(in: 2).first?.pitch,
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "third track keeps its note key")
-    report.expectEqual("Lead", document.trackName(1),
+    report.expectEqual(expected: "Lead", actual: document.trackName(1),
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "prefixed name lands on the second track")
-    report.expectEqual("", document.trackName(0),
+    report.expectEqual(expected: "", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "first track has no name")
-    report.expectEqual("", document.trackName(2),
+    report.expectEqual(expected: "", actual: document.trackName(2),
                        cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                        what: "third track has no name")
     let chunks = document.rawChunks
@@ -1232,19 +1232,19 @@ private func formatZeroGlobalsContract(_ report: CheckReport) {
     }
     let document = SongDocument(file: file)
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(12), timeline.loopStartTick,
+    report.expectEqual(expected: Tick(12), actual: timeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "converted loop start lands at tick 12")
-    report.expectEqual(Tick(36), timeline.loopEndTick,
+    report.expectEqual(expected: Tick(36), actual: timeline.loopEndTick,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "converted loop end lands at tick 36")
-    report.expectEqual(3, timeline.usedTrackCount,
+    report.expectEqual(expected: 3, actual: timeline.usedTrackCount,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "timeline reports three used tracks")
-    report.expectEqual("Lead", timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
+    report.expectEqual(expected: "Lead", actual: timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "timeline names the second track Lead")
-    report.expectEqual(Tick(12), timeline.loopStartTick,
+    report.expectEqual(expected: Tick(12), actual: timeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                        what: "timeline loop start matches the document")
     report.expect(chunksSortedByTick(document.state.file),
@@ -1270,18 +1270,18 @@ private func formatZeroSaveRoundTripContract(_ report: CheckReport) {
     report.expect(file.wasFormat0,
                   cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                   message: "redecoded source retains format-0 provenance")
-    report.expectEqual(try? file.encoded(), snapshot.bytes,
+    report.expectEqual(expected: try? file.encoded(), actual: snapshot.bytes,
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "redecoded original encodes to the exact saved bytes")
     let tempos = document.state.tempo
-    report.expectEqual(1, tempos.count,
+    report.expectEqual(expected: 1, actual: tempos.count,
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "one typed tempo point survives conversion")
     var withoutTempos = saved
     for index in withoutTempos.chunks.indices {
         withoutTempos.chunks[index].events.removeAll { $0.metaType == 0x51 }
     }
-    report.expectEqual(convertedLive, try? withoutTempos.encoded(),
+    report.expectEqual(expected: convertedLive, actual: try? withoutTempos.encoded(),
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "saved bytes without tempo metadata match converted live bytes")
     var tempoOutsideConductor = false
@@ -1316,21 +1316,21 @@ private func formatZeroSaveRoundTripContract(_ report: CheckReport) {
     report.expect(tempoFirst,
                   cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                   message: "saved tempos lead their tick group")
-    report.expectEqual(tempos, savedTempos,
+    report.expectEqual(expected: tempos, actual: savedTempos,
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "saved tempos match the typed state")
-    report.expectEqual(convertedLive, try? document.state.file.encoded(),
+    report.expectEqual(expected: convertedLive, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "live bytes survive the save")
     document.renameTrack(0, to: "Bass")
     report.expect(document.moveTrack(0, to: 2),
                   cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                   message: "move to slot 2 succeeds")
-    report.expectEqual("Bass", document.trackName(2),
+    report.expectEqual(expected: "Bass", actual: document.trackName(2),
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "name follows its track across the move")
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(convertedLive, try? document.state.file.encoded(),
+    report.expectEqual(expected: convertedLive, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "undo-all restores the converted bytes")
 }
@@ -1346,19 +1346,19 @@ private func markerVersusTrackNameContract(_ report: CheckReport) {
             .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
         ], endTick: 24),
     ]))
-    report.expectEqual("Real", document.trackName(0),
+    report.expectEqual(expected: "Real", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "bare name wins over the marker-shaped name")
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(0), timeline.loopStartTick,
+    report.expectEqual(expected: Tick(0), actual: timeline.loopStartTick,
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "marker-shaped name still opens the loop")
     document.renameTrack(0, to: "Renamed")
-    report.expectEqual("Renamed", document.trackName(0),
+    report.expectEqual(expected: "Renamed", actual: document.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "rename stores the new name")
     let renamed = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(Tick(0), renamed.loopStartTick,
+    report.expectEqual(expected: Tick(0), actual: renamed.loopStartTick,
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "loop start survives the rename")
 }
@@ -1367,34 +1367,34 @@ private func markerVersusTrackNameContract(_ report: CheckReport) {
 private func duplicateLaneAndTempoLoadContract(_ report: CheckReport) {
     let document = SongDocument(file: duplicateFixtureFile())
     let liveBytes = try? document.state.file.encoded()
-    report.expectEqual(2, document.lanePoints(track: 0, lane: .voice).count,
+    report.expectEqual(expected: 2, actual: document.lanePoints(track: 0, lane: .voice).count,
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "both voice lane points load")
-    report.expectEqual(2, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 2, actual: document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }.count,
         cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
         what: "both CC7 duplicates load at tick zero")
-    report.expectEqual(80, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 80, actual: document.lanePoints(track: 0, lane: .controller(7))
         .last { $0.tick == 0 }?.value,
         cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
         what: "last CC7 duplicate wins the loaded value")
-    report.expectEqual(9, document.lanePoints(track: 0, lane: .voice)
+    report.expectEqual(expected: 9, actual: document.lanePoints(track: 0, lane: .voice)
         .last { $0.tick == 0 }?.value,
         cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
         what: "last voice duplicate wins the loaded value")
-    report.expectEqual([
+    report.expectEqual(expected: [
         TempoPoint(tick: 24, microsecondsPerQuarterNote: 3_000_000),
         TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000),
         TempoPoint(tick: 72, microsecondsPerQuarterNote: 235_294),
         TempoPoint(tick: 96, microsecondsPerQuarterNote: 375_001),
-    ], document.state.tempo,
+    ], actual: document.state.tempo,
     cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
     what: "clamped and exact tempo points load in order")
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(5, timeline.tempoMap.count,
+    report.expectEqual(expected: 5, actual: timeline.tempoMap.count,
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "tempo map gains the default tick-zero point")
-    report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute,
+    report.expectEqual(expected: 120.0, actual: timeline.tempoMap.first?.beatsPerMinute,
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "tempo map fronts the default tempo")
     var expected = document.state.file
@@ -1415,10 +1415,10 @@ private func duplicateLaneAndTempoLoadContract(_ report: CheckReport) {
         report.fail("editcheck/EditCheckTest::duplicateLaneAndTempoLoad", "capture failed")
         return
     }
-    report.expectEqual(snapshot.bytes, try? expected.encoded(),
+    report.expectEqual(expected: snapshot.bytes, actual: try? expected.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "saved bytes match the live file with typed tempos inserted")
-    report.expectEqual(liveBytes, try? document.state.file.encoded(),
+    report.expectEqual(expected: liveBytes, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "capture leaves live bytes untouched")
 }
@@ -1445,20 +1445,20 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
     let revision = document.revision
     document.moveLanePoints(track: 0, lane: .controller(7), moves: [
         LanePointMove(point: point, tick: point.tick, value: point.value)])
-    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 1, actual: document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }.count,
         cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
         what: "no-op move collapses the duplicate lane points")
-    report.expectEqual(revision + 1, document.revision,
+    report.expectEqual(expected: revision + 1, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "canonicalizing move records one revision")
-    report.expectEqual(1, changedCount,
+    report.expectEqual(expected: 1, actual: changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "canonicalizing move publishes one change")
     report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                   message: "canonicalizing move advances the undo cursor to the tip")
-    report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+    report.expectEqual(expected: undoCount + 1, actual: try? coreEditHistoryCountAtTip(
         document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
         cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
         what: "canonicalizing move adds one undo entry")
@@ -1473,22 +1473,22 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
     }
     let restored = document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }
-    report.expectEqual(2, restored.count,
+    report.expectEqual(expected: 2, actual: restored.count,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo restores both duplicates")
-    report.expectEqual(100, restored.first?.value,
+    report.expectEqual(expected: 100, actual: restored.first?.value,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo restores the first duplicate value")
-    report.expectEqual(80, restored.dropFirst().first?.value,
+    report.expectEqual(expected: 80, actual: restored.dropFirst().first?.value,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo restores the second duplicate value")
-    report.expectEqual(baseline, try? document.state.file.encoded(),
+    report.expectEqual(expected: baseline, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo restores the baseline bytes")
-    report.expectEqual(canonicalRevision + 1, document.revision,
+    report.expectEqual(expected: canonicalRevision + 1, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo records another revision")
-    report.expectEqual(1, changedCount,
+    report.expectEqual(expected: 1, actual: changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo publishes one change")
     let undoneState = document.state
@@ -1505,7 +1505,7 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
         document.history.currentIdentity == canonicalIdentity,
         cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
         message: "redo restores the canonical state and identity")
-    report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+    report.expectEqual(expected: undoCount + 1, actual: try? coreEditHistoryCountAtTip(
         document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
         cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
         what: "undo retains the canonicalizing entry")
@@ -1521,7 +1521,7 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
         message: "redo/undo restores the exact undone state, identity and cursor")
     document.writeLane(track: 0, lane: .controller(7), from: 0, through: 0,
                        points: [LaneWrite(tick: 0, value: 70)])
-    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 1, actual: document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }.count,
         cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
         what: "lane write collapses the restored duplicates")
@@ -1541,7 +1541,7 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
                     "no CC7 lane point at tick 48")
         return
     }
-    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 1, actual: document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 48 }.count,
         cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
         what: "lane write leaves one point at the tick")
@@ -1557,25 +1557,25 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
     changedCount = 0
     document.moveLanePoints(track: 0, lane: .controller(7), moves: [
         LanePointMove(point: point, tick: point.tick, value: point.value)])
-    report.expectEqual(noOpBytes, try? document.state.file.encoded(),
+    report.expectEqual(expected: noOpBytes, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "no-op lane move leaves bytes untouched")
-    report.expectEqual(noOpRevision, document.revision,
+    report.expectEqual(expected: noOpRevision, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "no-op lane move leaves the revision untouched")
-    report.expectEqual(0, changedCount,
+    report.expectEqual(expected: 0, actual: changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "no-op lane move publishes no change")
     report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   message: "no-op lane move leaves the undo cursor at the tip")
-    report.expectEqual(noOpUndoCount, try? coreEditHistoryCountAtTip(
+    report.expectEqual(expected: noOpUndoCount, actual: try? coreEditHistoryCountAtTip(
         document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
         cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
         what: "no-op lane move adds no history entry")
     document.moveLanePoints(track: 0, lane: .controller(7), moves: [
         LanePointMove(point: point, tick: 0, value: 55)])
-    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+    report.expectEqual(expected: 1, actual: document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }.count,
         cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
         what: "move onto an occupied tick collapses to one point")
@@ -1600,22 +1600,22 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
     let tempoRevision = document.revision
     changedCount = 0
     document.editTempo(TempoEdit(add: [noOpTempo]))
-    report.expectEqual(tempoBytes, try? document.state.file.encoded(),
+    report.expectEqual(expected: tempoBytes, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "duplicate tempo apply leaves bytes untouched")
-    report.expectEqual(tempoPoints, document.state.tempo,
+    report.expectEqual(expected: tempoPoints, actual: document.state.tempo,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "duplicate tempo apply leaves tempo points untouched")
-    report.expectEqual(tempoRevision, document.revision,
+    report.expectEqual(expected: tempoRevision, actual: document.revision,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "duplicate tempo apply leaves the revision untouched")
-    report.expectEqual(0, changedCount,
+    report.expectEqual(expected: 0, actual: changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "duplicate tempo apply publishes no change")
     report.expect(document.history.canUndo && !document.history.canRedo,
                   cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   message: "duplicate tempo apply leaves the undo cursor at the tip")
-    report.expectEqual(tempoUndoCount, try? coreEditHistoryCountAtTip(
+    report.expectEqual(expected: tempoUndoCount, actual: try? coreEditHistoryCountAtTip(
         document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
         cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
         what: "duplicate tempo apply adds no history entry")
@@ -1626,7 +1626,7 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
         message: "undo restores the replaced tempo point")
     _ = document.history.redoDocument()
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(baseline, try? document.state.file.encoded(),
+    report.expectEqual(expected: baseline, actual: try? document.state.file.encoded(),
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "undo-all restores the baseline bytes")
 }

@@ -75,7 +75,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
                       message: "registered, partial and stray songs all list")
         report.expect(!labels.contains("mus_filler_test"), cppID: id,
                       message: "the mid-less table row is not playable")
-        report.expectEqual(labels.count, listings.count, cppID: id,
+        report.expectEqual(expected: labels.count, actual: listings.count, cppID: id,
                            what: "no playable song is dropped")
 
         guard let stray = listings.first(where: { $0.label == "mus_stray_test" }),
@@ -88,45 +88,45 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         // registered rows, the appended index for the stray. The fixture is
         // deterministic: 9 staged table rows, filler at 9, partial at 10,
         // stray discovered at 11.
-        report.expectEqual(10, partial.id, cppID: id,
+        report.expectEqual(expected: 10, actual: partial.id, cppID: id,
                            what: "partial id is its song_table index")
-        report.expectEqual(partial.id + 1, stray.id, cppID: id,
+        report.expectEqual(expected: partial.id + 1, actual: stray.id, cppID: id,
                            what: "unregistered id is the snapshot index")
-        report.expectEqual(listings.firstIndex { $0.label == "mus_partial_test" },
-                           listings.firstIndex { $0.id == partial.id }, cppID: id,
+        report.expectEqual(expected: listings.firstIndex { $0.label == "mus_partial_test" },
+                           actual: listings.firstIndex { $0.id == partial.id }, cppID: id,
                            what: "listing order matches snapshot order")
 
         // Registration state and gaps.
-        report.expectEqual(false, stray.registered, cppID: id,
+        report.expectEqual(expected: false, actual: stray.registered, cppID: id,
                            what: "stray reports unregistered")
-        report.expectEqual(["song_table.inc", "songs.h"], stray.registrationGaps, cppID: id,
+        report.expectEqual(expected: ["song_table.inc", "songs.h"], actual: stray.registrationGaps, cppID: id,
                            what: "stray gaps name every missing file")
-        report.expectEqual(true, partial.registered, cppID: id,
+        report.expectEqual(expected: true, actual: partial.registered, cppID: id,
                            what: "partial reports registered")
-        report.expectEqual(["songs.h"], partial.registrationGaps, cppID: id,
+        report.expectEqual(expected: ["songs.h"], actual: partial.registrationGaps, cppID: id,
                            what: "partial gap names the missing define")
-        report.expectEqual(true, registered.registered, cppID: id,
+        report.expectEqual(expected: true, actual: registered.registered, cppID: id,
                            what: "fixture song reports registered")
-        report.expectEqual([String](), registered.registrationGaps, cppID: id,
+        report.expectEqual(expected: [String](), actual: registered.registrationGaps, cppID: id,
                            what: "fixture song has no gaps")
 
         // Metadata: the stray derives its constant and default player; the
         // partial keeps an empty constant until registration completes.
-        report.expectEqual("MUS_STRAY_TEST", stray.constant, cppID: id,
+        report.expectEqual(expected: "MUS_STRAY_TEST", actual: stray.constant, cppID: id,
                            what: "stray derives its constant from the label")
-        report.expectEqual("MUSIC_PLAYER_BGM", stray.player, cppID: id,
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: stray.player, cppID: id,
                            what: "stray uses the default player")
-        report.expectEqual("", partial.constant, cppID: id,
+        report.expectEqual(expected: "", actual: partial.constant, cppID: id,
                            what: "partial has no constant until songs.h defines one")
-        report.expectEqual("MUS_SESSION_TEST", registered.constant, cppID: id,
+        report.expectEqual(expected: "MUS_SESSION_TEST", actual: registered.constant, cppID: id,
                            what: "registered constant comes from songs.h")
-        report.expectEqual(true, stray.hasMid && stray.isPlayable, cppID: id,
+        report.expectEqual(expected: true, actual: stray.hasMid && stray.isPlayable, cppID: id,
                            what: "stray is playable")
-        report.expectEqual(true, stray.registrationIncomplete, cppID: id,
+        report.expectEqual(expected: true, actual: stray.registrationIncomplete, cppID: id,
                            what: "stray is registration-incomplete")
-        report.expectEqual(true, partial.registrationIncomplete, cppID: id,
+        report.expectEqual(expected: true, actual: partial.registrationIncomplete, cppID: id,
                            what: "partial is registration-incomplete")
-        report.expectEqual(false, registered.registrationIncomplete, cppID: id,
+        report.expectEqual(expected: false, actual: registered.registrationIncomplete, cppID: id,
                            what: "registered song is complete")
         report.expect(stray.midiPath.hasSuffix("sound/songs/midi/mus_stray_test.mid"),
                       cppID: id, message: "stray carries its .mid path")
@@ -157,15 +157,15 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
             report.fail(id, "service-fed rows missing from the presenter")
             return
         }
-        report.expectEqual("mus_stray_test  ⚠ not registered", strayRow.text, cppID: id,
+        report.expectEqual(expected: "mus_stray_test  ⚠ not registered", actual: strayRow.text, cppID: id,
                            what: "service-fed stray wears the unregistered badge")
-        report.expectEqual("mus_partial_test  ⚠ not fully registered", partialRow.text,
+        report.expectEqual(expected: "mus_partial_test  ⚠ not fully registered", actual: partialRow.text,
                            cppID: id, what: "service-fed partial wears the partial badge")
-        report.expectEqual(true, presenter.canRegister(songId: stray.id), cppID: id,
+        report.expectEqual(expected: true, actual: presenter.canRegister(songId: stray.id), cppID: id,
                            what: "service-fed stray offers Register Song")
-        report.expectEqual(true, presenter.canRegister(songId: partial.id), cppID: id,
+        report.expectEqual(expected: true, actual: presenter.canRegister(songId: partial.id), cppID: id,
                            what: "service-fed partial offers Register Song")
-        report.expectEqual(false, presenter.canRegister(songId: registered.id), cppID: id,
+        report.expectEqual(expected: false, actual: presenter.canRegister(songId: registered.id), cppID: id,
                            what: "service-fed registered song does not")
 
         // The voice-list selector's choice feed (voice proof U001): the
@@ -173,7 +173,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let args = try runBlocking {
             try await service.voicegroupArgs()
         }
-        report.expectEqual(["_test_vg"], args, cppID: id,
+        report.expectEqual(expected: ["_test_vg"], actual: args, cppID: id,
                            what: "voicegroupArgs publishes the catalog group args")
 
         // The loaded-tone fallback feed (voice proof U005): the staged cry
@@ -183,23 +183,23 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let opened = try runBlocking {
             try await service.openSong(label: "mus_session_test")
         }
-        report.expectEqual(128, opened.bankSlots.count, cppID: id,
+        report.expectEqual(expected: 128, actual: opened.bankSlots.count, cppID: id,
                            what: "the bank publishes every slot")
         let cry = opened.bankSlots[3]
-        report.expectEqual(BankSlotKind.readOnlyVoice, cry.kind, cppID: id,
+        report.expectEqual(expected: BankSlotKind.readOnlyVoice, actual: cry.kind, cppID: id,
                            what: "the cry line is a read-only slot")
-        report.expectEqual("missing_cry_sample", cry.tone?.name, cppID: id,
+        report.expectEqual(expected: "missing_cry_sample", actual: cry.tone?.name, cppID: id,
                            what: "the read-only slot publishes its loaded tone name")
-        report.expectEqual(Int32(VoiceListSemantics.voiceCry), cry.tone?.type, cppID: id,
+        report.expectEqual(expected: Int32(VoiceListSemantics.voiceCry), actual: cry.tone?.type, cppID: id,
                            what: "the tone carries its raw type byte")
-        report.expectEqual(BankToneAdsr(attack: 255, decay: 0, sustain: 255, release: 0),
-                           cry.tone?.adsr, cppID: id,
+        report.expectEqual(expected: BankToneAdsr(attack: 255, decay: 0, sustain: 255, release: 0),
+                           actual: cry.tone?.adsr, cppID: id,
                            what: "the tone carries its scalar envelope")
-        report.expectEqual(false, cry.tone?.isSynth, cppID: id,
+        report.expectEqual(expected: false, actual: cry.tone?.isSynth, cppID: id,
                            what: "a cry tone is not a synth")
-        report.expectEqual(nil, opened.bankSlots[0].tone, cppID: id,
+        report.expectEqual(expected: nil, actual: opened.bankSlots[0].tone, cppID: id,
                            what: "editable slots publish no tone")
-        report.expectEqual(nil, opened.bankSlots[4].tone, cppID: id,
+        report.expectEqual(expected: nil, actual: opened.bankSlots[4].tone, cppID: id,
                            what: "blank slots publish no tone")
 
         // The register/delete transaction (proof B012/B013): plan, confirm,
@@ -208,20 +208,20 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let plan = try runBlocking {
             try await service.songRegistrationPlan(label: "mus_stray_test")
         }
-        report.expectEqual("mus_stray_test", plan.label, cppID: mutationId,
+        report.expectEqual(expected: "mus_stray_test", actual: plan.label, cppID: mutationId,
                            what: "the plan resolves the label")
-        report.expectEqual("MUS_STRAY_TEST", plan.constant, cppID: mutationId,
+        report.expectEqual(expected: "MUS_STRAY_TEST", actual: plan.constant, cppID: mutationId,
                            what: "the plan derives the constant")
-        report.expectEqual("MUSIC_PLAYER_BGM", plan.player, cppID: mutationId,
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: plan.player, cppID: mutationId,
                            what: "the plan defaults the player")
-        report.expectEqual(stray.id, plan.songId, cppID: mutationId,
+        report.expectEqual(expected: stray.id, actual: plan.songId, cppID: mutationId,
                            what: "the plan proposes the next table index")
-        report.expectEqual(["song_table.inc", "songs.h"], plan.missingFiles, cppID: mutationId,
+        report.expectEqual(expected: ["song_table.inc", "songs.h"], actual: plan.missingFiles, cppID: mutationId,
                            what: "the plan names the missing registration files")
         let newId = try runBlocking {
             try await service.registerSong(plan)
         }
-        report.expectEqual(plan.songId, newId, cppID: mutationId,
+        report.expectEqual(expected: plan.songId, actual: newId, cppID: mutationId,
                            what: "register assigns the planned song ID")
         let afterRegister = try runBlocking {
             try await service.songs()
@@ -231,11 +231,11 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
             report.fail(mutationId, "registered stray missing from the refreshed listing")
             return
         }
-        report.expectEqual(newId, registeredStray.id, cppID: mutationId,
+        report.expectEqual(expected: newId, actual: registeredStray.id, cppID: mutationId,
                            what: "the refreshed listing carries the new song ID")
-        report.expectEqual(true, registeredStray.registered, cppID: mutationId,
+        report.expectEqual(expected: true, actual: registeredStray.registered, cppID: mutationId,
                            what: "the refreshed stray reports registered")
-        report.expectEqual([String](), registeredStray.registrationGaps, cppID: mutationId,
+        report.expectEqual(expected: [String](), actual: registeredStray.registrationGaps, cppID: mutationId,
                            what: "the refreshed stray has no gaps")
 
         // Song ID 0 is the engine fallback: the plan documents it and the
@@ -243,7 +243,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let fallbackPlan = try runBlocking {
             try await service.songDeletionPlan(label: "mus_session_test")
         }
-        report.expectEqual(0, fallbackPlan.tableIndex, cppID: mutationId,
+        report.expectEqual(expected: 0, actual: fallbackPlan.tableIndex, cppID: mutationId,
                            what: "the fallback song plans at table index 0")
         var fallbackThrew = false
         do {
@@ -253,7 +253,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         } catch {
             fallbackThrew = true
         }
-        report.expectEqual(true, fallbackThrew, cppID: mutationId,
+        report.expectEqual(expected: true, actual: fallbackThrew, cppID: mutationId,
                            what: "deleting the engine fallback refuses")
 
         // Delete the now-registered stray: last table entry, removed
@@ -262,13 +262,13 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let deletePlan = try runBlocking {
             try await service.songDeletionPlan(label: "mus_stray_test")
         }
-        report.expectEqual(newId, deletePlan.tableIndex, cppID: mutationId,
+        report.expectEqual(expected: newId, actual: deletePlan.tableIndex, cppID: mutationId,
                            what: "the delete plan finds the table row")
-        report.expectEqual(true, deletePlan.lastEntry, cppID: mutationId,
+        report.expectEqual(expected: true, actual: deletePlan.lastEntry, cppID: mutationId,
                            what: "the last table entry deletes outright")
-        report.expectEqual(true, deletePlan.inSongsH, cppID: mutationId,
+        report.expectEqual(expected: true, actual: deletePlan.inSongsH, cppID: mutationId,
                            what: "the delete plan lists the songs.h define")
-        report.expectEqual(nil, deletePlan.deletableVoicegroupName, cppID: mutationId,
+        report.expectEqual(expected: nil, actual: deletePlan.deletableVoicegroupName, cppID: mutationId,
                            what: "no voicegroup is deletable with the stray")
         try runBlocking {
             try await service.deleteSong(label: "mus_stray_test")
@@ -276,7 +276,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         let afterDelete = try runBlocking {
             try await service.songs()
         }
-        report.expectEqual(false, afterDelete.contains { $0.label == "mus_stray_test" },
+        report.expectEqual(expected: false, actual: afterDelete.contains { $0.label == "mus_stray_test" },
                            cppID: mutationId,
                            what: "the deleted song leaves the refreshed listing")
         report.expect(FileManager.default.fileExists(
@@ -292,7 +292,7 @@ internal func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: Strin
         } catch {
             planThrew = true
         }
-        report.expectEqual(true, planThrew, cppID: mutationId,
+        report.expectEqual(expected: true, actual: planThrew, cppID: mutationId,
                            what: "an unknown label fails the registration plan")
     } catch {
         report.fail(id, "service listing failed: \(error)")

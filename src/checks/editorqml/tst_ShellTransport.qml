@@ -365,6 +365,26 @@ TestCase {
                 "application output preference survives a fresh shell session")
     }
 
+    function test_outputVolumeSurvivesShellRelaunch() {
+        var bar = openShell()
+        var output = findChild(bar, "transportOutputVolume")
+        verify(output !== null && output.visible, "application volume dial is mounted")
+        // Seed the preference through the dial's own commit signal — the same
+        // valueCommitted path wheel/keys use (input plumbing is covered by the
+        // transitions test); this test's contract is the Settings round-trip.
+        output.valueCommitted(87)
+        tryCompare(bar.presenter, "outputVolume", 87, 3000)
+        cleanup()
+        bar = openShell()
+        // Capture before restoring so a mismatch still writes back the default.
+        var restored = bar.presenter.outputVolume
+        output = findChild(bar, "transportOutputVolume")
+        output.valueCommitted(100)
+        tryCompare(bar.presenter, "outputVolume", 100, 3000)
+        compare(restored, 87,
+                "application output preference survives a fresh shell session")
+    }
+
     function test_explicitOpenSupersedesStartupRestoreDuringPlayback() {
         settings.setValue("lastProjectDir", bootstrap.projectRoot)
         settings.setValue("lastOpenSongs", ["mus_littleroot_test"])

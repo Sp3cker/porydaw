@@ -59,7 +59,7 @@ private func checkProjectFixture(path: String, report: CheckReport) {
                                            report: report) else { return }
     report.expect(!timeline.events.isEmpty, cppID: exactSamplesID,
                   message: "project fixture produced no playback events")
-    report.expectEqual(playbackCheckSampleRate, timeline.sampleRate, cppID: exactSamplesID,
+    report.expectEqual(expected: playbackCheckSampleRate, actual: timeline.sampleRate, cppID: exactSamplesID,
                        what: "project fixture sample rate")
     report.expect(timeline.usedTrackCount > 0 &&
                   timeline.usedTrackCount <= TrackLimits.hardwareCapacity,
@@ -68,7 +68,7 @@ private func checkProjectFixture(path: String, report: CheckReport) {
     report.expect(zip(timeline.events, timeline.events.dropFirst())
         .allSatisfy { $0.0.sample <= $0.1.sample },
         cppID: exactSamplesID, message: "project fixture events are not sample ordered")
-    report.expectEqual(timeline.events.last?.sample, Optional(timeline.lengthSamples),
+    report.expectEqual(expected: Optional(timeline.lengthSamples), actual: timeline.events.last?.sample,
                        cppID: exactSamplesID, what: "project fixture terminal sample")
 }
 
@@ -79,7 +79,7 @@ private func checkExactSamples(_ report: CheckReport) {
     ]
     let tolerance = 0.5 / 229.6875 + 1e-12
     for (tick, sample) in expected {
-        report.expectEqual(sample, timeline.sample(for: tick), cppID: exactSamplesID,
+        report.expectEqual(expected: sample, actual: timeline.sample(for: tick), cppID: exactSamplesID,
                            what: "sample at tick \(tick)")
         report.expect(abs(timeline.tick(for: sample) - Double(tick)) <= tolerance,
                       cppID: exactSamplesID,
@@ -87,10 +87,10 @@ private func checkExactSamples(_ report: CheckReport) {
     }
 
     let tempos = timeline.events.filter { $0.type == playbackTempoEventType && $0.tick == 1 }
-    report.expectEqual([UInt64(230), 230], tempos.map(\.sample), cppID: exactSamplesID,
+    report.expectEqual(expected: [UInt64(230), 230], actual: tempos.map(\.sample), cppID: exactSamplesID,
                        what: "same-tick tempo samples")
-    report.expectEqual([150, 100],
-                       tempos.map { Int($0.data0) | Int($0.data1) << 7 },
+    report.expectEqual(expected: [150, 100],
+                       actual: tempos.map { Int($0.data0) | Int($0.data1) << 7 },
                        cppID: exactSamplesID, what: "same-tick tempo order")
     let authoritative = PlaybackTimeline.build(
         file: exactTempoSong(),
@@ -99,36 +99,36 @@ private func checkExactSamples(_ report: CheckReport) {
     let authoritativeTempos = authoritative.events.filter {
         $0.type == playbackTempoEventType && $0.tick == 1
     }
-    report.expectEqual(1, authoritativeTempos.count, cppID: exactSamplesID,
+    report.expectEqual(expected: 1, actual: authoritativeTempos.count, cppID: exactSamplesID,
                        what: "last-wins authoritative tempo count")
-    report.expectEqual([100],
-                       authoritativeTempos.map { Int($0.data0) | Int($0.data1) << 7 },
+    report.expectEqual(expected: [100],
+                       actual: authoritativeTempos.map { Int($0.data0) | Int($0.data1) << 7 },
                        cppID: exactSamplesID, what: "last-wins authoritative tempo")
     let noteOn = timeline.events.first { $0.type == 0x9 }
-    report.expectEqual(Optional(UInt64(505)), noteOn?.sample, cppID: exactSamplesID,
+    report.expectEqual(expected: Optional(UInt64(505)), actual: noteOn?.sample, cppID: exactSamplesID,
                        what: "note-on exact sample")
-    report.expectEqual(Optional(UInt8(0)), noteOn?.track, cppID: exactSamplesID,
+    report.expectEqual(expected: Optional(UInt8(0)), actual: noteOn?.track, cppID: exactSamplesID,
                        what: "note-on engine track")
 }
 
 private func checkEngineTrackMapping(_ timeline: PlaybackTimeline, report: CheckReport) {
-    report.expectEqual(16, timeline.usedTrackCount, cppID: mappingID,
+    report.expectEqual(expected: 16, actual: timeline.usedTrackCount, cppID: mappingID,
                        what: "used engine tracks")
-    report.expectEqual(2, timeline.droppedTracks, cppID: mappingID,
+    report.expectEqual(expected: 2, actual: timeline.droppedTracks, cppID: mappingID,
                        what: "dropped channel chunks")
-    report.expectEqual(51, timeline.events.count, cppID: mappingID,
+    report.expectEqual(expected: 51, actual: timeline.events.count, cppID: mappingID,
                        what: "tempo and mapped channel event count")
     report.expect(timeline.tracks.allSatisfy { $0.used }, cppID: mappingID,
                   message: "a mapped engine track was unused")
-    report.expectEqual(Array(repeating: 1, count: 16), timeline.tracks.map(\.noteCount),
+    report.expectEqual(expected: Array(repeating: 1, count: 16), actual: timeline.tracks.map(\.noteCount),
                        cppID: mappingID, what: "per-track note counts")
-    report.expectEqual(Array(0..<16), timeline.tracks.map(\.firstProgram),
+    report.expectEqual(expected: Array(0..<16), actual: timeline.tracks.map(\.firstProgram),
                        cppID: mappingID, what: "per-track first programs")
 
     let noteOns = timeline.events.filter { $0.type == 0x9 }
-    report.expectEqual(Array(UInt8(0)...UInt8(15)), noteOns.map(\.track),
+    report.expectEqual(expected: Array(UInt8(0)...UInt8(15)), actual: noteOns.map(\.track),
                        cppID: mappingID, what: "note-on engine tracks")
-    report.expectEqual(Array(UInt8(48)...UInt8(63)), noteOns.map(\.data0),
+    report.expectEqual(expected: Array(UInt8(48)...UInt8(63)), actual: noteOns.map(\.data0),
                        cppID: mappingID, what: "note-on keys from retained chunks")
 }
 
@@ -142,10 +142,10 @@ private func checkNoteIdentities(_ report: CheckReport) {
     ])
     let timeline = PlaybackTimeline.build(file: file, sampleRate: playbackCheckSampleRate)
     let noteOns = timeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
-    report.expectEqual([UInt64(1), 2], noteOns.map(\.noteID.rawValue),
+    report.expectEqual(expected: [UInt64(1), 2], actual: noteOns.map(\.noteID.rawValue),
                        cppID: identitiesID, what: "stamped note-on identities")
     let noteOff = timeline.events.first { $0.type == 0x8 && $0.tick == 48 }
-    report.expectEqual(Optional(UInt64(0)), noteOff?.noteID.rawValue, cppID: identitiesID,
+    report.expectEqual(expected: Optional(UInt64(0)), actual: noteOff?.noteID.rawValue, cppID: identitiesID,
                        what: "ordinary note-off identity")
 }
 
@@ -183,7 +183,7 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
                                position: playbackCheckSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
             let applied = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expectedControllerField(controller.controller, nonDefault), applied,
+            report.expectEqual(expected: expectedControllerField(controller.controller, nonDefault), actual: applied,
                                cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) non-default")
 
@@ -191,16 +191,16 @@ private func compareControllerDefaults(fixtureRoot: String, defaultPath: String,
                                position: playbackCheckSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
             let restored = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expectedControllerField(controller.controller, controller.value),
-                               restored, cppID: controllerDefaultsID,
+            report.expectEqual(expected: expectedControllerField(controller.controller, controller.value),
+                               actual: restored, cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) default")
 
             guard prepareSwift(path: overridePath, native: native, engine: engine,
                                position: 13 * playbackCheckSamplesPerTick, chase: true, prime: false,
                                report: report) else { return }
             let overridden = controllerField(engine.pointer, controller: controller.controller)
-            report.expectEqual(expectedControllerField(controller.controller, overrideValue),
-                               overridden, cppID: controllerDefaultsID,
+            report.expectEqual(expected: expectedControllerField(controller.controller, overrideValue),
+                               actual: overridden, cppID: controllerDefaultsID,
                                what: "\(native ? "native" : "Swift") CC \(controller.controller) pre-seek")
         }
     }

@@ -25,9 +25,9 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
             report.fail(id, "first live session has no editable slot 0")
             return
         }
-        report.expectEqual(original, peer.bankSlots.first?.voice,
+        report.expectEqual(expected: original, actual: peer.bankSlots.first?.voice,
                            cppID: id, what: "both live sessions start with the same voice")
-        report.expectEqual(false, peer.bankDirty,
+        report.expectEqual(expected: false, actual: peer.bankDirty,
                            cppID: id, what: "peer starts with a clean bank")
 
         var edited = original
@@ -35,20 +35,20 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
         _ = try runBlocking {
             try await first.applyBankEdit(slot: 0, value: edited, expected: original)
         }
-        report.expectEqual(edited, first.bankSlots.first?.voice,
+        report.expectEqual(expected: edited, actual: first.bankSlots.first?.voice,
                            cppID: id, what: "first live session publishes the edited voice")
-        report.expectEqual(edited, peer.bankSlots.first?.voice,
+        report.expectEqual(expected: edited, actual: peer.bankSlots.first?.voice,
                            cppID: id, what: "already-open peer sees the edited voice without reopening")
-        report.expectEqual(true, peer.bankDirty,
+        report.expectEqual(expected: true, actual: peer.bankDirty,
                            cppID: id, what: "already-open peer sees the dirty bank")
         report.expect(!peer.document.isDirty && peer.bankDirty, cppID: id,
                       message: "shared bank edit marks observer bank dirty without dirtying its song")
         let late = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test2")
         }
-        report.expectEqual(edited, late.bankSlots.first?.voice,
+        report.expectEqual(expected: edited, actual: late.bankSlots.first?.voice,
                            cppID: id, what: "late subscriber catches up to the latest bank view")
-        report.expectEqual(true, late.bankDirty,
+        report.expectEqual(expected: true, actual: late.bankDirty,
                            cppID: id, what: "late subscriber catches up to dirty state")
     } catch {
         report.fail(id, "two-live-session bank edit failed: \(error)")
@@ -85,20 +85,20 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
         _ = try runBlocking {
             try await peer.applyBankEdit(slot: 1, value: peerEdit, expected: secondOriginal)
         }
-        report.expectEqual(peerEdit, first.bankSlots[1].voice, cppID: id,
+        report.expectEqual(expected: peerEdit, actual: first.bankSlots[1].voice, cppID: id,
                            what: "disjoint peer edit reaches the first session")
-        report.expectEqual(firstEdit, peer.bankSlots[0].voice, cppID: id,
+        report.expectEqual(expected: firstEdit, actual: peer.bankSlots[0].voice, cppID: id,
                            what: "first edit reaches the live peer")
         try runBlocking { _ = try await first.undo() }
-        report.expectEqual(firstOriginal, peer.bankSlots[0].voice, cppID: id,
+        report.expectEqual(expected: firstOriginal, actual: peer.bankSlots[0].voice, cppID: id,
                            what: "first undo reverts only its own slot")
-        report.expectEqual(peerEdit, first.bankSlots[1].voice, cppID: id,
+        report.expectEqual(expected: peerEdit, actual: first.bankSlots[1].voice, cppID: id,
                            what: "first undo retains the peer's disjoint edit")
         try runBlocking { _ = try await first.redo() }
         try runBlocking { _ = try await peer.undo() }
-        report.expectEqual(firstEdit, peer.bankSlots[0].voice, cppID: id,
+        report.expectEqual(expected: firstEdit, actual: peer.bankSlots[0].voice, cppID: id,
                            what: "peer undo preserves the other session's edit")
-        report.expectEqual(secondOriginal, first.bankSlots[1].voice, cppID: id,
+        report.expectEqual(expected: secondOriginal, actual: first.bankSlots[1].voice, cppID: id,
                            what: "peer undo restores only its own slot")
 
         guard let added = try peer.document.addNotes([
@@ -120,7 +120,7 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
             try await first.applyBankEdit(slot: 0, value: newer, expected: stale)
         }
         try runBlocking { _ = try await peer.undo() }
-        report.expectEqual(newer, peer.bankSlots[0].voice, cppID: id,
+        report.expectEqual(expected: newer, actual: peer.bankSlots[0].voice, cppID: id,
                            what: "same-slot stale peer undo cannot replace the newer edit")
         report.expect(peer.document.history.canUndo && peer.document.isDirty,
                       cppID: id, message: "stale bank command prunes without dropping document history")
@@ -143,7 +143,7 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
         _ = try runBlocking {
             try await first.applyBankEdit(slot: 0, value: afterClose, expected: newer)
         }
-        report.expectEqual(0, notifications, cppID: id,
+        report.expectEqual(expected: 0, actual: notifications, cppID: id,
                            what: "closed peer receives no old-binding bank notification")
     } catch {
         report.fail(id, "shared bank history/lifecycle check failed: \(error)")
@@ -197,11 +197,11 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         let sectionTwoAfter = try runBlocking {
             try await service.loadBank(voicegroupArg: "_shared_two")
         }
-        report.expectEqual(sectionTwoVoice, sectionTwoAfter.slots.first?.voice,
+        report.expectEqual(expected: sectionTwoVoice, actual: sectionTwoAfter.slots.first?.voice,
                            cppID: id, what: "editing one source section leaves the other live bank intact")
-        report.expectEqual(false, sectionTwoAfter.dirty, cppID: id,
+        report.expectEqual(expected: false, actual: sectionTwoAfter.dirty, cppID: id,
                            what: "independent section remains clean")
-        report.expectEqual(homeEdit, peer.bankSlots[0].voice,
+        report.expectEqual(expected: homeEdit, actual: peer.bankSlots[0].voice,
                            cppID: id, what: "section publication does not retarget the home bank")
 
         try runBlocking { try await first.selectVoicegroup("_fixture_alt") }
@@ -214,11 +214,11 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         _ = try runBlocking {
             try await peer.applyBankEdit(slot: 0, value: homeEdit, expected: peer.bankSlots[0].voice)
         }
-        report.expectEqual(alternate, first.bankSlots.first?.voice,
+        report.expectEqual(expected: alternate, actual: first.bankSlots.first?.voice,
                            cppID: id, what: "rebound subscriber stays on its alternate bank")
-        report.expectEqual(0, staleCallbacks, cppID: id,
+        report.expectEqual(expected: 0, actual: staleCallbacks, cppID: id,
                            what: "old home bank does not notify the rebound subscriber")
-        report.expectEqual(homeEdit, peer.bankSlots.first?.voice,
+        report.expectEqual(expected: homeEdit, actual: peer.bankSlots.first?.voice,
                            cppID: id, what: "home peer keeps its own bank publication")
 
         let otherRoot = stageTestProject(in: fixtureRoot, projectName: "swiftcore-shared-other-project")
@@ -236,7 +236,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         _ = try runBlocking {
             try await other.applyBankEdit(slot: 0, value: otherEdit, expected: otherOriginal)
         }
-        report.expectEqual(homeEdit, peer.bankSlots.first?.voice, cppID: id,
+        report.expectEqual(expected: homeEdit, actual: peer.bankSlots.first?.voice, cppID: id,
                            what: "same relative path in a different store never changes the home view")
         report.expect(peer.bankLease.publicationOwner != other.bankLease.publicationOwner,
                       cppID: id, message: "different project stores stamp distinct publication owners")
@@ -249,7 +249,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
             try await DocumentSession.open(service: service, label: "mus_session_test")
         }
         service.bankViews.publish(oldView)
-        report.expectEqual(otherOriginal, replacement.bankSlots.first?.voice,
+        report.expectEqual(expected: otherOriginal, actual: replacement.bankSlots.first?.voice,
                            cppID: id, what: "replaced-store receipt cannot overwrite current project")
         do {
             _ = try runBlocking {
@@ -258,21 +258,21 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
             }
             report.fail(id, "old store lease must not edit the replacement project")
         } catch let error as ProjectServiceError {
-            report.expectEqual(.serviceClosed, error, cppID: id,
+            report.expectEqual(expected: .serviceClosed, actual: error, cppID: id,
                                what: "old store lease is refused by the replacement service")
         }
-        report.expectEqual(otherOriginal, replacement.bankSlots.first?.voice,
+        report.expectEqual(expected: otherOriginal, actual: replacement.bankSlots.first?.voice,
                            cppID: id, what: "refused old-store edit leaves the replacement bank unchanged")
         let storedReplacement = try runBlocking {
             try await service.loadBank(voicegroupArg: "_test_vg")
         }
-        report.expectEqual(otherOriginal, storedReplacement.slots.first?.voice,
+        report.expectEqual(expected: otherOriginal, actual: storedReplacement.slots.first?.voice,
                            cppID: id, what: "refused old-store edit leaves the native store unchanged")
-        report.expectEqual(false, storedReplacement.dirty, cppID: id,
+        report.expectEqual(expected: false, actual: storedReplacement.dirty, cppID: id,
                            what: "refused old-store edit does not dirty the replacement source")
         try runBlocking { await service.close() }
         service.bankViews.publish(oldView)
-        report.expectEqual(otherOriginal, replacement.bankSlots.first?.voice,
+        report.expectEqual(expected: otherOriginal, actual: replacement.bankSlots.first?.voice,
                            cppID: id, what: "closed service cannot publish a prior project's bank")
     } catch {
         report.fail(id, "shared-bank binding identity check failed: \(error)")
@@ -324,7 +324,7 @@ internal func bankSharedFailedSaveAndStaleReceipt(report: CheckReport, fixtureRo
         } catch {
             report.expect(!first.bankDirty && !peer.bankDirty,
                           cppID: id, message: "completed bank stage cleans both peers despite MIDI failure")
-            report.expectEqual(edited, peer.bankSlots.first?.voice, cppID: id,
+            report.expectEqual(expected: edited, actual: peer.bankSlots.first?.voice, cppID: id,
                                what: "peer receives the saved bank voice despite MIDI failure")
             report.expect(first.document.isDirty && !peer.document.isDirty,
                           cppID: id, message: "failed later stage does not clean the song")
@@ -339,7 +339,7 @@ internal func bankSharedFailedSaveAndStaleReceipt(report: CheckReport, fixtureRo
             try await peer.applyBankEdit(slot: 0, value: newer, expected: edited)
         }
         service.bankViews.publish(olderSavedView)
-        report.expectEqual(newer, first.bankSlots.first?.voice, cppID: id,
+        report.expectEqual(expected: newer, actual: first.bankSlots.first?.voice, cppID: id,
                            what: "older completed bank-save view cannot replace the peer's later edit")
         report.expect(first.bankDirty && peer.bankDirty, cppID: id,
                       message: "older clean receipt cannot clean a newer unsaved bank edit")
@@ -431,7 +431,7 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
         _ = try runBlocking {
             try await background.applyBankEdit(slot: 0, value: noise, expected: original)
         }
-        report.expectEqual(noise, first.bankSlots.first?.voice, cppID: id,
+        report.expectEqual(expected: noise, actual: first.bankSlots.first?.voice, cppID: id,
                            what: "selected model receives the background bank edit")
         guard let noiseChannel = soundingChannel() else {
             report.fail(id, "background noise edit did not produce selected native CGB telemetry")
@@ -459,13 +459,13 @@ internal func bankReleaseBoundsAndSharedBank(report: CheckReport, session: Docum
             try await session.applyBankEdit(slot: 0, value: adjacent,
                                             expected: adjacentOriginal)
         }
-        report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
+        report.expectEqual(expected: adjacent.release, actual: session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit reaches the production bank view")
-        report.expectEqual(true, session.bankDirty,
+        report.expectEqual(expected: true, actual: session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit dirties the bank")
-        report.expectEqual(documentWasDirty, session.document.isDirty,
+        report.expectEqual(expected: documentWasDirty, actual: session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit does not dirty the document")
 
@@ -475,13 +475,13 @@ internal func bankReleaseBoundsAndSharedBank(report: CheckReport, session: Docum
             try await session.applyBankEdit(slot: 0, value: lower,
                                             expected: session.bankSlots[0].voice)
         }
-        report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
+        report.expectEqual(expected: Int32(0), actual: session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower release bound reaches the production bank view")
-        report.expectEqual(true, session.bankDirty,
+        report.expectEqual(expected: true, actual: session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower-bound bank edit dirties the bank")
-        report.expectEqual(documentWasDirty, session.document.isDirty,
+        report.expectEqual(expected: documentWasDirty, actual: session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower-bound bank edit does not dirty the document")
 
@@ -490,26 +490,26 @@ internal func bankReleaseBoundsAndSharedBank(report: CheckReport, session: Docum
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: upper, expected: lower)
         }
-        report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
+        report.expectEqual(expected: Int32(255), actual: session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper release bound reaches the production bank view")
-        report.expectEqual(true, session.bankDirty,
+        report.expectEqual(expected: true, actual: session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper-bound bank edit dirties the bank")
-        report.expectEqual(documentWasDirty, session.document.isDirty,
+        report.expectEqual(expected: documentWasDirty, actual: session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper-bound bank edit does not dirty the document")
 
         let switched = try runBlocking {
             try await service.openSong(label: "mus_session_test2")
         }
-        report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
+        report.expectEqual(expected: session.bankLease.bankToken, actual: switched.bank.bankToken,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "opening another song reuses the unsaved shared-bank record")
-        report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
+        report.expectEqual(expected: Int32(255), actual: switched.bankSlots[0].voice?.release,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "another song publishes the unsaved shared-bank edit")
-        report.expectEqual(true, switched.bankDirty,
+        report.expectEqual(expected: true, actual: switched.bankDirty,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "another song preserves shared-bank dirty state")
     } catch {
@@ -559,14 +559,14 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
             }
         }
         report.expectEqual(
-            ProjectServiceError.operationFailed("A bank transition is already in progress."),
-            result.1,
+            expected: ProjectServiceError.operationFailed("A bank transition is already in progress."),
+            actual: result.1,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "session gate refuses a second transition while the first is pending")
-        report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
+        report.expectEqual(expected: firstVoice, actual: coordinatorSession.bankSlots[0].voice,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                            what: "coordinator publishes only the applied transition")
-        report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
+        report.expectEqual(expected: result.0.lease.bankToken, actual: coordinatorSession.bankLease.bankToken,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                            what: "coordinator adopts the applied transition lease")
     } catch {

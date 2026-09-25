@@ -15,7 +15,7 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
         return
     }
     let page = fixture.page
-    report.expectEqual(3, fixture.handles.count, cppID: drawerVelocityProjectionID,
+    report.expectEqual(expected: 3, actual: fixture.handles.count, cppID: drawerVelocityProjectionID,
                        what: "every note of the primary track publishes one handle")
     guard let firstHandle = fixture.handle(notes[0]),
           let thirdHandle = fixture.handle(notes[2])
@@ -26,7 +26,7 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let openingMap = VelocityMap(voiceKind: .square1)
     report.expect(!firstHandle.selected, cppID: drawerVelocityProjectionID,
                   message: "a fresh selection publishes no selected handle")
-    report.expectEqual(openingMap.level(of: Int(notes[0].velocity)) ?? -1, firstHandle.level,
+    report.expectEqual(expected: openingMap.level(of: Int(notes[0].velocity)) ?? -1, actual: firstHandle.level,
                        cppID: drawerVelocityProjectionID,
                        what: "an intrinsic handle publishes the level of its displayed value")
     report.expect(abs(firstHandle.x - page.axisModel.geometry.labelWidth - 56) < 1.0
@@ -54,11 +54,11 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     VelocityGesturePolicy.applyRelative(&gesture, y: axis.velocityToY(30))
     report.expect(gesture.relativeActivated, cppID: drawerVelocityGestureID,
                   message: "leaving the activation distance arms the relative drag")
-    report.expectEqual(30, Int(gesture.preview[NoteID(1)] ?? 0), cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 30, actual: Int(gesture.preview[NoteID(1)] ?? 0), cppID: drawerVelocityGestureID,
                        what: "the low note takes the whole delta")
-    report.expectEqual(127, Int(gesture.preview[NoteID(2)] ?? 0), cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 127, actual: Int(gesture.preview[NoteID(2)] ?? 0), cppID: drawerVelocityGestureID,
                        what: "the high note clamps to the maximum instead of wrapping")
-    report.expectEqual(2, VelocityGesturePolicy.updates(gesture).count, cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 2, actual: VelocityGesturePolicy.updates(gesture).count, cppID: drawerVelocityGestureID,
                        what: "the commit payload carries one update per frozen note")
 
     let psgMap = VelocityMap(voiceKind: .square1)
@@ -75,16 +75,16 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
         axis: psgAxis, detentUnlock: false, activationDistance: 1, pressX: 0,
         pressY: psgAxis.levelToY(7))
     VelocityGesturePolicy.applyRelative(&psgGesture, y: psgAxis.levelToY(9))
-    report.expectEqual(Int(psgMap.representative(9)), Int(psgGesture.preview[NoteID(3)] ?? 0),
+    report.expectEqual(expected: Int(psgMap.representative(9)), actual: Int(psgGesture.preview[NoteID(3)] ?? 0),
                        cppID: drawerVelocityGestureID, what: "the first level follows the level delta")
-    report.expectEqual(Int(psgMap.representative(11)), Int(psgGesture.preview[NoteID(4)] ?? 0),
+    report.expectEqual(expected: Int(psgMap.representative(11)), actual: Int(psgGesture.preview[NoteID(4)] ?? 0),
                        cppID: drawerVelocityGestureID, what: "the second level keeps its own offset")
-    report.expectEqual(127,
+    report.expectEqual(expected: 127, actual: 
                        Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
                                                                   detentUnlock: true, y: 0)),
                        cppID: drawerVelocityGestureID,
                        what: "the detent unlock takes exact MIDI velocity")
-    report.expectEqual(Int(psgMap.canonicalize(76)),
+    report.expectEqual(expected: Int(psgMap.canonicalize(76)), actual: 
                        Int(VelocityGesturePolicy.resolvedVelocity(axis: psgAxis, noteMap: psgMap,
                                                                   detentUnlock: false,
                                                                   y: psgAxis.levelToY(9))),
@@ -101,19 +101,19 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let painted = VelocityGesturePolicy.paint(
         axis: axis, detentUnlock: false, candidates: candidates, from: (0, 100), to: (95, 40),
         hitRadius: 5)
-    report.expectEqual(2, painted.count, cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 2, actual: painted.count, cppID: drawerVelocityGestureID,
                        what: "the sweep covers every node the column reaches")
     report.expect(painted[0].velocity < painted[1].velocity, cppID: drawerVelocityGestureID,
                   message: "the painted ramp follows the swept line's own direction")
     let partial = VelocityGesturePolicy.paint(
         axis: axis, detentUnlock: false, candidates: candidates, from: (0, 100), to: (50, 40),
         hitRadius: 5)
-    report.expectEqual(1, partial.count, cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 1, actual: partial.count, cppID: drawerVelocityGestureID,
                        what: "a sweep that stops short leaves the far node alone")
     let singleColumn = VelocityGesturePolicy.paint(
         axis: axis, detentUnlock: false, candidates: candidates, from: (10, 100), to: (10, 60),
         hitRadius: 5)
-    report.expectEqual(1, singleColumn.count, cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 1, actual: singleColumn.count, cppID: drawerVelocityGestureID,
                        what: "a stationary paint only takes the nodes in its own column")
 
     let midpoint = VelocityFrozenNote(noteID: NoteID(7), tick: 24, duration: 24, pitch: 60,
@@ -125,11 +125,11 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     VelocityGesturePolicy.applyRamp(&ramp, x: 50, y: axis.velocityToY(50), hitRadius: 5) { note in
         note.tick == 0 ? 10 : note.tick == 24 ? 30 : 90
     }
-    report.expectEqual(100, Int(ramp.preview[NoteID(5)] ?? 0), cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 100, actual: Int(ramp.preview[NoteID(5)] ?? 0), cppID: drawerVelocityGestureID,
                        what: "the note at the press position keeps the press velocity")
-    report.expectEqual(75, Int(ramp.preview[NoteID(7)] ?? 0), cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 75, actual: Int(ramp.preview[NoteID(7)] ?? 0), cppID: drawerVelocityGestureID,
                        what: "a note inside the ramp span takes the swept line's value")
-    report.expectEqual(40, Int(ramp.preview[NoteID(6)] ?? 0), cppID: drawerVelocityGestureID,
+    report.expectEqual(expected: 40, actual: Int(ramp.preview[NoteID(6)] ?? 0), cppID: drawerVelocityGestureID,
                        what: "a note outside the ramp span keeps its captured velocity")
     // The commit payload is what the preview really changes: a gesture whose
     // preview resolves every note back to the value frozen at gesture start

@@ -15,26 +15,26 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "a prompt opens on a written node")
     report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID,
                   message: "an open prompt marks the page interacting")
-    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: drawerAutomationPromptID,
                        what: "opening a prompt writes nothing")
-    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
+    report.expectEqual(expected: 1, actual: fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
                        cppID: drawerAutomationPromptID, what: "opening a prompt leaves the lane alone")
     report.expect(!fixture.page.acceptPrompt(displayedValue: 0), cppID: drawerAutomationPromptID,
                   message: "accepting the unchanged value commits nothing")
-    report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: drawerAutomationPromptID,
                        what: "a no-op acceptance writes nothing")
     report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
                   message: "the prompt reopens")
     report.expect(fixture.page.acceptPrompt(displayedValue: 10), cppID: drawerAutomationPromptID,
                   message: "accepting a changed value commits once")
-    report.expectEqual(["24:74", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: ["24:74", "120:40"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
                        what: "the displayed value maps back through the prompt's offset")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: drawerAutomationPromptID,
                        what: "one acceptance is one document revision")
-    report.expectEqual(1, fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
+    report.expectEqual(expected: 1, actual: fixture.lanePoints(fixture.panLane).count(where: { $0.tick == 24 }),
                        cppID: drawerAutomationPromptID, what: "a value replacement keeps one occurrence at the tick")
     report.expect(fixture.undo(), cppID: drawerAutomationPromptID, message: "the acceptance is undoable")
-    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: ["24:64", "120:40"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationPromptID,
                        what: "one undo restores the lane's values")
     report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationPromptID,
                   message: "one undo consumes the acceptance's single history entry")
@@ -44,21 +44,21 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "a prompt opens on an empty tick")
     report.expect(fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
                   message: "the empty-tick prompt commits its insertion")
-    report.expectEqual(["24:64", "48:40", "120:40"], fixture.values(fixture.panLane),
+    report.expectEqual(expected: ["24:64", "48:40", "120:40"], actual: fixture.values(fixture.panLane),
                        cppID: drawerAutomationPromptID, what: "the insertion lands at the captured tick")
     let revisionAfterInsert = fixture.document.revision
     report.expect(fixture.page.openPrompt(tick: 48, value: 40), cppID: drawerAutomationPromptID,
                   message: "a prompt reopens on the inserted tick")
     report.expect(!fixture.page.acceptPrompt(displayedValue: -24), cppID: drawerAutomationPromptID,
                   message: "re-inserting an existing point changes nothing")
-    report.expectEqual(revisionAfterInsert, fixture.document.revision, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: revisionAfterInsert, actual: fixture.document.revision, cppID: drawerAutomationPromptID,
                        what: "a duplicate insertion writes no revision")
 
     // Cancellation writes nothing and ends the interaction.
     let beforeCancel = fixture.snapshot
     _ = fixture.page.openPrompt(tick: 24, value: 64)
     fixture.page.cancelSectionInteraction()
-    report.expectEqual(beforeCancel, fixture.snapshot, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: beforeCancel, actual: fixture.snapshot, cppID: drawerAutomationPromptID,
                        what: "cancelling a prompt commits nothing")
     report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID,
                   message: "cancelling drops the prompt and the interaction")
@@ -71,9 +71,9 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "Tempo opens the same prompt on its written point")
     report.expect(tempoFixture.page.acceptPrompt(displayedValue: 150), cppID: drawerAutomationPromptID,
                   message: "Tempo commits its prompt")
-    report.expectEqual(["0:150"], tempoFixture.tempoValues, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: ["0:150"], actual: tempoFixture.tempoValues, cppID: drawerAutomationPromptID,
                        what: "the tempo point stores the prompted BPM")
-    report.expectEqual(tempoBefore.revision + 1, tempoFixture.document.revision, cppID: drawerAutomationPromptID,
+    report.expectEqual(expected: tempoBefore.revision + 1, actual: tempoFixture.document.revision, cppID: drawerAutomationPromptID,
                        what: "Tempo's acceptance is one revision")
     report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
                   message: "one undo restores Tempo's stored microseconds")
@@ -82,7 +82,7 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
     report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "the prompt reopens for the Escape route")
     report.expect(fixture.page.handleEscape(), cppID: drawerAutomationPromptID, message: "Escape claims the open prompt")
     report.expect(!fixture.page.hasPrompt && !fixture.page.interactionActive, cppID: drawerAutomationPromptID, message: "Escape drops the prompt and the interaction")
-    report.expectEqual(escapeBefore, fixture.snapshot, cppID: drawerAutomationPromptID, what: "Escape cancellation writes nothing")
+    report.expectEqual(expected: escapeBefore, actual: fixture.snapshot, cppID: drawerAutomationPromptID, what: "Escape cancellation writes nothing")
 }
 
 @MainActor
@@ -105,12 +105,12 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
     }?.enabled == true, cppID: id, message: "the point menu enables Delete on a written node")
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                   cppID: id, message: "the Delete row is consumed")
-    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["120:40"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "Delete removes the targeted node and keeps the other")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "one Delete is one revision")
     report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
-    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:64", "120:40"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the deleted node")
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the Delete recorded exactly one history entry")
@@ -131,9 +131,9 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
     report.expect(!stale.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
                   message: "a stale point menu cannot delete its target")
-    report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
+    report.expectEqual(expected: rewritten, actual: stale.snapshot, cppID: staleID,
                        what: "the rejected Delete leaves the rewritten lane intact")
-    report.expectEqual(["24:64", "120:40", "168:5"], stale.values(stale.panLane), cppID: staleID,
+    report.expectEqual(expected: ["24:64", "120:40", "168:5"], actual: stale.values(stale.panLane), cppID: staleID,
                        what: "the rejected Delete preserves the rewritten points")
 }
 
@@ -144,19 +144,19 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                     pan: [(24, 30), (24, 90)])
     fixture.activate(fixture.panLane)
-    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:30", "24:90"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "both duplicate occurrences stage")
     let before = fixture.snapshot
     report.expect(fixture.page.openPrompt(tick: 24, value: 30), cppID: id,
                   message: "a prompt opens on the duplicate tick")
     report.expect(fixture.page.acceptPrompt(displayedValue: -14), cppID: id,
                   message: "the duplicate value commits")
-    report.expectEqual(["24:30", "24:50"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:30", "24:50"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "only the targeted duplicate occurrence moves")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "one duplicate acceptance is one revision")
     report.expect(fixture.undo(), cppID: id, message: "the duplicate acceptance undoes")
-    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:30", "24:90"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores both duplicate occurrences")
 
     let switchID = "automation/AutomationEditingTest::parameterSwitchInvalidatesValuePrompt"
@@ -172,11 +172,11 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
                   message: "Tempo opens its own prompt")
     report.expect(switched.page.acceptPrompt(displayedValue: 150), cppID: switchID,
                   message: "Tempo commits its prompt")
-    report.expectEqual(["0:150"], switched.tempoValues, cppID: switchID,
+    report.expectEqual(expected: ["0:150"], actual: switched.tempoValues, cppID: switchID,
                        what: "the tempo point stores the prompted BPM")
-    report.expectEqual(["24:64"], switched.values(switched.panLane), cppID: switchID,
+    report.expectEqual(expected: ["24:64"], actual: switched.values(switched.panLane), cppID: switchID,
                        what: "the CC lane stays untouched")
-    report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
+    report.expectEqual(expected: tempoBefore.revision + 1, actual: switched.document.revision, cppID: switchID,
                        what: "Tempo's acceptance is one revision")
     let routed = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     routed.activate(routed.panLane)
@@ -187,7 +187,7 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
     report.expect(routed.page.publishedMenuRows.first { $0.actionId == AutomationMenuAction.setValue.rawValue }?.enabled == true, cppID: id, message: "the point menu enables Set Value on a written node")
     report.expect(routed.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue), cppID: id, message: "the Set Value row is consumed")
     report.expect(routed.page.promptOpen, cppID: id, message: "the Set Value pick opens the value prompt")
-    report.expectEqual(AutomationPromptKind.value.rawValue, routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
+    report.expectEqual(expected: AutomationPromptKind.value.rawValue, actual: routed.page.promptKind, cppID: id, what: "the Set Value pick opens the value form")
     report.expect(routed.page.interactionActive, cppID: id, message: "the open value prompt marks the page interacting")
     report.expect(!routed.page.promptDraft.isEmpty, cppID: id, message: "the value prompt carries its initial draft")
     routed.page.cancelPrompt()
@@ -208,21 +208,21 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
                   cppID: id, message: "the lane menu opens")
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
                   cppID: id, message: "the Delete events row is consumed")
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
+    report.expectEqual(expected: AutomationPromptKind.confirmLaneDelete.rawValue, actual: page.promptKind, cppID: id,
                        what: "the row opens the delete confirmation")
     report.expect(page.promptMessage.contains("2 written events"), cppID: id,
                   message: "the confirmation names the written count")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "opening the confirmation writes nothing")
     report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
-    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: [String](), actual: fixture.values(fixture.panLane), cppID: id,
                        what: "accept removes only the target lane")
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "the volume lane is preserved")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "one acceptance is one revision")
     report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
-    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:60", "120:40"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the target lane")
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the acceptance recorded exactly one history entry")
@@ -233,7 +233,7 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
     let cancelBefore = fixture.snapshot
     page.cancelPrompt()
     report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
-    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
+    report.expectEqual(expected: cancelBefore, actual: fixture.snapshot, cppID: cancelID,
                        what: "cancelling leaves document and history untouched")
 
     let staleID = "automation/AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget"
@@ -244,9 +244,9 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
     let rewritten = fixture.snapshot
     report.expect(!page.acceptPromptDraft(), cppID: staleID,
                   message: "a stale confirmation cannot delete its target")
-    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
+    report.expectEqual(expected: rewritten, actual: fixture.snapshot, cppID: staleID,
                        what: "the rejected confirmation leaves the rewritten lane intact")
-    report.expectEqual(["24:60", "120:40", "168:5"], fixture.values(fixture.panLane),
+    report.expectEqual(expected: ["24:60", "120:40", "168:5"], actual: fixture.values(fixture.panLane),
                        cppID: staleID,
                        what: "the rejected confirmation preserves the rewritten points")
 
@@ -265,7 +265,7 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
                   message: "the disabled row is refused")
     report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
                   message: "no confirmation opens for the eventless lane")
-    report.expectEqual(syntheticBefore, synthetic.snapshot, cppID: syntheticID,
+    report.expectEqual(expected: syntheticBefore, actual: synthetic.snapshot, cppID: syntheticID,
                        what: "the refused row writes nothing")
 
     let countID = "automation/AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic"
@@ -281,23 +281,23 @@ func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: Docume
                   message: "the confirmation counts written events only")
     report.expect(single.page.acceptPromptDraft(), cppID: countID,
                   message: "the confirmation accepts")
-    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
+    report.expectEqual(expected: [String](), actual: single.values(single.volumeLane), cppID: countID,
                        what: "accept removes the written event")
     report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
                   message: "the volume parameter remains in the catalog")
     report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
-    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
+    report.expectEqual(expected: ["48:70"], actual: single.values(single.volumeLane), cppID: countID,
                        what: "undo restores the written event")
     _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
     _ = page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue)
-    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
+    report.expectEqual(expected: AutomationPromptKind.confirmLaneDelete.rawValue, actual: page.promptKind, cppID: id, what: "the reopened row owns the delete confirmation")
     report.expect(page.promptOpen, cppID: id, message: "the delete confirmation is open")
     report.expect(page.interactionActive, cppID: id, message: "the open confirmation marks the page interacting")
     let escapeID = "automation/AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched"
     let confirmationEscapeBefore = fixture.snapshot
     report.expect(page.handleEscape(), cppID: escapeID, message: "Escape claims the open confirmation")
     report.expect(!page.promptOpen && !page.interactionActive, cppID: escapeID, message: "Escape drops the confirmation and the interaction")
-    report.expectEqual(confirmationEscapeBefore, fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
+    report.expectEqual(expected: confirmationEscapeBefore, actual: fixture.snapshot, cppID: escapeID, what: "Escape cancellation writes nothing")
 }
 
 @MainActor
@@ -320,7 +320,7 @@ func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: Document
                   message: "an outside right press on another node retargets the menu")
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                   cppID: id, message: "the retargeted Delete row is consumed")
-    report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:64"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "the retargeted Delete removes the second node only")
     report.expect(fixture.undo(), cppID: id, message: "the retargeted Delete undoes")
 
@@ -335,7 +335,7 @@ func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: Document
     report.expect(!page.menuOpen, cppID: id, message: "the miss closes the shared menu")
     report.expect(!page.pointerRelease(x: fixture.x(168), y: 60, button: AutomationQtButton.right),
                   cppID: id, message: "the paired release claims no band")
-    report.expectEqual(missBefore, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: missBefore, actual: fixture.snapshot, cppID: id,
                        what: "the dismissed menu writes nothing")
     let foreignID = "automation/AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives"
     _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64), surface: 1, button: AutomationQtButton.right)
@@ -345,5 +345,5 @@ func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: Document
     let menuEscapeBefore = fixture.snapshot
     report.expect(page.handleEscape(), cppID: foreignID, message: "Escape claims the open point menu")
     report.expect(!page.menuOpen, cppID: foreignID, message: "Escape closes the open point menu")
-    report.expectEqual(menuEscapeBefore, fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")
+    report.expectEqual(expected: menuEscapeBefore, actual: fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")
 }

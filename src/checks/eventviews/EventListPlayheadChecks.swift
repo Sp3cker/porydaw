@@ -157,7 +157,7 @@ private func tintLastOfRun(_ report: CheckReport, suite: DocumentSession,
         let expected = playheadRowOracle(rows, tick: tick)
         fixture.presenter.setPlayheadTick(tick: tick, playing: true)
         // A003: controller playRow follows the independent row oracle.
-        report.expectEqual(expected, fixture.presenter.playRow, cppID: tintLastOfRunID,
+        report.expectEqual(expected: expected, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
                            what: "A003 \(explanation) at tick \(tick)")
         // A004: only one complete row has the playhead tint, with the stable bridge color.
         report.expect(tintedRows(fixture.presenter) == (expected >= 0 ? [expected] : [])
@@ -168,7 +168,7 @@ private func tintLastOfRun(_ report: CheckReport, suite: DocumentSession,
 
     fixture.presenter.setPlayheadTick(tick: -1, playing: false)
     // A005: a negative transport tick clears the published play row.
-    report.expectEqual(-1, fixture.presenter.playRow, cppID: tintLastOfRunID,
+    report.expectEqual(expected: -1, actual: fixture.presenter.playRow, cppID: tintLastOfRunID,
                        what: "A005 negative tick clears playRow")
     // A006: clearing playRow clears every presenter/model tint.
     report.expect(tintedRows(fixture.presenter).isEmpty
@@ -195,12 +195,12 @@ private func focusCommitsCursor(_ report: CheckReport, suite: DocumentSession,
 
     fixture.presenter.focusRow(row: eventRow)
     // A010: focusing an event commits its tick to the session edit cursor.
-    report.expectEqual(Tick(70), fixture.session.editCursor, cppID: focusCommitsCursorID,
+    report.expectEqual(expected: Tick(70), actual: fixture.session.editCursor, cppID: focusCommitsCursorID,
                        what: "A010 focusing NoteOn commits tick 70")
 
     fixture.presenter.focusRow(row: fixture.presenter.rowCount - 1)
     // A011: focusing the sentinel commits the chunk end tick.
-    report.expectEqual(Tick(120), fixture.session.editCursor, cppID: focusCommitsCursorID,
+    report.expectEqual(expected: Tick(120), actual: fixture.session.editCursor, cppID: focusCommitsCursorID,
                        what: "A011 focusing EOT commits end tick 120")
 }
 
@@ -232,7 +232,7 @@ private func focusedSiblingWins(_ report: CheckReport, suite: DocumentSession,
     fixture.presenter.focusRow(row: first)
     fixture.presenter.setPlayheadTick(tick: 60, playing: false)
     // A016: the focused first sibling wins exact-tick snapping.
-    report.expectEqual(first, fixture.presenter.playRow, cppID: focusedSiblingWinsID,
+    report.expectEqual(expected: first, actual: fixture.presenter.playRow, cppID: focusedSiblingWinsID,
                        what: "A016 focused first sibling wins at tick 60")
     // A017: tint follows the focused first sibling.
     report.expect(tintedRows(fixture.presenter) == [first]
@@ -241,12 +241,12 @@ private func focusedSiblingWins(_ report: CheckReport, suite: DocumentSession,
 
     fixture.presenter.setPlayheadTick(tick: 59.999, playing: false)
     // A018: the same focused sibling wins within the half-tick tolerance.
-    report.expectEqual(first, fixture.presenter.playRow, cppID: focusedSiblingWinsID,
+    report.expectEqual(expected: first, actual: fixture.presenter.playRow, cppID: focusedSiblingWinsID,
                        what: "A018 focused first sibling wins within 0.5 tick")
 
     fixture.presenter.focusRow(row: sibling)
     // A019: moving focus to the sibling moves the play row immediately.
-    report.expectEqual(sibling, fixture.presenter.playRow, cppID: focusedSiblingWinsID,
+    report.expectEqual(expected: sibling, actual: fixture.presenter.playRow, cppID: focusedSiblingWinsID,
                        what: "A019 focusing sibling moves playRow")
     // A020: tint follows the newly focused sibling.
     report.expect(tintedRows(fixture.presenter) == [sibling]
@@ -263,7 +263,7 @@ private func focusedSiblingWins(_ report: CheckReport, suite: DocumentSession,
     fixture.presenter.setPlayheadTick(tick: 60, playing: false)
     let expected = playheadRowOracle(fixture.presenter.model.rows, tick: 60)
     // A022: once an unrelated row is focused, the ordinary oracle wins.
-    report.expectEqual(expected, fixture.presenter.playRow, cppID: focusedSiblingWinsID,
+    report.expectEqual(expected: expected, actual: fixture.presenter.playRow, cppID: focusedSiblingWinsID,
                        what: "A022 unrelated focus restores ordinary row oracle")
     // A023: the ordinary oracle row is the only tinted row.
     report.expect(tintedRows(fixture.presenter) == [expected]
@@ -291,7 +291,7 @@ private func samplePathAndProgrammaticRestore(_ report: CheckReport, suite: Docu
     let rows = fixture.presenter.model.rows
     let endTick = rows.last?.tick ?? 0
     // A027: a fresh list starts without an edit-focused row.
-    report.expectEqual(-1, fixture.presenter.currentRow,
+    report.expectEqual(expected: -1, actual: fixture.presenter.currentRow,
                        cppID: samplePathAndProgrammaticRestoreID,
                        what: "A027 fresh list has no focused row")
 
@@ -299,7 +299,7 @@ private func samplePathAndProgrammaticRestore(_ report: CheckReport, suite: Docu
     fixture.presenter.setPlayheadTick(tick: 0, playing: false)
     let tickZero = playheadRowOracle(rows, tick: 0)
     // A028: direct programmatic tick updates use the row oracle without focus.
-    report.expectEqual(tickZero, fixture.presenter.playRow,
+    report.expectEqual(expected: tickZero, actual: fixture.presenter.playRow,
                        cppID: samplePathAndProgrammaticRestoreID,
                        what: "A028 programmatic tick zero uses the oracle row")
     // A029: programmatic restoration updates whole-row tint with the same oracle row.
@@ -316,7 +316,7 @@ private func samplePathAndProgrammaticRestore(_ report: CheckReport, suite: Docu
 
     fixture.presenter.focusRow(row: focused)
     // A031: focus commits the edit cursor before the document mutation.
-    report.expectEqual(Tick(70), fixture.session.editCursor,
+    report.expectEqual(expected: Tick(70), actual: fixture.session.editCursor,
                        cppID: samplePathAndProgrammaticRestoreID,
                        what: "A031 focused row commits edit cursor tick 70")
     let cursorBefore = fixture.session.editCursor
@@ -324,13 +324,13 @@ private func samplePathAndProgrammaticRestore(_ report: CheckReport, suite: Docu
         chunk: 0,
         event: .channel(tick: endTick + 50, status: 0xB0, data0: 7, data1: 64))
     // A032: the document publication/rebuild leaves the cursor untouched.
-    report.expectEqual(cursorBefore, fixture.session.editCursor,
+    report.expectEqual(expected: cursorBefore, actual: fixture.session.editCursor,
                        cppID: samplePathAndProgrammaticRestoreID,
                        what: "A032 insert preserves edit cursor")
 
     _ = fixture.session.document.history.undoDocument()
     // A033: undo publication also leaves the cursor untouched.
-    report.expectEqual(cursorBefore, fixture.session.editCursor,
+    report.expectEqual(expected: cursorBefore, actual: fixture.session.editCursor,
                        cppID: samplePathAndProgrammaticRestoreID,
                        what: "A033 undo preserves edit cursor")
 }
@@ -438,18 +438,18 @@ private func eventListRowsAndEditContract(_ report: CheckReport) {
         ],
     ]
     var model = EventListModel()
-    report.expectEqual(0, model.rowCount, cppID: rowsAndEditContractID,
+    report.expectEqual(expected: 0, actual: model.rowCount, cppID: rowsAndEditContractID,
                        what: "detached model has no EOT row")
     for (index, chunk) in file.chunks.enumerated() {
         model.setSource(chunk)
-        report.expectEqual(chunk.events.count + 1, model.rowCount,
+        report.expectEqual(expected: chunk.events.count + 1, actual: model.rowCount,
                            cppID: rowsAndEditContractID,
                            what: "shape \(index) has one EOT row after its events")
-        report.expectEqual(chunk.endTick, model.rowTick(row: chunk.events.count),
+        report.expectEqual(expected: chunk.endTick, actual: model.rowTick(row: chunk.events.count),
                            cppID: rowsAndEditContractID,
                            what: "shape \(index) EOT tick mirrors the chunk end")
-        report.expectEqual(expectedTypes[index] + [EventListEventType.endOfTrack.rawValue],
-                           model.rows.map(\.typeKind), cppID: rowsAndEditContractID,
+        report.expectEqual(expected: expectedTypes[index] + [EventListEventType.endOfTrack.rawValue],
+                           actual: model.rows.map(\.typeKind), cppID: rowsAndEditContractID,
                            what: "shape \(index) projects each event type and EOT")
         report.expect(model.rows.last?.isEndOfTrack == true
             && model.rows.dropLast().allSatisfy { !$0.isEndOfTrack },
@@ -491,13 +491,13 @@ private func eventListRowsAndEditContract(_ report: CheckReport) {
         && !model.validatesEdit(row: 3, column: 5, text: ""),
         cppID: rowsAndEditContractID, message: "data bytes and blob contents are validated")
     model.setPlayheadTick(36)
-    report.expectEqual(3, model.playRow, cppID: rowsAndEditContractID,
+    report.expectEqual(expected: 3, actual: model.playRow, cppID: rowsAndEditContractID,
                        what: "transport chooses the SysEx row")
     report.expect(model.rows.filter { model.rowTint(row: $0.index) != nil }.map(\.index) == [model.playRow]
         && model.rowTint(row: model.playRow) == EventListModel.playheadTint,
         cppID: rowsAndEditContractID, message: "exactly the playing row is tinted")
     model.detach()
-    report.expectEqual(0, model.rowCount, cppID: rowsAndEditContractID,
+    report.expectEqual(expected: 0, actual: model.rowCount, cppID: rowsAndEditContractID,
                        what: "detaching clears all rows")
 }
 
@@ -515,50 +515,50 @@ private func eventListRemapAnchorAndProjection(_ report: CheckReport, suite: Doc
     presenter.setChunk(index: 2)
     presenter.focusRow(row: 2)
     let initialCount = presenter.rowCount
-    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 2, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "initial chunk holds the focused event row")
 
     let moved = session.document.moveTrack(1, to: 0)
     report.expect(moved && remaps.last?.chunkMap[2] == 0,
                   cppID: remapAnchorAndProjectionID,
                   message: "moving the second track publishes its chunk remap")
-    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 0, actual: presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
                        what: "chunk anchor follows the move")
-    report.expectEqual(session.document.rawChunks[0].events.count + 1, presenter.rowCount,
+    report.expectEqual(expected: session.document.rawChunks[0].events.count + 1, actual: presenter.rowCount,
                        cppID: remapAnchorAndProjectionID,
                        what: "moved chunk projects its current event count and EOT")
-    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 2, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "document remap preserves in-range row focus")
 
     _ = session.document.history.undoDocument()
-    report.expectEqual(2, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 2, actual: presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
                        what: "undo restores the chunk anchor")
-    report.expectEqual(initialCount, presenter.rowCount, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: initialCount, actual: presenter.rowCount, cppID: remapAnchorAndProjectionID,
                        what: "undo restores the initial projection")
-    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 2, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "undo retains in-range row focus")
     _ = session.document.history.redoDocument()
-    report.expectEqual(0, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 0, actual: presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
                        what: "redo follows the moved chunk again")
-    report.expectEqual(session.document.rawChunks[0].events.count + 1, presenter.rowCount,
+    report.expectEqual(expected: session.document.rawChunks[0].events.count + 1, actual: presenter.rowCount,
                        cppID: remapAnchorAndProjectionID,
                        what: "redo rebuilds the moved chunk projection")
-    report.expectEqual(2, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 2, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "redo retains in-range row focus")
 
     presenter.setChunk(index: 1)
-    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: -1, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "explicit chunk switch resets row focus")
     presenter.focusRow(row: 2)
     session.document.deleteTrack(1)
     report.expect(remaps.last?.chunkMap[1] == .some(nil),
                   cppID: remapAnchorAndProjectionID,
                   message: "deletion publishes an unmapped original chunk")
-    report.expectEqual(-1, presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: -1, actual: presenter.chunkIndex, cppID: remapAnchorAndProjectionID,
                        what: "deleting the selected chunk clears its anchor")
-    report.expectEqual(0, presenter.rowCount, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: 0, actual: presenter.rowCount, cppID: remapAnchorAndProjectionID,
                        what: "deleted chunk has no projected rows")
-    report.expectEqual(-1, presenter.currentRow, cppID: remapAnchorAndProjectionID,
+    report.expectEqual(expected: -1, actual: presenter.currentRow, cppID: remapAnchorAndProjectionID,
                        what: "deleting the selected chunk clears row focus")
     _ = session.document.history.undoDocument()
     report.expect(presenter.chunkIndex == -1 && presenter.rowCount == 0

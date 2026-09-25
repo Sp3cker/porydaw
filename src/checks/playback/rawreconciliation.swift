@@ -14,7 +14,7 @@ internal func xcmdPairedReconciliation(_ report: CheckReport) {
         Xcmd.Relocation(index: 0, tick: 10, channel: 5),
         Xcmd.Relocation(index: 1, tick: 11, channel: 5),
     ], copying: [])
-    report.expectEqual([UInt64(0), 1], moved?.inserts.compactMap(\.sourceIndex),
+    report.expectEqual(expected: [UInt64(0), 1], actual: moved?.inserts.compactMap(\.sourceIndex),
                        cppID: "xcmdcheck/XcmdTest::wholeOpaqueRelocationIsByteExact",
                        what: "whole opaque epoch names original bytes")
 }

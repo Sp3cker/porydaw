@@ -23,7 +23,7 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
     let preSaveLoopStart = session.timeline.loopStartTick
     let preSaveLoopEnd = session.timeline.loopEndTick
     let preSaveGate60 = noteOffSample(session.timeline, key: 60)
-    report.expectEqual(Tick(72), preSaveLoopStart,
+    report.expectEqual(expected: Tick(72), actual: preSaveLoopStart,
                        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                        what: "the loop-start edit is present before save")
 
@@ -32,7 +32,7 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
         try runBlocking {
             try await session.save()
         }
-        report.expectEqual(false, session.document.isDirty,
+        report.expectEqual(expected: false, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "edited song save confirms clean state")
     } catch {
@@ -40,7 +40,7 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
                     "save failed: \(error)")
     }
     report.expectEqual(
-        otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+        expected: otherSongCfgBefore, actual: configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
         cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
         what: "save preserves the other song's complete midi.cfg line bytes")
 
@@ -59,19 +59,19 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
         _ = try session.document.addNotes([
             NewNote(track: 0, tick: identityTick, pitch: 74, duration: 24, velocity: 90),
         ])
-        report.expectEqual(true, session.document.isDirty,
+        report.expectEqual(expected: true, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "edit after save is dirty")
         _ = try runBlocking { try await session.undo() }
-        report.expectEqual(false, session.document.isDirty,
+        report.expectEqual(expected: false, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undo to the saved state is clean")
         _ = try runBlocking { try await session.redo() }
-        report.expectEqual(true, session.document.isDirty,
+        report.expectEqual(expected: true, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "redo away from the saved state is dirty")
         _ = try runBlocking { try await session.undo() }
-        report.expectEqual(false, session.document.isDirty,
+        report.expectEqual(expected: false, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "cleanup undo returns to the saved state")
     } catch {
@@ -87,41 +87,41 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
             try await DocumentSession.open(service: service, label: "mus_session_test",
                                            sampleRate: 48_000)
         }
-        report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
+        report.expectEqual(expected: UInt64(19_200), actual: reopened.timeline.sample(for: 24),
                            cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
                            what: "reopen reproduces saved authoritative 150 BPM timing")
-        report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+        report.expectEqual(expected: preSaveGate60, actual: noteOffSample(reopened.timeline, key: 60),
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                            what: "reopen reproduces settings-sensitive note-release timing")
-        report.expectEqual(preSaveFile, reopened.document.state.file,
+        report.expectEqual(expected: preSaveFile, actual: reopened.document.state.file,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "note and non-tempo metadata streams survive save/reopen")
-        report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+        report.expectEqual(expected: preSaveLoopStart, actual: reopened.timeline.loopStartTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-start marker survives save/reopen")
-        report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+        report.expectEqual(expected: preSaveLoopEnd, actual: reopened.timeline.loopEndTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-end marker survives save/reopen")
         let reopenedConfig = reopened.document.state.config
-        report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+        report.expectEqual(expected: preSaveConfig.rawFlags, actual: reopenedConfig.rawFlags,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "raw config flags survive save/reopen")
-        report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+        report.expectEqual(expected: preSaveConfig.voicegroupArgument, actual: reopenedConfig.voicegroupArgument,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "voicegroup argument survives save/reopen")
-        report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+        report.expectEqual(expected: preSaveConfig.masterVolume, actual: reopenedConfig.masterVolume,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "master volume survives save/reopen")
-        report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+        report.expectEqual(expected: preSaveConfig.reverb, actual: reopenedConfig.reverb,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "reverb survives save/reopen")
-        report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+        report.expectEqual(expected: preSaveConfig.priority, actual: reopenedConfig.priority,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "priority survives save/reopen")
-        report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+        report.expectEqual(expected: preSaveConfig.exactGate, actual: reopenedConfig.exactGate,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                            what: "exact-gate setting survives save/reopen")
-        report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+        report.expectEqual(expected: preSaveConfig.extendedClocks, actual: reopenedConfig.extendedClocks,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
                            what: "extended-clock setting survives save/reopen")
         let reopenedHasTempoMeta = reopened.document.state.file.chunks.contains { chunk in
@@ -130,7 +130,7 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
                 return false
             }
         }
-        report.expectEqual(false, reopenedHasTempoMeta,
+        report.expectEqual(expected: false, actual: reopenedHasTempoMeta,
                            cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
                            what: "tempo metas remain stripped while authoritative timing persists")
     } catch {
@@ -149,15 +149,15 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
             NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89),
         ])
         session.document.didSave(snapshot)
-        report.expectEqual(true, session.document.isDirty,
+        report.expectEqual(expected: true, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "stale snapshot completion leaves the newer document dirty")
         _ = try runBlocking { try await session.undo() }
-        report.expectEqual(true, session.document.isDirty,
+        report.expectEqual(expected: true, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undoing only the newer edit remains dirty")
         _ = try runBlocking { try await session.undo() }
-        report.expectEqual(false, session.document.isDirty,
+        report.expectEqual(expected: false, actual: session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undoing both post-save edits returns to the saved state")
     } catch {
@@ -176,7 +176,7 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
         report.expect(song1.bank.bankToken != 0,
                       cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                       message: "opened song has non-zero bank token")
-        report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
+        report.expectEqual(expected: song1.bank.bankToken, actual: song2.bank.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                            what: "songs sharing the same voicegroup reuse the native bank lease")
     } catch {
@@ -276,6 +276,6 @@ internal func savedMidiCompilesAfterDocumentSave(_ report: CheckReport, fixtureR
             pdc_check_compile_saved_midi(projectRoot, label)
         }
     }
-    report.expectEqual(Int32(1), compileResult, cppID: cppID,
+    report.expectEqual(expected: Int32(1), actual: compileResult, cppID: cppID,
                        what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 }

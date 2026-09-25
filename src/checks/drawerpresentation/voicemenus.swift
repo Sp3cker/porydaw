@@ -15,13 +15,13 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 2, modifiers: 0)
     report.expect(page.hasMenu && page.menuOpen, cppID: drawerVoiceMenuID,
                   message: "a right press on a marker opens the context menu")
-    report.expectEqual([VoiceChangesPagePolicy.changeVoiceAction,
-                        VoiceChangesPagePolicy.deleteMarkerAction],
+    report.expectEqual(expected: [VoiceChangesPagePolicy.changeVoiceAction,
+                        VoiceChangesPagePolicy.deleteMarkerAction], actual: 
                        page.menuRowActions, cppID: drawerVoiceMenuID,
                        what: "a marker target publishes the change and delete rows")
-    report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: target.text, actual: page.menuTargetIdentity, cppID: drawerVoiceMenuID,
                        what: "the menu captured the pressed occurrence")
-    report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 48, actual: page.menuTargetTick, cppID: drawerVoiceMenuID,
                        what: "the menu captured the marker's own tick")
     report.expect(page.interactionActive, cppID: drawerVoiceMenuID,
                   message: "an open menu reports an active interaction")
@@ -29,9 +29,9 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     // A camera scroll after the open neither drifts the capture nor closes it.
     fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
     report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "a camera scroll keeps the menu open")
-    report.expectEqual(target.text, page.menuTargetIdentity, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: target.text, actual: page.menuTargetIdentity, cppID: drawerVoiceMenuID,
                        what: "a camera scroll does not drift the captured identity")
-    report.expectEqual(48, page.menuTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 48, actual: page.menuTargetTick, cppID: drawerVoiceMenuID,
                        what: "a camera scroll does not drift the captured tick")
 
     // Outside dismissal writes nothing.
@@ -41,7 +41,7 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "the outside dismissal closes the menu")
     report.expect(!page.interactionActive, cppID: drawerVoiceMenuID,
                   message: "the dismissal releases the follow-scroll gate")
-    report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: baseline, actual: fixture.snapshot, cppID: drawerVoiceMenuID,
                        what: "the dismissal writes nothing")
 
     // The delete row removes exactly the captured occurrence.
@@ -50,26 +50,26 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
                   cppID: drawerVoiceMenuID, message: "the delete row deletes the captured marker")
     report.expect(VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints()) == nil,
                   cppID: drawerVoiceMenuID, message: "the deleted tick no longer holds a change")
-    report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: baseline.revision + 1, actual: fixture.snapshot.revision, cppID: drawerVoiceMenuID,
                        what: "the deletion is one revision")
     report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceMenuID,
                   message: "the deletion records one history entry")
-    report.expectEqual([0, 120], page.markerTicks, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: [0, 120], actual: page.markerTicks, cppID: drawerVoiceMenuID,
                        what: "the projection drops exactly the deleted marker")
 
     // An empty-lane target offers the insertion row, which hands the same
     // captured target to the picker.
     _ = page.pointerPress(x: fixture.markerX(96), y: 10, surface: 1, button: 2, modifiers: 0)
-    report.expectEqual([VoiceChangesPagePolicy.insertVoiceChangeAction], page.menuRowActions,
+    report.expectEqual(expected: [VoiceChangesPagePolicy.insertVoiceChangeAction], actual: page.menuRowActions,
                        cppID: drawerVoiceMenuID, what: "an empty-lane target publishes the insert row")
     report.expect(page.menuTargetIdentity == nil, cppID: drawerVoiceMenuID,
                   message: "the empty-lane target carries no occurrence")
     report.expect(page.activateMenuAction(actionId: VoiceChangesPagePolicy.insertVoiceChangeAction),
                   cppID: drawerVoiceMenuID, message: "the insert row opens the picker")
     report.expect(page.hasPicker, cppID: drawerVoiceMenuID, message: "the picker opens on the capture")
-    report.expectEqual(96, page.pickerTargetTick, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: 96, actual: page.pickerTargetTick, cppID: drawerVoiceMenuID,
                        what: "the picker inherits the menu's captured tick")
-    report.expectEqual("Insert voice change", page.pickerTitle, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: "Insert voice change", actual: page.pickerTitle, cppID: drawerVoiceMenuID,
                        what: "the inherited empty-lane capture keeps the insertion title")
     report.expect(!page.hasMenu, cppID: drawerVoiceMenuID, message: "the activation consumed the menu")
     page.cancelPicker()
@@ -86,7 +86,7 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     let rewritten = fixture.snapshot
     report.expect(!page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
                   cppID: drawerVoiceMenuID, message: "an activation after the cancellation writes nothing")
-    report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMenuID,
+    report.expectEqual(expected: rewritten, actual: fixture.snapshot, cppID: drawerVoiceMenuID,
                        what: "the stale activation leaves the rewrite as the only change")
 }
 

@@ -113,10 +113,10 @@ private func checkOrderedSelection(
         cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
     click(bRect, modifiers: 0x0400_0000)
     click(bRect, modifiers: 0x0400_0000)
-    report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
+    report.expectEqual(expected: [a, b], actual: session.selectedNoteOrder, cppID: id,
                        what: "deselecting and re-adding appends the note")
     session.setSelectedNotes([b, a, b])
-    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+    report.expectEqual(expected: [b, a], actual: session.selectedNoteOrder, cppID: id,
                        what: "replacement preserves first occurrence and removes duplicates")
     grid.beginRightPointer(x: 0, y: 0)
     grid.updateRightPointer(x: 640, y: 320)
@@ -124,18 +124,18 @@ private func checkOrderedSelection(
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")
     grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
-    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+    report.expectEqual(expected: [b, a], actual: session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
     publications.removeAll()
     session.setSelectedNotes([a, b])
-    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: id,
                        what: "order-only replacement publishes the selection domain")
     publications.removeAll()
     session.withStateChanges {
         session.setSelectedNotes([b, a])
         session.addSelectedNote(c)
     }
-    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: id,
                        what: "order-only replacement and additive selection coalesce")
     publications.removeAll()
     session.setSelectedNotes([b, a, c, b])

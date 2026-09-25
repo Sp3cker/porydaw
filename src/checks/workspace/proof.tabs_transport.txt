@@ -21,7 +21,7 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any project is open (disabled scale controls, reserved time-strip geometry, dial raster ticks) and with two tabs (toolbar order, output-volume dial versus song master-volume spin, mouse-drag dial behavior, shortcut-override filtering).
-tabs_transport.cpp contributes 73 sites: 7 MATCHED, 5 PARTIAL, 42 GAP, 19 RETIRED-REPRESENTATION. The
+tabs_transport.cpp contributes 73 sites: 9 MATCHED, 3 PARTIAL, 42 GAP, 19 RETIRED-REPRESENTATION. The
 shell-transport TestCase mounts ShellWindow with a live project and two tabs;
 
 Command: deno task verify --filter projectstore --filter swiftcore --verbose
@@ -315,8 +315,8 @@ Original expression:
   QCOMPARE(window.m_audio.outputVolume(), 37)
 
 A045 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:163
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed application output-volume restoration in a fresh shell session, but does not directly assert the historical QSettings key or exact fixture value 37.
+Disposition: MATCHED
+Mapping/reason: Related predicate S189 (mounted shell-transport test_outputVolumeSurvivesShellRelaunch commits a distinctive non-default level (87) through the dial valueCommitted path into Settings and restores bar.presenter.outputVolume == 87 in a fresh shell; message "application output preference survives a fresh shell session").
 Source context since previous assertion:
   ;
 Original expression:
@@ -456,8 +456,8 @@ Original expression:
   QCOMPARE(spin->value(), second->document().cfg().masterVolume)
 
 A064 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:209
-Disposition: PARTIAL
-Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed preservation of the application output level across a second tab, but does not pin the historical exact level 37.
+Disposition: MATCHED
+Mapping/reason: Related predicate S189 (mounted shell-transport test_outputVolumeSurvivesShellRelaunch pins a distinctive non-default level (87) through the dial valueCommitted path and restores it in a fresh shell; message "application output preference survives a fresh shell session").
 Source context since previous assertion:
   ;
 Original expression:
@@ -1098,3 +1098,6 @@ Anchor: message "Space does not insert into the numeric field"
 
 S188 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the same Space shortcut pauses playback"
+
+S189 | test_outputVolumeSurvivesShellRelaunch | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "application output preference survives a fresh shell session"

@@ -60,11 +60,11 @@ private func fileIoChecks(_ report: CheckReport) {
         do {
             let store = try VoicegroupStore(projectRoot: root.path)
             let rich = try store.loadBank(voicegroupArg: "_fixture_rich")
-            report.expectEqual("fixture_rich", rich.loadName, cppID: cppID,
+            report.expectEqual(expected: "fixture_rich", actual: rich.loadName, cppID: cppID,
                                what: "F002/\(attempt): rich bank resolves during multi-file load (ordering proxy)")
-            report.expectEqual("DirectSoundWaveData_fixture_loop", rich.slotViews[0].voice?.symbol,
+            report.expectEqual(expected: "DirectSoundWaveData_fixture_loop", actual: rich.slotViews[0].voice?.symbol,
                                cppID: cppID, what: "F003/\(attempt): first source slot names loop (blob-order proxy)")
-            report.expectEqual("DirectSoundWaveData_fixture_pluck", rich.slotViews[1].voice?.symbol,
+            report.expectEqual(expected: "DirectSoundWaveData_fixture_pluck", actual: rich.slotViews[1].voice?.symbol,
                                cppID: cppID, what: "F004/\(attempt): second source slot names pluck (blob-order proxy)")
             report.expect(store.preview(id: rich.id) != nil, cppID: cppID,
                           message: "F005/\(attempt): preview reload succeeds (release/drop proxy, not a drop count)")
@@ -79,9 +79,9 @@ private func fileIoChecks(_ report: CheckReport) {
         let observed: [String?] = try ["_fixture_alt", "_fixture_rich", "_fixture_alt"].map {
             try store.loadBank(voicegroupArg: $0).slotViews[0].voice?.symbol
         }
-        report.expectEqual(["DirectSoundWaveData_fixture_bass",
+        report.expectEqual(expected: ["DirectSoundWaveData_fixture_bass",
                             "DirectSoundWaveData_fixture_loop",
-                            "DirectSoundWaveData_fixture_bass"], observed, cppID: cppID,
+                            "DirectSoundWaveData_fixture_bass"], actual: observed, cppID: cppID,
                            what: "F010: alternating bank args retain distinct first samples (load-order proxy)")
     } catch {
         report.fail(cppID, "F011: alternating bank loads failed: \(error)")
@@ -92,9 +92,9 @@ private func fileIoChecks(_ report: CheckReport) {
         try FileManager.default.removeItem(at: sample)
         let store = try VoicegroupStore(projectRoot: root.path)
         let rich = try store.loadBank(voicegroupArg: "_fixture_rich")
-        report.expectEqual("fixture_rich", rich.loadName, cppID: cppID,
+        report.expectEqual(expected: "fixture_rich", actual: rich.loadName, cppID: cppID,
                            what: "F007: bank loads after sample removal (empty-blob soft-miss proxy)")
-        report.expectEqual("DirectSoundWaveData_fixture_pluck", rich.slotViews[1].voice?.symbol,
+        report.expectEqual(expected: "DirectSoundWaveData_fixture_pluck", actual: rich.slotViews[1].voice?.symbol,
                            cppID: cppID, what: "F008: source still names deleted sample (no blob-byte inspection)")
     } catch {
         report.fail(cppID, "F009: missing-sample load failed: \(error)")
@@ -166,19 +166,19 @@ private func projectContextChecks(_ report: CheckReport) {
         let again = try store.loadBank(voicegroupArg: "_fixture_rich")
         let other = try store.loadBank(voicegroupArg: "_fixture_alt")
         let section = try store.loadBank(voicegroupArg: "_context_one")
-        report.expectEqual("fixture_rich", first.loadName, cppID: cppID,
+        report.expectEqual(expected: "fixture_rich", actual: first.loadName, cppID: cppID,
                            what: "C006: per-file load name is the resolved file basename")
-        report.expectEqual(first.id, again.id, cppID: cppID,
+        report.expectEqual(expected: first.id, actual: again.id, cppID: cppID,
                            what: "C007: repeat load retains source identity")
-        report.expectEqual(first.loadName, again.loadName, cppID: cppID,
+        report.expectEqual(expected: first.loadName, actual: again.loadName, cppID: cppID,
                            what: "C008: repeat load retains native load name")
-        report.expectEqual("fixture_alt", other.loadName, cppID: cppID,
+        report.expectEqual(expected: "fixture_alt", actual: other.loadName, cppID: cppID,
                            what: "C009: unrelated bank resolves independently")
         report.expect(first.id != other.id, cppID: cppID,
                       message: "C010: unrelated bank has a distinct source identity")
-        report.expectEqual("voicegroup_context_one", section.loadName, cppID: cppID,
+        report.expectEqual(expected: "voicegroup_context_one", actual: section.loadName, cppID: cppID,
                            what: "C011: monolithic section uses its declaration label")
-        report.expectEqual("voicegroup_context_one", section.id.sectionLabel, cppID: cppID,
+        report.expectEqual(expected: "voicegroup_context_one", actual: section.id.sectionLabel, cppID: cppID,
                            what: "C012: monolithic section identity retains label")
 
         guard let baseline = contextNativeBank(root: root, name: first.loadName) else {
@@ -186,19 +186,19 @@ private func projectContextChecks(_ report: CheckReport) {
             return
         }
         defer { voicegroup_free(baseline) }
-        report.expectEqual(128, first.slotViews.count, cppID: cppID,
+        report.expectEqual(expected: 128, actual: first.slotViews.count, cppID: cppID,
                            what: "C014: store publishes the native bank's 128 slots")
         guard first.slotViews.count == 128 else { return }
         for slot in first.slotViews.indices {
             guard let voice = first.slotViews[slot].voice else { continue }
-            report.expectEqual(vgMacroVoiceType(voice.macro), contextTone(baseline, slot: slot).type,
+            report.expectEqual(expected: vgMacroVoiceType(voice.macro), actual: contextTone(baseline, slot: slot).type,
                                cppID: cppID, what: "C015/\(slot): native and source voice types agree")
         }
-        report.expectEqual("fixture_loop", contextVoiceName(baseline, slot: 0), cppID: cppID,
+        report.expectEqual(expected: "fixture_loop", actual: contextVoiceName(baseline, slot: 0), cppID: cppID,
                            what: "C016: native baseline names the first sample")
-        report.expectEqual("fixture_pluck", contextVoiceName(baseline, slot: 1), cppID: cppID,
+        report.expectEqual(expected: "fixture_pluck", actual: contextVoiceName(baseline, slot: 1), cppID: cppID,
                            what: "C017: native baseline names the second sample")
-        report.expectEqual(first.slotViews[0].voice, again.slotViews[0].voice, cppID: cppID,
+        report.expectEqual(expected: first.slotViews[0].voice, actual: again.slotViews[0].voice, cppID: cppID,
                            what: "C018: repeated public slot fact matches")
         report.expect(first.slotViews[0].voice != other.slotViews[0].voice, cppID: cppID,
                       message: "C019: unrelated bank retains its different first sample")
@@ -222,7 +222,7 @@ private func projectContextChecks(_ report: CheckReport) {
         // native post-teardown dereference is unobservable here. The loader owns that contract.
         report.expect(releasedStore == nil && retainedBank != nil, cppID: cppID,
                       message: "C022: store deallocates while a published bank handle remains retained")
-        report.expectEqual("DirectSoundWaveData_fixture_loop", held.slotViews[0].voice?.symbol,
+        report.expectEqual(expected: "DirectSoundWaveData_fixture_loop", actual: held.slotViews[0].voice?.symbol,
                            cppID: cppID, what: "C023: copied public facts survive store deallocation")
         let native = contextNativeBank(root: root, name: held.loadName)
         report.expect(native != nil, cppID: cppID,

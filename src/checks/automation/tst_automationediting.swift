@@ -14,16 +14,16 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
                   message: "the prompt opens")
     report.expect(fixture.page.acceptPrompt(displayedValue: 20), cppID: drawerAutomationHistoryID,
                   message: "the prompt commits")
-    report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
+    report.expectEqual(expected: ["24:84", "120:40"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                        what: "the committed lane holds the new value")
     report.expect(fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
                   message: "the transaction is on the undo stack")
     report.expect(fixture.undo(), cppID: drawerAutomationHistoryID, message: "the transaction undoes")
-    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
+    report.expectEqual(expected: ["24:64", "120:40"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                        what: "undo restores the curve from the document")
     report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationHistoryID,
                   message: "the transaction recorded exactly one history entry")
-    report.expectEqual(["0:64", "24:64", "120:40"],
+    report.expectEqual(expected: ["0:64", "24:64", "120:40"], actual:
                        fixture.page.projection?.points.map { "\($0.tick):\($0.value)" } ?? [],
                        cppID: drawerAutomationHistoryID, what: "the page rebuilds the restored curve")
     report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
@@ -34,12 +34,12 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
         report.fail(drawerAutomationHistoryID, "redo failed: \(error)")
         return
     }
-    report.expectEqual(["24:84", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
+    report.expectEqual(expected: ["24:84", "120:40"], actual: fixture.values(fixture.panLane), cppID: drawerAutomationHistoryID,
                        what: "redo restores the committed lane")
     report.expect(fixture.document.history.canUndo && !fixture.document.history.canRedo,
                   cppID: drawerAutomationHistoryID,
                   message: "one undo and one redo stand on the same single entry")
-    report.expectEqual(before.revision + 3, fixture.document.revision, cppID: drawerAutomationHistoryID,
+    report.expectEqual(expected: before.revision + 3, actual: fixture.document.revision, cppID: drawerAutomationHistoryID,
                        what: "a commit, an undo and a redo each publish one revision")
 
     // Two transactions undo one at a time.
@@ -49,7 +49,7 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
     _ = two.page.acceptPrompt(displayedValue: 10)
     _ = two.page.openPrompt(tick: 48, value: 64)
     _ = two.page.acceptPrompt(displayedValue: -10)
-    report.expectEqual(["24:74", "48:54"], two.values(two.panLane), cppID: drawerAutomationHistoryID,
+    report.expectEqual(expected: ["24:74", "48:54"], actual: two.values(two.panLane), cppID: drawerAutomationHistoryID,
                        what: "two transactions leave both writes")
     report.expect(two.undo() && two.values(two.panLane) == ["24:74"], cppID: drawerAutomationHistoryID,
                   message: "the first undo removes only the second transaction")

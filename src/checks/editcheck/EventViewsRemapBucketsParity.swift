@@ -60,9 +60,9 @@ private func remapParityAnchorTracking(_ report: CheckReport) {
     document.onChange = { changes.append($0) }
     var trackedChunk = 2
     var trackedEngine = 1
-    report.expectEqual(2, document.engineTracks.tracks[1].midiChunk ?? -1, cppID: remapNotifyOrderID, what: "initial second engine owns the third chunk")
+    report.expectEqual(expected: 2, actual: document.engineTracks.tracks[1].midiChunk ?? -1, cppID: remapNotifyOrderID, what: "initial second engine owns the third chunk")
     let moved = document.moveTrack(1, to: 0)
-    report.expectEqual(true, moved, cppID: remapNotifyOrderID, what: "move accepts the second track")
+    report.expectEqual(expected: true, actual: moved, cppID: remapNotifyOrderID, what: "move accepts the second track")
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "move publishes a track remap")
     report.expect(changes.last?.trackRemap?.chunkMap.indices.contains(2) == true && changes.last?.trackRemap?.chunkMap[2] == 0, cppID: remapNotifyOrderID, message: "move maps the third chunk to the front")
     if let remap = changes.last?.trackRemap {
@@ -77,9 +77,9 @@ private func remapParityAnchorTracking(_ report: CheckReport) {
             trackedEngine = -1
         }
     }
-    report.expectEqual(0, trackedChunk, cppID: remapNotifyOrderID, what: "chunk anchor follows the move")
-    report.expectEqual(0, trackedEngine, cppID: remapNotifyOrderID, what: "engine anchor follows the move")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "moved chunk projects its events and sentinel")
+    report.expectEqual(expected: 0, actual: trackedChunk, cppID: remapNotifyOrderID, what: "chunk anchor follows the move")
+    report.expectEqual(expected: 0, actual: trackedEngine, cppID: remapNotifyOrderID, what: "engine anchor follows the move")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "moved chunk projects its events and sentinel")
     _ = document.history.undoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "move undo publishes the inverse remap")
     if let remap = changes.last?.trackRemap {
@@ -94,9 +94,9 @@ private func remapParityAnchorTracking(_ report: CheckReport) {
             trackedEngine = -1
         }
     }
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "undo restores the chunk anchor")
-    report.expectEqual(1, trackedEngine, cppID: remapNotifyOrderID, what: "undo restores the engine anchor")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "undo restores the chunk projection")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "undo restores the chunk anchor")
+    report.expectEqual(expected: 1, actual: trackedEngine, cppID: remapNotifyOrderID, what: "undo restores the engine anchor")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "undo restores the chunk projection")
     _ = document.history.redoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "move redo republishes the forward remap")
     if let remap = changes.last?.trackRemap {
@@ -111,8 +111,8 @@ private func remapParityAnchorTracking(_ report: CheckReport) {
             trackedEngine = -1
         }
     }
-    report.expectEqual(0, trackedChunk, cppID: remapNotifyOrderID, what: "redo follows the moved chunk again")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "redo rebuilds the moved chunk projection")
+    report.expectEqual(expected: 0, actual: trackedChunk, cppID: remapNotifyOrderID, what: "redo follows the moved chunk again")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "redo rebuilds the moved chunk projection")
     _ = document.history.undoDocument()
     if let remap = changes.last?.trackRemap {
         if remap.chunkMap.indices.contains(trackedChunk) {
@@ -126,42 +126,42 @@ private func remapParityAnchorTracking(_ report: CheckReport) {
             trackedEngine = -1
         }
     }
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "restoring undo returns the anchor before rename")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "restoring undo returns the anchor before rename")
     document.renameTrack(1, to: "event view fixture rename")
     report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID, message: "rename publishes no track remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename keeps the chunk anchor")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "rename keeps the projected row count")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "rename keeps the chunk anchor")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "rename keeps the projected row count")
     _ = document.history.undoDocument()
     report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID, message: "rename undo publishes no track remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename undo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "rename undo keeps the chunk anchor")
     _ = document.history.redoDocument()
     report.expect(changes.last?.trackRemap == nil, cppID: remapNotifyOrderID, message: "rename redo publishes no track remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "rename redo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "rename redo keeps the chunk anchor")
     _ = document.history.undoDocument()
     report.expect(document.canAddTrack, cppID: remapNotifyOrderID, message: "track budget admits one more track")
     let added = document.addTrack(voice: 0)
     report.expect(added != nil, cppID: remapNotifyOrderID, message: "add returns the new engine slot")
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "add publishes a track remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add keeps the chunk anchor")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "add keeps the projected row count")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "add keeps the chunk anchor")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "add keeps the projected row count")
     _ = document.history.undoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "add undo publishes the inverse remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add undo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "add undo keeps the chunk anchor")
     _ = document.history.redoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "add redo republishes the forward remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "add redo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "add redo keeps the chunk anchor")
     _ = document.history.undoDocument()
     let duplicated = document.duplicateTrack(0)
     report.expect(duplicated != nil, cppID: remapNotifyOrderID, message: "duplicate returns the new engine slot")
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "duplicate publishes a track remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "duplicate keeps the chunk anchor")
-    report.expectEqual(remapParityExpectedCount(document, chunk: trackedChunk), remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "duplicate keeps the projected row count")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "duplicate keeps the chunk anchor")
+    report.expectEqual(expected: remapParityExpectedCount(document, chunk: trackedChunk), actual: remapParityRowCount(document, chunk: trackedChunk), cppID: remapNotifyOrderID, what: "duplicate keeps the projected row count")
     _ = document.history.undoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "duplicate undo publishes the inverse remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "duplicate undo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "duplicate undo keeps the chunk anchor")
     _ = document.history.redoDocument()
     report.expect(changes.last?.trackRemap != nil, cppID: remapNotifyOrderID, message: "duplicate redo republishes the forward remap")
-    report.expectEqual(2, trackedChunk, cppID: remapNotifyOrderID, what: "duplicate redo keeps the chunk anchor")
+    report.expectEqual(expected: 2, actual: trackedChunk, cppID: remapNotifyOrderID, what: "duplicate redo keeps the chunk anchor")
 }
 
 @MainActor
@@ -202,18 +202,18 @@ private func bucketParitySum(_ report: CheckReport) {
         report.expect(timeline.ticksPerBeat == 24, cppID: bucketSumID, message: entry.name + ": timeline keeps the fixture timebase")
         report.expect(timeline.tempoMap.count == 1 && timeline.tempoMap[0].tick == 0 && timeline.tempoMap[0].microsecondsPerQuarterNote == TimeDefaults.defaultTempoMicrosecondsPerQuarterNote, cppID: bucketSumID, message: entry.name + ": synthetic tick-zero tempo default exists")
         let notes = document.notes(in: 0)
-        report.expectEqual(entry.notes, notes.count, cppID: bucketSumID, what: entry.name + ": paired note count")
+        report.expectEqual(expected: entry.notes, actual: notes.count, cppID: bucketSumID, what: entry.name + ": paired note count")
         let laneSeven = document.lanePoints(track: 0, lane: .controller(7)).count
         let laneTen = document.lanePoints(track: 0, lane: .controller(10)).count
-        report.expectEqual(3, laneSeven + laneTen, cppID: bucketSumID, what: entry.name + ": audible lane point count")
-        report.expectEqual(1, document.lanePoints(track: 0, lane: .voice).count, cppID: bucketSumID, what: entry.name + ": voice point count")
+        report.expectEqual(expected: 3, actual: laneSeven + laneTen, cppID: bucketSumID, what: entry.name + ": audible lane point count")
+        report.expectEqual(expected: 1, actual: document.lanePoints(track: 0, lane: .voice).count, cppID: bucketSumID, what: entry.name + ": voice point count")
         let unterminated = notes.filter { $0.isUnterminated }.count
         let expectedUnterminated = entry.unpaired ? 1 : 0
-        report.expectEqual(expectedUnterminated, unterminated, cppID: bucketSumID, what: entry.name + ": unterminated note count")
-        report.expectEqual(entry.events, timeline.events.count, cppID: bucketSumID, what: entry.name + ": timeline event total with tempo")
-        report.expectEqual(1, timeline.otherEvents.count, cppID: bucketSumID, what: entry.name + ": marker survives as one other event")
+        report.expectEqual(expected: expectedUnterminated, actual: unterminated, cppID: bucketSumID, what: entry.name + ": unterminated note count")
+        report.expectEqual(expected: entry.events, actual: timeline.events.count, cppID: bucketSumID, what: entry.name + ": timeline event total with tempo")
+        report.expectEqual(expected: 1, actual: timeline.otherEvents.count, cppID: bucketSumID, what: entry.name + ": marker survives as one other event")
         let terminated = notes.count - unterminated
-        report.expectEqual(entry.pairedOffs, terminated, cppID: bucketSumID, what: entry.name + ": paired off count follows terminated notes")
+        report.expectEqual(expected: entry.pairedOffs, actual: terminated, cppID: bucketSumID, what: entry.name + ": paired off count follows terminated notes")
     }
 }
 

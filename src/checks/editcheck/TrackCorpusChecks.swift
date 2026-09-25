@@ -120,9 +120,9 @@ private func coreTrackCreateDeleteRow(_ report: CheckReport, _ document: SongDoc
     }
     let voices = document.lanePoints(track: added, lane: .voice)
     report.expect(!voices.isEmpty, cppID: id, message: "A005 new track seeds a voice point")
-    report.expectEqual(Tick(0), voices.first?.tick, cppID: id,
+    report.expectEqual(expected: Tick(0), actual: voices.first?.tick, cppID: id,
                        what: "A006 voice point starts at tick zero")
-    report.expectEqual(7, voices.first?.value, cppID: id,
+    report.expectEqual(expected: 7, actual: voices.first?.value, cppID: id,
                        what: "A007 voice point carries voice seven")
     _ = try document.addNotes([
         NewNote(track: added, tick: base, pitch: 72, duration: step * 4, velocity: 100),
@@ -145,7 +145,7 @@ private func coreTrackDuplicateRow(_ report: CheckReport, _ document: SongDocume
         return
     }
     report.expect(copy != track, cppID: id, message: "A016 copy occupies a distinct slot")
-    report.expectEqual(source, coreTrackNoteShapes(document, copy), cppID: id,
+    report.expectEqual(expected: source, actual: coreTrackNoteShapes(document, copy), cppID: id,
                        what: "A017 duplicate preserves note ticks, pitches, durations and velocities")
     document.deleteTrack(copy)
     report.expect(corpusTracksSorted(document), cppID: id,
@@ -168,16 +168,16 @@ private func coreTrackMoveRow(_ report: CheckReport, _ document: SongDocument,
     let before = try coreEditHistoryCountAtTip(document, report: report, cppID: id)
     report.expect(!document.moveTrack(0, to: 0), cppID: id,
                   message: "A023 same-slot move is rejected")
-    report.expectEqual(before, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A024 no-op leaves complete history count unchanged")
     report.expect(document.moveTrack(0, to: last), cppID: id,
                   message: "A025 move to last slot succeeds")
-    report.expectEqual(before + 1,
-                       try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1,
+                       actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A026 real move adds one history entry")
-    report.expectEqual(source, coreTrackNoteShapes(document, last), cppID: id,
+    report.expectEqual(expected: source, actual: coreTrackNoteShapes(document, last), cppID: id,
                        what: "A027 notes follow the moved track")
-    report.expectEqual(sourceChannel, document.engineTracks.tracks[last].channel,
+    report.expectEqual(expected: sourceChannel, actual: document.engineTracks.tracks[last].channel,
                        cppID: id, what: "A028 channel follows the moved track")
     report.expect(document.state.tempo.contains(tempo), cppID: id,
                   message: "A029 staged tempo survives the move")
@@ -185,19 +185,19 @@ private func coreTrackMoveRow(_ report: CheckReport, _ document: SongDocument,
         $0.tick == base + step * 112 && $0.numerator == 5 && $0.denominatorPower == 2
     }, cppID: id, message: "A030 staged 5/2 signature survives the move")
     let movedTimeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(originalTimeline.loopStartTick, movedTimeline.loopStartTick,
+    report.expectEqual(expected: originalTimeline.loopStartTick, actual: movedTimeline.loopStartTick,
                        cppID: id, what: "A031 loop start survives the move")
-    report.expectEqual(originalTimeline.loopEndTick, movedTimeline.loopEndTick,
+    report.expectEqual(expected: originalTimeline.loopEndTick, actual: movedTimeline.loopEndTick,
                        cppID: id, what: "A032 loop end survives the move")
     report.expect(document.history.undoDocument(), cppID: id,
                   message: "move can be undone")
-    report.expectEqual(source, coreTrackNoteShapes(document, 0), cppID: id,
+    report.expectEqual(expected: source, actual: coreTrackNoteShapes(document, 0), cppID: id,
                        what: "A033 undo restores track-zero notes")
     report.expect(document.history.redoDocument(), cppID: id,
                   message: "move can be redone")
     report.expect(document.moveTrack(last, to: 0), cppID: id,
                   message: "A034 move back succeeds")
-    report.expectEqual(source, coreTrackNoteShapes(document, 0), cppID: id,
+    report.expectEqual(expected: source, actual: coreTrackNoteShapes(document, 0), cppID: id,
                        what: "A035 source notes return to track zero")
     report.expect(corpusTracksSorted(document), cppID: id,
                   message: "A036 raw tracks remain tick-sorted after reordering")
@@ -209,16 +209,16 @@ private func coreTrackDeleteRescueRow(_ report: CheckReport, _ document: SongDoc
     let original = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
     document.deleteTrack(track)
     let deleted = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(original.loopStartTick, deleted.loopStartTick,
+    report.expectEqual(expected: original.loopStartTick, actual: deleted.loopStartTick,
                        cppID: id, what: "A053 loop start survives deleting the first editable track")
-    report.expectEqual(original.loopEndTick, deleted.loopEndTick,
+    report.expectEqual(expected: original.loopEndTick, actual: deleted.loopEndTick,
                        cppID: id, what: "A054 loop end survives deleting the first editable track")
     report.expect(document.history.undoDocument(), cppID: id,
                   message: "deleted track can be restored")
     let restored = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual(original.loopStartTick, restored.loopStartTick,
+    report.expectEqual(expected: original.loopStartTick, actual: restored.loopStartTick,
                        cppID: id, what: "A055 undo preserves loop start")
-    report.expectEqual(original.loopEndTick, restored.loopEndTick,
+    report.expectEqual(expected: original.loopEndTick, actual: restored.loopEndTick,
                        cppID: id, what: "A056 undo preserves loop end")
 }
 
@@ -230,35 +230,35 @@ private func coreTrackRenameRow(_ report: CheckReport, _ document: SongDocument,
         return
     }
     document.renameTrack(track, to: "editcheck name")
-    report.expectEqual("editcheck name", document.trackName(track), cppID: id,
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(track), cppID: id,
                        what: "A060 rename stores the exact name")
-    report.expectEqual(1, bareTrackNameCount(document.rawChunks[chunk]), cppID: id,
+    report.expectEqual(expected: 1, actual: bareTrackNameCount(document.rawChunks[chunk]), cppID: id,
                        what: "A061 exactly one bare track-name meta remains")
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
-    report.expectEqual("editcheck name", timeline.tracks[track].name, cppID: id,
+    report.expectEqual(expected: "editcheck name", actual: timeline.tracks[track].name, cppID: id,
                        what: "A063 timeline reports the renamed track")
     let before = try coreEditHistoryCountAtTip(document, report: report, cppID: id)
     document.renameTrack(track, to: "  editcheck name  ")
-    report.expectEqual(before, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A064 trimmed same-name rename adds no history entry")
     document.renameTrack(track, to: "[")
     document.renameTrack(track, to: " ][ ")
-    report.expectEqual(before, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A065 marker-shaped renames add no history entry")
-    report.expectEqual("editcheck name", document.trackName(track), cppID: id,
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(track), cppID: id,
                        what: "A066 rejected names preserve the stored name")
     document.renameTrack(track, to: "")
-    report.expectEqual("", document.trackName(track), cppID: id,
+    report.expectEqual(expected: "", actual: document.trackName(track), cppID: id,
                        what: "A067 clearing removes the stored name")
-    report.expectEqual(0, bareTrackNameCount(document.rawChunks[chunk]), cppID: id,
+    report.expectEqual(expected: 0, actual: bareTrackNameCount(document.rawChunks[chunk]), cppID: id,
                        what: "A068 clearing removes all bare name meta events")
     report.expect(document.history.undoDocument(), cppID: id,
                   message: "name clearing can be undone")
-    report.expectEqual("editcheck name", document.trackName(track), cppID: id,
+    report.expectEqual(expected: "editcheck name", actual: document.trackName(track), cppID: id,
                        what: "A069 undo restores the name")
     report.expect(document.history.redoDocument(), cppID: id,
                   message: "name clearing can be redone")
-    report.expectEqual("", document.trackName(track), cppID: id,
+    report.expectEqual(expected: "", actual: document.trackName(track), cppID: id,
                        what: "A070 redo clears the name")
 }
 
@@ -271,25 +271,25 @@ private func coreSongTimeSignatureRow(_ report: CheckReport, _ document: SongDoc
     document.setTimeSignature(tick: base, numerator: 3, denominatorPower: 3)
     let inserted = document.timeSignatures.first { $0.tick == base }
     report.expect(inserted != nil, cppID: id, message: "A073 3/3 signature exists")
-    report.expectEqual(UInt8(3), inserted?.numerator, cppID: id,
+    report.expectEqual(expected: UInt8(3), actual: inserted?.numerator, cppID: id,
                        what: "A074 staged numerator is three")
-    report.expectEqual(UInt8(3), inserted?.denominatorPower, cppID: id,
+    report.expectEqual(expected: UInt8(3), actual: inserted?.denominatorPower, cppID: id,
                        what: "A075 staged denominator power is three")
     document.setTimeSignature(tick: base, numerator: 7, denominatorPower: 2)
     let replaced = document.timeSignatures.first { $0.tick == base }
     report.expect(replaced != nil, cppID: id, message: "A076 replacement exists")
-    report.expectEqual(UInt8(7), replaced?.numerator, cppID: id,
+    report.expectEqual(expected: UInt8(7), actual: replaced?.numerator, cppID: id,
                        what: "A077 replacement numerator is seven")
-    report.expectEqual(UInt8(2), replaced?.denominatorPower, cppID: id,
+    report.expectEqual(expected: UInt8(2), actual: replaced?.denominatorPower, cppID: id,
                        what: "A078 replacement denominator power is two")
-    report.expectEqual(before + 1, document.timeSignatures.count, cppID: id,
+    report.expectEqual(expected: before + 1, actual: document.timeSignatures.count, cppID: id,
                        what: "A079 total time-signature entry count grows by one")
     document.moveTimeSignature(from: base, to: base + step * 4)
     report.expect(!document.timeSignatures.contains { $0.tick == base }, cppID: id,
                   message: "A080 source tick loses its signature")
     let moved = document.timeSignatures.first { $0.tick == base + step * 4 }
     report.expect(moved != nil, cppID: id, message: "A081 destination has a signature")
-    report.expectEqual(UInt8(7), moved?.numerator, cppID: id,
+    report.expectEqual(expected: UInt8(7), actual: moved?.numerator, cppID: id,
                        what: "A082 moved signature keeps numerator seven")
     document.deleteTimeSignature(at: base + step * 4)
     report.expect(!document.timeSignatures.contains { $0.tick == base + step * 4 },
@@ -311,15 +311,15 @@ private func coreLoopCfgUndoRedoRow(_ report: CheckReport, _ document: SongDocum
     config.masterVolume = config.masterVolume == 80 ? 90 : 80
     document.setConfig(config)
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: baseline, actual: try document.state.file.encoded(), cppID: id,
                        what: "A086 undo-all restores baseline MIDI bytes")
-    report.expectEqual(originalVolume, document.state.config.masterVolume, cppID: id,
+    report.expectEqual(expected: originalVolume, actual: document.state.config.masterVolume, cppID: id,
                        what: "A087 undo-all restores master volume")
     while document.history.canRedo { _ = document.history.redoDocument() }
     let redone = try document.state.file.encoded()
     report.expect(redone != baseline || firstNoteTrack(document) == nil, cppID: id,
                   message: "A088 redo changes MIDI bytes when the song has an editable note track")
     while document.history.canUndo { _ = document.history.undoDocument() }
-    report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
+    report.expectEqual(expected: baseline, actual: try document.state.file.encoded(), cppID: id,
                        what: "A089 second undo-all restores baseline MIDI bytes")
 }

@@ -34,22 +34,22 @@ func checkScaleTables(_ report: CheckReport) {
         (.kumoi, "Kumoi", 0x28D),
     ]
     for (index, row) in expected.enumerated() {
-        report.expectEqual(expected.count, ScaleID.scaleCount, cppID: table, what: "scale count")
-        report.expectEqual(index, row.0.rawValue, cppID: table, what: "scale identity order")
-        report.expectEqual(row.1, row.0.displayName, cppID: table, what: "scale name")
-        report.expectEqual(row.2, row.0.mask, cppID: table, what: "scale mask")
-        report.expectEqual(row.0, ScaleID.displayOrder[index], cppID: table, what: "display order")
+        report.expectEqual(expected: expected.count, actual: ScaleID.scaleCount, cppID: table, what: "scale count")
+        report.expectEqual(expected: index, actual: row.0.rawValue, cppID: table, what: "scale identity order")
+        report.expectEqual(expected: row.1, actual: row.0.displayName, cppID: table, what: "scale name")
+        report.expectEqual(expected: row.2, actual: row.0.mask, cppID: table, what: "scale mask")
+        report.expectEqual(expected: row.0, actual: ScaleID.displayOrder[index], cppID: table, what: "display order")
     }
 
     let roots = "scalecheck/ScaleCheckTest::rootsAndDefaults"
     let rootNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-    report.expectEqual(rootNames.count, ScaleID.rootCount, cppID: roots, what: "root count")
+    report.expectEqual(expected: rootNames.count, actual: ScaleID.rootCount, cppID: roots, what: "root count")
     for index in 0..<ScaleID.rootCount {
-        report.expectEqual(rootNames[index], ScaleID.rootDisplayName(index), cppID: roots,
+        report.expectEqual(expected: rootNames[index], actual: ScaleID.rootDisplayName(index), cppID: roots,
                            what: "root name")
     }
-    report.expectEqual(ScaleID.major, ScaleID.defaultScale, cppID: roots, what: "default scale")
-    report.expectEqual(0, ScaleID.defaultRoot, cppID: roots, what: "default root")
+    report.expectEqual(expected: ScaleID.major, actual: ScaleID.defaultScale, cppID: roots, what: "default scale")
+    report.expectEqual(expected: 0, actual: ScaleID.defaultRoot, cppID: roots, what: "default root")
 
     let neighbors = "scalecheck/ScaleCheckTest::membershipAndNeighbors"
     report.expect(ScaleID.major.isPitch(60, root: 0), cppID: neighbors,
@@ -60,21 +60,21 @@ func checkScaleTables(_ report: CheckReport) {
                   message: "D is a D-major pitch")
     report.expect(!ScaleID.major.isPitch(60, root: 2), cppID: neighbors,
                   message: "C is not a D-major pitch")
-    report.expectEqual(62, ScaleID.major.firstPitchAbove(61, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 62, actual: ScaleID.major.firstPitchAbove(61, root: 0), cppID: neighbors,
                        what: "first pitch above C#")
-    report.expectEqual(60, ScaleID.major.firstPitchBelow(61, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 60, actual: ScaleID.major.firstPitchBelow(61, root: 0), cppID: neighbors,
                        what: "first pitch below C#")
-    report.expectEqual(-1, ScaleID.major.firstPitchAbove(127, root: 0), cppID: neighbors,
+    report.expectEqual(expected: -1, actual: ScaleID.major.firstPitchAbove(127, root: 0), cppID: neighbors,
                        what: "no pitch above top")
-    report.expectEqual(-1, ScaleID.major.firstPitchBelow(0, root: 0), cppID: neighbors,
+    report.expectEqual(expected: -1, actual: ScaleID.major.firstPitchBelow(0, root: 0), cppID: neighbors,
                        what: "no pitch below bottom")
-    report.expectEqual(62, ScaleID.major.pitch(60, steps: 1, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 62, actual: ScaleID.major.pitch(60, steps: 1, root: 0), cppID: neighbors,
                        what: "one degree above C")
-    report.expectEqual(60, ScaleID.major.pitch(62, steps: -1, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 60, actual: ScaleID.major.pitch(62, steps: -1, root: 0), cppID: neighbors,
                        what: "one degree below D")
-    report.expectEqual(65, ScaleID.major.pitch(60, steps: 3, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 65, actual: ScaleID.major.pitch(60, steps: 3, root: 0), cppID: neighbors,
                        what: "three degrees above C")
-    report.expectEqual(62, ScaleID.major.pitch(67, steps: -3, root: 0), cppID: neighbors,
+    report.expectEqual(expected: 62, actual: ScaleID.major.pitch(67, steps: -3, root: 0), cppID: neighbors,
                        what: "three degrees below G")
 
     let diatonic = "scalecheck/ScaleCheckTest::diatonicDestinations"
@@ -91,7 +91,7 @@ func checkScaleTables(_ report: CheckReport) {
         var destinations = [UInt8](repeating: 42, count: row.expected.count)
         let result = ScaleID.resolveDiatonicDestinations(
             scale: .major, root: 0, sources: row.sources, steps: row.steps, dests: &destinations)
-        report.expectEqual(row.accepted, result, cppID: diatonic, what: "diatonic resolution")
-        report.expectEqual(row.expected, destinations, cppID: diatonic, what: "diatonic destination")
+        report.expectEqual(expected: row.accepted, actual: result, cppID: diatonic, what: "diatonic resolution")
+        report.expectEqual(expected: row.expected, actual: destinations, cppID: diatonic, what: "diatonic destination")
     }
 }

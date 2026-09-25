@@ -509,9 +509,9 @@ func runMidiCodecSuite(_ report: CheckReport) {
     do {
         let file = try MidiFile.decode(formatZeroBytes(justInside))
         report.pass(justInsideID, row: "independent Swift validity")
-        report.expectEqual(2, file.chunks.count, cppID: justInsideID,
+        report.expectEqual(expected: 2, actual: file.chunks.count, cppID: justInsideID,
                            what: "independent decoded chunk count")
-        report.expectEqual(TimeDefaults.maxTick, file.chunks.last?.endTick,
+        report.expectEqual(expected: TimeDefaults.maxTick, actual: file.chunks.last?.endTick,
                            cppID: justInsideID,
                            what: "independent decoded chunk=1 end tick")
     } catch {
@@ -528,7 +528,7 @@ func runMidiCodecSuite(_ report: CheckReport) {
         "4d54726b0000000b00c00000b0076460ff2f00")
     do {
         let swiftBlank = try MidiFile.blankSong().encoded()
-        report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
+        report.expectEqual(expected: expectedBlank, actual: swiftBlank, cppID: blankID,
                            what: "independent canonical byte vector")
         compareCodecCase(
             cppID: "project/SongRegistry::blankSong/reparse", bytes: swiftBlank,
@@ -572,19 +572,19 @@ private func tempoConversionProjection(_ report: CheckReport) {
     do {
         let bytes = try source.encoded()
         let file = try MidiFile.decode(bytes)
-        report.expectEqual(source, file, cppID: cppID, what: "tempo fixture semantic reparse")
+        report.expectEqual(expected: source, actual: file, cppID: cppID, what: "tempo fixture semantic reparse")
         let raw = PlaybackTimeline.build(file: file, sampleRate: 44_100)
         assertTempoProjection(raw, tempoValues: [150, 100], cppID: cppID, report: report)
 
         let document = SongDocument(file: file)
-        report.expectEqual([TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)],
-                           document.state.tempo, cppID: cppID,
+        report.expectEqual(expected: [TempoPoint(tick: 1, microsecondsPerQuarterNote: 600_000)],
+                           actual: document.state.tempo, cppID: cppID,
                            what: "document collapses duplicate tempo last-wins")
-        report.expectEqual(1, document.engineTracks.tracks.first?.midiChunk, cppID: cppID,
+        report.expectEqual(expected: 1, actual: document.engineTracks.tracks.first?.midiChunk, cppID: cppID,
                            what: "document maps voice chunk")
         let projected = PlaybackTimeline.build(state: document.state, sampleRate: 44_100)
         assertTempoProjection(projected, tempoValues: [100], cppID: cppID, report: report)
-        report.expectEqual(bytes, try file.encoded(), cppID: cppID,
+        report.expectEqual(expected: bytes, actual: try file.encoded(), cppID: cppID,
                            what: "projections do not mutate source MIDI bytes")
     } catch {
         report.fail(cppID, "tempo fixture codec failed: \(error)")
@@ -596,44 +596,44 @@ private func assertTempoProjection(_ timeline: PlaybackTimeline, tempoValues: [I
     let tickOneTempos = timeline.events.filter {
         $0.type == playbackTempoEventType && $0.tick == 1
     }
-    report.expectEqual(tempoValues.count, tickOneTempos.count, cppID: cppID,
+    report.expectEqual(expected: tempoValues.count, actual: tickOneTempos.count, cppID: cppID,
                        what: "tick-one tempo event count")
-    report.expectEqual(tempoValues, tickOneTempos.map {
+    report.expectEqual(expected: tempoValues, actual: tickOneTempos.map {
         Int($0.data0) | Int($0.data1) << 7
     }, cppID: cppID, what: "tick-one tempo sequence in BPM")
-    report.expectEqual([UInt64](repeating: 230, count: tempoValues.count),
-                       tickOneTempos.map(\.sample), cppID: cppID,
+    report.expectEqual(expected: [UInt64](repeating: 230, count: tempoValues.count),
+                       actual: tickOneTempos.map(\.sample), cppID: cppID,
                        what: "tick-one tempo sample positions")
     let noteOns = timeline.events.filter { $0.type == 0x9 }
-    report.expectEqual(1, noteOns.count, cppID: cppID, what: "one scheduled note-on")
-    report.expectEqual([Tick(2)], noteOns.map(\.tick), cppID: cppID,
+    report.expectEqual(expected: 1, actual: noteOns.count, cppID: cppID, what: "one scheduled note-on")
+    report.expectEqual(expected: [Tick(2)], actual: noteOns.map(\.tick), cppID: cppID,
                        what: "note-on tick")
-    report.expectEqual([UInt64(505)], noteOns.map(\.sample), cppID: cppID,
+    report.expectEqual(expected: [UInt64(505)], actual: noteOns.map(\.sample), cppID: cppID,
                        what: "note-on sample")
-    report.expectEqual([UInt8(0)], noteOns.map(\.track), cppID: cppID,
+    report.expectEqual(expected: [UInt8(0)], actual: noteOns.map(\.track), cppID: cppID,
                        what: "note-on engine track")
     let noteOffs = timeline.events.filter { $0.type == 0x8 }
-    report.expectEqual([Tick(4)], noteOffs.map(\.tick), cppID: cppID,
+    report.expectEqual(expected: [Tick(4)], actual: noteOffs.map(\.tick), cppID: cppID,
                        what: "note-off tick")
-    report.expectEqual([UInt8(0)], noteOffs.map(\.track), cppID: cppID,
+    report.expectEqual(expected: [UInt8(0)], actual: noteOffs.map(\.track), cppID: cppID,
                        what: "note-off engine track")
     let ticks: [Tick] = [0, 1, 2, 3, 9]
     let samples: [UInt64] = [0, 230, 505, 781, 2435]
     for (tick, sample) in zip(ticks, samples) {
-        report.expectEqual(sample, timeline.sample(for: tick), cppID: cppID,
+        report.expectEqual(expected: sample, actual: timeline.sample(for: tick), cppID: cppID,
                            what: "sample for tick \(tick)")
         report.expect(abs(timeline.tick(for: sample) - Double(tick))
             <= 0.5 / 229.6875 + 1e-12, cppID: cppID,
             message: "sample \(sample) inverts to tick \(tick)")
     }
     report.expect(timeline.hasLoop, cppID: cppID, message: "start/end mark a loop")
-    report.expectEqual(Tick(3), timeline.loopStartTick, cppID: cppID,
+    report.expectEqual(expected: Tick(3), actual: timeline.loopStartTick, cppID: cppID,
                        what: "loop start tick")
-    report.expectEqual(Tick(9), timeline.loopEndTick, cppID: cppID,
+    report.expectEqual(expected: Tick(9), actual: timeline.loopEndTick, cppID: cppID,
                        what: "loop end tick")
-    report.expectEqual(UInt64(781), timeline.loopStartSample, cppID: cppID,
+    report.expectEqual(expected: UInt64(781), actual: timeline.loopStartSample, cppID: cppID,
                        what: "loop start sample")
-    report.expectEqual(UInt64(2435), timeline.loopEndSample, cppID: cppID,
+    report.expectEqual(expected: UInt64(2435), actual: timeline.loopEndSample, cppID: cppID,
                        what: "loop end sample")
 }
 
@@ -670,69 +670,69 @@ private func engineMappingProjection(_ report: CheckReport) {
         let document = SongDocument(file: file)
         let projected = PlaybackTimeline.build(state: document.state, sampleRate: 44_100)
         let analysis = MidiImport.analyze(file)
-        report.expectEqual(16, raw.usedTrackCount, cppID: cppID,
+        report.expectEqual(expected: 16, actual: raw.usedTrackCount, cppID: cppID,
                            what: "raw timeline mapped-track count")
-        report.expectEqual(1, raw.droppedTracks, cppID: cppID,
+        report.expectEqual(expected: 1, actual: raw.droppedTracks, cppID: cppID,
                            what: "raw timeline dropped-track count")
-        report.expectEqual(16, projected.usedTrackCount, cppID: cppID,
+        report.expectEqual(expected: 16, actual: projected.usedTrackCount, cppID: cppID,
                            what: "document timeline mapped-track count")
-        report.expectEqual(1, projected.droppedTracks, cppID: cppID,
+        report.expectEqual(expected: 1, actual: projected.droppedTracks, cppID: cppID,
                            what: "document timeline dropped-track count")
-        report.expectEqual(16, analysis.mappedTracks, cppID: cppID,
+        report.expectEqual(expected: 16, actual: analysis.mappedTracks, cppID: cppID,
                            what: "import mapped-track count")
-        report.expectEqual(1, analysis.droppedTracks, cppID: cppID,
+        report.expectEqual(expected: 1, actual: analysis.droppedTracks, cppID: cppID,
                            what: "import dropped-track count")
-        report.expectEqual(16, analysis.tracks.count, cppID: cppID,
+        report.expectEqual(expected: 16, actual: analysis.tracks.count, cppID: cppID,
                            what: "import mapped-track rows")
-        report.expectEqual(15, analysis.peakConcurrentNotes, cppID: cppID,
+        report.expectEqual(expected: 15, actual: analysis.peakConcurrentNotes, cppID: cppID,
                            what: "concurrent playback notes")
         let names = ["", "Alpha", "Beta"] + (5...17).map { "T\($0)" }
-        report.expectEqual(names, Array(raw.tracks.prefix(16).map(\.name)),
+        report.expectEqual(expected: names, actual: Array(raw.tracks.prefix(16).map(\.name)),
                            cppID: cppID, what: "raw timeline track names")
-        report.expectEqual([0] + [Int](repeating: 1, count: 15),
-                           Array(raw.tracks.prefix(16).map(\.noteCount)),
+        report.expectEqual(expected: [0] + [Int](repeating: 1, count: 15),
+                           actual: Array(raw.tracks.prefix(16).map(\.noteCount)),
                            cppID: cppID, what: "raw timeline note counts")
         report.expect(raw.tracks.prefix(16).allSatisfy(\.used),
                       cppID: cppID, message: "pressure-only engine track remains used")
-        report.expectEqual(2, raw.otherEvents.count, cppID: cppID,
+        report.expectEqual(expected: 2, actual: raw.otherEvents.count, cppID: cppID,
                            what: "pressure events remain visible")
-        report.expectEqual([0, 0], raw.otherEvents.map(\.track), cppID: cppID,
+        report.expectEqual(expected: [0, 0], actual: raw.otherEvents.map(\.track), cppID: cppID,
                            what: "pressure events map to engine zero")
         let noteOns = raw.events.filter { $0.type == 0x9 }
-        report.expectEqual(15, noteOns.count, cppID: cppID,
+        report.expectEqual(expected: 15, actual: noteOns.count, cppID: cppID,
                            what: "mapped note-on event count")
         for event in noteOns {
             let expected = event.data0 == 60 ? 1 : event.data0 == 61 ? 2 :
                 (62...74).contains(event.data0) ? Int(event.data0) - 59 : -1
             report.expect(expected >= 0, cppID: cppID,
                           message: "unexpected note key \(event.data0)")
-            report.expectEqual(expected, Int(event.track), cppID: cppID,
+            report.expectEqual(expected: expected, actual: Int(event.track), cppID: cppID,
                                what: "engine routing for note key \(event.data0)")
         }
         for engine in 0..<16 {
-            report.expectEqual(engine + 2, document.engineTracks.tracks[engine].midiChunk,
+            report.expectEqual(expected: engine + 2, actual: document.engineTracks.tracks[engine].midiChunk,
                                cppID: cppID, what: "document chunk for engine \(engine)")
             let expectedChannel = engine == 0 ? 0 : engine <= 2 ? 1 : engine - 1
-            report.expectEqual(expectedChannel, Int(document.engineTracks.tracks[engine].channel),
+            report.expectEqual(expected: expectedChannel, actual: Int(document.engineTracks.tracks[engine].channel),
                                cppID: cppID, what: "document channel for engine \(engine)")
-            report.expectEqual(names[engine], document.trackName(engine),
+            report.expectEqual(expected: names[engine], actual: document.trackName(engine),
                                cppID: cppID, what: "document name for engine \(engine)")
             if analysis.tracks.indices.contains(engine) {
-                report.expectEqual(engine + 2, analysis.tracks[engine].chunk,
+                report.expectEqual(expected: engine + 2, actual: analysis.tracks[engine].chunk,
                                    cppID: cppID, what: "import chunk for engine \(engine)")
-                report.expectEqual(names[engine], analysis.tracks[engine].name,
+                report.expectEqual(expected: names[engine], actual: analysis.tracks[engine].name,
                                    cppID: cppID, what: "import name for engine \(engine)")
-                report.expectEqual(engine == 0 ? 0 : 1, analysis.tracks[engine].noteCount,
+                report.expectEqual(expected: engine == 0 ? 0 : 1, actual: analysis.tracks[engine].noteCount,
                                    cppID: cppID, what: "import note count for engine \(engine)")
             }
         }
-        report.expectEqual(file, document.state.file, cppID: cppID,
+        report.expectEqual(expected: file, actual: document.state.file, cppID: cppID,
                            what: "document preserves mapping fixture MIDI content")
-        report.expectEqual(Array(raw.tracks.prefix(16)), Array(projected.tracks.prefix(16)),
+        report.expectEqual(expected: Array(raw.tracks.prefix(16)), actual: Array(projected.tracks.prefix(16)),
                            cppID: cppID, what: "document timeline agrees with raw tracks")
-        report.expectEqual(bytes, try file.encoded(), cppID: cppID,
+        report.expectEqual(expected: bytes, actual: try file.encoded(), cppID: cppID,
                            what: "mapping projections do not mutate MIDI bytes")
-        report.expectEqual(file, try MidiFile.decode(file.encoded()), cppID: cppID,
+        report.expectEqual(expected: file, actual: try MidiFile.decode(file.encoded()), cppID: cppID,
                            what: "mapping fixture semantic reparse")
     } catch {
         report.fail(cppID, "mapping fixture codec failed: \(error)")
@@ -791,7 +791,7 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
     }
     // The frozen C++ midiKeyName indexes names[key % 12]; for -1 that is names[-1].
     // Keep this regression Swift-only rather than invoking undefined oracle behavior.
-    report.expectEqual("B-2", midiKeyName(-1), cppID: m4aSemanticsID,
+    report.expectEqual(expected: "B-2", actual: midiKeyName(-1), cppID: m4aSemanticsID,
                        what: "row=key-negative floor modulo")
     for numerator in 1...16 {
         for power in 0...10 {
@@ -830,13 +830,13 @@ func runMusicalSemanticsSuite(_ report: CheckReport) {
         (0x01, 0), (0x05, 0), (0x07, 127), (0x0A, 64), (0x14, 2), (0x15, 22),
         (0x16, 0), (0x17, 0), (0x18, 64), (0x19, 0), (0x1A, 0),
     ]
-    report.expectEqual(concreteDefaults.count, TimeDefaults.controllerDefaultCount,
+    report.expectEqual(expected: concreteDefaults.count, actual: TimeDefaults.controllerDefaultCount,
                        cppID: timeDefaultsID, what: "controller-default count")
     for (index, expected) in concreteDefaults.enumerated() {
         let actual = TimeDefaults.controllerDefault(at: index)
-        report.expectEqual(expected.0, actual.controller, cppID: timeDefaultsID,
+        report.expectEqual(expected: expected.0, actual: actual.controller, cppID: timeDefaultsID,
                            what: "controller-default[\(index)].controller")
-        report.expectEqual(expected.1, actual.value, cppID: timeDefaultsID,
+        report.expectEqual(expected: expected.1, actual: actual.value, cppID: timeDefaultsID,
                            what: "controller-default[\(index)].value")
     }
     for cc in 0...255 {
@@ -966,17 +966,17 @@ private func runMidiExportEquivalence(
         }
     }
 
-    report.expectEqual(Int32(0), native.xcmdCompileFailed, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(0), actual: native.xcmdCompileFailed, cppID: xcmdConverterID,
                        what: "mid2agb compiles Swift XCMD traffic")
-    report.expectEqual(Int32(1), native.xiecvCount, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(1), actual: native.xiecvCount, cppID: xcmdConverterID,
                        what: "one xIECV command")
-    report.expectEqual(Int32(1), native.xieclCount, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(1), actual: native.xieclCount, cppID: xcmdConverterID,
                        what: "one xIECL command")
-    report.expectEqual(Int32(1), native.xiecv64Count, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(1), actual: native.xiecv64Count, cppID: xcmdConverterID,
                        what: "xIECV carries value 64")
-    report.expectEqual(Int32(1), native.xiecl51Count, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(1), actual: native.xiecl51Count, cppID: xcmdConverterID,
                        what: "xIECL carries value 51")
-    report.expectEqual(Int32(0), native.unknown127Count, cppID: xcmdConverterID,
+    report.expectEqual(expected: Int32(0), actual: native.unknown127Count, cppID: xcmdConverterID,
                        what: "unknown selector emits no echo command")
 }
 
@@ -1021,7 +1021,7 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
                               assertSemanticReparse: Bool = false,
                               report: CheckReport) -> CodecObservation {
     let swift = swiftCodec(bytes)
-    report.expectEqual(expectedValid, swift.valid, cppID: cppID,
+    report.expectEqual(expected: expectedValid, actual: swift.valid, cppID: cppID,
                        what: "independent Swift validity (error=\(swift.error))")
     if let expectedSwiftError {
         report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
@@ -1030,14 +1030,14 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
 
     if expectedValid, let file = swift.decoded {
         if assertCanonicalBytes {
-            report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
+            report.expectEqual(expected: expectedCanonicalBytes ?? bytes, actual: swift.encoded, cppID: cppID,
                                what: "independent canonical byte vector")
         }
         report.expect(swift.encoded.count > 9 &&
                       swift.encoded[8] == 0 && swift.encoded[9] == 1,
                       cppID: cppID,
                       message: "independent encoded format word is 1")
-        report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
+        report.expectEqual(expected: expectedFormatZero, actual: file.wasFormat0, cppID: cppID,
                            what: "independent format-0 provenance")
         expectDecodedStructure(file, expected: expectedDecoded, cppID: cppID, report: report)
         if assertSemanticReparse {
@@ -1045,9 +1045,9 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
             report.expect(reparsed.valid, cppID: cppID,
                           message: "independent semantic reparse validity (error=\(reparsed.error))")
             if let reread = reparsed.decoded {
-                report.expectEqual(file.division, reread.division, cppID: cppID,
+                report.expectEqual(expected: file.division, actual: reread.division, cppID: cppID,
                                    what: "independent semantic reparse division")
-                report.expectEqual(file.chunks, reread.chunks, cppID: cppID,
+                report.expectEqual(expected: file.chunks, actual: reread.chunks, cppID: cppID,
                                    what: "independent semantic reparse chunks")
             }
         }
@@ -1071,16 +1071,16 @@ private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpe
         }
     }
     guard let expected else { return }
-    report.expectEqual(expected.division, file.division, cppID: cppID,
+    report.expectEqual(expected: expected.division, actual: file.division, cppID: cppID,
                        what: "independent decoded division")
-    report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
+    report.expectEqual(expected: expected.wasFormatZero, actual: file.wasFormat0, cppID: cppID,
                        what: "independent decoded format-0 provenance")
-    report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
+    report.expectEqual(expected: expected.endTicks.count, actual: file.chunks.count, cppID: cppID,
                        what: "independent decoded chunk count")
     for index in 0..<min(expected.endTicks.count, file.chunks.count) {
-        report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
+        report.expectEqual(expected: expected.endTicks[index], actual: file.chunks[index].endTick, cppID: cppID,
                            what: "independent decoded chunk=\(index) end tick")
-        report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
+        report.expectEqual(expected: expected.eventCounts[index], actual: file.chunks[index].events.count,
                            cppID: cppID, what: "independent decoded chunk=\(index) event count")
     }
     for item in expected.events {
@@ -1090,7 +1090,7 @@ private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpe
             report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
             continue
         }
-        report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
+        report.expectEqual(expected: item.event, actual: file.chunks[item.chunk].events[item.index],
                            cppID: cppID,
                            what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
     }
@@ -1426,7 +1426,7 @@ internal func coreMidiExpectOracleValue(_ actual: Int64, _ operation: CoreMidiOr
                                _ a: Int64, _ b: Int64 = 0, _ c: Int64 = 0, _ d: Int64 = 0,
                                row: String, cppID: String, report: CheckReport) {
     let independent = independentExpectedValue(operation, a, b, c, d)
-    report.expectEqual(independent, actual, cppID: cppID,
+    report.expectEqual(expected: independent, actual: actual, cppID: cppID,
                        what: "row=\(row) independent expected value")
 }
 
@@ -1434,7 +1434,7 @@ internal func coreMidiExpectOracleText(_ actual: String, _ operation: CoreMidiOr
                               _ a: Int64, _ b: Int64 = 0, row: String,
                               cppID: String, report: CheckReport) {
     let independent = independentExpectedText(operation, a, b)
-    report.expectEqual(independent, actual, cppID: cppID,
+    report.expectEqual(expected: independent, actual: actual, cppID: cppID,
                        what: "row=\(row) independent expected text")
 }
 

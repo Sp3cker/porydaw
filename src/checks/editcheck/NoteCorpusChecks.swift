@@ -92,32 +92,32 @@ private func basicNoteRow(_ document: SongDocument, _ track: Int, _ base: Tick, 
     document.resizeNotes([moved.id], edge: .trailing, byTicks: Int64(step) * 2)
     guard let extended = requireCorpusNote(document, track, base + step * 8, 63, report, id, "A077")
     else { return }
-    report.expectEqual(step * 6, extended.duration, cppID: id, what: "A078 trailing resize adds two steps")
+    report.expectEqual(expected: step * 6, actual: extended.duration, cppID: id, what: "A078 trailing resize adds two steps")
     document.resizeNotes([extended.id], edge: .leading, byTicks: -Int64(step) * 2)
     guard let leading = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A079")
     else { return }
-    report.expectEqual(step * 8, leading.duration, cppID: id, what: "A080 leading resize preserves the end")
+    report.expectEqual(expected: step * 8, actual: leading.duration, cppID: id, what: "A080 leading resize preserves the end")
     document.resizeNotes([leading.id], edge: .leading, byTicks: Int64(step) * 100)
     guard let clamped = requireCorpusNote(document, track, base + step * 14 - 1, 63, report, id, "A081")
     else { return }
-    report.expectEqual(Tick(1), clamped.duration, cppID: id, what: "A082 leading resize clamps to one tick")
+    report.expectEqual(expected: Tick(1), actual: clamped.duration, cppID: id, what: "A082 leading resize clamps to one tick")
     document.resizeNotes([clamped.id], edge: .leading, byTicks: -Int64(step) * 8 + 1)
     guard let restored = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A083")
     else { return }
-    report.expectEqual(step * 8, restored.duration, cppID: id, what: "A084 leading resize restores eight steps")
+    report.expectEqual(expected: step * 8, actual: restored.duration, cppID: id, what: "A084 leading resize restores eight steps")
     _ = document.setVelocities([NoteVelocity(noteID: restored.id, velocity: 88)],
                                expectedRevision: document.revision)
     guard let set = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A085")
     else { return }
-    report.expectEqual(UInt8(88), set.velocity, cppID: id, what: "A086 velocity is set to 88")
+    report.expectEqual(expected: UInt8(88), actual: set.velocity, cppID: id, what: "A086 velocity is set to 88")
     document.nudgeVelocities([set.id], by: -30)
     guard let lowered = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A087")
     else { return }
-    report.expectEqual(UInt8(58), lowered.velocity, cppID: id, what: "A088 negative nudge yields 58")
+    report.expectEqual(expected: UInt8(58), actual: lowered.velocity, cppID: id, what: "A088 negative nudge yields 58")
     document.nudgeVelocities([lowered.id], by: 200)
     guard let raised = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A089")
     else { return }
-    report.expectEqual(UInt8(127), raised.velocity, cppID: id, what: "A090 positive nudge clamps to 127")
+    report.expectEqual(expected: UInt8(127), actual: raised.velocity, cppID: id, what: "A090 positive nudge clamps to 127")
     document.deleteNotes([raised.id])
     report.expect(corpusNote(document, track, base + step * 6, 63) == nil, cppID: id,
                   message: "A091 deleted note is absent")
@@ -134,7 +134,7 @@ private func batchNoteRow(_ document: SongDocument, _ track: Int, _ base: Tick, 
     ])
     guard requireCorpusNote(document, track, base + step * 20, 64, report, id, "A096") != nil,
           requireCorpusNote(document, track, base + step * 22, 67, report, id, "A097") != nil else { return }
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+    report.expectEqual(expected: before + 1, actual: try coreEditHistoryCountAtTip(document, report: report, cppID: id),
                        cppID: id, what: "A098 batch adds exactly one undo entry")
     _ = document.history.undoDocument()
     report.expect(corpusNote(document, track, base + step * 20, 64) == nil, cppID: id,
@@ -158,8 +158,8 @@ private func abuttingNoteRow(_ document: SongDocument, _ track: Int, _ base: Tic
     ])
     guard let left = requireCorpusNote(document, track, seam - step * 2, 60, report, id, "A106"),
           let right = requireCorpusNote(document, track, seam, 60, report, id, "A107") else { return }
-    report.expectEqual(step * 2, left.duration, cppID: id, what: "A108 left note ends at the seam")
-    report.expectEqual(step * 2, right.duration, cppID: id, what: "A109 right note retains its full duration")
+    report.expectEqual(expected: step * 2, actual: left.duration, cppID: id, what: "A108 left note ends at the seam")
+    report.expectEqual(expected: step * 2, actual: right.duration, cppID: id, what: "A109 right note retains its full duration")
     report.expect(left.endIndex != right.endIndex, cppID: id, message: "A110 abutting notes have distinct ends")
     document.deleteNotes([left.id, right.id])
     guard let chunk = document.engineTracks.tracks[track].midiChunk else {

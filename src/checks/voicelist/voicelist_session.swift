@@ -73,36 +73,36 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refresh(from: session)
 
     // The staged test_vg binds: three editable CGB voices, then blanks.
-    report.expectEqual(128, list.rows.count, cppID: bindingID,
+    report.expectEqual(expected: 128, actual: list.rows.count, cppID: bindingID,
                        what: "a bound session publishes the full 128 rows")
-    report.expectEqual(true, list.isBound, cppID: bindingID,
+    report.expectEqual(expected: true, actual: list.isBound, cppID: bindingID,
                        what: "the session's bank view binds the list")
-    report.expectEqual("000  Square 1", list.rows[0].title, cppID: bindingID,
+    report.expectEqual(expected: "000  Square 1", actual: list.rows[0].title, cppID: bindingID,
                        what: "slot 0 renders the fixture's square_1 voice")
-    report.expectEqual("2 3 12 4", list.rows[0].adsr, cppID: bindingID,
+    report.expectEqual(expected: "2 3 12 4", actual: list.rows[0].adsr, cppID: bindingID,
                        what: "slot 0 shows the fixture's CGB envelope")
-    report.expectEqual("Square 2", list.rows[1].typeName, cppID: bindingID,
+    report.expectEqual(expected: "Square 2", actual: list.rows[1].typeName, cppID: bindingID,
                        what: "slot 1 renders the fixture's square_2 voice")
-    report.expectEqual("Noise", list.rows[2].typeName, cppID: bindingID,
+    report.expectEqual(expected: "Noise", actual: list.rows[2].typeName, cppID: bindingID,
                        what: "slot 2 renders the fixture's noise voice")
-    report.expectEqual("003  [Blank]", list.rows[3].title, cppID: bindingID,
+    report.expectEqual(expected: "003  [Blank]", actual: list.rows[3].title, cppID: bindingID,
                        what: "slot 3 renders the blank template row")
-    report.expectEqual("test_vg", list.selectorText, cppID: bindingID,
+    report.expectEqual(expected: "test_vg", actual: list.selectorText, cppID: bindingID,
                        what: "the selector reflects the song's -G arg as a display name")
-    report.expectEqual(true, list.selectorEnabled, cppID: bindingID,
+    report.expectEqual(expected: true, actual: list.selectorEnabled, cppID: bindingID,
                        what: "a bound selector is enabled")
-    report.expectEqual(false, list.bankDirty, cppID: bindingID,
+    report.expectEqual(expected: false, actual: list.bankDirty, cppID: bindingID,
                        what: "a freshly opened bank is clean")
 
     // Used marks derive from the document: the fixture song references no
     // programs, then a voice lane point marks its program, and undo clears
     // it — the native addLanePoint/undo flow.
-    report.expectEqual(false, list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
+    report.expectEqual(expected: false, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
                        what: "an unreferenced program starts unmarked")
     session.document.writeLane(track: 0, lane: .voice, from: 480, through: 480,
                                points: [LaneWrite(tick: 480, value: 9)])
     list.refreshUsedVoices(from: session)
-    report.expectEqual(true, list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
+    report.expectEqual(expected: true, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
                        what: "a voice lane point marks its program used")
     do {
         _ = try runBlocking { try await session.undo() }
@@ -111,7 +111,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     list.refreshUsedVoices(from: session)
-    report.expectEqual(false, list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
+    report.expectEqual(expected: false, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
                        what: "voice-lane undo clears the used mark")
 
     // applyVoiceEdit routes through DocumentSession.applyBankEdit: the
@@ -131,21 +131,21 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         report.fail(editID, "applyVoiceEdit threw: \(error)")
         return
     }
-    report.expectEqual(true, session.bankDirty, cppID: editID,
+    report.expectEqual(expected: true, actual: session.bankDirty, cppID: editID,
                        what: "a committed voice edit dirties the bank")
-    report.expectEqual(edited, session.bankSlots[0].voice, cppID: editID,
+    report.expectEqual(expected: edited, actual: session.bankSlots[0].voice, cppID: editID,
                        what: "a committed voice edit lands in the published bank")
     // Rows are explicit-refresh: the model holds the pre-edit row until the
     // owner's change seam calls refresh (DocumentSession.onChange stays
     // single-subscriber, owned by DocumentWorkspace).
-    report.expectEqual("2 3 12 4", list.rows[0].adsr, cppID: editID,
+    report.expectEqual(expected: "2 3 12 4", actual: list.rows[0].adsr, cppID: editID,
                        what: "rows hold the pre-edit state until refresh")
     list.refresh(from: session)
     report.expect(list.rows[0] === originalRow && list.bankDirty
                   && list.panelTitle == "Voicegroup*",
                   cppID: bankViewID,
                   message: "bank edit republishes the dirty view on the same voice row handle")
-    report.expectEqual("2 3 12 \(edited.release & 7)", list.rows[0].adsr, cppID: editID,
+    report.expectEqual(expected: "2 3 12 \(edited.release & 7)", actual: list.rows[0].adsr, cppID: editID,
                        what: "refresh re-derives the edited row")
     do {
         _ = try runBlocking { try await session.undo() }
@@ -158,9 +158,9 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                   && list.panelTitle == "Voicegroup",
                   cppID: bankViewID,
                   message: "bank undo republishes the clean view on the same voice row handle")
-    report.expectEqual(original, session.bankSlots[0].voice, cppID: editID,
+    report.expectEqual(expected: original, actual: session.bankSlots[0].voice, cppID: editID,
                        what: "voice edit undo restores the published voice")
-    report.expectEqual("2 3 12 4", list.rows[0].adsr, cppID: editID,
+    report.expectEqual(expected: "2 3 12 4", actual: list.rows[0].adsr, cppID: editID,
                        what: "voice edit undo restores the row")
 
     // Blank materialization through the same canonical path.
@@ -178,9 +178,9 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     list.refresh(from: session)
-    report.expectEqual(draft.voice, session.bankSlots[3].voice, cppID: blankID,
+    report.expectEqual(expected: draft.voice, actual: session.bankSlots[3].voice, cppID: blankID,
                        what: "a blank slot materializes the template voice")
-    report.expectEqual("003  Sample", list.rows[3].title, cppID: blankID,
+    report.expectEqual(expected: "003  Sample", actual: list.rows[3].title, cppID: blankID,
                        what: "the materialized row renders its type-named title")
     do {
         _ = try runBlocking { try await session.undo() }
@@ -191,7 +191,7 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refresh(from: session)
     report.expect(session.bankSlots[3].voice == nil, cppID: blankID,
                   message: "materialization undo returns the slot to blank")
-    report.expectEqual("003  [Blank]", list.rows[3].title, cppID: blankID,
+    report.expectEqual(expected: "003  [Blank]", actual: list.rows[3].title, cppID: blankID,
                        what: "the reverted row renders the blank template again")
 
     // A -G selection changes both document history and the real loaded bank.
@@ -208,11 +208,11 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                   && list.rows[0].title == "000  Square 2",
                   cppID: bankViewID,
                   message: "voicegroup rebind publishes the alternate voice on the original row handle")
-    report.expectEqual(true, session.document.isDirty, cppID: selectorID,
+    report.expectEqual(expected: true, actual: session.document.isDirty, cppID: selectorID,
                        what: "the selected -G marks the song config dirty")
-    report.expectEqual("other", list.selectorText, cppID: selectorID,
+    report.expectEqual(expected: "other", actual: list.selectorText, cppID: selectorID,
                        what: "selected -G name reflects the undoable config")
-    report.expectEqual("other", session.bankLoadName, cppID: selectorID,
+    report.expectEqual(expected: "other", actual: session.bankLoadName, cppID: selectorID,
                        what: "the selected -G loads the alternate bank")
     report.expect(session.bankLease.bankToken != originalToken &&
                       session.bankSlots[0].voice?.macro == BankVoiceMacro.square2,
@@ -229,13 +229,13 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                   && list.rows[0].title == "000  Square 1",
                   cppID: bankViewID,
                   message: "voicegroup undo rebind restores the original voice on the original row handle")
-    report.expectEqual("test_vg", list.selectorText, cppID: selectorID,
+    report.expectEqual(expected: "test_vg", actual: list.selectorText, cppID: selectorID,
                        what: "-G undo restores the original selector")
-    report.expectEqual("test_vg", session.bankLoadName, cppID: selectorID,
+    report.expectEqual(expected: "test_vg", actual: session.bankLoadName, cppID: selectorID,
                        what: "-G undo restores the original loaded bank")
-    report.expectEqual(false, session.document.isDirty, cppID: selectorID,
+    report.expectEqual(expected: false, actual: session.document.isDirty, cppID: selectorID,
                        what: "-G undo clears the song config dirty state")
-    report.expectEqual(original, session.bankSlots[0].voice, cppID: selectorID,
+    report.expectEqual(expected: original, actual: session.bankSlots[0].voice, cppID: selectorID,
                        what: "-G undo restores the original slot's instrument")
     let originID = "swiftcore/VoiceEditorController::queuedOriginSurvivesTabRebind"
     let second: DocumentSession
@@ -275,15 +275,15 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         report.fail(originID, "same-origin queued edit did not complete: \(error)")
         return
     }
-    report.expectEqual(originalHistory, session.document.history.currentIdentity, cppID: originID,
+    report.expectEqual(expected: originalHistory, actual: session.document.history.currentIdentity, cppID: originID,
                        what: "discarded queued edits leave the original document history unchanged")
     report.expect(session.bankSlots[0].voice == expectedVoice &&
                       second.bankSlots[0].voice == expectedVoice,
                   cppID: originID,
                   message: "the valid peer edit publishes its full voice to both live bank views")
-    report.expectEqual(secondVoice.macro, second.bankSlots[0].voice?.macro, cppID: originID,
+    report.expectEqual(expected: secondVoice.macro, actual: second.bankSlots[0].voice?.macro, cppID: originID,
                        what: "queued type edit cannot retarget the other tab's slot")
-    report.expectEqual(committedRelease, second.bankSlots[0].voice?.release, cppID: originID,
+    report.expectEqual(expected: committedRelease, actual: second.bankSlots[0].voice?.release, cppID: originID,
                        what: "same-origin edit commits after discarded earlier requests")
     do {
         _ = try runBlocking { try await second.undo() }
@@ -291,6 +291,6 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
         report.fail(originID, "same-origin edit undo threw: \(error)")
         return
     }
-    report.expectEqual(secondVoice, second.bankSlots[0].voice, cppID: originID,
+    report.expectEqual(expected: secondVoice, actual: second.bankSlots[0].voice, cppID: originID,
                        what: "undo restores the second tab's original voice")
 }

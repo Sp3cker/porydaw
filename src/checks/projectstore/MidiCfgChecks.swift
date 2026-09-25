@@ -12,13 +12,13 @@ private func midiCfgParsing(_ report: CheckReport) {
     let bytes = Data(" # ignored\r\n  mus_one.MID : -V080 -R50 # old\r\n"
         .appending("mus_one.mid: -E  -V099\r\ninvalid line\r\nother.mid: -V005\r\n").utf8)
     let parsed = MidiCfg.parse(bytes)
-    report.expectEqual(2, parsed.count, cppID: cppID,
+    report.expectEqual(expected: 2, actual: parsed.count, cppID: cppID,
                        what: "comments and lines without a colon do not create entries")
-    report.expectEqual(["-E", "-V099"], parsed["mus_one"]?.rawFlags, cppID: cppID,
+    report.expectEqual(expected: ["-E", "-V099"], actual: parsed["mus_one"]?.rawFlags, cppID: cppID,
                        what: "last duplicate label wins after case-insensitive .mid removal")
-    report.expectEqual(99, parsed["mus_one"]?.masterVolume, cppID: cppID,
+    report.expectEqual(expected: 99, actual: parsed["mus_one"]?.masterVolume, cppID: cppID,
                        what: "flags after a comment cut are parsed")
-    report.expectEqual(5, parsed["other"]?.masterVolume, cppID: cppID,
+    report.expectEqual(expected: 5, actual: parsed["other"]?.masterVolume, cppID: cppID,
                        what: "other song flags remain available")
 }
 
@@ -38,14 +38,14 @@ private func midiCfgByteConservation(_ report: CheckReport) {
         let before = ProjectFileStore.splitLines(original)
         let after = ProjectFileStore.splitLines(changed)
         // proof.save.txt A013/A014: direct writer round-trip; no SongDocument/undo scaffolding.
-        report.expectEqual(before.lines.count, after.lines.count, cppID: cppID,
+        report.expectEqual(expected: before.lines.count, actual: after.lines.count, cppID: cppID,
                            what: "A013: rewriting one song retains the line count")
         if before.lines.count == after.lines.count {
             for index in before.lines.indices where index != 2 {
-                report.expectEqual(before.lines[index], after.lines[index], cppID: cppID,
+                report.expectEqual(expected: before.lines[index], actual: after.lines[index], cppID: cppID,
                                    what: "A014: other line \(index) retains every byte")
             }
-            report.expectEqual(Data("mus_target.mid:   -E -V111\r".utf8), after.lines[2],
+            report.expectEqual(expected: Data("mus_target.mid:   -E -V111\r".utf8), actual: after.lines[2],
                                cppID: cppID, what: "target retains name padding and CRLF")
         }
         report.expect(after.endsWithNewline && after.crlf, cppID: cppID,
@@ -53,7 +53,7 @@ private func midiCfgByteConservation(_ report: CheckReport) {
 
         try MidiCfg.writeMidiCfgLine(midiDir: root, label: "mus_added", flags: ["-V005"])
         let appended = ProjectFileStore.splitLines(try Data(contentsOf: path))
-        report.expectEqual(Data("mus_added.mid: -V005\r".utf8), appended.lines.last,
+        report.expectEqual(expected: Data("mus_added.mid: -V005\r".utf8), actual: appended.lines.last,
                            cppID: cppID, what: "new line follows the file's CRLF style")
     } catch {
         report.expect(false, cppID: cppID, message: "fixture or write failed: \(error)")
@@ -72,7 +72,7 @@ private func midiCfgCreationAndRouting(_ report: CheckReport) {
     do {
         try FileManager.default.createDirectory(at: midiDir, withIntermediateDirectories: true)
         try MidiCfg.writeSongFlags(midiDir: midiDir, label: "mus_fresh", flags: ["-E", "-V100"])
-        report.expectEqual(Data("mus_fresh.mid: -E -V100\n".utf8), try Data(contentsOf: cfgFile),
+        report.expectEqual(expected: Data("mus_fresh.mid: -E -V100\n".utf8), actual: try Data(contentsOf: cfgFile),
                            cppID: cppID, what: "missing backends create midi.cfg with flags")
 
         let mkFile = root.appendingPathComponent("songs.mk")
@@ -80,9 +80,9 @@ private func midiCfgCreationAndRouting(_ report: CheckReport) {
             .appending("$(MID_SUBDIR)/mus_target.s: %.s: %.mid\n\t$(MID) $< $@ -V080\n").utf8)
         try mkBefore.write(to: mkFile)
         try MidiCfg.writeSongFlags(midiDir: midiDir, label: "mus_fresh", flags: ["-V110"])
-        report.expectEqual(Data("mus_fresh.mid: -V110\n".utf8), try Data(contentsOf: cfgFile),
+        report.expectEqual(expected: Data("mus_fresh.mid: -V110\n".utf8), actual: try Data(contentsOf: cfgFile),
                            cppID: cppID, what: "existing midi.cfg takes precedence over songs.mk")
-        report.expectEqual(mkBefore, try Data(contentsOf: mkFile), cppID: cppID,
+        report.expectEqual(expected: mkBefore, actual: try Data(contentsOf: mkFile), cppID: cppID,
                            what: "midi.cfg route leaves songs.mk unchanged")
 
         try FileManager.default.removeItem(at: cfgFile)
@@ -90,9 +90,9 @@ private func midiCfgCreationAndRouting(_ report: CheckReport) {
         let mkAfter = try Data(contentsOf: mkFile)
         report.expect(!FileManager.default.fileExists(atPath: cfgFile.path), cppID: cppID,
                       message: "songs.mk route does not create midi.cfg")
-        report.expectEqual(Data("$(MID_SUBDIR)/mus_other.s: %.s: %.mid\n\t$(MID) $< $@ -V080\n"
+        report.expectEqual(expected: Data("$(MID_SUBDIR)/mus_other.s: %.s: %.mid\n\t$(MID) $< $@ -V080\n"
             .appending("$(MID_SUBDIR)/mus_target.s: %.s: %.mid\n\t$(MID) $< $@ -V099\n").utf8),
-            mkAfter, cppID: cppID, what: "existing songs.mk recipe receives the new flags")
+            actual: mkAfter, cppID: cppID, what: "existing songs.mk recipe receives the new flags")
     } catch {
         report.expect(false, cppID: cppID, message: "fixture or route failed: \(error)")
     }

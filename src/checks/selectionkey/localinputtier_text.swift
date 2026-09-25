@@ -19,7 +19,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         let notes = try fixture.document.addNotes([
             NewNote(track: 0, tick: 24, pitch: 60, duration: 24, velocity: 100)
         ])
-        report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
+        report.expectEqual(expected: 1, actual: notes.count, cppID: id, what: "the original selected fixture note exists")
         insertedNotes = notes
         fixture.session.setSelectedNotes(notes)
     } catch {
@@ -33,15 +33,15 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
                   message: "the original empty-tick numeric prompt opens")
     page.updatePromptDraft(draft: "12")
-    report.expectEqual("12", page.promptDraft, cppID: id,
+    report.expectEqual(expected: "12", actual: page.promptDraft, cppID: id,
                        what: "the production prompt retains the supplied numeric draft")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "draft editing does not mutate the song")
-    report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
+    report.expectEqual(expected: selection, actual: fixture.session.selectedNotes, cppID: id,
                        what: "draft editing preserves note selection")
     page.cancelPrompt()
     report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "cancellation leaves the original document unchanged")
     report.expect(fixture.document.state == state, cppID: id,
                   message: "draft and cancellation preserve the full song contents")
@@ -62,7 +62,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "the original volume lane is present in the page's row stack")
     report.expect(page.openPrompt(tick: 5808, value: 48), cppID: labelID,
                   message: "the original volume-lane insertion prompt opens")
-    report.expectEqual("48", page.promptDraft, cppID: labelID,
+    report.expectEqual(expected: "48", actual: page.promptDraft, cppID: labelID,
                        what: "the volume prompt opens with the plotted value as its draft")
     page.cancelPrompt()
 
@@ -78,7 +78,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "the document-switch cancellation closes the prompt")
     report.expect(!page.acceptPrompt(displayedValue: 96), cppID: lifetimeID,
                   message: "accepting a closed prompt commits nothing")
-    report.expectEqual(before, fixture.snapshot, cppID: lifetimeID,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: lifetimeID,
                        what: "the closed prompt's late acceptance leaves the document unchanged")
     let peer = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                  pan: [(48, 32), (96, 64)],
@@ -94,7 +94,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "second-document note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(2, pairB.count, cppID: lifetimeID,
+    report.expectEqual(expected: 2, actual: pairB.count, cppID: lifetimeID,
                        what: "the second document holds the reserved tick-960 note pair")
     report.expect(pairB.allSatisfy { peer.document.note($0) != nil }, cppID: lifetimeID,
                   message: "the second-document pair resolves by its inserted IDs")
@@ -108,24 +108,24 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "first-document note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(2, pairA.count, cppID: lifetimeID,
+    report.expectEqual(expected: 2, actual: pairA.count, cppID: lifetimeID,
                        what: "the first document holds the reserved tick-3840 note pair")
     _ = peer.page.activateParameter(index: AutomationCatalog.index(of: .tempo, track: 0) ?? 0)
-    report.expectEqual(AutomationParameter.tempo, peer.page.activeParameter, cppID: lifetimeID,
+    report.expectEqual(expected: AutomationParameter.tempo, actual: peer.page.activeParameter, cppID: lifetimeID,
                        what: "the second document keeps tempo active")
-    report.expectEqual(fixture.panLane, page.activeParameter, cppID: lifetimeID,
+    report.expectEqual(expected: fixture.panLane, actual: page.activeParameter, cppID: lifetimeID,
                        what: "the first document keeps pan active while the second shows tempo")
     let firstSteady = fixture.snapshot
     peer.document.nudgeNotes(pairB, byTicks: 24, byKeys: 0)
     report.expect(peer.document.note(pairB[0])?.tick == Tick(984), cppID: lifetimeID,
                   message: "the second document's pair advances under the Right-arrow nudge")
-    report.expectEqual(firstSteady, fixture.snapshot, cppID: lifetimeID,
+    report.expectEqual(expected: firstSteady, actual: fixture.snapshot, cppID: lifetimeID,
                        what: "the second-document nudge leaves the first document unchanged")
     let peerSteady = peer.snapshot
     fixture.document.nudgeNotes(pairA, byTicks: 0, byKeys: 1)
     report.expect(fixture.document.note(pairA[0])?.pitch == 61, cppID: lifetimeID,
                   message: "the reselected first document transposes one semitone under Up")
-    report.expectEqual(peerSteady, peer.snapshot, cppID: lifetimeID,
+    report.expectEqual(expected: peerSteady, actual: peer.snapshot, cppID: lifetimeID,
                        what: "the first-document transpose leaves the second document unchanged")
     var layout = EditorDrawerLayout()
     _ = layout.attachPage(page)
@@ -140,7 +140,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     let second = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                    pan: [(48, 32), (96, 64)],
                                                    tailTick: 6000)
-    report.expectEqual(fixture.volumeLane, second.page.activeParameter, cppID: lifetimeID,
+    report.expectEqual(expected: fixture.volumeLane, actual: second.page.activeParameter, cppID: lifetimeID,
                        what: "a fresh page presents the volume lane")
     let addedTrack = second.document.addTrack(voice: 0)
     report.expect(addedTrack == 1, cppID: lifetimeID,
@@ -157,7 +157,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         report.fail(lifetimeID, "track-1 note pair creation failed: \(error)")
         return
     }
-    report.expectEqual(2, pairT1.count, cppID: lifetimeID,
+    report.expectEqual(expected: 2, actual: pairT1.count, cppID: lifetimeID,
                        what: "the reserved track-1 tick-960 note pair inserts")
     let trackZeroStaging = try? second.document.addNotes([
         NewNote(track: 0, tick: 2000, pitch: 60, duration: 48, velocity: 100),
@@ -176,7 +176,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID,
                   message: "the primary-track change clears the note selection")
     let trackOnePan = AutomationParameter.controlChange(track: 1, controller: TimeDefaults.ccPan)
-    report.expectEqual(trackOnePan, second.page.activeParameter, cppID: lifetimeID,
+    report.expectEqual(expected: trackOnePan, actual: second.page.activeParameter, cppID: lifetimeID,
                        what: "the primary-track change retargets the active parameter")
     report.expect(second.page.rows.contains { $0.parameter == trackOnePan }, cppID: lifetimeID,
                   message: "the track-1 pan lane is present in the row stack")
@@ -193,9 +193,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     report.expect(second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 && $0.value == 96 },
                   cppID: lifetimeID,
                   message: "the accepted value lands on the track-1 lane through the pan offset")
-    report.expectEqual(trackZeroValues, second.values(second.panLane), cppID: lifetimeID,
+    report.expectEqual(expected: trackZeroValues, actual: second.values(second.panLane), cppID: lifetimeID,
                        what: "the track-1 insertion leaves the track-0 lane untouched")
-    report.expectEqual(peerBeforeInsert, peer.snapshot, cppID: lifetimeID,
+    report.expectEqual(expected: peerBeforeInsert, actual: peer.snapshot, cppID: lifetimeID,
                        what: "the track-1 insertion leaves the second document unchanged")
     second.session.setSelectedNotes(pairT1)
     second.document.nudgeNotes(pairT1, byTicks: 0, byKeys: 1)
@@ -210,9 +210,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
         priorChange?(change)
     }
     second.session.selectPrimaryTrack(1)
-    report.expectEqual(Set(pairT1), second.session.selectedNotes, cppID: lifetimeID,
+    report.expectEqual(expected: Set(pairT1), actual: second.session.selectedNotes, cppID: lifetimeID,
                        what: "selecting the existing primary track preserves selected notes")
-    report.expectEqual([SessionChangeDomains](), publications, cppID: lifetimeID,
+    report.expectEqual(expected: [SessionChangeDomains](), actual: publications, cppID: lifetimeID,
                        what: "selecting the existing primary track publishes no change")
 
     second.session.setSelectedNotes(pairT1)
@@ -220,9 +220,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
     second.session.selectPrimaryTrack(0)
     report.expect(second.session.selectedNotes.isEmpty, cppID: lifetimeID,
                   message: "changing the primary track clears selected notes")
-    report.expectEqual(0, second.session.selectedTrack, cppID: lifetimeID,
+    report.expectEqual(expected: 0, actual: second.session.selectedTrack, cppID: lifetimeID,
                        what: "changing the primary track selects track zero")
-    report.expectEqual([SessionChangeDomains.selection], publications, cppID: lifetimeID,
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: lifetimeID,
                        what: "changing the primary track publishes one selection change")
 
     second.session.setSelectedNotes(pairT1)
@@ -245,7 +245,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "tempo insertion prompt opens at tick 24")
     report.expect(tempoFixture.page.acceptPrompt(displayedValue: 90), cppID: tempoID,
                   message: "tempo prompt commits 90 BPM")
-    report.expectEqual(tempoBaseRevision + 1, tempoFixture.document.revision, cppID: tempoID,
+    report.expectEqual(expected: tempoBaseRevision + 1, actual: tempoFixture.document.revision, cppID: tempoID,
                        what: "A017 one tempo acceptance advances the revision once")
     report.expect(tempoFixture.tempoValues.contains("24:90"), cppID: tempoID,
                   message: "A019 committed tempo reads 90 BPM at tick 24")
@@ -261,7 +261,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   cppID: tempoID, message: "under-minimum tempo acceptance commits")
     report.expect(tempoFixture.tempoValues.contains("40:\(TimeDefaults.minimumTempoBPM)"), cppID: tempoID,
                   message: "A028 floor acceptance clamps to the minimum BPM")
-    report.expectEqual(tempoBaseRevision + 3, tempoFixture.document.revision, cppID: tempoID,
+    report.expectEqual(expected: tempoBaseRevision + 3, actual: tempoFixture.document.revision, cppID: tempoID,
                        what: "A029 three tempo acceptances advance the revision three times")
     let tempoDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service)
     tempoDepthFixture.activate(.tempo)
@@ -272,7 +272,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "depth tempo prompt commits 90 BPM")
     if let base = tempoDepthBase,
        let afterFirst = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
-        report.expectEqual(base + 1, afterFirst, cppID: tempoID,
+        report.expectEqual(expected: base + 1, actual: afterFirst, cppID: tempoID,
                            what: "A018 one tempo acceptance records one history entry")
     } else {
         report.fail(tempoID, "tempo history depth unreadable after one acceptance")
@@ -287,7 +287,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   cppID: tempoID, message: "depth under-minimum tempo acceptance commits")
     if let base = tempoDepthBase,
        let afterAll = try? coreEditHistoryCountAtTip(tempoDepthFixture.document, report: report, cppID: tempoID) {
-        report.expectEqual(base + 3, afterAll, cppID: tempoID,
+        report.expectEqual(expected: base + 3, actual: afterAll, cppID: tempoID,
                            what: "A030 three tempo acceptances record three history entries")
     } else {
         report.fail(tempoID, "tempo history depth unreadable after three acceptances")
@@ -301,11 +301,11 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "CC insertion prompt opens at empty tick 96")
     report.expect(ccFixture.page.acceptPrompt(displayedValue: 0), cppID: ccID,
                   message: "displayed 0 commits through the center offset")
-    report.expectEqual(ccBaseRevision + 1, ccFixture.document.revision, cppID: ccID,
+    report.expectEqual(expected: ccBaseRevision + 1, actual: ccFixture.document.revision, cppID: ccID,
                        what: "A042 one CC insertion advances the revision once")
-    report.expectEqual(2, ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
+    report.expectEqual(expected: 2, actual: ccFixture.lanePoints(ccFixture.panLane).count, cppID: ccID,
                        what: "A044 insertion leaves two lane points")
-    report.expectEqual(64, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+    report.expectEqual(expected: 64, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
                        cppID: ccID, what: "A045 inserted point stores 64")
     report.expect(ccFixture.page.openPrompt(tick: 96, value: 64), cppID: ccID,
                   message: "node prompt opens on the inserted point")
@@ -313,7 +313,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "displayed -64 commits through the stored offset")
     report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
                   message: "A049 lowered node found at tick 96")
-    report.expectEqual(0, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+    report.expectEqual(expected: 0, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
                        cppID: ccID, what: "A050 displayed -64 stores 0")
     report.expect(ccFixture.page.openPrompt(tick: 96, value: 0), cppID: ccID,
                   message: "node prompt reopens on the lowered point")
@@ -321,9 +321,9 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "displayed 63 commits through the stored offset")
     report.expect(ccFixture.lanePoints(ccFixture.panLane).contains { $0.tick == 96 }, cppID: ccID,
                   message: "A054 raised node found at tick 96")
-    report.expectEqual(127, ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+    report.expectEqual(expected: 127, actual: ccFixture.lanePoints(ccFixture.panLane).first { $0.tick == 96 }?.value ?? -1,
                        cppID: ccID, what: "A055 displayed 63 stores 127")
-    report.expectEqual(ccBaseRevision + 3, ccFixture.document.revision, cppID: ccID,
+    report.expectEqual(expected: ccBaseRevision + 3, actual: ccFixture.document.revision, cppID: ccID,
                        what: "A056 three CC acceptances advance the revision three times")
     let ccDepthFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     ccDepthFixture.activate(ccDepthFixture.panLane)
@@ -334,7 +334,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "depth displayed 0 commits through the center offset")
     if let base = ccDepthBase,
        let afterFirst = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
-        report.expectEqual(base + 1, afterFirst, cppID: ccID,
+        report.expectEqual(expected: base + 1, actual: afterFirst, cppID: ccID,
                            what: "A043 one CC insertion records one history entry")
     } else {
         report.fail(ccID, "CC history depth unreadable after one insertion")
@@ -349,7 +349,7 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "depth displayed 63 commits")
     if let base = ccDepthBase,
        let afterAll = try? coreEditHistoryCountAtTip(ccDepthFixture.document, report: report, cppID: ccID) {
-        report.expectEqual(base + 3, afterAll, cppID: ccID,
+        report.expectEqual(expected: base + 3, actual: afterAll, cppID: ccID,
                            what: "A057 three CC acceptances record three history entries")
     } else {
         report.fail(ccID, "CC history depth unreadable after three acceptances")
@@ -372,19 +372,19 @@ func drawerOriginalNumericPromptTransaction(_ report: CheckReport, suite: Docume
                   message: "document change cancels the pending prompt")
     report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 24 }, cppID: focusID,
                   message: "A080 original node found after the cancel")
-    report.expectEqual(64, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
+    report.expectEqual(expected: 64, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 24 }?.value ?? -1,
                        cppID: focusID, what: "A081 cancelled prompt keeps the original value 64")
     report.expect(focusFixture.lanePoints(focusFixture.panLane).contains { $0.tick == 48 }, cppID: focusID,
                   message: "A082 added point found at tick 48")
-    report.expectEqual(32, focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+    report.expectEqual(expected: 32, actual: focusFixture.lanePoints(focusFixture.panLane).first { $0.tick == 48 }?.value ?? -1,
                        cppID: focusID, what: "A083 added point stores 32")
-    report.expectEqual(["24:64", "48:32"], focusFixture.values(focusFixture.panLane), cppID: focusID,
+    report.expectEqual(expected: ["24:64", "48:32"], actual: focusFixture.values(focusFixture.panLane), cppID: focusID,
                        what: "A084 lane holds the original plus the added point")
-    report.expectEqual(focusBaseRevision + 1, focusFixture.document.revision, cppID: focusID,
+    report.expectEqual(expected: focusBaseRevision + 1, actual: focusFixture.document.revision, cppID: focusID,
                        what: "A085 document change alone advances the revision once")
     if let base = focusDepthBase,
        let afterChange = try? coreEditHistoryCountAtTip(focusFixture.document, report: report, cppID: focusID) {
-        report.expectEqual(base + 1, afterChange, cppID: focusID,
+        report.expectEqual(expected: base + 1, actual: afterChange, cppID: focusID,
                            what: "A086 document change records one history entry")
     } else {
         report.fail(focusID, "focus history depth unreadable after the document change")

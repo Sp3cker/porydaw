@@ -56,7 +56,7 @@ struct CheckReport {
         }
     }
 
-    func expectEqual<T: Equatable>(_ expected: T, _ actual: T, cppID: String,
+    func expectEqual<T: Equatable>(expected: T, actual: T, cppID: String,
                                     what: String) {
         if expected == actual {
             pass(cppID, row: what)

@@ -44,20 +44,20 @@ private func songCatalogDiscovery(_ report: CheckReport) {
                           message: "expected four songs and three players, got \(catalog.songs.count) and \(catalog.players.count)")
             return
         }
-        report.expectEqual(["mus_target", "mus_missing", "mus_a.extra", "mus_z"],
-                           catalog.songs.map(\.label), cppID: cppID,
+        report.expectEqual(expected: ["mus_target", "mus_missing", "mus_a.extra", "mus_z"],
+                           actual: catalog.songs.map(\.label), cppID: cppID,
                            what: "comments and non-ASCII labels are skipped; unregistered files sort by name")
-        report.expectEqual([0, 1, 2, 3], catalog.songs.map(\.id), cppID: cppID,
+        report.expectEqual(expected: [0, 1, 2, 3], actual: catalog.songs.map(\.id), cppID: cppID,
                            what: "registered and sorted unregistered songs receive consecutive IDs")
-        report.expectEqual("MUS_FIRST", catalog.songs[0].constant, cppID: cppID,
+        report.expectEqual(expected: "MUS_FIRST", actual: catalog.songs[0].constant, cppID: cppID,
                            what: "first decimal songs.h definition wins for a song ID")
-        report.expectEqual("MUS_MISSING", catalog.songs[1].constant, cppID: cppID,
+        report.expectEqual(expected: "MUS_MISSING", actual: catalog.songs[1].constant, cppID: cppID,
                            what: "constants attach by decimal numeric ID")
-        report.expectEqual("MUS_A.EXTRA", catalog.songs[2].constant, cppID: cppID,
+        report.expectEqual(expected: "MUS_A.EXTRA", actual: catalog.songs[2].constant, cppID: cppID,
                            what: "unregistered constants derive from full label after last suffix")
         report.expect(catalog.songs[0].registered && catalog.songs[0].hasMid && catalog.songs[0].hasCfg,
                       cppID: cppID, message: "registered MIDI song receives supplied config")
-        report.expectEqual(cfg, catalog.songs[0].cfg, cppID: cppID,
+        report.expectEqual(expected: cfg, actual: catalog.songs[0].cfg, cppID: cppID,
                            what: "caller-provided configuration is attached without re-parsing")
         report.expect(catalog.songs[1].registered && !catalog.songs[1].hasMid
             && catalog.songs[1].midPath == nil, cppID: cppID,
@@ -65,16 +65,16 @@ private func songCatalogDiscovery(_ report: CheckReport) {
         report.expect(!catalog.songs[2].registered && catalog.songs[2].hasMid
             && !catalog.songs[2].hasCfg, cppID: cppID,
             message: "discovered song keeps unregistered, MIDI-backed, no-config defaults")
-        report.expectEqual(SongConfig(), catalog.songs[2].cfg, cppID: cppID,
+        report.expectEqual(expected: SongConfig(), actual: catalog.songs[2].cfg, cppID: cppID,
                            what: "unregistered song starts with default configuration")
-        report.expectEqual("MUSIC_PLAYER_BGM", catalog.songs[2].player, cppID: cppID,
+        report.expectEqual(expected: "MUSIC_PLAYER_BGM", actual: catalog.songs[2].player, cppID: cppID,
                            what: "unregistered song uses the default player")
-        report.expectEqual(["MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE", "MUSIC_PLAYER_UNKNOWN"],
-                           catalog.players.map(\.name), cppID: cppID,
+        report.expectEqual(expected: ["MUSIC_PLAYER_BGM", "MUSIC_PLAYER_SE", "MUSIC_PLAYER_UNKNOWN"],
+                           actual: catalog.players.map(\.name), cppID: cppID,
                            what: "equiv players retain file order")
-        report.expectEqual([16, 0, -1], catalog.players.map(\.trackCount), cppID: cppID,
+        report.expectEqual(expected: [16, 0, -1], actual: catalog.players.map(\.trackCount), cppID: cppID,
                            what: "budgets clamp to 16, preserve zero, and mark unresolved as unknown")
-        report.expectEqual("mus_target", catalog.playableSong(label: "mus_target")?.label,
+        report.expectEqual(expected: "mus_target", actual: catalog.playableSong(label: "mus_target")?.label,
                            cppID: cppID, what: "playable MIDI song is found by exact label")
         report.expect(catalog.playableSong(label: "mus_missing") == nil
             && catalog.playableSong(label: "MUS_TARGET") == nil, cppID: cppID,
@@ -95,11 +95,11 @@ private func songCatalogFallbacks(_ report: CheckReport) {
             _ = try SongCatalog.load(root: root, cfgMap: [:])
             report.expect(false, cppID: cppID, message: "missing table should be an open error")
         } catch let error as SongCatalogError {
-            report.expectEqual(.cannotOpenSongTable(table.path), error, cppID: cppID,
+            report.expectEqual(expected: .cannotOpenSongTable(table.path), actual: error, cppID: cppID,
                                what: "missing table reports the C++ open-failure condition")
             report.expectEqual(
-                "Cannot open \(table.path).\n\nIs this a pokeemerald/pokefirered/pokeruby project directory?",
-                error.errorDescription, cppID: cppID, what: "open failure preserves the user-facing text")
+                expected: "Cannot open \(table.path).\n\nIs this a pokeemerald/pokefirered/pokeruby project directory?",
+                actual: error.errorDescription, cppID: cppID, what: "open failure preserves the user-facing text")
         }
         try FileManager.default.createDirectory(at: table.deletingLastPathComponent(),
                                                 withIntermediateDirectories: true)
@@ -108,9 +108,9 @@ private func songCatalogFallbacks(_ report: CheckReport) {
             _ = try SongCatalog.load(root: root, cfgMap: [:])
             report.expect(false, cppID: cppID, message: "empty table should be an open error")
         } catch let error as SongCatalogError {
-            report.expectEqual(.noSongs(table.path), error, cppID: cppID,
+            report.expectEqual(expected: .noSongs(table.path), actual: error, cppID: cppID,
                                what: "empty table reports no songs found")
-            report.expectEqual("No songs found in \(table.path)", error.errorDescription,
+            report.expectEqual(expected: "No songs found in \(table.path)", actual: error.errorDescription,
                                cppID: cppID, what: "empty table preserves the user-facing text")
         }
         try Data("song mus_only, MUSIC_PLAYER_BGM, 0\n".utf8).write(to: table)
@@ -124,11 +124,11 @@ private func songCatalogFallbacks(_ report: CheckReport) {
                           message: "expected one song and one default player")
             return
         }
-        report.expectEqual("", catalog.songs[0].constant, cppID: cppID,
+        report.expectEqual(expected: "", actual: catalog.songs[0].constant, cppID: cppID,
                            what: "hexadecimal sentinel does not attach a song constant")
-        report.expectEqual(["MUSIC_PLAYER_BGM"], catalog.players.map(\.name), cppID: cppID,
+        report.expectEqual(expected: ["MUSIC_PLAYER_BGM"], actual: catalog.players.map(\.name), cppID: cppID,
                            what: "no equiv declarations supply the default player")
-        report.expectEqual(-1, catalog.players[0].trackCount, cppID: cppID,
+        report.expectEqual(expected: -1, actual: catalog.players[0].trackCount, cppID: cppID,
                            what: "missing budget table leaves track count unknown")
     } catch {
         report.expect(false, cppID: cppID, message: "fallback fixture/load failed: \(error)")
@@ -137,14 +137,14 @@ private func songCatalogFallbacks(_ report: CheckReport) {
 
 private func songCatalogCandidates(_ report: CheckReport) {
     let cppID = "swiftproject/SongCatalogChecks::candidates"
-    report.expectEqual(["dummy", "voicegroup_dummy", "_dummy"],
-                       SongCatalog.voicegroupCandidates(cfg: SongConfig(voicegroupArgument: "")),
+    report.expectEqual(expected: ["dummy", "voicegroup_dummy", "_dummy"],
+                       actual: SongCatalog.voicegroupCandidates(cfg: SongConfig(voicegroupArgument: "")),
                        cppID: cppID, what: "empty -G uses mid2agb's dummy voicegroup")
-    report.expectEqual(["abandoned_ship", "voicegroup_abandoned_ship", "_abandoned_ship"],
-                       SongCatalog.voicegroupCandidates(
+    report.expectEqual(expected: ["abandoned_ship", "voicegroup_abandoned_ship", "_abandoned_ship"],
+                       actual: SongCatalog.voicegroupCandidates(
                            cfg: SongConfig(voicegroupArgument: "_abandoned_ship")),
                        cppID: cppID, what: "underscore argument supplies short and full symbol names")
-    report.expectEqual(["voicegroup000", "000"],
-                       SongCatalog.voicegroupCandidates(cfg: SongConfig(voicegroupArgument: "000")),
+    report.expectEqual(expected: ["voicegroup000", "000"],
+                       actual: SongCatalog.voicegroupCandidates(cfg: SongConfig(voicegroupArgument: "000")),
                        cppID: cppID, what: "numeric argument keeps full symbol first")
 }

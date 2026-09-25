@@ -11,9 +11,9 @@ import PorydawProject
 // rows keep their GAP disposition.
 internal func runVoicegroupCatalogAbsentSuite(_ report: CheckReport) {
     let cppID = "voicegroupsourcecatalog/retired"
-    report.expectEqual(90, voicegroupEditingRowIDs.count, cppID: cppID,
+    report.expectEqual(expected: 90, actual: voicegroupEditingRowIDs.count, cppID: cppID,
                        what: "editing ledger ports 90 of 98 rows, audited retirements recorded")
-    report.expectEqual(1, saveCoreRowIDs.count, cppID: cppID,
+    report.expectEqual(expected: 1, actual: saveCoreRowIDs.count, cppID: cppID,
                        what: "save-core ledger ports 1 of 81 exact rows, audited retirements recorded")
 
     let portedNames = voicegroupEditingRowIDs.map { "voicegroupsourceediting/\($0)" }

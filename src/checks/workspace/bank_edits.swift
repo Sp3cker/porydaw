@@ -40,13 +40,13 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
         report.fail("vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                     "could not block the preview directory: \(error)")
     }
-    report.expectEqual(previewSlots, session.bankSlots,
+    report.expectEqual(expected: previewSlots, actual: session.bankSlots,
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure preserves every visible bank slot")
-    report.expectEqual(previewDirty, session.bankDirty,
+    report.expectEqual(expected: previewDirty, actual: session.bankDirty,
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure preserves visible dirty state")
-    report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
+    report.expectEqual(expected: previewSourceBytes, actual: bytes(at: previewSourcePath),
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure leaves source file bytes unchanged")
 }
@@ -66,7 +66,7 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expect(materialized.materializationToken != nil,
                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                       message: "blank slot materialization issues a single-shot token")
-        report.expectEqual(materializedSlots, session.bankSlots,
+        report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "blank materialization publishes the requested voice and preserves other slots")
 
@@ -74,7 +74,7 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(beforeMaterializationSlots, session.bankSlots,
+        report.expectEqual(expected: beforeMaterializationSlots, actual: session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                            what: "undo restores the complete pre-materialization bank view")
 
@@ -82,7 +82,7 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         _ = try runBlocking {
             try await session.redo()
         }
-        report.expectEqual(materializedSlots, session.bankSlots,
+        report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "redo rematerializes the voice without changing other slots")
     } catch {
@@ -183,7 +183,7 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panVoice2, expected: panVoice1)
         }
-        report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
+        report.expectEqual(expected: Int32(25), actual: session.bankSlots[0].voice?.pan,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                            what: "second pan edit applied")
 
@@ -191,7 +191,7 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         _ = try runBlocking {
             try await session.undo()
         }
-        report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
+        report.expectEqual(expected: Int32(15), actual: session.bankSlots[0].voice?.pan,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                            what: "undo reverts merged pan edits to origin in one step")
     } catch {
@@ -235,17 +235,17 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
         report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                     "stale expected voice should trigger bankConflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(ProjectServiceError.bankConflict, error,
+        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
                            cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                            what: "stale expected voice triggers bankConflict")
     } catch {
         report.fail("project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                     "unexpected error type: \(error)")
     }
-    report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+    report.expectEqual(expected: undoBeforeInitialConflict, actual: session.document.history.canUndo,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                        what: "initial conflict leaves canUndo unchanged")
-    report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+    report.expectEqual(expected: redoBeforeInitialConflict, actual: session.document.history.canRedo,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                        what: "initial conflict leaves canRedo unchanged")
 
@@ -258,7 +258,7 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
         report.fail("projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
                     "materializing occupied slot 0 must trigger bankConflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(ProjectServiceError.bankConflict, error,
+        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
                            cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
                            what: "materializing occupied slot triggers bankConflict")
     } catch {
@@ -274,7 +274,7 @@ internal func bankConflicts(report: CheckReport, session: DocumentSession, servi
         report.fail("vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                     "unknown token must trigger conflict")
     } catch let error as ProjectServiceError {
-        report.expectEqual(ProjectServiceError.bankConflict, error,
+        report.expectEqual(expected: ProjectServiceError.bankConflict, actual: error,
                            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                            what: "unknown token triggers bankConflict")
     } catch {

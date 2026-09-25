@@ -14,7 +14,7 @@ func checkAuditionTailTransitions(_ report: CheckReport) throws {
         let audio = rig.renderer
         let timeline = playbackCheckSilentTimeline()
         audio.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
-        report.expectEqual(2, timeline.usedTrackCount, cppID: id, what: "both audition tracks initialized")
+        report.expectEqual(expected: 2, actual: timeline.usedTrackCount, cppID: id, what: "both audition tracks initialized")
         report.expect(audio.songLoaded, cppID: id, message: "silent song loaded")
         if scenario != 0 {
             audio.play()
@@ -44,7 +44,7 @@ func checkAuditionTailTransitions(_ report: CheckReport) throws {
             audio.play()
         }
         _ = rig.render(rig.rate * 2)
-        report.expectEqual(0, audio.activePcmChannels, cppID: id,
+        report.expectEqual(expected: 0, actual: audio.activePcmChannels, cppID: id,
                           what: "transition cuts preview and release tail within two seconds")
     }
     try checkUnloadedVoicegroupLifetime(report)
@@ -68,17 +68,17 @@ private func checkUnloadedVoicegroupLifetime(_ report: CheckReport) throws {
     bank!.renderer.bind(timeline: bank!.timeline(velocity: 127), voicegroup: bank!.voices, settings: AudioSettings())
     let audio = bank!.renderer
     report.expect(audio.songLoaded, cppID: id, message: "heap-bank note song loaded")
-    report.expectEqual(1, audio.timeline!.usedTrackCount, cppID: id, what: "one song track")
+    report.expectEqual(expected: 1, actual: audio.timeline!.usedTrackCount, cppID: id, what: "one song track")
     audio.play()
     _ = bank!.render(12_000)
     report.expect(audio.activePcmChannels >= 1, cppID: id, message: "heap-bank note sounds")
     audio.unload()
-    report.expectEqual(0, audio.activePcmChannels, cppID: id, what: "unload immediately retires song voices")
+    report.expectEqual(expected: 0, actual: audio.activePcmChannels, cppID: id, what: "unload immediately retires song voices")
     bank = nil
     var output = [Float](repeating: 0, count: 1024)
     for _ in 0..<29 {
         output.withUnsafeMutableBufferPointer { audio.render($0.baseAddress!, frames: 512) }
     }
-    report.expectEqual(0, audio.activePcmChannels, cppID: id,
+    report.expectEqual(expected: 0, actual: audio.activePcmChannels, cppID: id,
                       what: "callbacks remain voiceless after heap-bank destruction")
 }

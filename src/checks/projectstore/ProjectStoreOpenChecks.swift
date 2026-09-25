@@ -43,9 +43,9 @@ internal func runProjectStoreOpenSuite(_ report: CheckReport) {
     report.expect(tableLabels == expectedLabels && snapshot.songs.map(\.label) == expectedLabels,
                   cppID: "\(id)/A02", message: "song labels match staged song table exactly in table order")
     report.expectEqual(
-        ["MUSIC_PLAYER_BGM": 16, "MUSIC_PLAYER_SE1": 3, "MUSIC_PLAYER_SE2": 3,
+        expected: ["MUSIC_PLAYER_BGM": 16, "MUSIC_PLAYER_SE1": 3, "MUSIC_PLAYER_SE2": 3,
          "MUSIC_PLAYER_SE3": 3, "MUSIC_PLAYER_SE_1TRK": 1],
-        snapshot.trackBudgets, cppID: "\(id)/A02a",
+        actual: snapshot.trackBudgets, cppID: "\(id)/A02a",
         what: "staged music player table supplies the expected per-player track budgets")
 
     let midiURL = rootURL.appendingPathComponent("sound/songs/midi", isDirectory: true)

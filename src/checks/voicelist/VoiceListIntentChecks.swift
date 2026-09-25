@@ -17,7 +17,7 @@ internal func voiceListAuditionIntents(_ report: CheckReport) {
     }
 
     list.pressVoice(slot: 2)
-    report.expectEqual(2, list.soundingVoice, cppID: cppID,
+    report.expectEqual(expected: 2, actual: list.soundingVoice, cppID: cppID,
                        what: "a press marks the voice sounding")
     report.expect(auditions.count == 1 && auditions[0].voice == 2 &&
                       auditions[0].key == 60 && auditions[0].velocity == 112,
@@ -36,10 +36,10 @@ internal func voiceListAuditionIntents(_ report: CheckReport) {
                       auditions[3].velocity == 0,
                   cppID: cppID,
                   message: "release emits velocity 0 for the sounding voice")
-    report.expectEqual(-1, list.soundingVoice, cppID: cppID,
+    report.expectEqual(expected: -1, actual: list.soundingVoice, cppID: cppID,
                        what: "release clears the sounding voice")
     list.releaseVoice()
-    report.expectEqual(4, auditions.count, cppID: cppID,
+    report.expectEqual(expected: 4, actual: auditions.count, cppID: cppID,
                        what: "releasing with nothing sounding emits nothing")
 
     // Picker browse auditions classify by destination voice and symbol.
@@ -75,7 +75,7 @@ internal func voiceListAuditionIntents(_ report: CheckReport) {
     var stops = 0
     list.onSampleAuditionStopRequested = { stops += 1 }
     list.stopSampleAudition()
-    report.expectEqual(1, stops, cppID: cppID,
+    report.expectEqual(expected: 1, actual: stops, cppID: cppID,
                        what: "the picker stop intent reaches the owner")
 }
 
@@ -101,11 +101,11 @@ internal func voiceListDraftsAndEditIntents(_ report: CheckReport) {
     report.expect(blank != nil && blank!.materializesBlank,
                   cppID: cppID,
                   message: "a blank slot drafts a materializing template")
-    report.expectEqual("DirectSoundWaveData_first", blank?.voice.symbol ?? "", cppID: cppID,
+    report.expectEqual(expected: "DirectSoundWaveData_first", actual: blank?.voice.symbol ?? "", cppID: cppID,
                        what: "the blank template adopts the first sample symbol")
-    report.expectEqual(Int32(250), blank?.voice.attack ?? -1, cppID: cppID,
+    report.expectEqual(expected: Int32(250), actual: blank?.voice.attack ?? -1, cppID: cppID,
                        what: "the blank template adopts the project-typical envelope")
-    report.expectEqual(Int32(90), blank?.voice.release ?? -1, cppID: cppID,
+    report.expectEqual(expected: Int32(90), actual: blank?.voice.release ?? -1, cppID: cppID,
                        what: "the blank template adopts the typical release")
 
     report.expect(list.voiceDraft(10) == nil, cppID: cppID,
@@ -145,7 +145,7 @@ internal func voiceListDraftsAndEditIntents(_ report: CheckReport) {
     // Unchanged and draft-less requests emit nothing.
     list.requestVoiceEdit(slot: 0, voice: list.voiceDraft(0)!.voice)
     list.requestVoiceEdit(slot: 10, voice: BankVoice())
-    report.expectEqual(3, edits.count, cppID: cppID,
+    report.expectEqual(expected: 3, actual: edits.count, cppID: cppID,
                        what: "unchanged and draft-less edits emit no request")
 
     // The edit path requires an explicit session binding: a bank-bound
@@ -173,11 +173,11 @@ internal func voiceListDraftsAndEditIntents(_ report: CheckReport) {
     list.requestNewVoicegroup()
     list.requestNewSample(slot: 0)
     list.requestEditSample(slot: 0)
-    report.expectEqual(1, newVoicegroups,
+    report.expectEqual(expected: 1, actual: newVoicegroups,
                        cppID: "vgsavecheck/VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably",
                        what: "the New Voicegroup intent reaches the owner")
-    report.expectEqual([0], newSamples, cppID: cppID,
+    report.expectEqual(expected: [0], actual: newSamples, cppID: cppID,
                        what: "the New Sample intent carries the slot")
-    report.expectEqual([0], editSamples, cppID: cppID,
+    report.expectEqual(expected: [0], actual: editSamples, cppID: cppID,
                        what: "the Edit Sample intent carries the slot")
 }

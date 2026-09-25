@@ -65,7 +65,7 @@ private func runLoopRows(timeline: PlaybackTimeline, report: CheckReport) {
 
         let actualKeys = playbackCheckPcmKeys(engine.pointer)
         report.expectEqual(
-            row.expectedKeys, actualKeys, cppID: cppID,
+            expected: row.expectedKeys, actual: actualKeys, cppID: cppID,
             what: "sample=\(row.samplePosition) looping=\(row.looping) keyed-on MIDI keys")
     }
 }
@@ -98,9 +98,9 @@ internal func runPairedLoopChecks(fixtureRoot: String, report: CheckReport) -> B
 
     report.expect(loopTimeline.hasLoop, cppID: loopPointsID,
                   message: "loop fixture did not produce a loop")
-    report.expectEqual(96 * playbackCheckSamplesPerTick, loopTimeline.loopStartSample,
+    report.expectEqual(expected: 96 * playbackCheckSamplesPerTick, actual: loopTimeline.loopStartSample,
                        cppID: loopPointsID, what: "loop-start sample")
-    report.expectEqual(288 * playbackCheckSamplesPerTick, loopTimeline.loopEndSample,
+    report.expectEqual(expected: 288 * playbackCheckSamplesPerTick, actual: loopTimeline.loopEndSample,
                        cppID: loopPointsID, what: "loop-end sample")
     runLoopRows(timeline: loopTimeline, report: report)
 

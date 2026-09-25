@@ -19,10 +19,10 @@ func noteIdentityContracts(_ report: CheckReport) {
     do {
         let bytes = try source.encoded()
         let decoded = try MidiFile.decode(bytes)
-        report.expectEqual(1, decoded.chunks.count, cppID: parsedIdentityID,
+        report.expectEqual(expected: 1, actual: decoded.chunks.count, cppID: parsedIdentityID,
                            what: "decoded MIDI retains one chunk")
         if let events = decoded.chunks.first?.events {
-            report.expectEqual(3, events.count, cppID: parsedIdentityID,
+            report.expectEqual(expected: 3, actual: events.count, cppID: parsedIdentityID,
                                what: "decoded MIDI retains three lifecycle events")
             if events.count == 3 {
                 report.expect(events[0].isNoteOn, cppID: parsedIdentityID,
@@ -45,7 +45,7 @@ func noteIdentityContracts(_ report: CheckReport) {
             sampleRate: 48_000)
         let rawOns = timeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
         let rawEnds = timeline.events.filter { $0.type == 0x8 && $0.tick == 48 }
-        report.expectEqual(2, rawOns.count, cppID: parsedIdentityID,
+        report.expectEqual(expected: 2, actual: rawOns.count, cppID: parsedIdentityID,
                            what: "two raw note-ons reach playback")
         report.expect(rawOns.allSatisfy { !$0.noteID.isAssigned }, cppID: parsedIdentityID,
                       message: "raw playback does not mint note-on identities")
@@ -69,11 +69,11 @@ func noteIdentityContracts(_ report: CheckReport) {
             NewNote(track: 0, tick: 96, pitch: 64, duration: 24, velocity: 80),
         ])
         let ids = readopted.notes(in: 0).map(\.id)
-        report.expectEqual(3, ids.count, cppID: adoptedIdentityID,
+        report.expectEqual(expected: 3, actual: ids.count, cppID: adoptedIdentityID,
                            what: "readoption followed by insertion produces three notes")
         report.expect(ids.allSatisfy(\.isAssigned), cppID: adoptedIdentityID,
                       message: "every readopted and newly inserted identity is assigned")
-        report.expectEqual(ids.count, Set(ids).count, cppID: adoptedIdentityID,
+        report.expectEqual(expected: ids.count, actual: Set(ids).count, cppID: adoptedIdentityID,
                            what: "readopted and newly inserted identities are pairwise distinct")
     } catch {
         report.fail(adoptedIdentityID, "adding a note after readoption failed: \(error)")
@@ -94,7 +94,7 @@ func noteIdentityContracts(_ report: CheckReport) {
                   cppID: equalityIdentityID,
                   message: "otherwise identical MIDI events compare equal despite different IDs")
     do {
-        report.expectEqual(try source.encoded(), try stamped.encoded(),
+        report.expectEqual(expected: try source.encoded(), actual: try stamped.encoded(),
                            cppID: equalityIdentityID,
                            what: "stamped and unstamped MIDI serialize identically")
     } catch {
@@ -106,7 +106,7 @@ func noteIdentityContracts(_ report: CheckReport) {
         sampleRate: 48_000)
     let stampedOns = stampedTimeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
     let stampedEnds = stampedTimeline.events.filter { $0.type == 0x8 && $0.tick == 48 }
-    report.expectEqual(2, stampedOns.count, cppID: timelineIdentityID,
+    report.expectEqual(expected: 2, actual: stampedOns.count, cppID: timelineIdentityID,
                        what: "both stamped note-ons reach playback")
     report.expect(stampedOns.contains { $0.noteID == firstID }, cppID: timelineIdentityID,
                   message: "first stamped identity reaches playback")

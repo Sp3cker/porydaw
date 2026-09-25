@@ -17,24 +17,24 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                              lanes: [fixture.panLane, fixture.volumeLane, .tempo])
     let before = fixture.snapshot
     fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: AutomationQtModifier.alt)
-    report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:70"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "selected drag moves the grabbed lane")
-    report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:80"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "selected drag resolves a disjoint CC snapshot")
-    report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["0:120", "36:160"], actual: fixture.tempoValues, cppID: id,
                        what: "selected drag resolves Tempo through its own stream")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "heterogeneous selected drag is one revision")
     report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "undo restores secondary CC lane")
-    report.expectEqual(["0:120", "36:150"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["0:120", "36:150"], actual: fixture.tempoValues, cppID: id,
                        what: "undo restores secondary Tempo lane")
     let redone = (try? drawerAutomationRunBlocking { try await fixture.session.redo() }) ?? false
     report.expect(redone, cppID: id, message: "the heterogeneous drag is redoable")
-    report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["0:120", "36:160"], actual: fixture.tempoValues, cppID: id,
                        what: "redo restores the committed Tempo stream")
-    report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:80"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "redo restores the committed secondary CC lane")
     report.expect(fixture.undo(), cppID: id, message: "a second undo parks the drag again")
     report.expect(!fixture.document.history.canUndo, cppID: id,
@@ -45,9 +45,9 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     let y = fixture.y(fixture.panLane, 60)
     _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.left)
     _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.left)
-    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: [String](), actual: fixture.values(fixture.panLane), cppID: id,
                        what: "stationary selection click deletes grabbed node only")
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "stationary selection click preserves other lanes")
     _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
     _ = page.pointerRelease(x: 400, y: 90, button: AutomationQtButton.right)
@@ -73,9 +73,9 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.volumeLane), x: 0, y: 0)
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
                   cppID: id, message: "zoomable lane consumes range choice")
-    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+    report.expectEqual(expected: 64, actual: page.scaleLabels.first?.value, cppID: id,
                        what: "range choice changes displayed maximum")
-    report.expectEqual(rangeBefore, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: rangeBefore, actual: fixture.snapshot, cppID: id,
                        what: "range choice changes neither document nor history")
     fixture.activate(fixture.panLane)
     _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
@@ -83,7 +83,7 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                   cppID: id, message: "centered lane has no value range submenu")
     page.dismissMenu()
     fixture.activate(fixture.volumeLane)
-    report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+    report.expectEqual(expected: 64, actual: page.scaleLabels.first?.value, cppID: id,
                        what: "range persists independently across parameter switches")
     let synthetic = drawerAutomationAutomationFixture(suite: suite, service: service)
     synthetic.activate(synthetic.volumeLane)
@@ -97,14 +97,14 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
         _ = synthetic.page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue)
         report.expect(synthetic.page.acceptPrompt(displayedValue: 80), cppID: id,
                       message: "Set Value promotes the synthetic default")
-        report.expectEqual(["0:80"], synthetic.values(synthetic.volumeLane), cppID: id,
+        report.expectEqual(expected: ["0:80"], actual: synthetic.values(synthetic.volumeLane), cppID: id,
                            what: "promoted value is a written tick-zero event")
         _ = synthetic.page.openPrompt(tick: 0, value: 80)
         synthetic.session.selectedTrack = nil
         let stale = synthetic.snapshot
         report.expect(!synthetic.page.acceptPrompt(displayedValue: 70), cppID: id,
                       message: "a prompt cannot follow a primary-track change")
-        report.expectEqual(stale, synthetic.snapshot, cppID: id,
+        report.expectEqual(expected: stale, actual: synthetic.snapshot, cppID: id,
                            what: "stale prompt leaves document and history untouched")
     } else {
         report.fail(id, "synthetic default projection missing")
@@ -118,7 +118,7 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     let hoverBefore = hover.snapshot
     report.expect(hover.page.consumeHoverDelete(), cppID: id,
                   message: "pencil blank hover consumes deletion without falling through")
-    report.expectEqual(hoverBefore, hover.snapshot, cppID: id,
+    report.expectEqual(expected: hoverBefore, actual: hover.snapshot, cppID: id,
                        what: "blank hover deletion changes nothing")
     hover.page.selectRange(from: 0, to: 100, lanes: [hover.volumeLane])
     report.expect(!hover.page.consumeHoverDelete(), cppID: id,
@@ -131,13 +131,13 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     _ = hover.page.pointerMove(x: hover.x(48), y: hover.y(hover.volumeLane, 70), buttons: 0)
     report.expect(hover.page.consumeHoverDelete(), cppID: id,
                   message: "pencil hover deletion consumes the written point")
-    report.expectEqual([String](), hover.values(hover.volumeLane), cppID: id,
+    report.expectEqual(expected: [String](), actual: hover.values(hover.volumeLane), cppID: id,
                        what: "hover deletion removes the actual written point")
-    report.expectEqual(hoverBefore.revision + 1, hover.document.revision, cppID: id,
+    report.expectEqual(expected: hoverBefore.revision + 1, actual: hover.document.revision, cppID: id,
                        what: "hover deletion publishes one revision")
     report.expect(hover.undo() && !hover.document.history.canUndo, cppID: id,
                   message: "hover deletion is exactly one undo entry")
-    report.expectEqual(["48:70"], hover.values(hover.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: hover.values(hover.volumeLane), cppID: id,
                        what: "undo restores the hover-deleted point")
 
     _ = hover.page.pointerPress(x: hover.x(48), y: hover.y(hover.volumeLane, 70),
@@ -151,7 +151,7 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     let superseded = hover.snapshot
     report.expect(!hover.page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
                   cppID: id, message: "a replacement lane menu invalidates the old point action")
-    report.expectEqual(superseded, hover.snapshot, cppID: id,
+    report.expectEqual(expected: superseded, actual: hover.snapshot, cppID: id,
                        what: "a superseded point command cannot edit the lane")
 
     let emptyRange = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
@@ -162,20 +162,20 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     report.expect((emptyRange.page.selection?.range.startTick ?? 0) > 48
                       && emptyRange.page.selection?.range.span == 48, cppID: id,
                   message: "an empty range advances on the camera grid without changing its span")
-    report.expectEqual(emptyBefore, emptyRange.snapshot, cppID: id,
+    report.expectEqual(expected: emptyBefore, actual: emptyRange.snapshot, cppID: id,
                        what: "empty-band movement creates no document edit or history")
 
     let duplicate = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 30)])
     duplicate.page.selectRange(from: 0, to: 48, lanes: [duplicate.panLane])
     report.expect(duplicate.page.consumeSelectionCommand(command: .duplicate), cppID: id,
                   message: "range duplicate is consumed through the canonical command seam")
-    report.expectEqual(TimeRange(startTick: 48, endTick: 96), duplicate.page.selection?.range,
+    report.expectEqual(expected: TimeRange(startTick: 48, endTick: 96), actual: duplicate.page.selection?.range,
                        cppID: id, what: "duplicate moves the band onto the inserted span")
-    report.expectEqual(Tick(96), duplicate.session.editCursor, cppID: id,
+    report.expectEqual(expected: Tick(96), actual: duplicate.session.editCursor, cppID: id,
                        what: "duplicate advances the edit cursor to the new span end")
     report.expect(duplicate.undo() && !duplicate.document.history.canUndo, cppID: id,
                   message: "duplicate remains one undo entry")
-    report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
+    report.expectEqual(expected: ["24:30"], actual: duplicate.values(duplicate.panLane), cppID: id,
                        what: "undo restores the original range contents")
 }
 
@@ -197,13 +197,13 @@ func drawerAutomationBandIsolatesTempoAndCc(_ report: CheckReport, suite: Docume
                   cppID: id, message: "a band on Tempo selects Tempo alone")
     report.expect(page.selection?.scope == .lanes, cppID: id,
                   message: "the band publishes a lane-scoped range")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "banding writes nothing")
     report.expect(fixture.drag(.tempo, from: (48, 100), to: 120, modifiers: 0),
                   cppID: id, message: "the pointer route takes the tempo drag")
-    report.expectEqual(["48:120"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["48:120"], actual: fixture.tempoValues, cppID: id,
                        what: "the tempo drag moves the tempo point")
-    report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["48:60"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "the tempo drag leaves the CC lane alone")
     report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
 
@@ -228,20 +228,20 @@ func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: Doc
     fixture.page.selectRange(from: 0, to: 96, lanes: [fixture.panLane, fixture.modulationLane])
     let before = fixture.snapshot
     fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: 0)
-    report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:70"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "the grabbed lane moves with the selection")
-    report.expectEqual(["48:80"], fixture.values(fixture.modulationLane), cppID: id,
+    report.expectEqual(expected: ["48:80"], actual: fixture.values(fixture.modulationLane), cppID: id,
                        what: "the second selected lane shares the delta")
-    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
                        what: "the unselected volume lane is excluded")
-    report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["0:120"], actual: fixture.tempoValues, cppID: id,
                        what: "tempo is excluded from the CC drag")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "the multi-lane drag is one revision")
     report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
-    report.expectEqual(["24:60"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:60"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the grabbed lane")
-    report.expectEqual(["48:70"], fixture.values(fixture.modulationLane), cppID: id,
+    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.modulationLane), cppID: id,
                        what: "undo restores the second selected lane")
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the drag recorded exactly one history entry")
@@ -260,17 +260,17 @@ func drawerAutomationGhostViewOnlyAndSurvives(_ report: CheckReport, suite: Docu
     let panIndex = page.catalogIndex(of: fixture.panLane)
     report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
                   message: "a lane with events pins as a ghost")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "pinning a ghost writes nothing")
     report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "the page publishes the pinned ghost")
-    report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
+    report.expectEqual(expected: fixture.volumeLane, actual: page.activeParameter, cppID: id,
                        what: "pinning keeps the active parameter")
     fixture.activate(fixture.panLane)
     fixture.activate(fixture.volumeLane)
     report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
                   message: "the ghost survives parameter activation")
-    report.expectEqual(before, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "activation around a ghost writes nothing")
     report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
                   message: "the pin toggles off again")
@@ -341,11 +341,11 @@ func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: Docum
                       cppID: doubleID, message: "a double-click on the node is handled")
         report.expect(!twice.page.hasPrompt, cppID: doubleID,
                       message: "a double-click never opens the value prompt")
-        report.expectEqual(before.revision + 1, twice.document.revision, cppID: doubleID,
+        report.expectEqual(expected: before.revision + 1, actual: twice.document.revision, cppID: doubleID,
                            what: "the double-click publishes exactly one revision")
         let expected = ["0:80", "288:64"]
         let actual = parameter == .tempo ? twice.tempoValues : twice.values(twice.panLane)
-        report.expectEqual(expected, actual, cppID: doubleID,
+        report.expectEqual(expected: expected, actual: actual, cppID: doubleID,
                            what: "only the clicked node is deleted from the active adapter")
         report.expect(twice.document.history.canUndo, cppID: doubleID,
                       message: "the deletion records an undo entry")
@@ -354,7 +354,7 @@ func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: Docum
         report.expect(!twice.document.history.canUndo, cppID: doubleID,
                       message: "one undo consumes the double-click's single history entry")
         let restored = parameter == .tempo ? twice.tempoValues : twice.values(twice.panLane)
-        report.expectEqual(["0:80", "96:100", "288:64"], restored, cppID: doubleID,
+        report.expectEqual(expected: ["0:80", "96:100", "288:64"], actual: restored, cppID: doubleID,
                            what: "one undo restores the deleted node and its two neighbours")
     }
 }
@@ -410,7 +410,7 @@ func drawerAutomationDetailThresholdPrecedence(_ report: CheckReport, suite: Doc
                   cppID: id, message: "the pencil press on a visible node grabs it")
     _ = shownFixture.page.pointerRelease(x: shownFixture.x(24),
                                           y: shownFixture.y(shownFixture.panLane, 64), button: 1)
-    report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id,
+    report.expectEqual(expected: ["120:40"], actual: shownFixture.values(shownFixture.panLane), cppID: id,
                        what: "a stationary release on the grabbed node deletes exactly it")
 }
 
@@ -426,7 +426,7 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
                   cppID: tempoID, message: "the pencil press on the empty tempo lane starts")
     report.expect(tempo.page.pointerRelease(x: tempo.x(48), y: tempo.y(.tempo, 150), button: 1),
                   cppID: tempoID, message: "the tempo click commits")
-    report.expectEqual(["48:150", "120:120"], tempo.tempoValues, cppID: tempoID,
+    report.expectEqual(expected: ["48:150", "120:120"], actual: tempo.tempoValues, cppID: tempoID,
                        what: "the click writes its BPM at the cell start and restores default at the end")
 
     let bendID = "automation/AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd"
@@ -438,7 +438,7 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
                   cppID: bendID, message: "the pencil press on the empty bend lane starts")
     report.expect(bend.page.pointerRelease(x: bend.x(48), y: bend.y(bend.bendLane, 100), button: 1),
                   cppID: bendID, message: "the bend click commits")
-    report.expectEqual(["48:100", "120:0"], bend.values(bend.bendLane), cppID: bendID,
+    report.expectEqual(expected: ["48:100", "120:0"], actual: bend.values(bend.bendLane), cppID: bendID,
                        what: "the click writes its value at the cell start and restores center at the end")
 
     let excursionID = "automation/AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion"
@@ -452,7 +452,7 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
     report.expect(excursion.page.pointerRelease(x: excursion.x(48),
                                                  y: excursion.y(excursion.panLane, 60), button: 1),
                   cppID: excursionID, message: "the baseline click commits")
-    report.expectEqual(["0:60"], excursion.values(excursion.panLane), cppID: excursionID,
+    report.expectEqual(expected: ["0:60"], actual: excursion.values(excursion.panLane), cppID: excursionID,
                        what: "collapsing the excursion leaves the baseline alone")
 }
 
@@ -468,21 +468,21 @@ func drawerAutomationSelectionDeleteCommand(_ report: CheckReport, suite: Docume
     let before = fixture.snapshot
     report.expect(fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "the Delete command removes the covered span")
-    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["120:40"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "Delete keeps CC points outside the span")
     report.expect(fixture.tempoValues.isEmpty, cppID: id,
                   message: "Delete removes the covered tempo point")
-    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+    report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "one Delete is one revision")
     report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
-    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+    report.expectEqual(expected: ["24:60", "120:40"], actual: fixture.values(fixture.panLane), cppID: id,
                        what: "undo restores the covered CC point")
-    report.expectEqual(["48:100"], fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["48:100"], actual: fixture.tempoValues, cppID: id,
                        what: "undo restores the covered tempo point")
     fixture.page.clearTimeSelection()
     let emptyBefore = fixture.snapshot
     report.expect(!fixture.page.consumeSelectionCommand(command: .delete), cppID: id,
                   message: "Delete with no selection commits nothing")
-    report.expectEqual(emptyBefore, fixture.snapshot, cppID: id,
+    report.expectEqual(expected: emptyBefore, actual: fixture.snapshot, cppID: id,
                        what: "an empty Delete writes nothing")
 }
