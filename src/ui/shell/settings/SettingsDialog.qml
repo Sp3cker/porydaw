@@ -28,8 +28,10 @@ ThemedWindow {
 
     function showSettings(songFirst) {
         store.open()
-        enginePage.reset()
-        songPage.reset()
+        if (enginePage.item)
+            enginePage.item.reset()
+        if (songPage.item)
+            songPage.item.reset()
         selectedTab = songFirst && store.songAvailable ? 1 : 0
         show()
         raise()
@@ -37,7 +39,7 @@ ThemedWindow {
     }
     function commit() {
         if (store.songAvailable)
-            songPage.finishVoicegroupEdit()
+            songPage.item.finishVoicegroupEdit()
         store.apply()
     }
 
@@ -104,27 +106,35 @@ ThemedWindow {
             }
         }
     }
-    EngineSettingsPage {
+    Loader {
         id: enginePage
         parent: body
-        objectName: "settingsEnginePage"
         x: 20; y: 31
         width: dialog.width - 40
         height: tabs.height - 20 * dialog.unit
-        unit: dialog.unit; store: dialog.store; colors: dialog.colors
-        applicationFont: dialog.applicationFont
+        active: dialog.visible
         visible: dialog.selectedTab === 0
+        onLoaded: item.reset()
+        sourceComponent: EngineSettingsPage {
+            objectName: "settingsEnginePage"
+            unit: dialog.unit; store: dialog.store; colors: dialog.colors
+            applicationFont: dialog.applicationFont
+        }
     }
-    SongSettingsPage {
+    Loader {
         id: songPage
         parent: body
-        objectName: "settingsSongPage"
         x: 20; y: 31
         width: dialog.width - 40
         height: tabs.height - 20 * dialog.unit
-        unit: dialog.unit; store: dialog.store; colors: dialog.colors
-        applicationFont: dialog.applicationFont
+        active: dialog.visible
         visible: dialog.selectedTab === 1
+        onLoaded: item.reset()
+        sourceComponent: SongSettingsPage {
+            objectName: "settingsSongPage"
+            unit: dialog.unit; store: dialog.store; colors: dialog.colors
+            applicationFont: dialog.applicationFont
+        }
     }
     Item {
         objectName: "button-box"

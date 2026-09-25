@@ -73,6 +73,10 @@ or copying the event buffer.
 Catalog parsing likewise iterates borrowed line spans while reading project
 files live.
 
+Settings pages are constructed only while the dialog is visible. Opening
+the dialog initializes controls from the current settings draft; reopening
+after Cancel discards uncommitted field edits.
+
 ## License
 
 Porydaw is licensed under [GPL-3.0](LICENSE). The embedded poryaaaa engine is

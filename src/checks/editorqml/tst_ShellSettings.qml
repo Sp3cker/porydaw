@@ -143,6 +143,28 @@ TestCase {
         nativeSettings.setValue("pcmMixer", "sappy")
         nativeSettings.sync()
     }
+    function test_reopeningDiscardsCancelledDraft() {
+        const presenter = createShell()
+        const model = presenter.settingsStore
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const savedChannels = model.maxPcmChannels
+        const field = findChild(dialog(), "engine.polyphony")
+        verify(!!field, "Object exists")
+        const changedChannels = savedChannels > 1 ? savedChannels - 1 : 2
+        field.value = changedChannels
+        model.changeMaxPcmChannels(changedChannels)
+        const cancel = findChild(dialog(), "settingsCancel")
+        verify(!!cancel, "Object exists")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const reopenedField = findChild(dialog(), "engine.polyphony")
+        verify(!!reopenedField, "Object exists")
+        tryCompare(model, "maxPcmChannels", savedChannels)
+        tryCompare(reopenedField, "value", savedChannels)
+    }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()
         const app = presenter.session
