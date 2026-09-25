@@ -481,9 +481,12 @@ public enum ClipboardSemantics {
         } else {
             scopedTracks = scope.tracks.sorted()
         }
-        let tracks = scopedTracks.compactMap { track -> (Int, [Note])? in
-            guard track >= 0, track < document.engineTracks.usedTrackCount else { return nil }
-            return (track, document.notes(in: track).filter { range.contains($0.tick) })
+        var tracks: [(Int, [Note])] = []
+        tracks.reserveCapacity(scopedTracks.count)
+        for track in scopedTracks {
+            guard track >= 0, track < document.engineTracks.usedTrackCount else { continue }
+            let notes = document.notes(in: track).filter { range.contains($0.tick) }
+            tracks.append((track, notes))
         }
 
         var lanes = scope.lanes
@@ -492,14 +495,16 @@ public enum ClipboardSemantics {
                 TimeScope.ScopedLane(track: track, lane: $0)
             })
         }
-        let gatheredLanes = lanes.sorted {
-            $0.track == $1.track ? encoded($0.lane) < encoded($1.lane) : $0.track < $1.track
-        }.compactMap { scoped -> (Int, Lane, [LanePoint])? in
+        var gatheredLanes: [(Int, Lane, [LanePoint])] = []
+        for scoped in lanes.sorted(by: { left, right in
+            if left.track != right.track { return left.track < right.track }
+            return encoded(left.lane) < encoded(right.lane)
+        }) {
             guard scoped.track >= 0,
-                  scoped.track < document.engineTracks.usedTrackCount else { return nil }
-            return (scoped.track, scoped.lane,
-                    document.lanePoints(track: scoped.track, lane: scoped.lane)
-                        .filter { range.contains($0.tick) })
+                  scoped.track < document.engineTracks.usedTrackCount else { continue }
+            let points = document.lanePoints(track: scoped.track, lane: scoped.lane)
+                .filter { range.contains($0.tick) }
+            gatheredLanes.append((scoped.track, scoped.lane, points))
         }
         let tempo = scope.coversTempo
             ? document.state.tempo.filter { range.contains($0.tick) } : []
