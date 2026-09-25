@@ -557,7 +557,7 @@ public enum ClipboardSemantics {
     }
 }
 
-public struct RangeContents {
+public struct RangeContents: Sendable {
     public var tracks: [(track: Int, notes: [Note])]
     public var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
     public var tempo: [TempoPoint]
@@ -565,7 +565,7 @@ public struct RangeContents {
 
 @MainActor
 public final class GridClipboard {
-    public init() {}
+    nonisolated public init() {}
     public func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
         guard let data = ClipboardCodec.encode(clip, ticksPerBeat: ticksPerBeat) else { return false }
         return data.withUnsafeBytes { bytes in

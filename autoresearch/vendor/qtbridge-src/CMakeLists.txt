@@ -50,23 +50,47 @@ if(WIN32)
   set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON)
 endif()
 
-# autoresearch harness: build QtBridgeMacros in-tree instead of an
-# ExternalProject. On this platform host == target, so the separate
-# configure+build EP only adds a serial stamp boundary; a subdirectory puts
-# the macro executable in the main Ninja graph.
-add_subdirectory(Sources/QtBridgeMacros)
-
-if(CMAKE_HOST_WIN32)
-  set(QTBRIDGE_MACROS_PLUGIN_PATH
-    "$<TARGET_FILE:QtBridgeMacros>#QtBridgeMacros"
-    CACHE STRING "Macro plugin load path"
-  )
-else()
-  set(QTBRIDGE_MACROS_PLUGIN_PATH
-    "$<TARGET_FILE:QtBridgeMacros>#QtBridgeMacros"
-    CACHE STRING "Macro plugin load path"
-  )
+# autoresearch: build QtBridgeMacros as a library plugin linked against the
+# toolchain's OWN host swift-syntax dylibs (usr/lib/swift/host). This removes
+# the ~34s serial 11-module swift-syntax chain and runs expansion in-process.
+# SwiftCompilerPlugin is not shipped to hosts, so the @main tail is guarded
+# CMAKE_Swift_COMPILER may be a shim (swiftly). The toolchain root is only
+# reliably discoverable from the compiler's own target info.
+execute_process(
+    COMMAND "${CMAKE_Swift_COMPILER}" -print-target-info
+    OUTPUT_VARIABLE _qtb_target_info
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+string(JSON _qtb_rt GET "${_qtb_target_info}" paths runtimeResourcePath)
+set(QTBRIDGE_HOST_LIB_DIR "${_qtb_rt}/host")
+if(NOT EXISTS "${QTBRIDGE_HOST_LIB_DIR}/libSwiftSyntax.dylib")
+    message(FATAL_ERROR "host swift-syntax not found at ${QTBRIDGE_HOST_LIB_DIR}")
 endif()
+add_library(QtBridgeMacros SHARED
+    Sources/QtBridgeMacros/Extensions.swift
+    Sources/QtBridgeMacros/QtBridgeableMacro.swift
+)
+set_target_properties(QtBridgeMacros PROPERTIES
+    Swift_MODULE_NAME QtBridgeMacros
+    Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+    BUILD_RPATH "${QTBRIDGE_HOST_LIB_DIR}"
+)
+target_compile_options(QtBridgeMacros PRIVATE
+    "$<$<COMPILE_LANGUAGE:Swift>:-I${QTBRIDGE_HOST_LIB_DIR}>"
+)
+target_link_directories(QtBridgeMacros PRIVATE "${QTBRIDGE_HOST_LIB_DIR}")
+target_link_libraries(QtBridgeMacros PRIVATE
+    SwiftSyntax SwiftDiagnostics SwiftBasicFormat SwiftParser
+    SwiftParserDiagnostics SwiftOperators SwiftSyntaxBuilder
+    SwiftSyntaxMacros SwiftSyntaxMacroExpansion SwiftIfConfig
+    SwiftCompilerPluginMessageHandling
+)
+
+set(QTBRIDGE_MACROS_PLUGIN_PATH
+    "$<TARGET_FILE:QtBridgeMacros>"
+    CACHE STRING "Macro plugin load path"
+)
 
 
 

@@ -1,7 +1,9 @@
 // Copyright (C) 2025 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
 
+#if canImport(SwiftCompilerPlugin)
 import SwiftCompilerPlugin
+#endif
 import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxMacros
@@ -495,6 +497,7 @@ public struct QtSignalMacro: BodyMacro {
 }
 
 
+#if canImport(SwiftCompilerPlugin)
 @main
 struct QtBridgePackagePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
@@ -504,3 +507,4 @@ struct QtBridgePackagePlugin: CompilerPlugin {
         QtSignalMacro.self
     ]
 }
+#endif

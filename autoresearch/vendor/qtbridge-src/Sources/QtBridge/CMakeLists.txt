@@ -72,7 +72,7 @@ target_compile_options(QtBridge PRIVATE
 # flag, and the $<TARGET_FILE:> genex preserves their dependency on the exe.
 if(DEFINED QTBRIDGE_MACROS_PLUGIN_PATH)
     target_compile_options(QtBridge INTERFACE
-        "$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-executable>"
+        "$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-library>"
         "$<$<COMPILE_LANGUAGE:Swift>:${QTBRIDGE_MACROS_PLUGIN_PATH}>"
     )
 endif()
