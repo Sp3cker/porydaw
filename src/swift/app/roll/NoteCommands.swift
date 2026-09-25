@@ -156,8 +156,12 @@ final class NoteCommands {
             else { return }
             _ = session.document.nudgeNotes(notes.map(\.id), toPitches: pitches)
         } else {
-            guard notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) })
-            else { return }
+            var canTranspose = true
+            for note in notes {
+                let shifted = Int(note.pitch) + semitones
+                if shifted < 0 || shifted > 127 { canTranspose = false; break }
+            }
+            guard canTranspose else { return }
             session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
         }
     }
