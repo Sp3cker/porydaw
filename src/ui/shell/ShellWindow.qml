@@ -283,6 +283,9 @@ ThemedWindow {
             Instantiator {
                 model: shell.fileActionIds
                 delegate: MenuItem {
+                    // No submenu/check visuals: skips per-item image loads at launch.
+                    arrow: null
+                    indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -312,6 +315,8 @@ ThemedWindow {
                 active: false
                 model: shell.editTopActionIds
                 delegate: MenuItem {
+                    arrow: null
+                    indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -330,6 +335,8 @@ ThemedWindow {
                 active: false
                 model: shell.editClipboardActionIds
                 delegate: MenuItem {
+                    arrow: null
+                    indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -351,6 +358,8 @@ ThemedWindow {
                 Instantiator {
                     model: shell.timeActionIds
                     delegate: MenuItem {
+                        arrow: null
+                        indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
@@ -369,6 +378,8 @@ ThemedWindow {
                 active: false
                 model: shell.editNotesActionIds
                 delegate: MenuItem {
+                    arrow: null
+                    indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -391,6 +402,8 @@ ThemedWindow {
                 Instantiator {
                     model: shell.tracksActionIds
                     delegate: MenuItem {
+                        arrow: null
+                        indicator: null
                         required property string modelData
                         objectName: "shellAction_" + modelData
                         text: root.nativeMenuText(modelData)
@@ -409,6 +422,8 @@ ThemedWindow {
                 active: false
                 model: shell.editTailActionIds
                 delegate: MenuItem {
+                    arrow: null
+                    indicator: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -433,6 +448,7 @@ ThemedWindow {
             Instantiator {
                 model: shell.transportActionIds
                 delegate: MenuItem {
+                    arrow: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -456,6 +472,7 @@ ThemedWindow {
             Instantiator {
                 model: shell.viewActionIds
                 delegate: MenuItem {
+                    arrow: null
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
@@ -480,6 +497,8 @@ ThemedWindow {
             // item stays in the Help menu on every platform, as it did on
             // non-macOS builds of the old app.
             MenuItem {
+                arrow: null
+                indicator: null
                 objectName: "shellAction_help.about"
                 text: root.nativeMenuText("help.about")
                 enabled: {
