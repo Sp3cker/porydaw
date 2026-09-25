@@ -372,7 +372,11 @@ public final class SongDocument {
     public func trackName(_ track: Int) -> String {
         guard let mapping = mapping(for: track) else { return "" }
         var scanner = TrackNameScan()
-        for event in state.file.chunks[mapping.chunk].events where scanner.consume(event) {
+        let sourceEvents = state.file.chunks[mapping.chunk].events
+        let events = sourceEvents.span
+        for index in events.indices {
+            let event = events[index]
+            guard scanner.consume(event) else { continue }
             guard case let .meta(_, bytes) = event.payload else { continue }
             return String(bytes: bytes.prefix(64), encoding: .isoLatin1) ?? ""
         }
