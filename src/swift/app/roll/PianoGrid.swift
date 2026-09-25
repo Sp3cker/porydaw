@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import QtBridge
+import PorydawAppCommands
 
 @MainActor
 struct GridNote: Equatable {

@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import QtBridge
+import PorydawAppCommands
 
 // Canonical window commands for the drawer's shared time selection. Scope and
 // content gathering use the same semantics as the native selection clipboard.

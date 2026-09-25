@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawPlaybackNative
 import QtBridge
+import PorydawAppAudio
 
 /// User-wide audio configuration, kept separate from the song's undoable flags.
 public struct EngineSettings: Equatable {

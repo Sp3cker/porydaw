@@ -694,28 +694,28 @@ private func copySlots(_ lease: ProjectBankLease) -> [BankSlotView] {
         return lease.slotViews.enumerated().map { index, slot in
             let voice = slot.voice.map(copyVoice)
             let loaded: ToneData? = bank.flatMap { storage in
-                guard slot.kind != .none, index < 128 else { return nil }
-                return withUnsafePointer(to: storage.pointee.voices) {
-                    $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[index] }
-                }
+                guard slot.kind != .none, index < 128,
+                      let voicesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voices)
+                else { return nil }
+                return UnsafeRawPointer(storage).advanced(by: voicesOffset)
+                    .assumingMemoryBound(to: ToneData.self)[index]
             }
             let synth = loaded.map {
                 $0.type & 0xE7 == 0 && $0.wav?.pointee.size == 0 && $0.wav?.pointee.data != nil
             } ?? false
             let tone: BankTone? = bank.flatMap { storage in
-                guard voice == nil, let loaded else { return nil }
-                let name = withUnsafePointer(to: storage.pointee.voiceNames) {
-                    $0.withMemoryRebound(to: CChar.self,
-                                         capacity: 128 * Int(VG_VOICE_NAME_LEN)) { names in
-                        let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
-                        let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
-                            start[$0] == 0
-                        }) ?? Int(VG_VOICE_NAME_LEN)
-                        let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
-                        return String(decoding: UnsafeBufferPointer(start: bytes, count: length),
-                                      as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                }
+                guard voice == nil, let loaded,
+                      let namesOffset = MemoryLayout<LoadedVoiceGroup>.offset(of: \.voiceNames)
+                else { return nil }
+                let names = UnsafeRawPointer(storage).advanced(by: namesOffset)
+                    .assumingMemoryBound(to: CChar.self)
+                let start = names.advanced(by: index * Int(VG_VOICE_NAME_LEN))
+                let length = (0..<Int(VG_VOICE_NAME_LEN)).first(where: {
+                    start[$0] == 0
+                }) ?? Int(VG_VOICE_NAME_LEN)
+                let bytes = UnsafeRawPointer(start).assumingMemoryBound(to: UInt8.self)
+                let name = String(decoding: UnsafeBufferPointer(start: bytes, count: length),
+                                  as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
                 let adsr = loaded.type == UInt8(VOICE_KEYSPLIT)
                     || loaded.type == UInt8(VOICE_KEYSPLIT_ALL) ? nil
                     : BankToneAdsr(attack: Int32(loaded.attack), decay: Int32(loaded.decay),

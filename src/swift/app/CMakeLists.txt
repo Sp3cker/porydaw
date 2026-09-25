@@ -8,20 +8,10 @@ add_library(PorydawApp STATIC
     DocumentSession.swift
     DocumentWorkspace.swift
     NativeAudio.swift
-    audio/AudioDevice.swift
-    audio/AudioRenderEngine.swift
-    audio/AudioTransport.swift
-    audio/AudioTimelineHandoff.swift
-    audio/AudioTelemetry.swift
     audio/PolyphonyPanelPresenter.swift
-    audio/AudioAudition.swift
-    audio/AudioSampleAudition.swift
-    audio/ResonanceSuppression.swift
     ApplicationSession.swift
     transport/TransportBarPresenter.swift
     SongTabsController.swift
-    eventlist/EventListModel.swift
-    eventlist/EventListProjection.swift
     eventlist/EventListSelection.swift
     eventlist/EventListEditing.swift
     eventlist/EventListMenus.swift
@@ -57,10 +47,6 @@ add_library(PorydawApp STATIC
     timeline/GridTypography.swift
     timeline/RulerMenuPresenter.swift
     timeline/TimelineSnapPolicy.swift
-    commands/EditCommands.swift
-    commands/EditKeyArbiter.swift
-    commands/KeybindingRegistry.swift
-    commands/Clipboard.swift
     drawer/EditorDrawer.swift
     drawer/PromptAppearance.swift
     drawer/EditorDrawerTypes.swift
@@ -180,3 +166,87 @@ target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback PorydawProje
 # upstream (ExternalProject variant) is an INTERFACE lib — the name resolves
 # either way.
 add_dependencies(PorydawApp QtBridgeMacros)
+
+# autoresearch star-topology leaves: macro-plugin-free modules that compile in
+# parallel with the QtBridgeMacros head instead of inside the PorydawApp edge.
+# Each imports only upstream modules (PorydawCore/Playback/Project), never the
+# hub. PorydawApp links them PUBLIC; the hub gains `import`s for their types.
+add_library(PorydawAppCommands STATIC
+    commands/EditCommands.swift
+    commands/EditKeyArbiter.swift
+    commands/KeybindingRegistry.swift
+    commands/Clipboard.swift
+)
+set_target_properties(PorydawAppCommands PROPERTIES
+    Swift_MODULE_NAME PorydawAppCommands
+    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
+    Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+target_include_directories(PorydawAppCommands INTERFACE
+    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppCommands,Swift_MODULE_DIRECTORY>>"
+)
+target_compile_options(PorydawAppCommands PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+)
+target_link_libraries(PorydawAppCommands PUBLIC PorydawCore QtBridgeCpp Qt6::Gui)
+
+add_library(PorydawAppAudio STATIC
+    audio/AudioDevice.swift
+    audio/AudioRenderEngine.swift
+    audio/AudioTransport.swift
+    audio/AudioTimelineHandoff.swift
+    audio/AudioTelemetry.swift
+    audio/AudioAudition.swift
+    audio/AudioSampleAudition.swift
+    audio/ResonanceSuppression.swift
+)
+set_target_properties(PorydawAppAudio PROPERTIES
+    Swift_MODULE_NAME PorydawAppAudio
+    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
+    Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+target_include_directories(PorydawAppAudio INTERFACE
+    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppAudio,Swift_MODULE_DIRECTORY>>"
+)
+target_compile_options(PorydawAppAudio PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/hw_audio>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+)
+target_link_libraries(PorydawAppAudio PUBLIC PorydawCore PorydawPlayback)
+
+add_library(PorydawAppEventList STATIC
+    eventlist/EventListModel.swift
+    eventlist/EventListProjection.swift
+)
+set_target_properties(PorydawAppEventList PROPERTIES
+    Swift_MODULE_NAME PorydawAppEventList
+    Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
+    Swift_LANGUAGE_VERSION 6
+    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+)
+target_include_directories(PorydawAppEventList INTERFACE
+    "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppEventList,Swift_MODULE_DIRECTORY>>"
+)
+target_compile_options(PorydawAppEventList PUBLIC
+    "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+)
+target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
+
+target_link_libraries(PorydawApp PUBLIC
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList
+)

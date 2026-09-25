@@ -3,7 +3,7 @@ import PorydawAudioDeviceNative
 
 /// Owns the output device and its renderer. Lifecycle/cold calls are serialized by
 /// the facade on its control thread, never made from the audio callback.
-final class AudioDevice {
+public final class AudioDevice {
     enum InitializationError: String, LocalizedError {
         case nullBackend = "Failed to initialize the null audio backend."
         case outputDevice = "Failed to initialize the audio output device."
@@ -12,18 +12,18 @@ final class AudioDevice {
     }
 
     /// Programming invariant: the facade must not access the renderer after shutdown.
-    var renderer: AudioRenderEngine {
+    public var renderer: AudioRenderEngine {
         precondition(retainedRenderer != nil, "AudioDevice renderer accessed after shutdown")
         return retainedRenderer!
     }
-    private(set) var sampleRate: Double = 0
-    private(set) var backendName = ""
-    private(set) var usingNullBackend = false
-    let nullBackendForced: Bool
-    private(set) var periodSizeFrames = 0
-    private(set) var periodCount = 0
+    public private(set) var sampleRate: Double = 0
+    public private(set) var backendName = ""
+    public private(set) var usingNullBackend = false
+    public let nullBackendForced: Bool
+    public private(set) var periodSizeFrames = 0
+    public private(set) var periodCount = 0
 
-    init() throws {
+    public init() throws {
         let environment = ProcessInfo.processInfo.environment
         nullBackendForced = environment["PORYDAW_AUDIO_BACKEND"] == "null"
         do {
@@ -78,7 +78,7 @@ final class AudioDevice {
     }
 
     /// Sole device start point; outermost call parks synchronously and restarts off-main.
-    func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
+    public func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
         coldDepth += 1
         if coldDepth == 1, let device {
             let handle = DeviceHandle(device: device)
@@ -94,7 +94,7 @@ final class AudioDevice {
         return try body()
     }
 
-    func shutdown() {
+    public func shutdown() {
         if let device {
             startStop.sync {}
             if deviceInitialized {

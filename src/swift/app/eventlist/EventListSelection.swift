@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import PorydawAppEventList
 
 @MainActor
 extension EventListPresenter {

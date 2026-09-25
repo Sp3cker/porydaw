@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawPlaybackNative
 import QtBridge
+import PorydawAppAudio
 
 @MainActor
 @QtBridgeable

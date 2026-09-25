@@ -1,4 +1,5 @@
 import PorydawCore
+import PorydawAppCommands
 
 // Pointer, prompt and gesture machinery for the drawer's Velocity section: the
 // four pointer entries, the local Escape and cancellation seam, the Set Velocity

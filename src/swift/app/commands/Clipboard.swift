@@ -473,7 +473,7 @@ public enum ClipboardSemantics {
     }
 
     @MainActor
-    static func gather(_ range: TimeRange, scope: TimeScope,
+    public static func gather(_ range: TimeRange, scope: TimeScope,
                        from document: SongDocument) -> RangeContents {
         let scopedTracks: [Int]
         if scope.wholeSong {
@@ -557,15 +557,16 @@ public enum ClipboardSemantics {
     }
 }
 
-struct RangeContents {
-    var tracks: [(track: Int, notes: [Note])]
-    var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
-    var tempo: [TempoPoint]
+public struct RangeContents {
+    public var tracks: [(track: Int, notes: [Note])]
+    public var lanes: [(track: Int, lane: Lane, points: [LanePoint])]
+    public var tempo: [TempoPoint]
 }
 
 @MainActor
-final class GridClipboard {
-    func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
+public final class GridClipboard {
+    public init() {}
+    public func write(_ clip: PorydawClip, ticksPerBeat: UInt32) -> Bool {
         guard let data = ClipboardCodec.encode(clip, ticksPerBeat: ticksPerBeat) else { return false }
         return data.withUnsafeBytes { bytes in
             let pointer = bytes.bindMemory(to: UInt8.self).baseAddress
@@ -573,7 +574,7 @@ final class GridClipboard {
         }
     }
 
-    func read() -> DecodedPorydawClip? {
+    public func read() -> DecodedPorydawClip? {
         let box = ClipboardReadBox()
         let context = Unmanaged.passUnretained(box).toOpaque()
         guard pd_clipboard_read(context, { rawContext, bytes, count in
