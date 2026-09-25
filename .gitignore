@@ -14,3 +14,4 @@ site/
 docs/plans/**/*-review.diff
 autoresearch/logs/
 build-bench-*/
+autoresearch.sh
