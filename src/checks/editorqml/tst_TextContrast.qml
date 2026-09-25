@@ -183,6 +183,47 @@ TestCase {
         tryCompare(dialog, "visible", false, 3000)
     }
 
+    function auditClippedKeyboardLabel(context) {
+        const tabs = shell.shellPresenter.session.songTabs
+        const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
+        const surface = page ? findChild(page, "swiftRollOverlay") : null
+        verify(surface !== null, "the loaded roll is mounted")
+        const gutter = findChild(surface, "timelineQuickRollGutter")
+        verify(gutter !== null, "the keyboard gutter is mounted")
+        const grid = surface.gridModel
+        verify(grid.rowHeight > 0 && gutter.height > 0, "the keyboard has a viewport")
+        for (const edge of ["top", "bottom"]) {
+            const rowOffset = edge === "top" ? 0.2 : 0.8
+            const scroll = (127 - 72 + rowOffset) * grid.rowHeight
+                - (edge === "bottom" ? gutter.height : 0)
+            grid.setCameraVScroll(scroll)
+            let label = null
+            tryVerify(function() {
+                const texts = []
+                Audit.collect([gutter], texts, [])
+                label = texts.find(function(item) { return item.text === "C5" })
+                return label !== undefined
+                    && (edge === "top" ? label.parent.y < 0
+                                       : label.parent.y + label.height > gutter.height)
+                    && label.parent.y < gutter.height
+                    && label.parent.y + label.height > 0
+            }, 3000, "C5 straddles the scrolled keyboard's " + edge + " edge")
+            const root = Audit.sceneRoot(gutter)
+            const box = Audit.glyphBox(label, root)
+            verify(box !== null, "the " + edge + "-clipped C5 glyph box remains visible")
+            const gutterTop = gutter.mapToItem(root, 0, 0).y
+            verify(box.y0 >= gutterTop && box.y1 <= gutterTop + gutter.height,
+                   "the " + edge + "-clipped C5 ink stays on its painted key")
+            const observation = Audit.measure(label, grab(root), root)
+            verify(observation !== null, "the " + edge + "-clipped C5 ink is painted")
+            compare(observation.bg, grid.palette.keyboardNatural,
+                    "the " + edge + "-clipped C5 glyph sits on the actual natural key")
+            verify(observation.ratio >= observation.required,
+                   "the " + edge + "-clipped C5 ink meets WCAG AA on its painted key")
+            auditWindow(context + " " + edge + "-clipped keyboard")
+        }
+    }
+
     function report(label) {
         verify(measured > 0, label + ": text items were measured")
         verify(failures.length === 0, label + ": " + failures.length
@@ -228,6 +269,7 @@ TestCase {
         const mode = data.tag
         session.voiceListController().selectSlot(0)
         auditPopups(mode + " song", auditWindow(mode + " song"))
+        auditClippedKeyboardLabel(mode)
 
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() {

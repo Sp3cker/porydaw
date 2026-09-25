@@ -39,6 +39,10 @@ ledger agent did not run it.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
+Command: deno task verify:shell --verbose
+Result: PASS for the shellwindow lane (7.24s) on the task-6 settled tst_ShellWindow.qml; the
+failed sibling lanes in the same run were repaired separately. Controller-run; the ledger
+agent did not run it.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
 Disposition: GAP
@@ -709,7 +713,7 @@ Mapping: S195, S196
 
 A079 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:238
 Disposition: MATCHED
-Mapping: S195
+Mapping: S207
 
 A080 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:242
 Disposition: MATCHED
@@ -2927,7 +2931,7 @@ S194 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow
 Anchor: message "shellEditMenu"
 
 S195 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
-Anchor: message "Time contains the original six commands"
+Anchor: message "Time mounts " #1
 
 S196 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "shellAction_" #1
@@ -2961,3 +2965,6 @@ Anchor: message "A074 move succeeds"
 
 S206 | trackRemapPublicationContract | src/checks/editcheck/DocumentTrackChecks.swift
 Anchor: function
+
+S207 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Tracks mounts " #1

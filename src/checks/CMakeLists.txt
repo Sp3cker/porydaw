@@ -347,13 +347,8 @@ if(APPLE)
         LINKER_LANGUAGE CXX
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
     )
-    # PorydawApp carries the session and its QML registration entry point; the
-    # whole-archive C++ app library carries the QML resources; QtBridge
-    # supplies the QTestAppCpp host.
     target_link_libraries(editor_qml_tests PRIVATE
         editor_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
         Qt6::QuickTest
     )
@@ -403,8 +398,6 @@ if(APPLE)
     )
     target_link_libraries(roll_qml_tests PRIVATE
         roll_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
         Qt6::QuickTest
     )
@@ -445,8 +438,6 @@ if(APPLE)
     )
     target_link_libraries(shell_qml_tests PRIVATE
         shell_qml_lane
-        QtBridge
-        PorydawApp
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
         Qt6::QuickTest
     )

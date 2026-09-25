@@ -100,10 +100,19 @@ TestCase {
 
     function gridNotes(grid) { return JSON.parse(grid.noteSummary) }
 
-    function noteFacts(grid) {
-        return gridNotes(grid).map(function(note) {
+    function editableNotes(grid) {
+        return gridNotes(grid).filter(function(note) {
+            return !note.ghost && note.track === grid.trackIndex
+        })
+    }
+
+    function noteFacts(grid, track) {
+        var notes = gridNotes(grid)
+        if (track !== undefined)
+            notes = notes.filter(function(note) { return note.track === track })
+        return notes.map(function(note) {
             return [note.id, note.track, note.tick, note.pitch, note.duration, note.velocity].join(":")
-        }).join(";")
+        }).sort().join(";")
     }
 
     function noteById(grid, id) {
@@ -146,7 +155,7 @@ TestCase {
 
         // Two fully visible notes on the same track, sorted by (tick, id).
         var visible = []
-        var all = gridNotes(grid)
+        var all = editableNotes(grid)
         for (var vi = 0; vi < all.length; ++vi) {
             var probe = findChild(surface, "gridNote_" + all[vi].id)
             if (!probe)
@@ -169,7 +178,10 @@ TestCase {
             }
         }
         verify(source !== null && secondSource !== null, "two visible notes share one track")
-
+        grid.setTrack(source.track)
+        verify(waitForNative(function() {
+            return grid.trackIndex === source.track
+        }, 5000), "the source track is presented")
         var firstCenter = noteCenter(roll, surface, source.id)
         verify(firstCenter !== null, "the first source renders")
         mouseClick(roll, firstCenter.x, firstCenter.y, Qt.LeftButton)
@@ -300,7 +312,7 @@ TestCase {
         }, 5000), "Undo returns after Redo")
         compare(shell.shellPresenter.actionEnabled("edit.redo"), false, "Redo returns disabled")
 
-        var sourceNotesBeforeTrackSwitch = noteFacts(grid)
+        var sourceNotesBeforeTrackSwitch = noteFacts(grid, source.track)
         var destinationTrack = source.track === 0 ? 1 : 0
         grid.setTrack(destinationTrack)
         verify(waitForNative(function() {
@@ -336,7 +348,7 @@ TestCase {
         verify(waitForNative(function() {
             return grid.trackIndex === source.track
         }, 5000), "the source track is presented again")
-        compare(noteFacts(grid), sourceNotesBeforeTrackSwitch,
+        compare(noteFacts(grid, source.track), sourceNotesBeforeTrackSwitch,
                 "cross-track Paste keeps source notes intact")
         grid.setTrack(destinationTrack)
         verify(waitForNative(function() {
@@ -534,7 +546,7 @@ TestCase {
         var roll = findChild(surface, "swiftRollInput")
         verify(roll && roll.visible, "the real roll input is mounted")
         var visible = []
-        var all = gridNotes(grid)
+        var all = editableNotes(grid)
         for (var vi = 0; vi < all.length; ++vi) {
             var probe = findChild(surface, "gridNote_" + all[vi].id)
             if (!probe)
@@ -654,6 +666,7 @@ TestCase {
         grid.setTrack(probedTracks)
         verify(grid.trackIndex !== probedTracks, "the outer track is beyond the staged song")
         grid.setTrack(0)
+        var beforeFacts = noteFacts(grid)
         var before = gridNotes(grid)
         var snap = grid.snapTicks
         verify(snap > 0, "snap is positive")
@@ -678,11 +691,14 @@ TestCase {
         }, 5000), "Paste is enabled with a range clip")
         keySequence(StandardKey.Paste)
         verify(waitForNative(function() {
-            if (gridNotes(grid).length !== before.length + 1)
+            var current = gridNotes(grid)
+            if (current.length !== before.length + 2)
                 return false
             var home = tileOn(grid, cursor, 60, 24, 0, 100)
-            return home !== null && grid.editCursorTick === cursor + 96
-        }, 5000), "real Paste merges the home track and advances by span")
+            var outer = tileOn(grid, cursor, 64, 24, probedTracks, 90)
+            return home !== null && !home.ghost && outer !== null && outer.ghost
+                && grid.editCursorTick === cursor + 96
+        }, 5000), "real Paste publishes both target tracks and advances by span")
         verify(waitForNative(function() {
             return shell.shellPresenter.actionEnabled("edit.undo")
         }, 5000), "Undo is enabled after the expanding paste")
@@ -691,15 +707,18 @@ TestCase {
             return grid.trackIndex === probedTracks
         }, 5000), "the paste expands the song by one track")
         var outer = tileOn(grid, cursor, 64, 24, probedTracks, 90)
-        verify(outer !== null, "the outer track carries its pasted note")
+        verify(outer !== null && !outer.ghost, "the expanded track presents its pasted note")
         keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            return tileOn(grid, cursor, 64, 24, probedTracks, 90) === null
+            return gridNotes(grid).length === before.length
+                && tileOn(grid, cursor, 64, 24, probedTracks, 90) === null
         }, 5000), "Undo removes the outer pasted note")
         grid.setTrack(0)
         verify(waitForNative(function() {
-            return grid.trackIndex === 0 && gridNotes(grid).length === before.length
-        }, 5000), "Undo restores the home baseline")
+            return grid.trackIndex === 0 && noteFacts(grid) === beforeFacts
+                && gridNotes(grid).length === before.length
+                && tileOn(grid, cursor, 60, 24, 0, 100) === null
+        }, 5000), "Undo restores both target tracks' baseline notes")
         grid.setTrack(probedTracks)
         verify(grid.trackIndex !== probedTracks, "Undo retracts the expansion")
     }

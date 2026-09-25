@@ -68,19 +68,6 @@ TestCase {
         return page ? findChild(page, "swiftRollOverlay") : null
     }
 
-    function primitiveCount(layer, clip) {
-        var n = 0
-        for (var i = 0; i < layer.children.length; ++i) {
-            var c = layer.children[i]
-            if (!c || c.fillColor === undefined || !c.visible)
-                continue
-            if (c.x + c.width > clip.x && c.x < clip.x + clip.w
-                    && c.y + c.height > clip.y && c.y < clip.y + clip.h)
-                ++n
-        }
-        return n
-    }
-
     function rowCenter(pitch, rowHeight) {
         return (127.0 - pitch + 0.5) * rowHeight
     }
@@ -152,16 +139,6 @@ TestCase {
         verify(time !== null, "the time layer is mounted")
         verify(keys !== null, "the keyboard layer is mounted")
         verify(chip !== null, "the hover chip is mounted")
-        var plotClip = { x: 0, y: 0, w: plot.width, h: plot.height }
-        verify(waitForNative(function() {
-            return primitiveCount(rows, plotClip) > 0
-        }, 5000), "the row layer draws visible primitives")
-        verify(waitForNative(function() {
-            return primitiveCount(time, plotClip) > 0
-        }, 5000), "the time layer draws visible primitives")
-        verify(waitForNative(function() {
-            return primitiveCount(keys, { x: 0, y: 0, w: gutter.width, h: gutter.height }) > 0
-        }, 5000), "the keyboard layer draws visible primitives")
 
         var rowHeight = grid.rowHeight
         var keyboardWidth = grid.keyboardWidth

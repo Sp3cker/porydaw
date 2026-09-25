@@ -467,30 +467,29 @@ public actor ProjectService {
     public func voicegroupCatalog() async throws -> VoicegroupCatalog {
         let store = try requireStore()
         let root = projectRoot
-        return try await store.run {
-            let groups = VoicegroupSource.catalogScan(root)
-            let direct = VoicegroupSource.directSoundCatalog(root)
-            let defaults = VoiceListAdsrDefaults(
-                bySymbol: groups.typicalAdsr.bySymbol.mapValues {
-                    VoiceListAdsr(attack: Int32($0.attack), decay: Int32($0.decay),
-                                  sustain: Int32($0.sustain), release: Int32($0.release))
-                },
-                byFamily: Dictionary(uniqueKeysWithValues:
-                    groups.typicalAdsr.byFamily.map { key, adsr in
-                        (Int32(key), VoiceListAdsr(
-                            attack: Int32(adsr.attack), decay: Int32(adsr.decay),
-                            sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
-                    }))
-            return VoicegroupCatalog(
-                samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
-                drumkits: groups.drumkits,
-                keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
-                                      uniquingKeysWith: { _, latest in latest }),
-                synths: direct.synths.defs.map(\.symbol),
-                synthDefinitions: Dictionary(direct.synths.defs.map { ($0.symbol, $0.descriptor) },
-                                             uniquingKeysWith: { first, _ in first }),
-                canMintSynths: direct.synths.creatable(), defaults: defaults)
-        }
+        let catalog = await store.voicegroupCatalog()
+        let groups = catalog.groups
+        let direct = catalog.direct
+        let defaults = VoiceListAdsrDefaults(
+            bySymbol: groups.typicalAdsr.bySymbol.mapValues {
+                VoiceListAdsr(attack: Int32($0.attack), decay: Int32($0.decay),
+                              sustain: Int32($0.sustain), release: Int32($0.release))
+            },
+            byFamily: Dictionary(uniqueKeysWithValues:
+                groups.typicalAdsr.byFamily.map { key, adsr in
+                    (Int32(key), VoiceListAdsr(
+                        attack: Int32(adsr.attack), decay: Int32(adsr.decay),
+                        sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
+                }))
+        return VoicegroupCatalog(
+            samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
+            drumkits: groups.drumkits,
+            keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
+                                  uniquingKeysWith: { _, latest in latest }),
+            synths: direct.synths.defs.map(\.symbol),
+            synthDefinitions: Dictionary(direct.synths.defs.map { ($0.symbol, $0.descriptor) },
+                                         uniquingKeysWith: { first, _ in first }),
+            canMintSynths: direct.synths.creatable(), defaults: defaults)
     }
 
     /// Resolves a picker audition through the project's own loader.
@@ -534,7 +533,7 @@ public actor ProjectService {
             guard song.hasMid, let midiPath = song.midPath else {
                 throw ProjectServiceError.operationFailed("No playable song named \(label).")
             }
-            let bytes = try await store.run { try ProjectFileStore.read(midiPath) }
+            let bytes = try await store.readFile(midiPath)
             let bank = try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument)
             let lease = NativeBankLease(handle: bank)
             return LoadedSong(
@@ -564,10 +563,7 @@ public actor ProjectService {
                 }
                 refreshed = appliedBank(saved, token: nil)
             }
-            try await store.run {
-                try ProjectFileStore.writeAtomic(snapshot.destination.midiPath,
-                                                 data: Data(snapshot.bytes))
-            }
+            try await store.writeFile(snapshot.destination.midiPath, data: Data(snapshot.bytes))
             var flagsWritten = false
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)

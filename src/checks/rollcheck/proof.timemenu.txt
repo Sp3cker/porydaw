@@ -8,10 +8,14 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s).
+Result: PASS — 1/31 ok (30 skipped); runtime swiftcore 16.53s, build 27.27 (controller-recorded final run).
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: PASS — 3 Qt results (initTestCase, projectSession, cleanupTestCase), 0 failed, 947ms
+(controller-recorded run on the refrozen sources; full output artifact://459); it executed
+S001 (insert-time model rows) and S007 (half-open boundary menu open).
 Command: deno task verify:shell --verbose --filter shell-grid-menu --qt ShellGridMenu::test_shiftRightRollSweepOpensCanonicalTimeMenu
 Result: PASS — 1/19 ok (local mounted ShellWindow test; shift-right roll sweep exposes time commands and rendered menu).
-Counts: MATCHED 7, PARTIAL 2, GAP 81, RETIRED-REPRESENTATION 10.
+Counts: MATCHED 7, PARTIAL 3, GAP 80, RETIRED-REPRESENTATION 10.
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: GAP
@@ -169,8 +173,8 @@ Original expression:
   QTRY_VERIFY(view.editActions()->pasteClipPresent())
 
 A005 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:133
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/timemenu.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Disposition: PARTIAL
+Mapping/reason: S007 (timemenu.swift checkTimeMenuHalfOpenBoundary, executed) opens the range menu at a press one tick inside the interval and asserts the typed time-range menu (menuKind 2) is open. Unproved: the rendered canvas menu session/panel and the native right-click delivery this row drives.
 Source context since previous assertion:
   ;
 
@@ -1074,7 +1078,8 @@ Original expression:
                "a note-only selection left Duplicate cached as disabled")
 
 Swift executable assertion index
-S001 proves model insertion undo in swiftcore; S002-S006 run in the mounted
+S001 proves model insertion undo in swiftcore; S007 proves the half-open range boundary in
+the registered time-menu presenter check; S002-S006 run in the mounted
 shell QML test and prove a roll-origin sweep and rendered-menu eligibility.
 
 S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift
@@ -1094,6 +1099,9 @@ Anchor: message "Copy is enabled in the rendered time menu after sweep"
 
 S006 | test_shiftRightRollSweepOpensCanonicalTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "Duplicate Time is enabled in the rendered time menu after sweep"
+
+S007 | checkTimeMenuHalfOpenBoundary | src/checks/rollcheck/timemenu.swift
+Anchor: message "a press one tick inside the end stays inside the half-open interval"
 
 Remaining original source (closing sequence and helper bodies):
   ;

@@ -11,8 +11,12 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 EditorGridCameraChecks ::trackOwnerRemap supplies the remap-before-publication payload
 predicate (S025) and the per-owner sequences. The original two-signal emission order
 (tracksRemapped before documentChanged) has no Swift counterpart — SongView Qt signals
-do not exist in Swift — so the twelve pure-ordering sites stay GAP; the shell-grid-input lane runs test_trackFollowReload for header
-follow and session replacement. The original SongView editorViewState cosmetics and
+do not exist in Swift — so the twelve pure-ordering sites stay GAP; the shell-grid-input lane runs test_trackFollowReload (S030) for header
+follow and session replacement. That predicate asserts the projected primary/ghost
+partition (track-1 faces unghosted, other-track faces ghosted) in place of the superseded
+primary-only face list, so the cited follow clauses rest on its trackIndex,
+rendered-note-completeness and session-replacement conjuncts, not on a single-track face list.
+The original SongView editorViewState cosmetics and
 time-selection lanes are not modelled in the Swift roll, so every site whose original
 conjunction includes them stays PARTIAL. The raw metadata-to-engine promotion family
 stays GAP because insertRawEvent never promotes or remaps a conductor in Swift.
@@ -27,8 +31,9 @@ Result: PASS — 1/1 ok (controller-recorded post-change run); no remap site dep
 on the roll QML lane.
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-input
-lane ran test_trackFollowReload (S030). The shell and roll QML runs predate only a
-swiftcore-checks-only commit; no production or QML source changed after them.
+lane ran test_trackFollowReload (S030) after the ghost-projection fixture edit, so the
+recorded function list matches the current tst_ShellGridInput.qml. The other shell lanes
+predate the in-progress shell-menu work and are cited nowhere here.
 
 A001 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:170
 Disposition: RETIRED-REPRESENTATION
@@ -781,4 +786,4 @@ S029 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "undo restores the track without reviving dropped owner state"
 
 S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml
-Anchor: message "setTrack follows track 1 in notes and faces"
+Anchor: message "setTrack follows track 1 with other tracks as ghosts"

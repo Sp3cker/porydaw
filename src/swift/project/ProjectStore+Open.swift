@@ -47,10 +47,6 @@ extension ProjectStore {
     /// - Returns: A detached value snapshot of the opened project.
     /// - Throws: An open error if the root or loader is invalid, or a catalog error if the song table is invalid.
     public func open() async throws -> ProjectSnapshot {
-        try await run { [self] in try await self.openProject() }
-    }
-
-    private func openProject() throws -> ProjectSnapshot {
         let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: projectRoot, isDirectory: &isDirectory),

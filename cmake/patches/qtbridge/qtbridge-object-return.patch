@@ -1,0 +1,594 @@
+diff --git a/Sources/QtBridgeMacros/Extensions.swift b/Sources/QtBridgeMacros/Extensions.swift
+--- a/Sources/QtBridgeMacros/Extensions.swift
++++ b/Sources/QtBridgeMacros/Extensions.swift
+@@ -124,7 +124,7 @@ extension TypeSyntax {
+     }
+ 
+     var isSupportedReturnType: Bool {
+-        return isSupportedSettableType || isVoid
++        return isSupportedSettableType || isVoid || self.is(IdentifierTypeSyntax.self)
+     }
+ 
+     var isVoid: Bool {
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -59,9 +59,13 @@ ExternalProject_Add(QtBridgeMacros_External
+     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Sources/QtBridgeMacros"
+     CMAKE_ARGS
+         -G Ninja
++        -DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}
++        -DCMAKE_Swift_COMPILER:FILEPATH=${CMAKE_Swift_COMPILER}
++        -DCMAKE_Swift_FLAGS:STRING=${CMAKE_Swift_FLAGS}
+         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+         -DBUILD_SHARED_LIBS=YES
+         -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${QTBRIDGE_MACROS_EP_ROOT}/build/bin
++    BUILD_BYPRODUCTS "${QTBRIDGE_MACROS_EP_ROOT}/build/bin/QtBridgeMacros"
+     USES_TERMINAL_BUILD TRUE
+     INSTALL_COMMAND ""
+ )
+diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstantiable.swift
+--- a/Sources/QtBridge/QmlInstantiable.swift
++++ b/Sources/QtBridge/QmlInstantiable.swift
+@@ -50,7 +50,7 @@ extension QmlInstantiable {
+ }
+ 
+ extension QmlInstantiable {
+-    package static func registerQmlElement() {
++    public static func registerQmlElement() {
+         metaObjectBuilder.registerInitializer(initFn: self.init)
+         metaObjectBuilder.registerQmlElement(from: Self.self)
+     }
+diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
+index c69ec15..6a08894 100644
+--- a/Sources/QtBridge/QVariant.swift
++++ b/Sources/QtBridge/QVariant.swift
+@@ -96,6 +96,17 @@ public struct QVariant
+         self.variant = value.objectHolder.proxy.toVariant()
+     }
+ 
++    /// Creates a variant containing an optional Swift object exposed to QML.
++    /// A missing value is stored as a typed null QObject pointer.
++    public init<Wrapped: QObjectBuildable>(value: Wrapped?) {
++        if let value {
++            self.variant = value.objectHolder.proxy.toVariant()
++        } else {
++            self.variant = QtBridgeCpp.QVariant.fromMetaType(
++                QMetaType(Wrapped.metaType()), nil)
++        }
++    }
++
+     /// Creates a variant from a Swift dictionary.
+     ///
+     /// - Parameter value: A dictionary to be bridged to
+@@ -152,7 +163,7 @@ public struct QVariant
+         return nil
+     }
+ 
+-    internal func cppVariant() -> QtBridgeCpp.QVariant {
++    public func cppVariant() -> QtBridgeCpp.QVariant {
+         return variant
+     }
+ }
+@@ -183,6 +194,11 @@ public protocol QVariantSettable : QVariantGettable {
+     static func value(from variant: QVariant) -> Self
+ }
+ 
++extension Optional: QVariantGettable where Wrapped: QObjectBuildable {
++    public func toVariant() -> QVariant { QVariant(value: self) }
++    public static func metaType() -> Int32 { Wrapped.metaType() }
++}
++
+ extension Bool: QVariantSettable {
+     public func toVariant() -> QVariant { QVariant(value: self) }
+     public static func value(from variant: QVariant) -> Bool { variant.toBool() }
+diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
+--- a/Sources/QtBridge/QListModel.swift
++++ b/Sources/QtBridge/QListModel.swift
+@@ -109,6 +109,33 @@
+         }
+     }
+ 
++    /// Moves an element to a final index within the list.
++    ///
++    /// Invalid indices, identical indices, and moves rejected by
++    /// the underlying Qt model leave the list unchanged.
++    ///
++    /// - Parameters:
++    ///   - sourceIndex: The current index of the element.
++    ///   - destinationIndex: The element's final index.
++    public func move(from sourceIndex: Int, to destinationIndex: Int) {
++        guard storage.indices.contains(sourceIndex),
++              storage.indices.contains(destinationIndex),
++              sourceIndex != destinationIndex
++        else { return }
++
++        let sourceRow = Int32(sourceIndex)
++        let destinationChild = Int32(destinationIndex > sourceIndex
++                                     ? destinationIndex + 1
++                                     : destinationIndex)
++        guard model.beginMoveRows(QModelIndex(), sourceRow, sourceRow,
++                                  QModelIndex(), destinationChild)
++        else { return }
++
++        let element = storage.remove(at: sourceIndex)
++        storage.insert(element, at: destinationIndex)
++        model.endMoveRows()
++    }
++
+     /// Inserts, removes or replaces elements within
+     /// the specified range.
+     ///
+diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
+--- a/Sources/QtBridge/QAbstractListModel.swift
++++ b/Sources/QtBridge/QAbstractListModel.swift
+@@ -162,6 +162,15 @@
+ 
+     internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
+ 
++    @discardableResult
++    internal func beginMoveRows(_ sourceParent: QModelIndex, _ sourceFirst: Int32, _ sourceLast: Int32,
++                                _ destinationParent: QModelIndex, _ destinationRow: Int32) -> Bool {
++        return getCppModel().beginMoveRows(sourceParent.cppModel, sourceFirst, sourceLast,
++                                           destinationParent.cppModel, destinationRow)
++    }
++
++    internal func endMoveRows() { getCppModel().endMoveRows() }
++
+     internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
+         return getCppModel().beginRemoveRows(parent.cppModel, first, last)
+     }
+diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+--- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
++++ b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+@@ -64,6 +64,14 @@
+ 
+     void endInsertRows() { QAbstractListModel::endInsertRows(); }
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst, int sourceLast,
++                       const QModelIndex &destinationParent, int destinationRow) {
++        return QAbstractListModel::beginMoveRows(sourceParent, sourceFirst, sourceLast,
++                                                 destinationParent, destinationRow);
++    }
++
++    void endMoveRows() { QAbstractListModel::endMoveRows(); }
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last) {
+         QAbstractListModel::beginRemoveRows(parent, first, last);
+     }
+@@ -147,6 +155,15 @@
+ 
+ void QAbstractListModelCpp::endInsertRows() { m_impl->endInsertRows(); }
+ 
++bool QAbstractListModelCpp::beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                                          int sourceLast, const QModelIndex &destinationParent,
++                                          int destinationRow) {
++    return m_impl->beginMoveRows(sourceParent, sourceFirst, sourceLast, destinationParent,
++                                 destinationRow);
++}
++
++void QAbstractListModelCpp::endMoveRows() { m_impl->endMoveRows(); }
++
+ void QAbstractListModelCpp::beginRemoveRows(const QModelIndex &parent, int first, int last) {
+     m_impl->beginRemoveRows(parent, first, last);
+ }
+diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+--- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
++++ b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+@@ -42,6 +42,11 @@
+     void beginInsertRows(const QModelIndex parent, int first, int last);
+     void endInsertRows();
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                       int sourceLast, const QModelIndex &destinationParent,
++                       int destinationRow);
++    void endMoveRows();
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last);
+     void endRemoveRows();
+ 
+diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
+--- a/Sources/QtBridgeCpp/qobjectproxy.cpp
++++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
+@@ -4,6 +4,8 @@
+ #include "qobjectproxy.h"
+ 
+ #include "qobjectproxyimpl.h"
++
++#include <QtQml/QJSEngine>
+ 
+ // Impl
+ 
+@@ -13,7 +15,9 @@ public:
+     Impl(void *owner) :
+         m_ownership(Cpp),
+         m_object(new QObjectProxyImpl(owner))
+     {
++        // ~Impl deletes this object; exclude it from JS garbage collection.
++        QJSEngine::setObjectOwnership(m_object, QJSEngine::CppOwnership);
+     }
+ 
+     Impl(void *owner,
+@@ -55,7 +59,7 @@ private:
+     };
+ 
+     Ownership m_ownership;
+-    QObject * m_object;
++    QPointer<QObject> m_object;
+ };
+ 
+ QObjectProxy::QObjectProxy(void *owner)
+diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+--- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+@@ -281,5 +281,8 @@@
+     void emitSignal(QObject* obj, const std::string &name, const std::vector<QVariant> &args)
+     {
++        if (!obj)
++            return;
++
+         auto it = m_signalNameToId.find(name);
+         if (it == m_signalNameToId.end())
+             return;
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+--- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+@@ -6,6 +6,7 @@
+ #include <QtCore/qobject.h>
+ #include <QtQml/qqmllist.h>
+ #include <QtQml/qqmlparserstatus.h>
++#include <QtQml/qqmlengine.h>
+ 
+ #include "swiftobjectaccesor.h"
+ 
+@@ -21,6 +22,11 @@@ public:
+     QObjectProxyImpl(void *swiftObj)
+     : m_swiftObj(swiftObj)
+-    {}
++    {
++        // A Swift-created proxy is owned by its Swift owner, never by QML.
++        // Pin CppOwnership so the engine cannot garbage-collect it while the
++        // Swift object still publishes through it.
++        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
++    }
+ 
+     using DeleterFn = void(*)(void *swiftObj);
+     QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
+diff --git a/Sources/QtBridgeCpp/include/qappcpp.h b/Sources/QtBridgeCpp/include/qappcpp.h
+index fb09757..4bb1833 100644
+--- a/Sources/QtBridgeCpp/include/qappcpp.h
++++ b/Sources/QtBridgeCpp/include/qappcpp.h
+@@ -7,6 +7,8 @@
+ #include <QtCore/qurl.h>
+ #include <QtCore/qvariant.h>
+ 
++#include <QtQml/qqmlapplicationengine.h>
++
+ #include <swift/bridging>
+ 
+ #include "qobjectproxy.h"
+@@ -25,6 +29,10 @@ public:
+ 
+     int run(int argc, char **argv);
+ 
++    // The application engine while run() is executing; nullptr before load
++    // and after exec() returns. Valid to call from slots during exec().
++    static QQmlApplicationEngine *engine();
++
+ private:
+     std::vector<QString> m_importPaths;
+     QString m_pluginsPath;
+diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
+index 7e91abd..1922e24 100644
+--- a/Sources/QtBridgeCpp/qappcpp.cpp
++++ b/Sources/QtBridgeCpp/qappcpp.cpp
+@@ -2,12 +2,21 @@
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
+ 
+ #include "qappcpp.h"
++#include "quickdisplaylistitem.h"
+ 
+ #include <QtGui/qguiapplication.h>
+ #include <QtQml/qqmlapplicationengine.h>
+ 
++static QQmlApplicationEngine *s_engine = nullptr;
++
++QQmlApplicationEngine *QAppCpp::engine()
++{
++    return s_engine;
++}
++
+ QAppCpp::QAppCpp()
+ {
++    registerQuickDisplayListQmlType();
+ }
+ 
+ QAppCpp::~QAppCpp()
+@@ -44,7 +53,10 @@ int QAppCpp::run(int argc, char **argv)
+         engine.addImportPath(path);
+ 
+     engine.setInitialProperties(m_map);
++    s_engine = &engine;
+     engine.load(m_root);
+ 
+-    return app.exec();
++    const int rc = app.exec();
++    s_engine = nullptr;
++    return rc;
+ }
+diff --git a/Sources/QtBridgeCpp/CMakeLists.txt b/Sources/QtBridgeCpp/CMakeLists.txt
+index 943d39b..f023134 100644
+--- a/Sources/QtBridgeCpp/CMakeLists.txt
++++ b/Sources/QtBridgeCpp/CMakeLists.txt
+@@ -8,6 +8,8 @@ set(QTBRIDGE_CPP_SOURCES
+     callbackbase.cpp
+     metaparamslist.cpp
+     qappcpp.cpp
++    include/quickdisplaylistitem.h
++    quickdisplaylistitem.cpp
+     qobjectproxy.cpp
+     qobjectproxyimpl.cpp
+     qtestappcpp.cpp
+diff --git a/Sources/QtBridgeCpp/include/QtBridgeCpp.h b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
+index 3e3f056..a0fccfb 100644
+--- a/Sources/QtBridgeCpp/include/QtBridgeCpp.h
++++ b/Sources/QtBridgeCpp/include/QtBridgeCpp.h
+@@ -9,6 +9,7 @@
+ #include "callbackbase.h"
+ #include "metaparamslist.h"
+ #include "qappcpp.h"
++#include "quickdisplaylistitem.h"
+ #include "qobjectproxy.h"
+ #include "qobjectproxyimpl.h"
+ #include "qtestappcpp.h"
+diff --git a/Sources/QtBridgeCpp/include/qtestappcpp.h b/Sources/QtBridgeCpp/include/qtestappcpp.h
+index 8efd93c..3eb3144 100644
+--- a/Sources/QtBridgeCpp/include/qtestappcpp.h
++++ b/Sources/QtBridgeCpp/include/qtestappcpp.h
+@@ -12,7 +12,7 @@
+ class QTestAppCpp
+ {
+ public:
+-    QTestAppCpp() = default;
++    QTestAppCpp();
+     ~QTestAppCpp() = default;
+ 
+     void setImportPath(const char *path);
+diff --git a/Sources/QtBridgeCpp/qtestappcpp.cpp b/Sources/QtBridgeCpp/qtestappcpp.cpp
+index 169c7c9..060a93c 100644
+--- a/Sources/QtBridgeCpp/qtestappcpp.cpp
++++ b/Sources/QtBridgeCpp/qtestappcpp.cpp
+@@ -2,11 +2,17 @@
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
+ 
+ #include "qtestappcpp.h"
++#include "quickdisplaylistitem.h"
+ 
+ #include <QtQuickTest/quicktest.h>
+ #include <QtQml/QQmlEngine>
+ #include <QtCore/qobject.h>
+ 
++QTestAppCpp::QTestAppCpp()
++{
++    registerQuickDisplayListQmlType();
++}
++
+ void QTestAppCpp::setImportPath(const char *path)
+ {
+     m_importPath = std::string(path);
+diff --git a/Sources/QtBridgeCpp/include/quickdisplaylistitem.h b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
+new file mode 100644
+index 0000000..e70bfc6
+--- /dev/null
++++ b/Sources/QtBridgeCpp/include/quickdisplaylistitem.h
+@@ -0,0 +1,44 @@
++#pragma once
++
++#include <QtCore/qabstractitemmodel.h>
++#include <QtCore/qpointer.h>
++#include <QtQuick/qquickitem.h>
++
++#include <vector>
++
++class QuickDisplayListItem : public QQuickItem
++{
++    Q_OBJECT
++    Q_PROPERTY(QAbstractItemModel *rects READ rects WRITE setRects NOTIFY rectsChanged)
++
++public:
++    explicit QuickDisplayListItem(QQuickItem *parent = nullptr);
++
++    QAbstractItemModel *rects() const;
++    void setRects(QAbstractItemModel *rects);
++
++signals:
++    void rectsChanged();
++
++protected:
++    QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
++
++private:
++    struct Rect {
++        float x;
++        float y;
++        float width;
++        float height;
++        unsigned char red;
++        unsigned char green;
++        unsigned char blue;
++        unsigned char alpha;
++    };
++
++    void rebuildSnapshot();
++
++    QPointer<QAbstractItemModel> m_rects;
++    std::vector<Rect> m_snapshot;
++};
++
++void registerQuickDisplayListQmlType();
+diff --git a/Sources/QtBridgeCpp/quickdisplaylistitem.cpp b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
+new file mode 100644
+index 0000000..3befa29
+--- /dev/null
++++ b/Sources/QtBridgeCpp/quickdisplaylistitem.cpp
+@@ -0,0 +1,160 @@
++#include "quickdisplaylistitem.h"
++
++#include <QtCore/qhash.h>
++#include <QtCore/qvariant.h>
++#include <QtGui/qcolor.h>
++#include <QtQml/qqml.h>
++#include <QtQuick/qsggeometry.h>
++#include <QtQuick/qsgnode.h>
++#include <QtQuick/qsgvertexcolormaterial.h>
++
++#include <cmath>
++#include <mutex>
++
++namespace {
++
++class RectGeometryNode final : public QSGGeometryNode
++{
++public:
++    RectGeometryNode()
++        : geometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), 0)
++    {
++        geometry.setDrawingMode(QSGGeometry::DrawTriangles);
++        geometry.setVertexDataPattern(QSGGeometry::DynamicPattern);
++        setGeometry(&geometry);
++        setMaterial(&material);
++    }
++
++    QSGGeometry geometry;
++    QSGVertexColorMaterial material;
++    int allocatedRectCount = 0;
++};
++
++int requiredRole(const QHash<int, QByteArray> &roles, const QByteArray &name)
++{
++    const int role = roles.key(name, -1);
++    if (role < 0)
++        qFatal("QuickDisplayList model is missing the required '%s' role", name.constData());
++    return role;
++}
++
++}
++
++QuickDisplayListItem::QuickDisplayListItem(QQuickItem *parent)
++    : QQuickItem(parent)
++{
++    setFlag(ItemHasContents, true);
++}
++
++QAbstractItemModel *QuickDisplayListItem::rects() const
++{
++    return m_rects;
++}
++
++void QuickDisplayListItem::setRects(QAbstractItemModel *rects)
++{
++    if (m_rects == rects)
++        return;
++
++    if (m_rects)
++        disconnect(m_rects, nullptr, this, nullptr);
++    m_rects = rects;
++
++    if (m_rects) {
++        const auto rebuild = [this] { rebuildSnapshot(); };
++        connect(m_rects, &QAbstractItemModel::modelReset, this, rebuild);
++        connect(m_rects, &QAbstractItemModel::dataChanged, this, rebuild);
++        connect(m_rects, &QAbstractItemModel::rowsInserted, this, rebuild);
++        connect(m_rects, &QAbstractItemModel::rowsRemoved, this, rebuild);
++        connect(m_rects, &QAbstractItemModel::rowsMoved, this, rebuild);
++        connect(m_rects, &QAbstractItemModel::layoutChanged, this, rebuild);
++        connect(m_rects, &QObject::destroyed, this, [this] {
++            m_rects = nullptr;
++            rebuildSnapshot();
++        });
++    }
++
++    rebuildSnapshot();
++    emit rectsChanged();
++}
++
++void QuickDisplayListItem::rebuildSnapshot()
++{
++    m_snapshot.clear();
++    if (m_rects) {
++        const auto roles = m_rects->roleNames();
++        const int xRole = requiredRole(roles, "x");
++        const int yRole = requiredRole(roles, "y");
++        const int widthRole = requiredRole(roles, "width");
++        const int heightRole = requiredRole(roles, "height");
++        const int colorRole = requiredRole(roles, "fillColor");
++        const int count = m_rects->rowCount();
++        m_snapshot.reserve(size_t(count));
++        for (int row = 0; row < count; ++row) {
++            const QModelIndex index = m_rects->index(row, 0);
++            const float x = m_rects->data(index, xRole).toFloat();
++            const float y = m_rects->data(index, yRole).toFloat();
++            const float width = m_rects->data(index, widthRole).toFloat();
++            const float height = m_rects->data(index, heightRole).toFloat();
++            const QColor color(m_rects->data(index, colorRole).toString());
++            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width)
++                || !std::isfinite(height) || !color.isValid())
++                qFatal("QuickDisplayList received invalid rectangle data at row %d", row);
++            if (width <= 0 || height <= 0 || color.alpha() == 0)
++                continue;
++            m_snapshot.push_back(Rect{
++                x, y, width, height,
++                static_cast<unsigned char>(color.red()),
++                static_cast<unsigned char>(color.green()),
++                static_cast<unsigned char>(color.blue()),
++                static_cast<unsigned char>(color.alpha())});
++        }
++    }
++    update();
++}
++
++QSGNode *QuickDisplayListItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
++{
++    if (m_snapshot.empty()) {
++        delete oldNode;
++        return nullptr;
++    }
++
++    auto *node = static_cast<RectGeometryNode *>(oldNode);
++    if (!node)
++        node = new RectGeometryNode;
++
++    const int count = int(m_snapshot.size());
++    if (node->allocatedRectCount != count) {
++        node->geometry.allocate(count * 6);
++        node->allocatedRectCount = count;
++    }
++    auto *vertices = node->geometry.vertexDataAsColoredPoint2D();
++    for (int i = 0; i < count; ++i) {
++        const Rect &rect = m_snapshot[size_t(i)];
++        const float right = rect.x + rect.width;
++        const float bottom = rect.y + rect.height;
++        const int alpha = rect.alpha;
++        const auto red = static_cast<unsigned char>((rect.red * alpha + 127) / 255);
++        const auto green = static_cast<unsigned char>((rect.green * alpha + 127) / 255);
++        const auto blue = static_cast<unsigned char>((rect.blue * alpha + 127) / 255);
++        const int vertex = i * 6;
++        vertices[vertex].set(rect.x, rect.y, red, green, blue, rect.alpha);
++        vertices[vertex + 1].set(rect.x, bottom, red, green, blue, rect.alpha);
++        vertices[vertex + 2].set(right, rect.y, red, green, blue, rect.alpha);
++        vertices[vertex + 3].set(right, rect.y, red, green, blue, rect.alpha);
++        vertices[vertex + 4].set(rect.x, bottom, red, green, blue, rect.alpha);
++        vertices[vertex + 5].set(right, bottom, red, green, blue, rect.alpha);
++    }
++    node->geometry.markVertexDataDirty();
++    node->markDirty(QSGNode::DirtyGeometry);
++    return node;
++}
++
++void registerQuickDisplayListQmlType()
++{
++    static std::once_flag once;
++    std::call_once(once, [] {
++        qmlRegisterType<QuickDisplayListItem>("QtBridge", 1, 0, "QuickDisplayList");
++    });
++}

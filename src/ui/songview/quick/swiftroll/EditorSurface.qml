@@ -283,7 +283,7 @@ Item {
                         onPressed: (mouse) => {
                             rulerMoves.flush()
                             if (mouse.button === Qt.LeftButton) {
-                                root.rulerMenu.beginSweep(mouse.x)
+                                root.rulerMenu.beginSweep(mouse.x, mouse.modifiers)
                             } else if (mouse.button === Qt.RightButton) {
                                 root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
                                 root.timeMenuFocus = false
@@ -414,7 +414,7 @@ Item {
                             else if (mouse.button === Qt.RightButton) {
                                 rightSweepActive = (mouse.modifiers & Qt.ShiftModifier) !== 0
                                 if (rightSweepActive) {
-                                    root.rulerMenu.beginSweep(mouse.x)
+                                    root.rulerMenu.beginSweep(mouse.x, mouse.modifiers)
                                 } else {
                                     root.timeSelectionMenuPosition = mapToItem(root, mouse.x, mouse.y)
                                     root.rulerMenu.openTimeSelection(mouse.x)

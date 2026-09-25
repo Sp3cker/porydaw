@@ -126,7 +126,6 @@ public final class DocumentWorkspace {
         session.onCameraChangeDetailed = { [weak self] _, change in
             self?.cameraDidChange(change)
         }
-        installPlaybackPublication()
         session.onChange = { [weak self] change in
             self?.sessionDidChange(change)
         }
@@ -142,6 +141,8 @@ public final class DocumentWorkspace {
         do {
             try audio.bind(timeline: session.timeline, bank: session.bankLease,
                            config: session.document.state.config)
+            audio.setMuteMask(Self.trackMask(session.mutedTracks))
+            audio.setSoloMask(Self.trackMask(session.soloedTracks))
             appliedSongConfig = session.document.state.config
         } catch {
             // The renderer refused this document's voices. The document stays
@@ -189,6 +190,7 @@ public final class DocumentWorkspace {
     }
 
     public func cancel(reason: Int) {
+        rulerMenu.cancelSweep()
         grid.inputCancelled(reason: reason)
         trackHeaders.inputCancelled(reason: reason)
         voiceChangesPage.cancelSectionInteraction()
@@ -247,7 +249,11 @@ public final class DocumentWorkspace {
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
-        deactivate()
+        if isActive {
+            deactivate()
+        } else {
+            cancel(reason: GridCancelReason.hidden.rawValue)
+        }
         session.onChange = nil
         session.onPlayback = nil
         drawer.onSectionVisibilityChanged = nil
@@ -262,24 +268,29 @@ public final class DocumentWorkspace {
         grid.detach()
     }
 
-    /// Installs the borrowed session's playback publication. The workspace owns
-    /// this closure from construction while it presents the document, and every
-    /// activation reinstalls what `deactivate()` cleared: an engine bound
-    /// without it would keep playing whatever it last held.
     private func installPlaybackPublication() {
-        session.onPlayback = { [weak audio, weak self] timeline in
+        session.onPlayback = { [weak self] timeline in
+            guard let self, self.isActive else { return }
             do {
-                try audio?.publish(timeline)
+                try self.audio.publish(timeline)
             } catch {
-                self?.callbacks.publicationFailed(String(describing: error))
+                self.callbacks.publicationFailed(String(describing: error))
             }
+        }
+    }
+
+    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
+        tracks.reduce(into: UInt32(0)) { mask, track in
+            if (0..<16).contains(track) { mask |= UInt32(1) << track }
         }
     }
 
     private func cameraDidChange(_ change: EditorCamera.Change) {
         grid.refreshCamera()
-        playhead.refreshProjection()
-        playheadGuides.refreshProjection()
+        if isActive {
+            playhead.refreshProjection()
+            playheadGuides.refreshProjection()
+        }
 
         // Drawer pages project only through the horizontal camera. A vertical
         // scroll or pitch-projection change therefore leaves them untouched;
@@ -306,12 +317,14 @@ public final class DocumentWorkspace {
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
-        playheadGuides.sessionDidChange(change)
-        eventList.documentDidChange(change)
+        if isActive {
+            playheadGuides.sessionDidChange(change)
+            eventList.documentDidChange(change)
+        }
 
         if documentChanged {
             trackHeaders.documentDidChange(change)
-            playhead.refreshImmediate()
+            if isActive { playhead.refreshImmediate() }
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()
         }
@@ -325,6 +338,10 @@ public final class DocumentWorkspace {
         if isActive && documentChanged && appliedSongConfig != session.document.state.config {
             appliedSongConfig = session.document.state.config
             audio.updateSettings(config: appliedSongConfig)
+        }
+        if isActive && (change.domains.contains(.mixState) || change.trackRemap != nil) {
+            audio.setMuteMask(Self.trackMask(session.mutedTracks))
+            audio.setSoloMask(Self.trackMask(session.soloedTracks))
         }
 
         if isActive && change.domains.contains(.bank) {
@@ -347,7 +364,7 @@ public final class DocumentWorkspace {
             automationPage.refreshEditCursor()
         }
 
-        if change.domains.contains(.mixState) {
+        if isActive && change.domains.contains(.mixState) {
             callbacks.gridCommandAvailabilityChanged()
         }
         if !change.domains.intersection(applicationStateDomains).isEmpty {

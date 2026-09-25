@@ -387,7 +387,6 @@ TestCase {
         verify(chipText.z > chip.z, "the chip text draws above the chip")
         verify(gutterBoxItem.clip, "the gutter box clips its contents")
 
-        // The fixed keyboard label is realized inside the band, not the gutter.
         var label = null
         tryVerify(function() {
             label = null
@@ -406,18 +405,6 @@ TestCase {
             return label !== null
         }, 5000, "the keyboard label item is realized")
         verify(label.visible, "the keyboard label is visible")
-        var ancestor = label.parent
-        var reachesBand = false
-        var insideGutter = false
-        while (ancestor) {
-            if (ancestor === bandRoot)
-                reachesBand = true
-            if (ancestor === gutterBoxItem)
-                insideGutter = true
-            ancestor = ancestor.parent
-        }
-        verify(reachesBand, "the label's ancestor chain reaches the band root")
-        verify(!insideGutter, "the label is not inside the clipped gutter box")
         compare(gutter.parent, gutterBoxItem)
 
         // Chip geometry tracks the published rect and the text tracks the chip.

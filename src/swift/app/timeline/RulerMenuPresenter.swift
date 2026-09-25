@@ -37,7 +37,7 @@ public final class RulerMenuPresenter {
         case duplicate, removeContents, clearSelection, editTimeSignature
         case removeTimeSignature, copy, cut, paste, deleteSelection
     }
-
+    private static let controlModifier = 0x0400_0000
     @QtTracked public var isOpen = false
     public var rows: QListModel<RulerMenuRow> = QListModel()
     @QtTracked public var menuKind = 0 // 1: ruler background; 2: selected time range
@@ -64,7 +64,9 @@ public final class RulerMenuPresenter {
     private var capturedCursor: Tick = 0
     private var sweepAnchor: Tick?
     private var sweepWasRange = false
+    private var sweepMultiTrack = false
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
+    @QtIgnored public var onSeek: ((Tick) -> Void)?
     private var rowSnapshot: [RulerMenuRow] = []
 
     public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage) {
@@ -87,6 +89,7 @@ public final class RulerMenuPresenter {
         if !inside {
             automation.clearTimeSelection()
             session.editCursor = tick
+            onSeek?(tick)
         }
         capturedTick = tick
         capturedSelection = automation.selection
@@ -254,13 +257,14 @@ public final class RulerMenuPresenter {
             scope: TimeScope(wholeSong: true))
     }
 
-    public func beginSweep(contentX: Double) {
+    public func beginSweep(contentX: Double, modifiers: Int = 0) {
         guard contentX.isFinite else { return }
         close()
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         sweepAnchor = snapped(raw)
         sweepWasRange = false
+        sweepMultiTrack = modifiers & Self.controlModifier != 0
     }
 
     public func updateSweep(contentX: Double) {
@@ -273,25 +277,46 @@ public final class RulerMenuPresenter {
             return
         }
         sweepWasRange = true
-        let track = session.selectedTrack ?? grid.trackIndex
+        let start = min(sweepAnchor, tick)
+        let end = max(sweepAnchor, tick)
         automation.applyTimeSelection(AutomationTimeSelection(
-            range: TimeRange(startTick: min(sweepAnchor, tick), endTick: max(sweepAnchor, tick)),
-            scope: .tracks([track])))
+            range: TimeRange(startTick: start, endTick: end),
+            scope: .tracks(sweepTrackScope(start: start, end: end))))
     }
 
     public func endSweep(contentX: Double) {
         updateSweep(contentX: contentX)
-        if !sweepWasRange || automation.selection == nil {
-            automation.clearTimeSelection()
-            if let sweepAnchor { session.editCursor = sweepAnchor }
+        if sweepWasRange {
+            if automation.selection?.isActive != true {
+                automation.clearTimeSelection()
+            }
+        } else if let sweepAnchor {
+            session.editCursor = sweepAnchor
+            onSeek?(sweepAnchor)
         }
         sweepAnchor = nil
         sweepWasRange = false
+        sweepMultiTrack = false
     }
 
     public func cancelSweep() {
         sweepAnchor = nil
         sweepWasRange = false
+        sweepMultiTrack = false
+    }
+
+    private func sweepTrackScope(start: Tick, end: Tick) -> Set<Int> {
+        let primary = session.selectedTrack ?? grid.trackIndex
+        var mask: Set<Int> = [primary]
+        guard sweepMultiTrack else { return mask }
+        for track in 0..<session.document.engineTracks.usedTrackCount where track != primary {
+            for note in session.document.notes(in: track)
+                where note.tick < end && start < note.tick + note.duration {
+                    mask.insert(track)
+                    break
+            }
+        }
+        return mask
     }
 
     private func snapped(_ raw: Double) -> Tick {

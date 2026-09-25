@@ -4,11 +4,18 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/selectionkey/localinputtier_pitchbend.cpp
 Original SHA-256: dfffb49ac306107884b336a69859d3db9390feb3f1c5a702bdc61ac4e50351b7
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
+Command: deno task verify:shell --filter shell-menus --filter shell-pitch-bend --filter
+shell-grid-input --filter shell-grid-menu --filter shell-transport --verbose
+Result: PASS — run_checks: PASS (5/26 ok, 3.52 s); shell-menus ok (2.38 s) on the
+frozen final sources; raw log /tmp/porydaw-shell-parity-final.log
+(controller-supplied). S009-S012 execute in the shell-menus slot; the swiftcore
+row above stays pending.
 
 SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys runs on the fresh
 
@@ -151,11 +158,15 @@ Original expression:
   QVERIFY2(pitchBendAction, "the pitch-bend scenario has no canonical action")
 
 A004 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:129
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the shared-routing rejection below is routing behavior a
-presenter-level Swift check could in principle assert, but none does. Original
-predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009: test_noteCommandsRouteThroughMenuAndKey calls the production
+routeEditorKey(Qt.Key_G, Qt.NoModifier, false) with no note selection and
+expects false (declined, not consumed), the same observable as
+!handleEditKey(opener, Timeline) here, on the same fresh mus_route101 fixture
+with primary track 0 and no note or time selection. S010 shows, in the same
+run, that this exact key plus modifiers returns true once a note is selected,
+so the decline is live unavailability of roll.pitch_bend (= G, editorRouted;
+KeybindingRegistry.swift:156), not an unbound key.
 Source context since previous assertion:
   ;
       QSignalSpy pitchBendTriggered(pitchBendAction, &QAction::triggered);
@@ -298,10 +309,16 @@ Original expression:
   QVERIFY2(!pitchBendAction->isEnabled(), "the disabled action state was not staged")
 
 A013 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:219
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the exactly-once opener trigger observation requires the native
-signal spy and cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: S011 + S012: the same test delivers one real keyClick(Qt.Key_G)
+into the focused swiftRollInput and then observes the production pitch-bend
+editor open (lines 381-382, tryCompare editor.isOpen true, "delivered G opens
+pitch bend on the selected note") with the roll document revision unchanged
+(line 383). The delivered key executed the pitch-bend route
+and mutated nothing, but not exactly once: the Swift shell has no QAction and
+no trigger-count or open-count predicate, so
+QCOMPARE(pitchBendTriggered.count(), 1) stays unproved, as does the original
+signal spy on the canonical action. One open is observed, not a count of one.
 Source context since previous assertion:
   ;
 
@@ -819,3 +836,15 @@ Anchor: message "cancellation leaves the original document unchanged"
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
+
+S009 | test_noteCommandsRouteThroughMenuAndKey | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "G without a note selection is declined"
+
+S010 | test_noteCommandsRouteThroughMenuAndKey | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "G routes to pitch bend with a note selected"
+
+S011 | test_noteCommandsRouteThroughMenuAndKey | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "delivered G opens pitch bend on the selected note"
+
+S012 | test_noteCommandsRouteThroughMenuAndKey | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the delivered key edits nothing on open"

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
@@ -9,6 +9,8 @@ func runKeyboardChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardResizeNotes(report, session: session)
     checkTimelineInsertBlankTimeTracks(report, session: session)
     checkTimelineInsertBlankTimeLanes(report, session: session)
+    checkKeyboardSkipsGhosts(report, session: session)
+    checkTimeSelectionHighlights(report, session: session)
     runKeyboardParityChecks(report, session: session)
 }
 
@@ -315,8 +317,14 @@ private func checkTimelineInsertBlankTimeTracks(_ report: CheckReport, session: 
         report.expect(session.document.note(seed.id).map {
             $0.tick == start && Int($0.pitch) == seed.pitch - 10
         } == true, cppID: id, message: "track insertion seed reaches its shortcut position")
-        guard session.document.engineTracks.usedTrackCount >= 2 else { return }
-        let otherTrack = seed.track == 0 ? 1 : 0
+        guard session.document.canAddTrack,
+              let otherTrack = session.document.addTrack(voice: 0),
+              otherTrack != seed.track else {
+            report.fail(id, "could not provision the unselected track for blank insertion")
+            return
+        }
+        report.expect(session.document.engineTracks.usedTrackCount > otherTrack,
+                      cppID: id, message: "a distinct second track exists for scoped insertion")
         guard let otherPitch = (12..<128).first(where: { pitch in
             !session.document.notes(in: otherTrack).contains {
                 $0.tick == start && Int($0.pitch) == pitch
@@ -387,5 +395,140 @@ private func checkTimelineInsertBlankTimeLanes(_ report: CheckReport, session: D
             && session.document.state == baseline
             && session.document.history.currentIdentity == history,
             cppID: id, message: "undo restores the lane-scoped insertion")
+    }
+}
+
+@MainActor
+private func checkKeyboardSkipsGhosts(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::keyboardTranspose"
+    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+        guard session.document.canAddTrack, let other = session.document.addTrack(voice: 0),
+              other != seed.track else {
+            report.fail(id, "could not provision the other track for keyboard ghost editing")
+            return
+        }
+        report.expect(session.document.engineTracks.usedTrackCount > other,
+                      cppID: id, message: "a distinct second track exists for keyboard ghost editing")
+        guard let ghostPitch = (24...115).first(where: { pitch in
+            !session.document.notes(in: other).contains { note in
+                Int(note.pitch) == pitch && UInt64(note.tick) < UInt64(seed.tick + seed.duration)
+                    && (note.endTick ?? UInt64.max) > UInt64(seed.tick)
+            }
+        }), let ids = try? session.document.addNotes([
+            NewNote(track: other, tick: seed.tick, pitch: UInt8(ghostPitch),
+                    duration: seed.duration, velocity: 100)
+        ]), let ghostID = ids.first,
+            let ghostBefore = session.document.note(ghostID) else {
+            report.fail(id, "could not seed the other-track ghost note")
+            return
+        }
+        grid.refreshFromSession()
+        report.expect(grid.notes.contains {
+            $0.noteId == ghostID && $0.ghost
+        }, cppID: id, message: "the other-track note projects as a ghost")
+        session.setSelectedNotes([seed.id])
+        grid.performCommand(command: EditCommand.transposeUp.rawValue)
+        grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+        report.expect(session.document.note(seed.id).map {
+            $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch + 1
+        } == true, cppID: id,
+        message: "transpose and nudge remap the selected note with ghosts present")
+        report.expect(session.document.note(ghostID).map {
+            $0.tick == ghostBefore.tick && $0.duration == ghostBefore.duration
+                && $0.pitch == ghostBefore.pitch && $0.velocity == ghostBefore.velocity
+        } == true, cppID: id,
+        message: "keyboard remaps leave other-track ghost notes untouched")
+    }
+}
+
+@MainActor
+private func checkTimeSelectionHighlights(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::keyboardTimeSelectionShortcuts"
+    withKeyboardSeed(report, session: session, id: id) { grid, seed in
+        guard session.document.canAddTrack, let other = session.document.addTrack(voice: 0),
+              other != seed.track else {
+            report.fail(id, "could not provision the other track for time-scoped highlights")
+            return
+        }
+        report.expect(session.document.engineTracks.usedTrackCount > other,
+                      cppID: id, message: "a distinct second track exists for time-scoped highlights")
+        let snapshot = session.camera.snapshot
+        let projection = session.camera.projection
+        guard let ghostPitch = (24...115).first(where: { pitch in
+            let row = projection.row(forPitch: pitch)
+            guard row != PitchProjection.hiddenRow,
+                  let top = projection.rowTop(row, keyHeight: snapshot.keyHeight,
+                                              scrollY: snapshot.scrollY,
+                                              dpr: grid.devicePixelRatio),
+                  let bottom = projection.rowBottom(row, keyHeight: snapshot.keyHeight,
+                                                    scrollY: snapshot.scrollY,
+                                                    dpr: grid.devicePixelRatio),
+                  top >= 0, bottom <= snapshot.rollHeight else { return false }
+            return !session.document.notes(in: other).contains { note in
+                Int(note.pitch) == pitch && UInt64(note.tick) < UInt64(seed.tick + seed.duration)
+                    && (note.endTick ?? UInt64.max) > UInt64(seed.tick)
+            }
+        }), let ids = try? session.document.addNotes([
+            NewNote(track: other, tick: seed.tick, pitch: UInt8(ghostPitch),
+                    duration: seed.duration, velocity: 100)
+        ]), let ghostID = ids.first else {
+            report.fail(id, "could not seed the time-scoped ghost note")
+            return
+        }
+        defer { session.document.deleteNotes([ghostID]) }
+        grid.refreshFromSession()
+        guard let plainBox = grid.projectedNoteBox(tick: Int(seed.tick),
+                                                   end: Int(seed.tick + seed.duration),
+                                                   pitch: seed.pitch),
+              let ghostBox = grid.projectedNoteBox(tick: Int(seed.tick),
+                                                   end: Int(seed.tick + seed.duration),
+                                                   pitch: ghostPitch) else {
+            report.fail(id, "time-scoped fixtures have no projected boxes")
+            return
+        }
+        let ring = 3.0 / grid.devicePixelRatio
+        var current: AutomationTimeSelection? = AutomationTimeSelection(
+            range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
+            scope: .tracks([seed.track, other]))
+        grid.timeSelectionSource = { current }
+        grid.refreshTimeSelectionHighlight()
+        report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
+                               thickness: ring, color: grid.palette.selectionRing)
+                          && hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox,
+                                      inset: 0, thickness: ring,
+                                      color: grid.palette.selectionRing),
+                      cppID: id,
+                      message: "A053/A029 covered notes ring, including the time-scoped ghost")
+        report.expect(session.selectedNotes.isEmpty, cppID: id,
+                      message: "A054 time-covered notes never leak into the note selection")
+        let x0 = session.camera.displayX(tick: Double(seed.tick), origin: 0,
+                                         dpr: grid.devicePixelRatio)
+        let x1 = session.camera.displayX(tick: Double(seed.tick + seed.duration), origin: 0,
+                                         dpr: grid.devicePixelRatio)
+        let overlay = grid.scene.pianoOverlay.asArray
+        report.expect(overlay.contains { rect in
+            rect.fillColor == grid.palette.selectionFill && renderingNear(rect.x, x0)
+                && renderingNear(rect.y, 0) && renderingNear(rect.width, x1 - x0)
+                && renderingNear(rect.height, session.camera.snapshot.rollHeight)
+        } && overlay.filter { $0.fillColor == grid.palette.selectionEdge }.count >= 2,
+        cppID: id, message: "the covered selected track publishes its range band and edges")
+        current = AutomationTimeSelection(
+            range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
+            scope: .lanes)
+        grid.refreshTimeSelectionHighlight()
+        report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
+                                thickness: ring, color: grid.palette.selectionRing)
+                          && !hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox,
+                                       inset: 0, thickness: ring,
+                                       color: grid.palette.selectionRing),
+                      cppID: id, message: "lane-scoped ranges ring no roll notes")
+        current = nil
+        grid.refreshTimeSelectionHighlight()
+        report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
+                                thickness: ring, color: grid.palette.selectionRing)
+                          && !grid.scene.pianoOverlay.asArray.contains {
+                              $0.fillColor == grid.palette.selectionFill
+                          },
+                      cppID: id, message: "clearing the range removes every highlight")
     }
 }

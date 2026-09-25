@@ -202,14 +202,22 @@ public final class PianoGrid {
             let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
             session.selectedTrack = valid
             if trackIndex != valid { trackIndex = valid }
-            notes = session.document.notes(in: valid).map { note in
-                GridNote(noteId: note.id, tick: Int(note.tick),
-                         duration: Int(note.isUnterminated
-                             ? max(1, Tick(metrics.snapTicks(camera: session.camera)))
-                             : max(1, note.duration)),
-                         pitch: Int(note.pitch), track: note.track,
-                         velocity: Int(note.velocity), ghost: false)
+            let snap = max(1, Tick(metrics.snapTicks(camera: session.camera)))
+            var projected: [GridNote] = []
+            var noteCount = 0
+            for track in 0..<count { noteCount += session.document.notes(in: track).count }
+            projected.reserveCapacity(noteCount)
+            func emit(track: Int) {
+                for note in session.document.notes(in: track) {
+                    projected.append(GridNote(noteId: note.id, tick: Int(note.tick),
+                        duration: Int(note.isUnterminated ? max(1, snap) : max(1, note.duration)),
+                        pitch: Int(note.pitch), track: note.track,
+                        velocity: Int(note.velocity), ghost: track != valid))
+                }
             }
+            emit(track: valid)
+            for track in 0..<count where track != valid { emit(track: track) }
+            notes = projected
         }
         let revisionText = String(session.document.revision)
         if appliedRevisionText != revisionText { appliedRevisionText = revisionText }
@@ -281,6 +289,12 @@ public final class PianoGrid {
     public func setNoteNameMode(enabled: Bool) {
         guard noteNameMode != enabled else { return }
         noteNameMode = enabled
+        refreshNotes()
+    }
+
+    @QtIgnored public var timeSelectionSource: (() -> AutomationTimeSelection?)?
+    @QtIgnored
+    public func refreshTimeSelectionHighlight() {
         refreshNotes()
     }
 
@@ -964,7 +978,7 @@ public final class PianoGrid {
     private func applyBandSelection() {
         guard let band = selectionBand else { return }
         var covered: [NoteID] = []
-        for note in notes {
+        for note in notes where !note.ghost {
             let displayed = displayedNote(note)
             let rect = metrics.noteRect(
                 camera: session.camera,
@@ -983,7 +997,7 @@ public final class PianoGrid {
     private func auditionBandEntrants() {
         guard let band = selectionBand else { return }
         var covered: [NoteID: (track: Int, pitch: Int)] = [:]
-        for note in notes {
+        for note in notes where !note.ghost {
             let rect = metrics.noteRect(
                 camera: session.camera,
                 x0: session.camera.displayX(tick: Double(note.tick), origin: 0, dpr: metrics.dpr),
@@ -1039,7 +1053,10 @@ public final class PianoGrid {
             hoverKey: hoverKey, selectionBand: selectionBand,
             velocityColorMode: velocityColorMode, noteNameMode: noteNameMode,
             noteNameAdvance: { self.typography?.noteNameAdvance(pitch: $0) ?? 0 },
-            noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0)
+            noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
+            timeSelection: timeSelectionSource?(),
+            usedTrackCount: session.document.engineTracks.usedTrackCount,
+            selectedTrack: trackIndex)
     }
 
     @QtIgnored
@@ -1162,7 +1179,7 @@ public final class PianoGrid {
         var tick = note.tick
         var end = note.tick + note.duration
         var pitch = note.pitch
-        guard let gesture, session.selectedNotes.contains(note.noteId) else {
+        guard let gesture, !note.ghost, session.selectedNotes.contains(note.noteId) else {
             return (tick, end, pitch)
         }
         switch gesture {
@@ -1215,6 +1232,7 @@ public final class PianoGrid {
         var hitInside = false
         var grip: (index: Int, zone: HitZone)?
         for index in notes.indices {
+            if notes[index].ghost { continue }
             let (zone, inside) = hitZone(x: x, y: y, note: notes[index])
             if zone == .none { continue }
             hit = (index, zone)
@@ -1226,7 +1244,6 @@ public final class PianoGrid {
         if let grip, !hitInside { return grip }
         return hit
     }
-
     @QtIgnored
     private func currentStatusText() -> String {
         if let gesture {
@@ -1266,6 +1283,7 @@ public final class PianoGrid {
                 "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
                     + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
                     + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
+                    + "\"ghost\":\(note.ghost),"
                     + "\"selected\":\(session.selectedNotes.contains(note.noteId))}"
             }
             noteSummary = "[" + parts.joined(separator: ",") + "]"

@@ -4,18 +4,23 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/timelinepan/tst_timelinepan.cpp
 Original SHA-256: 2f7fbeac149980e4fce3f3ea25d4a5a092561bf4afc848fcfb58b117c7f25450
 Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Additional Swift counterpart: src/checks/rollqml/tst_TimelinePan.qml
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
-Disposition tally: 138 sites: 89 MATCHED, 49 NATIVE.
+Disposition tally: 138 sites: 88 MATCHED, 43 GAP, 7 RETIRED-REPRESENTATION.
 
 Command: deno task verify:qml-roll --verbose
-Result: passing — TimelinePan::test_wheelPansCamera, test_middleDragPansCamera,
-test_hoverChipOverlay, test_coalescedRefreshMatchesFull,
-test_trackSwitchKeepsNoteLabels, and test_selectedPanRenders all PASS under
-deno task verify:qml-roll (8/8 in the TimelinePan suite). The lane runs each
-tst_*.qml in its own child process; the wheel-pan assertions use Shift+wheel
-because the production WheelHandler is vertical-only and Shift+wheel is the
-real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
+Result: passing — controller-recorded post-change run after the obsolete
+keyboard-label ancestry assertions were deleted: PASS 1/1 ok, 27.80s.
+test_hoverChipOverlay still asserts the hover chip's realized geometry and the
+fixed label's visible fit and alignment; the deleted label parent traversal is
+not replaced. An earlier run before the deletion reported
+test_wheelPansCamera, test_middleDragPansCamera, test_hoverChipOverlay,
+test_coalescedRefreshMatchesFull, test_trackSwitchKeepsNoteLabels and
+test_selectedPanRenders all passing (8/8 in the TimelinePan suite). The lane
+runs each tst_*.qml in its own child process; the wheel-pan assertions use
+Shift+wheel because the production WheelHandler is vertical-only and Shift+wheel
+is the real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
 Command: deno task verify --filter swiftcore --verbose
 Result: passing — the suite ran green with these checks registered.
 
@@ -728,8 +733,8 @@ A110 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:850
 Disposition: MATCHED
 
 A111 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:854
-Disposition: MATCHED
-
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Original walks the realized long fixed drum-pad label's parent chain and pins its ownership to the unclipped roll band root rather than the clipped gutter box — a scene-graph ancestry claim, not a rendering observation. The repair parents the shared keyboard-label layer (PianoRollCanvas.qml pianoKeyboardTextModel delegates) inside the clipped roll gutter (rollGutterSide) and leaves only the hover chip overlay on the band side (rollContentBand), so the Swift scene no longer has this label ancestry and task 8 deleted the QML assertion that carried it — tst_TimelinePan.qml test_hoverChipOverlay's reachesBand / !insideGutter traversal — instead of inverting it; the surviving band-parenting comparisons (A103-A104) belong to the hover chip. The label's horizontal-overflow obligations, which that out-of-gutter placement served, stay unproved and unchanged as GAP at A113 and A137; the related shell predicate (tst_TextContrast.qml auditClippedKeyboardLabel) covers top/bottom key-edge ink clipping only, not label ancestry or horizontal overflow.
 A112 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:855
 Disposition: MATCHED
 

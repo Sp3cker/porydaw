@@ -778,8 +778,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// A document in one tab published a state change: every caption follows its
     /// own document, and the selected document also feeds the window's flags.
     /// Hidden tabs publish too, so a background edit still marks its own tab.
-    private func tabStateChanged() {
+    private func tabStateChanged(for session: DocumentSession) {
         songTabs.refreshDirty()
+        guard selectedDocument === session else { return }
         refreshDocumentState()
         transportBar.refresh()
         refreshVoicegroupDock()
@@ -916,13 +917,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
-                callbacks: makeCallbacks())
+                callbacks: makeCallbacks(for: session))
+            workspace.rulerMenu.onSeek = { [weak self, weak workspace] tick in
+                guard let self, let workspace else { return }
+                self.seekToTick(tick, in: workspace)
+            }
             // New tabs receive the current View menu display modes: the grid
             // defaults both off, and each setter no-ops (without rebuilding)
             // when the mode is already off.
             workspace.grid.setVelocityColorMode(enabled: velocityColorMode)
             workspace.grid.setNoteNameMode(enabled: noteNameMode)
-            workspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
+            workspace.grid.timeSelectionSource = { [weak workspace] in workspace?.automationPage.selection }
+            workspace.grid.refreshTimeSelectionHighlight()
+            workspace.automationPage.onCommandAvailabilityChanged = { [weak self, weak workspace] in
+                workspace?.grid.refreshTimeSelectionHighlight()
                 self?.gridCommandAvailabilityChanged()
             }
             workspace.automationPage.onLaneRangeChanged = { [weak self] parameter, range in
@@ -952,7 +960,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// session's own notices: the window's track and context-menu requests, the
     /// grid's command availability, and the state the strip and the window flags
     /// publish.
-    private func makeCallbacks() -> DocumentWorkspace.Callbacks {
+    private func makeCallbacks(for session: DocumentSession) -> DocumentWorkspace.Callbacks {
         DocumentWorkspace.Callbacks(
             addTrackRequested: { [weak self] in self?.addTrackRequested() },
             changeTrackVoiceRequested: { [weak self] track in
@@ -964,10 +972,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             headerContextMenuRequested: { [weak self] x, y in
                 self?.headerContextMenuRequested(x: x, y: y)
             },
-            gridCommandAvailabilityChanged: { [weak self] in
-                self?.gridCommandAvailabilityChanged()
+            gridCommandAvailabilityChanged: { [weak self, weak session] in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.gridCommandAvailabilityChanged()
             },
-            sessionStateChanged: { [weak self] in self?.tabStateChanged() },
+            sessionStateChanged: { [weak self, weak session] in
+                guard let session else { return }
+                self?.tabStateChanged(for: session)
+            },
             publicationFailed: { [weak self] message in
                 self?.lastSaveError = message
             },
@@ -1041,16 +1053,33 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    public func playPause() {
-        guard let audio else { return }
-        if audio.transport == SharedPlayheadPolicy.playingTransport {
-            audio.pause()
+    public func play() {
+        guard let audio, audio.songLoaded else { return }
+        if audio.transport == AudioTransportState.stopped.rawValue,
+           let session = workspace?.session {
+            let target = session.timeline.sample(for: session.editCursor)
+            audio.seek(sample: target)
+            audio.play()
+            playhead.observe(sample: target, transport: audio.transport)
         } else {
             audio.play()
+            playhead.refreshImmediate()
         }
-        // The transport the audio service now reports is authoritative; present
-        // it without waiting for the next poll.
-        playhead.refreshImmediate()
+        transportBar.refresh()
+    }
+
+    public func playPause() {
+        guard let audio, audio.songLoaded else { return }
+        if audio.transport == SharedPlayheadPolicy.playingTransport {
+            audio.pause()
+            playhead.refreshImmediate()
+        } else if let session = workspace?.session {
+            let target = session.timeline.sample(for: session.editCursor)
+            audio.seek(sample: target)
+            audio.play()
+            playhead.observe(sample: target, transport: audio.transport)
+        }
+        transportBar.refresh()
     }
 
     public func stop() {
@@ -1058,6 +1087,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // Stop's rewind comes from the audio service; this presents whatever
         // sample and transport the service reports now. No tick is synthesized.
         playhead.refreshImmediate()
+        transportBar.refresh()
+    }
+    private func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
+        guard workspace === origin, let audio, audio.songLoaded,
+              audio.transport != AudioTransportState.stopped.rawValue else { return }
+        let target = origin.session.timeline.sample(for: tick)
+        audio.seek(sample: target)
+        playhead.observe(sample: target, transport: audio.transport)
     }
 
     private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {

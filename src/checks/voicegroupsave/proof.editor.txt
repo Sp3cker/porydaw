@@ -3,11 +3,16 @@ Assertion correspondence: voicegroupsave/editor.cpp
 Reference revision: f31a88ba84cbe31fe5f9b849ebf7406df6dda3f1
 Original: src/checks/voicegroupsave/editor.cpp
 Original SHA-256: 6186ed3eb7032d96a8a5c7afab089f76bfeb7462898e5d245e49364cd81ca4b7
-Swift counterpart: none identified
+Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 
 
-Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run.
+Command: deno task verify --filter projectstore --filter swiftcore --verbose;
+deno task verify:shell --verbose (shell-voicegroup lane).
+Result: PASS for the swiftcore session predicates (focused run: 24 applicable
+entries, 7 filtered skips) and PASS for the shell-voicegroup lane of the full
+shell run; unrelated shell lanes failed under separate tasks. Retained native
+checks are not Swift parity evidence.
 
 A001 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:36
 Disposition: RETIRED-REPRESENTATION
@@ -44,7 +49,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A006 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:68
 Disposition: PARTIAL
-Mapping/reason: tst_ShellVoicegroup.qml::test_editorAndUndo commits the selected editor draft's release and observes bankDirty plus the changed published release; runVoiceListSessionChecks confirms bank edit and fresh row after refresh; widget DragSpinBox precision gestures are not reproduced.
+Mapping/reason: S001 observes the mounted editor release commit dirty the bank with the changed draft release; S002 repeats that commit after a discarded same-controller edit; S003 lands the committed release in the published bank slot. Unproved: engine.voices[slot].release parity; the native DragSpinBox drag and precision input rows are not reproduced.
 Source context since previous assertion:
 ;
     }
@@ -64,7 +69,7 @@ QCOMPARE(spin->value(), target)
 
 A008 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:72
 Disposition: PARTIAL
-Mapping/reason: tst_ShellVoicegroup.qml::test_editorAndUndo invokes app.requestUndo and observes the selected editor draft's release restored; runVoiceListSessionChecks also asserts bank lease voice restoration, but engine output and drag-variant parity remain unproved.
+Mapping/reason: S004 observes the mounted editor undo restore the initial draft release; S005 restores the release of the re-selected slot after a discarded same-controller edit; S006 restores the published bank voice; S007 republishes the clean bank view on the same row handle. Unproved: engine.voices[slot].release parity after undo.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -371,15 +376,24 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart identified for this file: no same-dir editor.swift
-exists and no Swift check covers the voicegroup browser/save suite, so no
-report.expect*/expectEqual predicates pair with these sites. There are no S
-entries and no shared-helper expects for this file.
 
-Related Swift source scope
-No file src/checks/voicegroupsave/editor.swift exists. A repo-wide search
-for Swift voicegroup-browser coverage finds only project-io voicegroup
-references in the workspace session suite (dispatched by
-src/checks/workspace/SessionChecks.swift and implemented in sibling scenario
-files), which exercise project open/save plumbing,
-not the browser/editor/picker/save flows inventoried here.
+S001 | test_editorAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "ADSR commit publishes dirty bank and refreshed editor"
+
+S002 | test_editorQueuedEditsKeepTheirSlot | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "mounted editor commits the selected slot after discarding the stale edit"
+
+S003 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a committed voice edit lands in the published bank"
+
+S004 | test_editorAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "undo restores original ADSR"
+
+S005 | test_editorQueuedEditsKeepTheirSlot | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "undo restores the selected slot after queued stale edit"
+
+S006 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "voice edit undo restores the published voice"
+
+S007 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "bank undo republishes the clean view on the same voice row handle"

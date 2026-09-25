@@ -9,6 +9,7 @@ func runNoteRenderingChecks(_ report: CheckReport, session: DocumentSession) {
     checkIdentityNoteColors(report, session: session)
     checkVelocityColorMode(report, session: session)
     checkNoteNameMode(report, session: session)
+    checkGhostNotes(report, session: session)
 }
 
 @MainActor
@@ -73,7 +74,7 @@ private func noteBox(_ grid: PianoGrid, session: DocumentSession, note: Note)
                           pitch: Int(note.pitch))
 }
 
-private func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
+func renderingNear(_ lhs: Double, _ rhs: Double) -> Bool {
     abs(lhs - rhs) < 1e-6
 }
 private func publishedOpaque(_ color: String) -> Bool {
@@ -82,7 +83,7 @@ private func publishedOpaque(_ color: String) -> Bool {
 
 
 @MainActor
-private func hasFrame(_ model: QListModel<SceneRect>,
+func hasFrame(_ model: QListModel<SceneRect>,
                       box: (x: Double, y: Double, w: Double, h: Double),
                       inset: Double, thickness: Double, color: String) -> Bool {
     let x = box.x + inset, y = box.y + inset
@@ -505,4 +506,219 @@ private func checkNoteNameMode(_ report: CheckReport, session: DocumentSession) 
     grid.setNoteNameMode(enabled: false)
     report.expect(grid.scene.pianoNoteTextModel.count == 0, cppID: id,
                   message: "disabling the mode empties the name model")
+}
+
+@MainActor
+private struct GhostSeed {
+    let id: NoteID
+    let pitch: Int
+    let tick: Int
+    let duration: Int
+}
+
+@MainActor
+private func ghostSeed(_ report: CheckReport, id: String, session: DocumentSession,
+                       grid: PianoGrid, track: Int, spanCells: Int,
+                       nearPitch: Int? = nil, nearTick: Int? = nil,
+                       excluding: Set<Int> = []) -> GhostSeed? {
+    let camera = session.camera
+    let projection = camera.projection
+    let snapshot = camera.snapshot
+    let occupied = (0..<session.document.engineTracks.usedTrackCount).flatMap {
+        session.document.notes(in: $0)
+    }
+    let pitches: [Int]
+    if let near = nearPitch {
+        pitches = (24...115).sorted {
+            let lhs = abs($0 - near), rhs = abs($1 - near)
+            return lhs == rhs ? $0 > $1 : lhs < rhs
+        }
+    } else {
+        pitches = Array((24...115).reversed())
+    }
+    var probes = stride(from: 40, to: Int(snapshot.viewportWidth) - 40, by: 24).map { probe in
+        (probe: Double(probe), tick: grid.snapTickDown(camera.tickAtContentX(Double(probe))))
+    }
+    if let near = nearTick {
+        probes.sort { abs($0.tick - near) < abs($1.tick - near) }
+    }
+    for pitch in pitches {
+        if excluding.contains(pitch) { continue }
+        let row = projection.row(forPitch: pitch)
+        guard row != PitchProjection.hiddenRow,
+              let top = projection.rowTop(row, keyHeight: snapshot.keyHeight,
+                                          scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+              let bottom = projection.rowBottom(row, keyHeight: snapshot.keyHeight,
+                                                scrollY: snapshot.scrollY,
+                                                dpr: grid.devicePixelRatio),
+              top >= 0, bottom <= snapshot.rollHeight else { continue }
+        for probe in probes {
+            let tick = probe.tick
+            let cell = grid.gridCell(at: tick)
+            guard (tick - cell.start) % cell.duration == 0 else { continue }
+            let duration = cell.duration * spanCells
+            let left = camera.contentX(tick: Double(tick))
+            let right = camera.contentX(tick: Double(tick + duration))
+            let snap = camera.contentX(tick: Double(tick + grid.snapTicks))
+            guard left >= 0, right - left >= 12, snap - left >= 8,
+                  right < snapshot.viewportWidth,
+                  !occupied.contains(where: { note in
+                      Int(note.pitch) == pitch && Int(note.tick) < tick + duration
+                          && Int(note.tick) + Int(note.duration) > tick
+                  }) else { continue }
+            guard let added = try? session.document.addNotes([
+                NewNote(track: track, tick: Tick(tick), pitch: UInt8(pitch),
+                        duration: Tick(duration), velocity: 100)
+            ]), let noteID = added.first else {
+                report.fail(id, "ghost fixture could not insert the free cell")
+                return nil
+            }
+            grid.refreshFromSession()
+            return GhostSeed(id: noteID, pitch: pitch, tick: tick, duration: duration)
+        }
+    }
+    report.fail(id, "ghost fixture has no visible free cell")
+    return nil
+}
+
+@MainActor
+private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::ghostNoteRaster"
+    let document = session.document
+    let initialState = document.state
+    let initialIdentity = document.history.currentIdentity
+    let oldCamera = session.camera
+    let priorSelection = session.selectedNoteOrder
+    let priorTrack = session.selectedTrack
+    defer {
+        session.clearSelectedNotes()
+        if let priorTrack, session.selectedTrack != priorTrack {
+            session.selectPrimaryTrack(priorTrack)
+        }
+        while document.history.currentIdentity != initialIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        session.selectedTrack = priorTrack
+        session.setSelectedNotes(priorSelection)
+        session.mutateCamera { $0 = oldCamera }
+        report.expect(document.state == initialState
+                          && document.history.currentIdentity == initialIdentity,
+                      cppID: id, message: "undo restores the ghost fixture and its track")
+    }
+    let grid = PianoGrid(session: session)
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    grid.resetCameraScroll()
+    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    grid.refreshCamera()
+    let primary = grid.trackIndex
+    guard document.canAddTrack, let other = document.addTrack(voice: 0),
+          other != primary else {
+        report.fail(id, "ghost fixture cannot provision a second engine track")
+        return
+    }
+    report.expect(document.engineTracks.usedTrackCount > other && other != primary,
+                  cppID: id, message: "A016 a distinct other track exists for the ghost seed")
+    grid.refreshFromSession()
+    guard let ghost = ghostSeed(report, id: id, session: session, grid: grid,
+                                track: other, spanCells: 8) else { return }
+    guard let plain = ghostSeed(report, id: id, session: session, grid: grid,
+                                track: primary, spanCells: 1, nearPitch: ghost.pitch,
+                                nearTick: ghost.tick, excluding: [ghost.pitch]) else { return }
+    func projected(_ noteID: NoteID) -> GridNote? {
+        grid.notes.first { $0.noteId == noteID }
+    }
+    func ghostFill(named name: String) -> String? {
+        firstNoteRect(named: name, in: grid.scene.pianoNoteFills)?.fillColor
+    }
+    report.expect(projected(plain.id)?.ghost == false && projected(ghost.id)?.ghost == true,
+                  cppID: id, message: "A016 both fixture notes project, other-track note as ghost")
+    guard let ghostBox = grid.projectedNoteBox(tick: ghost.tick, end: ghost.tick + ghost.duration,
+                                               pitch: ghost.pitch),
+          let plainBox = grid.projectedNoteBox(tick: plain.tick, end: plain.tick + plain.duration,
+                                               pitch: plain.pitch) else {
+        report.fail(id, "ghost fixture has no projected scene box")
+        return
+    }
+    let expectedGhost = PaletteMath.ghostFill(track: other,
+                                              accidentalRow: GridScene.isBlackKey(ghost.pitch))
+    report.expect(ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
+                  cppID: id, message: "A017 ghost face uses the track-identity mix")
+    let ring = 3.0 / grid.devicePixelRatio
+    let border = 2.0 / grid.devicePixelRatio
+    session.setSelectedNotes([plain.id])
+    grid.refreshCamera()
+    report.expect(hasFrame(grid.scene.pianoNoteBordersAndSelection, box: plainBox, inset: 0,
+                           thickness: ring, color: grid.palette.selectionRing),
+                  cppID: id, message: "the plain note rings while the ghost face stays flat")
+    report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
+                            thickness: border, color: grid.palette.noteBorder)
+                      && !hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
+                                   thickness: ring, color: grid.palette.selectionRing),
+                  cppID: id, message: "A017 ghost face edge matches its interior: no border or ring")
+    session.setSelectedNotes([ghost.id])
+    grid.refreshCamera()
+    report.expect(!hasFrame(grid.scene.pianoNoteBordersAndSelection, box: ghostBox, inset: 0,
+                            thickness: ring, color: grid.palette.selectionRing),
+                  cppID: id, message: "selecting a ghost publishes no selection ring")
+    session.clearSelectedNotes()
+    grid.refreshCamera()
+    grid.setTrack(index: other)
+    report.expect(grid.trackIndex == other
+                      && projected(plain.id)?.ghost == true
+                      && projected(ghost.id)?.ghost == false,
+                  cppID: id, message: "selecting the other track swaps plain and ghost roles")
+    report.expect(ghostFill(named: "gridNote_\(plain.id.rawValue)")
+                      == PaletteMath.ghostFill(track: primary,
+                                              accidentalRow: GridScene.isBlackKey(plain.pitch))
+                      && ghostFill(named: "gridNote_\(ghost.id.rawValue)")
+                      == grid.palette.noteFill(track: other, velocity: 100),
+                  cppID: id, message: "swapped faces follow their new roles")
+    grid.setTrack(index: primary)
+    grid.setVelocityColorMode(enabled: true)
+    let ghostVelocityFill = ghostFill(named: "gridNote_\(ghost.id.rawValue)")
+    grid.setVelocityColorMode(enabled: false)
+    report.expect(ghostVelocityFill == expectedGhost
+                      && ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
+                  cppID: id, message: "A031 velocity-color mode leaves the ghost fill byte-identical")
+    let pressX = ghostBox.x + ghostBox.w / 2
+    let pressY = ghostBox.y + ghostBox.h / 2
+    let revision = session.document.revision
+    grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
+    report.expect(!session.selectedNotes.contains(ghost.id)
+                      && session.document.revision == revision,
+                  cppID: id, message: "pressing a ghost selects and edits nothing")
+    grid.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+    report.expect(!session.selectedNotes.contains(ghost.id) && !grid.interactionActive
+                      && session.document.revision == revision,
+                  cppID: id, message: "cancelling a ghost press leaves no gesture or edit")
+    grid.beginRightPointer(x: ghostBox.x - 4, y: ghostBox.y - 4)
+    grid.updateRightPointer(x: ghostBox.x + ghostBox.w + 4, y: ghostBox.y + ghostBox.h + 4)
+    grid.endRightPointer(x: ghostBox.x + ghostBox.w + 4, y: ghostBox.y + ghostBox.h + 4)
+    report.expect(!session.selectedNotes.contains(ghost.id),
+                  cppID: id, message: "a band over a ghost never selects it")
+    session.clearSelectedNotes()
+    let stateBefore = session.document.state
+    grid.doublePointer(x: pressX, y: pressY)
+    report.expect(session.document.note(ghost.id) != nil
+                      && session.document.state == stateBefore,
+                  cppID: id, message: "double-tapping a ghost deletes nothing")
+    session.mutateCamera { camera in
+        _ = camera.setKeyHeight(32)
+        _ = camera.setVScroll(max(0, (127.5 - Double(plain.pitch)) * 32 - 160))
+    }
+    grid.refreshCamera()
+    _ = session.mutateCamera { _ = $0.setTimeZoom(280) }
+    grid.refreshCamera()
+    _ = session.mutateCamera { camera in
+        _ = camera.setHScroll(max(camera.snapshot.minHScroll,
+                                  camera.contentX(tick: Double(min(ghost.tick, plain.tick))) - 160))
+    }
+    grid.refreshCamera()
+    grid.setNoteNameMode(enabled: true)
+    let labels = grid.scene.pianoNoteTextModel.asArray
+    report.expect(labels.contains { $0.labelText == GridScene.keyName(plain.pitch) },
+                  cppID: id, message: "the wide selected-track note keeps its name label")
+    report.expect(!labels.contains { $0.labelText == GridScene.keyName(ghost.pitch) },
+                  cppID: id, message: "A036 ghost notes are never labeled")
+    grid.setNoteNameMode(enabled: false)
 }

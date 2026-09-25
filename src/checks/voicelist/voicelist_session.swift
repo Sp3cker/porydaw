@@ -237,4 +237,53 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                        what: "-G undo clears the song config dirty state")
     report.expectEqual(original, session.bankSlots[0].voice, cppID: selectorID,
                        what: "-G undo restores the original slot's instrument")
+    let originID = "swiftcore/VoiceEditorController::queuedOriginSurvivesTabRebind"
+    let second: DocumentSession
+    do {
+        second = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test2")
+        }
+    } catch {
+        report.fail(originID, "second session open failed: \(error)")
+        return
+    }
+    guard let firstVoice = session.bankSlots[0].voice,
+          let secondVoice = second.bankSlots[0].voice else {
+        report.fail(originID, "both sessions need editable slot zero")
+        return
+    }
+    list.refresh(from: session)
+    list.selectSlot(slot: 0)
+    let editor = list.editor
+    let staleRelease = firstVoice.release == 7 ? 6 : firstVoice.release + 1
+    editor.change(field: "release", value: Int(staleRelease))
+    editor.changeType(macro: Int(BankVoiceMacro.square2), symbol: "")
+    list.refresh(from: second)
+    let committedRelease = secondVoice.release == 7 ? 6 : secondVoice.release + 1
+    editor.change(field: "release", value: Int(committedRelease))
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while second.bankSlots[0].voice?.release != committedRelease && Date() < deadline {
+                await Task.yield()
+            }
+        }
+    } catch {
+        report.fail(originID, "same-origin queued edit did not complete: \(error)")
+        return
+    }
+    report.expectEqual(firstVoice, session.bankSlots[0].voice, cppID: originID,
+                       what: "queued scalar and type edits do not commit to the original tab")
+    report.expectEqual(secondVoice.macro, second.bankSlots[0].voice?.macro, cppID: originID,
+                       what: "queued type edit cannot retarget the other tab's slot")
+    report.expectEqual(committedRelease, second.bankSlots[0].voice?.release, cppID: originID,
+                       what: "same-origin edit commits after discarded earlier requests")
+    do {
+        _ = try runBlocking { try await second.undo() }
+    } catch {
+        report.fail(originID, "same-origin edit undo threw: \(error)")
+        return
+    }
+    report.expectEqual(secondVoice, second.bankSlots[0].voice, cppID: originID,
+                       what: "undo restores the second tab's original voice")
 }

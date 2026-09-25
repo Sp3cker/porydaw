@@ -8,8 +8,19 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (controller, 10.17s).
-Counts: MATCHED 15, PARTIAL 1, GAP 97, NATIVE 0.
+Result: PASS — 1/31 ok (30 skipped); runtime swiftcore 16.53s, build 27.27 (controller-recorded final run).
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: PASS — 3 Qt results (initTestCase, projectSession, cleanupTestCase), 0 failed, 947ms
+(controller-recorded run on the refrozen sources; full output artifact://459). It executed the
+counterpart predicates S001-S019: S014-S017 cover the presenter sweep (now the exact swept
+range), chip, exact-end press and cursor-publication policy, S018-S019 the seek emission
+callback and the playhead projection.
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS — shell-transport 3.99s, run 4.00 (controller-recorded final run); every other
+affected shell lane passed its own final build. It executed
+test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped, the source of S020-S024; the added
+test_backgroundRulerSeekCannotMoveSelectedSong stays unmapped because no original clause pins it.
+Counts: MATCHED 15, PARTIAL 17, GAP 81, NATIVE 0.
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
 Disposition: GAP
@@ -487,8 +498,8 @@ Original expression:
 QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A039 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:264
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S014 (checkRulerSweepScopeTapAndChip, executed) opens the ruler at a chip tick and asserts the cursor commits that exact chip tick with the cursor menu open. Unproved: the snap-aligned chip fixture of this row (S014 exercises the off-grid chip of A059), the production chip hit-test plus QML press delivery, and the rendered menu row set.
 Source context since previous assertion:
 ;
 
@@ -706,8 +717,8 @@ Original expression:
 QVERIFY2(exactChip.session, qUtf8Printable(exactChip.diagnostic))
 
 A059 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:330
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S014 (checkRulerSweepScopeTapAndChip, executed) opens the ruler at the signature chip one tick past the snap lattice and asserts the cursor commits that exact event tick. Unproved: the production chip hit-test and QML press delivery, and the rendered menu panel rows (Remove time signature enablement, Escape dismissal).
 Source context since previous assertion:
 ;
 
@@ -1196,8 +1207,8 @@ QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &sele
              "the ruler insert seed did not reach its expected state")
 
 A098 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:522
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S015 (checkRulerSweepScopeTapAndChip, executed) opens the ruler menu one tick inside the interval and asserts the menu stays open on the selection. Unproved: the rendered menu session/panel and the native/QML press delivery at that raw coordinate.
 Source context since previous assertion:
 ;
 
@@ -1219,8 +1230,8 @@ Original expression:
 QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A099 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:523
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S015 (checkRulerSweepScopeTapAndChip, executed) asserts the inside press leaves the time selection active over the exact anchor/end range and the edit cursor unchanged. Unproved: the native/QML press delivery into the ruler input.
 Source context since previous assertion:
 ;
 
@@ -1323,8 +1334,8 @@ Disposition: MATCHED
 Mapping: S013
 
 A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S016 (checkRulerSweepScopeTapAndChip, executed) presses exactly at the interval end and asserts the ruler menu opens as the cursor menu. Unproved: the rendered session/panel and the native/QML press delivery.
 Source context since previous assertion:
 ;
 
@@ -1339,8 +1350,8 @@ Original expression:
 QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic))
 
 A111 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:560
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S016 (checkRulerSweepScopeTapAndChip, executed) asserts the exact-end press leaves no active time selection. Unproved: the rendered session/panel and the native/QML press delivery.
 Source context since previous assertion:
 ;
 
@@ -1349,8 +1360,8 @@ QVERIFY2(!view.selectionModel().timeSelection().active(),
              "the exact-end press did not clear the time selection")
 
 A112 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:562
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S016/S017 (checkRulerSweepScopeTapAndChip, executed) assert the exact-end press commits the snapped end tick as the edit cursor and publishes it through the session observer; the mounted shell-transport test adds the real ruler right-click delivery and its presentation (S020 committed cursor, S021 paused playhead target, S022 stopped guard, S023 paused clock beat). Unproved: the exact selection-end boundary press (the mounted press is the plain cursor path, not the half-open end) and the live audio pipeline behind the shared playhead.
 Source context since previous assertion:
 ;
 
@@ -1359,8 +1370,8 @@ QVERIFY2(view.editCursorTick() == insertEnd,
              "the exact-end press did not commit the snapped end tick")
 
 A113 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:564
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S016 (checkRulerSweepScopeTapAndChip, executed) asserts the exact-end press opens the cursor menu (menuKind 1) whose rows omit the selection-scoped row and offer Set Loop Start. Unproved: the rendered menu session/panel and the native/QML press delivery.
 Source context since previous assertion:
 ;
 
@@ -1371,7 +1382,19 @@ QVERIFY2(rulerRow(*atEnd.model, songview::RulerMenuAction::LoopFromSelection) < 
 
 Swift executable assertion index
 These predicates run in the green swiftcore projectSession suite; they establish
-only model observations, not rendered ruler menu activation.
+only model observations, not rendered ruler menu activation. The split helpers exercise the
+presenter policy directly: checkRulerSweepScope (S072/S073, indexed in proof.keyboard.txt for the
+timelineRulerScope sites) asserts the exact swept range, checkRulerTapAndCancel the outside tap and
+cancellation, checkRulerPressPolicy the inside press and the exact-end press (S015-S017), and
+checkRulerChip the chip press (S014); none routes through the QML input or renders a menu panel.
+S018-S019 cover the seek emission callback and
+its playhead projection only: the live audio seek is wired in ApplicationSession.
+S020-S023 are predicates of the mounted shell-transport test
+(src/checks/editorqml/tst_ShellTransport.qml), which right-clicks the mounted ruler and
+observes the committed cursor, the paused playhead target, the stopped guard and the paused
+clock beat; S024 observes that same mounted ruler menu mounting before its Escape dismissal.
+None of them reproduces the exact selection-end boundary press or renders the native widget
+menu.
 
 S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A004: both markers begin absent"
@@ -1412,6 +1435,39 @@ Anchor: message "A104/A108: the note shifts by exactly one span and the song byt
 S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A109: one undo restores the song before ruler insertion"
 
+S014 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A039/A059: a chip press commits the chip's exact event tick"
+
+S015 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A098/A099: a press inside the interval keeps the selection and cursor"
+
+S016 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A110-A113: the exact-end press clears, commits the end tick, opens cursor rows"
+
+S017 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A112: the outside press publishes the committed cursor through the session observer"
+
+S018 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "a ruler tap emits one seek for the exact snapped anchor"
+
+S019 | checkRulerSeekEmission | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the shared playhead presents the sought tick from its sample"
+
+S020 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the stopped press commits the cursor"
+
+S021 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+
+S022 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "stopped seek leaves the playhead at origin"
+
+S023 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "paused audio seek updates the mounted clock and lands in the target beat"
+
+S024 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the stopped ruler menu mounts before keyboard dismissal"
+
 Remaining original source (closing sequence and helper bodies):
 ;
     QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
@@ -1419,4 +1475,8 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-None: no counterpart file carries predicates for this suite.
+The counterpart predicates for this suite are the S001-S024 indexed above: S001-S013 cover the
+document and menu-model rows, S014-S017 the presenter sweep, chip and press policy, S018-S019 the
+ruler seek emission, and S020-S024 the mounted ruler press, transport presentation and menu-mount
+observations. None of them reproduces the exact selection-end boundary press or renders the native
+widget menu.

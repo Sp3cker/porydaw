@@ -44,10 +44,6 @@ extension ProjectStore {
     /// - Returns: A lease with a detached copy of the voicegroup's slot publication.
     /// - Throws: `VoicegroupStoreError` if the project is not open or its bank cannot load.
     public func loadBank(voicegroupArg: String) async throws -> ProjectBankLease {
-        try await run { [self] in try await self.loadBankProject(voicegroupArg: voicegroupArg) }
-    }
-
-    private func loadBankProject(voicegroupArg: String) throws -> ProjectBankLease {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }

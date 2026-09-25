@@ -6,6 +6,7 @@ import PorydawCore
 func runTimemenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkTimeMenuInsertTime(report, session: session)
     checkTimeSelectionMenuCommands(report, session: session)
+    checkTimeMenuHalfOpenBoundary(report, session: session)
 }
 
 @MainActor
@@ -99,4 +100,33 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     _ = menu.activate(actionId: 6)
     report.expect(!menu.isOpen && session.document.history.currentIdentity == identity,
                   cppID: id, message: "a stale duplicate click cannot write after selection loss")
+}
+
+@MainActor
+private func checkTimeMenuHalfOpenBoundary(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timeSelectionMenuHalfOpenBoundary"
+    let palette = GridPalette()
+    let grid = PianoGrid(session: session, palette: palette)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: palette)
+    defer { automation.detach() }
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    let previousTrack = session.selectedTrack
+    if previousTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = previousTrack }
+    defer { automation.clearTimeSelection(); menu.close() }
+    let start: Tick = 72
+    let end: Tick = 96
+    automation.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: start, endTick: end),
+        scope: .tracks([session.selectedTrack ?? 0])))
+    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(end - 1)))
+    report.expect(menu.isOpen && menu.menuKind == 2,
+                  cppID: id,
+                  message: "a press one tick inside the end stays inside the half-open interval")
+    menu.close()
+    menu.openTimeSelection(contentX: session.camera.contentX(tick: Double(end) + 0.5))
+    report.expect(!menu.isOpen && menu.menuKind == 0,
+                  cppID: id,
+                  message: "a press at the interval end is outside the half-open selection")
 }

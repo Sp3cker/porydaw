@@ -180,6 +180,37 @@ TestCase {
                "outside click dismisses without editing or changing selection")
     }
 
+    function test_menuRouteOpensEditorWithoutEditing() {
+        openSong()
+        const view = surface()
+        const grid = view.gridModel
+        const roll = findChild(view, "swiftRollInput")
+        const plot = findChild(view, "timelineQuickRollPlot")
+        verify(roll !== null && plot !== null)
+        const note = visibleNote(view, grid, roll, plot)
+        verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
+        mouseClick(roll, note.x, note.y, Qt.LeftButton)
+        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+               "the actual roll selects the note")
+        const item = findChild(shell, "shellAction_roll.pitch_bend")
+        verify(item !== null, "the Edit menu owns the pitch bend row")
+        verify(shell.shellPresenter.actionEnabled("roll.pitch_bend"),
+               "the selection enables the menu row")
+        tryVerify(function() { return item.enabled }, 3000,
+                  "the menu row follows the selection")
+        const before = grid.appliedRevisionText
+        item.triggered()
+        const editor = view.pitchBendPresenter
+        tryCompare(editor, "isOpen", true)
+        tryVerify(function() { return findChild(view, "pitchBendPopup") !== null }, 5000,
+                  "the menu route realizes the popup")
+        compare(grid.appliedRevisionText, before)
+        editor.cancelAndClose()
+        tryCompare(editor, "isOpen", false)
+        verify(JSON.parse(grid.noteSummary).some(function(n) { return n.selected }),
+               "dismissing the menu-opened editor keeps the note selection")
+    }
+
     function test_noteScopedCurveAndControls() {
         const app = openSong()
         const view = surface()

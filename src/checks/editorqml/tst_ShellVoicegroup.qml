@@ -162,6 +162,27 @@ TestCase {
                "undo restores original ADSR")
     }
 
+    function test_editorQueuedEditsKeepTheirSlot() {
+        const controller = app.voiceListController()
+        controller.selectSlot(4)
+        const editor = controller.editorModel()
+        const firstRelease = editor.release
+        editor.change("release", firstRelease === 7 ? 6 : firstRelease + 1)
+        controller.selectSlot(0)
+        const secondRelease = editor.release
+        const changedRelease = secondRelease === 255 ? 254 : secondRelease + 1
+        editor.change("release", changedRelease)
+        verify(waitForNative(function() {
+            return editor.release === changedRelease && controller.bankDirty
+        }, 15000), "mounted editor commits the selected slot after discarding the stale edit")
+        controller.selectSlot(4)
+        compare(editor.release, firstRelease, "queued old-slot edit never lands after selection")
+        controller.selectSlot(0)
+        app.requestUndo()
+        verify(waitForNative(function() { return editor.release === secondRelease }, 15000),
+               "undo restores the selected slot after queued stale edit")
+    }
+
     function test_editorSaveCommitsCleanBank() {
         const controller = app.voiceListController()
         controller.selectSlot(4)
@@ -275,6 +296,20 @@ TestCase {
         verify(waitForNative(function() {
             return draft.symbol === pulse && draft.waveform === 0
         }, 15000), "undo restores saved pulse voice")
+        const pulseDepth = draft.modDepth
+        draft.changeSynth("modDepth", pulseDepth === 255 ? 254 : pulseDepth + 1)
+        controller.selectSlot(4)
+        const otherRelease = draft.release
+        draft.change("release", otherRelease === 7 ? 6 : otherRelease + 1)
+        verify(waitForNative(function() { return draft.release !== otherRelease }, 15000),
+               "selected slot commits after the obsolete synth request")
+        controller.selectSlot(0)
+        compare(draft.symbol, pulse, "stale synth change cannot retarget another slot")
+        compare(draft.modDepth, pulseDepth, "obsolete synth descriptor remains unchanged")
+        controller.selectSlot(4)
+        app.requestUndo()
+        verify(waitForNative(function() { return draft.release === otherRelease }, 15000),
+               "undo removes only the selected slot's edit")
     }
 
     function test_referenceProfileCapture() {

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -589,7 +589,9 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
     report.expect(
         grid.ticksPerBeat == max(1, session.document.ticksPerBeat)
             && grid.appliedRevisionText == String(session.document.revision)
-            && grid.renderedNoteCount == session.document.notes(in: grid.trackIndex).count,
+            && grid.renderedNoteCount == (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
+                $0 + session.document.notes(in: $1).count
+            },
         cppID: id, message: "published beat grid, revision text, and note count match the document")
     report.expect(
         snapshot.minHScroll < 0 && snapshot.maxHScroll > 0 && snapshot.maxVScroll >= 0,
@@ -601,17 +603,21 @@ private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSessi
         let pitch: Int
         let track: Int
         let velocity: Int
+        let ghost: Bool
         let selected: Bool
     }
     let decoded = (try? JSONDecoder().decode(
         [SummaryNote].self, from: Data(grid.noteSummary.utf8))) ?? []
-    let notes = session.document.notes(in: grid.trackIndex)
+    let trackOrder = [grid.trackIndex]
+        + (0..<session.document.engineTracks.usedTrackCount).filter { $0 != grid.trackIndex }
+    let notes = trackOrder.flatMap { session.document.notes(in: $0) }
     let summaryMatches = decoded.count == notes.count
         && zip(decoded, notes).allSatisfy { summary, note in
             summary.id == note.id.rawValue && summary.tick == Int(note.tick)
                 && summary.duration == Int(note.duration)
                 && summary.pitch == Int(note.pitch) && summary.track == note.track
                 && summary.velocity == Int(note.velocity)
+                && summary.ghost == (note.track != grid.trackIndex)
                 && summary.selected == session.selectedNotes.contains(note.id)
         }
     report.expect(
@@ -1038,10 +1044,14 @@ private func checkTrackOwnerRemap(_ report: CheckReport, session: DocumentSessio
     let switchGrid = PianoGrid(session: session)
     switchGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     switchGrid.setTrack(index: added)
+    let switchedTotal = (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
+        $0 + session.document.notes(in: $1).count
+    }
     report.expect(
         switchGrid.trackIndex == added
-            && switchGrid.renderedNoteCount == session.document.notes(in: added).count,
-        cppID: id, message: "track switch republishes the grid filtered to the new track")
+            && switchGrid.renderedNoteCount == switchedTotal
+            && switchGrid.notes.allSatisfy { $0.ghost == ($0.track != added) },
+        cppID: id, message: "track switch republishes every track with ghost roles following the new track")
     switchGrid.setTrack(index: 0)
     session.soloedTracks = [1]
     session.selectedTrack = 1

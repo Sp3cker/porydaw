@@ -15,13 +15,16 @@ public actor ProjectStore {
         self.projectRoot = ProjectFileStore.cleanPath(projectRoot.path)
     }
 
-    /// Runs an operation under the store's actor isolation.
-    /// Blocking native calls must be delegated to ProjectContext's worker thread so the
-    /// cooperative pool never blocks.
-    /// - Parameter op: The asynchronous operation to execute.
-    /// - Returns: The operation's result.
-    /// - Throws: Any error thrown by the operation.
-    public func run<T: Sendable>(_ op: @escaping @Sendable () async throws -> T) async throws -> T {
-        try await op()
+    public func readFile(_ path: String) throws -> Data {
+        try ProjectFileStore.read(path)
+    }
+
+    public func writeFile(_ path: String, data: Data) throws {
+        try ProjectFileStore.writeAtomic(path, data: data)
+    }
+
+    public func voicegroupCatalog() -> (groups: VgCatalogScan, direct: VgDirectSoundScan) {
+        (VoicegroupSource.catalogScan(projectRoot),
+         VoicegroupSource.directSoundCatalog(projectRoot))
     }
 }

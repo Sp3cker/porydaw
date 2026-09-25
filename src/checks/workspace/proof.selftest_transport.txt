@@ -12,6 +12,8 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
+Swift counterpart: src/checks/workspace/transport_checks.swift
+QML counterpart: src/checks/editorqml/tst_ShellTransport.qml
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -19,14 +21,26 @@ Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport is a single long live-transport flow: mixer-settings updates that must not drop playback, pause stability, paused seek with playhead sync, resume, loop-disabled mid-song seek, stop/start, pause, restart-from-pause rewind, and final tab close.
-selftest_transport.cpp contributes 20 sites: 0 MATCHED, 0 PARTIAL, 14 GAP, 6 RETIRED-REPRESENTATION. The paired
-counterpart drives the disjoint DocumentSession/ProjectService/bank-history
-suite; it never opens a MainWindow, workspace tab, transport, scale control,
-or editor-codec flow, so no workspace-flow predicate is matched here.
+selftest_transport.cpp contributes 20 sites: 5 MATCHED, 6 PARTIAL, 3 GAP, 6 RETIRED-REPRESENTATION. The paired
+SessionChecks/session_*/bank_* counterpart drives the disjoint
+DocumentSession/ProjectService/bank-history suite; it never opens a MainWindow,
+workspace tab, transport, scale control, or editor-codec flow. The mounted
+shell-transport QML lane (src/checks/editorqml/tst_ShellTransport.qml, entry
+shell-transport) does open ShellWindow with a staged fixture project and the
+application's NativeAudio transport, and eleven of this flow's transport
+clauses are matched or partially matched through it as S186-S197; the
+workspace-audio telemetry in src/checks/workspace/transport_checks.swift is a
+supplemental mask/audition observation and is not mapped to these transport
+rows.
 Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Command: deno task verify --filter projectstore --filter swiftcore --verbose
+Result: PASS — 24 applicable entries, 7 filtered skips (controller-run final run on the
+frozen sources pinned above; the ledger agent did not run it). Inside swiftcore the
+workspace-audio telemetry observed actual NativeAudio CGB activity and polyphony for the
+selected mute/solo/tab masks after the fixture received its explicit program 0.
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS — shell-transport 1/1 applicable (4.78s).
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceTransportSelfTest)
@@ -37,8 +51,10 @@ and is unregistered in src/checks/checkcatalog.cpp, so each native site was
 reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture
 and wait plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
-runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
-workspace, tab, transport, scale control, or editor-codec flow. The 185
+runProjectSessionSuite and runBankHistorySuite, and those entry points never
+open a workspace, tab, transport, scale control, or editor-codec flow; the
+mounted shell-transport QML lane is the counterpart that opens the workspace
+and transport (S186-S197). The 185
 paired predicates are split across SessionChecks.swift (both suite entry
 points and their shared-state checks) and the session_*/bank_* counterparts
 (session_editor_semantics.swift, session_io.swift,
@@ -80,8 +96,8 @@ A006 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A007 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:144
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.pause with the transport projection exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicate S186 (test_toolbarResumeAndSpaceRestartAtEditCursor: the mounted toolbar Pause presents bar.presenter.state 2, the audio-transport Paused projection); unproved: the original's 100 ms playhead-stability window — no predicate samples the playhead across 100 ms.
 Source context since previous assertion:
   ;
       window.pausePlayback();
@@ -99,8 +115,8 @@ Original expression:
       }())
 
 A008 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:156
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the host synchronize path exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 (test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped: the paused audio seek updates the mounted clock and the audio-derived shared playhead lands in the committed target's beat); unproved: the original's 0.25-tick closeness between the presented paused playhead and the audio tick.
 Source context since previous assertion:
   ;
       window.synchronizePlayhead();
@@ -111,22 +127,12 @@ Original expression:
   QVERIFY(std::abs(view->playheadTick() - pausedTick) <= toleranceTicks)
 
 A009 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:163
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const MidiTimeline *const timeline = window.m_audio.timeline();
-      const uint64_t maxTick = timeline->lengthTicks > 0 ? timeline->lengthTicks - 1 : 9600;
-      const uint64_t target = view->playheadTick() >= 960.0
-                                  ? uint64_t(view->playheadTick() - 480.0)
-                                  : (std::min)(uint64_t(view->playheadTick() + 960.0), maxTick);
-      view->commitEditCursor(target);
-Original expression:
-  QVERIFY(std::abs(view->playheadTick() - double(target)) <= toleranceTicks)
+Disposition: MATCHED
+Mapping: S187
 
 A010 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:164
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner SharedPlayheadPresenter (src/swift/app/timeline/SharedPlayhead.swift) with the NativeAudio transport position exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicate S188 (the mounted paused seek presents the audio-derived playhead and clock at the committed target); unproved: the original's 0.25-tick tolerance of the audio position against the committed target — S188 anchors the target beat only.
 Source context since previous assertion:
   ;
 Original expression:
@@ -135,8 +141,8 @@ Original expression:
                    double(target)) <= toleranceTicks)
 
 A011 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:170
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192, S193, S194 (the mounted toolbar Play from paused presents Playing, advances past the committed cursor, and does not jump behind the prior pause point); unproved: the original's strict increase beyond the pre-resume sample — S193's bound (past the committed cursor) already held before the resume and S194 admits a stationary or one-tick-backward result.
 Source context since previous assertion:
   ;
 
@@ -150,8 +156,8 @@ A012 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A013 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:181
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicates S188, S189, S191 (the mounted paused seek moves the real audio position to the committed target, and mounted Play from the committed edit cursor presents Playing with the audio advance passing the cursor); unproved: an edit-cursor commit during active playback — no predicate sweeps the ruler cursor while the transport is Playing or asserts the transport stays Playing through that commit.
 Source context since previous assertion:
   ;
       const uint64_t seekTick =
@@ -163,17 +169,12 @@ Original expression:
                   window.m_audio.playheadSamples() >= seekSample)
 
 A014 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:184
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      window.stopPlayback();
-Original expression:
-  QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
+Disposition: MATCHED
+Mapping: S197 (mounted transport.stop click then tryCompare bar.presenter.state 1 == Stopped; that probe carries no message literal, so S197 anchors test_transportControlTransitionsAndSettings)
 
 A015 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:186
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play with the edit-cursor seek exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: Related predicates S189, S190, S191 (mounted Play from the committed edit cursor presents Playing, parks the shared playhead on that cursor, and the real audio position advances past it); unproved: the original's 0.25 s-of-samples lower bound — the mounted advance only requires passing the committed cursor by more than 8 ticks.
 Source context since previous assertion:
   ;
       window.startPlayback();
@@ -183,37 +184,16 @@ Original expression:
                       seekSample + uint64_t(window.m_audio.sampleRate() * 0.25))
 
 A016 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:190
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.pause exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      window.pausePlayback();
-Original expression:
-  QTRY_COMPARE(window.m_audio.transport(), Transport::Paused)
+Disposition: MATCHED
+Mapping: S186
 
 A017 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:193
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.play(true) resume-from-pause exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-      const uint64_t pausedAt = window.m_audio.playheadSamples();
-      window.startPlayback(true);
-Original expression:
-  QTRY_VERIFY([&] {
-          const uint64_t sample = window.m_audio.playheadSamples();
-          return window.m_audio.transport() == Transport::Playing && sample >= seekSample &&
-                 sample < pausedAt;
-      }())
+Disposition: MATCHED
+Mapping: S195, S196
 
 A018 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:200
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner NativeAudio.stop exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
-Source context since previous assertion:
-  ;
-
-      window.stopPlayback();
-Original expression:
-  QTRY_COMPARE(window.m_audio.transport(), Transport::Stopped)
+Disposition: MATCHED
+Mapping: S197 (mounted transport.stop click then tryCompare bar.presenter.state 1 == Stopped; that probe carries no message literal, so S197 anchors test_transportControlTransitionsAndSettings)
 
 A019 | WorkspaceTransportSelfTest::settingsAndSeekKeepLiveTransport | src/checks/workspace/selftest_transport.cpp:203
 Disposition: GAP
@@ -793,3 +773,39 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
+
+S186 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Pause presents paused when its action completes"
+
+S187 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+
+S188 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "paused audio seek updates the mounted clock and lands in the target beat"
+
+S189 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Play presents playing when its action completes"
+
+S190 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "stopped Play presents the edit-cursor target immediately"
+
+S191 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the real playback advances beyond the edit cursor"
+
+S192 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "toolbar Play resumes when its action completes"
+
+S193 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "toolbar Play resumes beyond the cursor rather than restarting"
+
+S194 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "a resumed transport does not jump behind its prior pause point"
+
+S195 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Space presents playing when its action completes"
+
+S196 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Space restarts from the edit cursor instead of the pause point"
+
+S197 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: function

@@ -9,7 +9,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
 
 Command: deno task verify --filter projectstore-checks --verbose;
 deno task verify:shell --filter shell-voicegroup --verbose.
-Result: PASS for both focused runs; retained native checks are not
+Result: PASS for both focused runs; retained native checks are not Swift parity evidence.
 
 A001 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:25
 Disposition: GAP

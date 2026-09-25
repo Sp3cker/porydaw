@@ -15,6 +15,7 @@ Item {
         objectName: "timelineQuickPianoGridRows"
         anchors.fill: parent
         rects: root.timelineScene.pianoGridRows
+        batched: true
         z: 0
     }
 
@@ -23,6 +24,7 @@ Item {
         objectName: "timelineQuickPianoGridTime"
         anchors.fill: parent
         rects: root.timelineScene.pianoGridTime
+        batched: true
         z: 1
     }
 
@@ -39,6 +41,7 @@ Item {
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
         rects: root.timelineScene.pianoDrawPreviewFill
+        batched: true
         z: 3
     }
 
@@ -81,6 +84,7 @@ Item {
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
         rects: root.timelineScene.pianoNoteBordersAndSelection
+        batched: true
         z: 5
     }
 
@@ -89,6 +93,7 @@ Item {
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
         rects: root.timelineScene.pianoOverlay
+        batched: true
         z: 6
     }
 
@@ -108,9 +113,6 @@ Item {
         z: 1
     }
 
-    // Drum labels and hover chips may span the gutter and plot so full pad
-    // names stay readable. Their coordinates are already band-local because
-    // the gutter starts at band-local x = 0.
     Rectangle {
         parent: root.bandSide
         objectName: "timelineQuickPianoHoverChip"
@@ -125,7 +127,7 @@ Item {
     }
 
     Item {
-        parent: root.bandSide
+        parent: root.gutterSide
         anchors.fill: parent
         z: 3
 

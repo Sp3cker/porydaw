@@ -38,10 +38,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("edit.clear_time_selection", "Clear Time Selection", .clearTimeSelection),
         Action("edit.edit_time_signature", "Edit Time Signature at Edit Cursor…", .editTimeSignature),
         Action("edit.remove_time_signature", "Remove Time Signature", .removeTimeSignature),
+        Action("edit.loop_from_selection", "Loop from Time Selection", .loopFromSelection),
         Action("roll.transpose_up", "Transpose Up", .transposeUp),
         Action("roll.transpose_down", "Transpose Down", .transposeDown),
         Action("roll.transpose_up_octave", "Transpose Up an Octave", .transposeUpOctave),
         Action("roll.transpose_down_octave", "Transpose Down an Octave", .transposeDownOctave),
+        Action("roll.pitch_bend", "Edit Note Pitch Bend", .pitchBend),
+        Action("edit.set_velocity", "Set Velocity…", .setVelocity),
         Action("roll.nudge_left", "Nudge Left", .nudgeLeft),
         Action("roll.nudge_right", "Nudge Right", .nudgeRight),
         Action("roll.mute_tracks", "Mute Selected Tracks", .muteTracks),
@@ -92,8 +95,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
     private static let editTailIds = [
         "automation.pencil_mode", "roll.split", "roll.join",
         "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
-        "roll.grid_widen", "roll.grid_triplet",
-        "edit.preferences", "edit.song_settings", "edit.engine_settings",
+        "roll.grid_widen", "roll.grid_triplet", "roll.pitch_bend",
+        "edit.set_velocity", "edit.loop_from_selection", "eventlist.move_up",
+        "eventlist.move_down", "edit.preferences", "edit.song_settings",
+        "edit.engine_settings",
     ]
     private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
     private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
@@ -180,6 +185,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
         if id == "view.polyphony_debugger" || id == "edit.preferences"
             || id == "edit.engine_settings" { return true }
         guard sceneActive else { return false }
+        if id == "eventlist.move_up" || id == "eventlist.move_down" {
+            guard session.songOpen else { return false }
+            let events = session.eventListPresenter()
+            guard events.attached, events.visible, !events.editing, !events.menuOpen else { return false }
+            return events.model.row(at: events.currentRow)?.eventIndex != nil
+        }
         if let command = action.command {
             return session.songOpen && session.gridCommandAvailable(command: command.rawValue)
         }
@@ -205,7 +216,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func activate(id: String) {
         guard actionEnabled(id: id) else { return }
         if let command = Self.byId[id]?.command {
-            session.performGridCommand(command: command.rawValue)
+            if command == .moveEventUp || command == .moveEventDown {
+                session.performEventListCommand(command: command.rawValue)
+            } else {
+                session.performGridCommand(command: command.rawValue)
+            }
             return
         }
         switch id {

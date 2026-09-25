@@ -133,21 +133,18 @@ TestCase {
         var firstRow = Math.min(127, Math.max(0, Math.ceil(scrollY / rowH) + 2))
         var lastRow = Math.min(127, Math.max(0, Math.floor((scrollY + plot.height) / rowH) - 2))
         var current = gridNotes(grid)
+        var tick = Math.max(0, firstTick)
+        if (tick + spanSnaps * snap > lastTick)
+            return null
         for (var row = firstRow; row <= lastRow; ++row) {
             var pitch = 127 - row
-            for (var tick = Math.max(0, firstTick); tick + spanSnaps * snap <= lastTick; tick += snap) {
-                var end = tick + spanSnaps * snap
-                var occupied = false
-                for (var i = 0; i < current.length; ++i) {
-                    var note = current[i]
-                    if (note.pitch === pitch && note.tick < end && note.tick + note.duration > tick) {
-                        occupied = true
-                        break
-                    }
-                }
-                if (!occupied)
-                    return { tick: tick, pitch: pitch }
-            }
+            // Drawing needs an untouched pitch row: a neighboring fixture note
+            // can capture the press through its resize grip even without overlap.
+            var occupied = current.some(function(note) {
+                return note.track === grid.trackIndex && note.pitch === pitch
+            })
+            if (!occupied)
+                return { tick: tick, pitch: pitch }
         }
         return null
     }
@@ -481,11 +478,20 @@ TestCase {
             var list = gridNotes(grid)
             if (list.length === 0 || grid.renderedNoteCount !== list.length)
                 return false
-            for (var i = 0; i < list.length; ++i)
-                if (list[i].track !== 1)
-                    return false
-            return true
-        }, 5000), "setTrack follows track 1 in notes and faces")
+            var primary = 0, ghosts = 0
+            for (var i = 0; i < list.length; ++i) {
+                if (list[i].track === 1) {
+                    if (list[i].ghost)
+                        return false
+                    ++primary
+                } else {
+                    if (!list[i].ghost)
+                        return false
+                    ++ghosts
+                }
+            }
+            return primary > 0 && ghosts > 0
+        }, 5000), "setTrack follows track 1 with other tracks as ghosts")
         var oldGrid = grid
         var tabs = session.songTabs
         compare(tabs.tabCount, 1, "one tab is open before the reload")

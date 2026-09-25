@@ -117,6 +117,9 @@ struct GridSceneInput {
     /// in which case no label is built (see rebuildNotes).
     var noteNameAdvance: (Int) -> Double = { _ in 0 }
     var noteNameOccupiedHeight = 0.0
+    var timeSelection: AutomationTimeSelection? = nil
+    var usedTrackCount = 0
+    var selectedTrack = 0
 }
 
 @MainActor
@@ -287,6 +290,36 @@ public final class GridScene {
         addFrame(
             &rects, box: box, color: color, thicknessPixels: max(1, fitted),
             insetPixels: insetPixels, metrics: m)
+    }
+
+    private func timeCovers(_ input: GridSceneInput, track: Int, tick: Int, end: Int) -> Bool {
+        guard let selection = input.timeSelection, selection.isActive else { return false }
+        guard case let .tracks(scope) = selection.scope else { return false }
+        guard scope.contains(track), track >= 0, track < input.usedTrackCount else { return false }
+        return Int(selection.range.startTick) < end && Int(selection.range.endTick) > tick
+    }
+
+    private func addSelectionRing(
+        _ rects: inout [SceneRect],
+        box: (x: Double, y: Double, w: Double, h: Double),
+        input: GridSceneInput
+    ) {
+        let m = input.metrics
+        let requested = m.selectionRingPixels
+        let ring = m.fittedFrameThickness(
+            rectWidth: box.w, rectHeight: box.h,
+            requestedPixels: requested, insetPixels: 0)
+        if ring > 0 {
+            addFrame(
+                &rects, box: box, color: input.palette.selectionRing,
+                thicknessPixels: ring, insetPixels: 0, metrics: m)
+            addNoteBorder(&rects, box: box, insetPixels: ring, input: input)
+        } else {
+            rects.append(
+                SceneRect(
+                    x: box.x, y: box.y, width: box.w,
+                    height: box.h, fillColor: input.palette.selectionRing))
+        }
     }
 
     private func visibleTicks(_ input: GridSceneInput) -> (begin: Tick, end: Tick) {
@@ -641,6 +674,8 @@ public final class GridScene {
         for ghostPass in [true, false] {
             for note in input.notes where note.ghost == ghostPass {
                 let (tick, end, pitch) = input.displayedNote(note)
+                if ghostPass, input.scale.fold,
+                    camera.projection.row(forPitch: pitch) == PitchProjection.hiddenRow { continue }
                 let box = m.noteBox(
                     camera: camera,
                     x0: camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr),
@@ -672,27 +707,19 @@ public final class GridScene {
                         x: box.x, y: box.y, width: box.w, height: box.h,
                         fillColor: fillColor,
                         primitiveName: name))
-                if ghostPass { continue }
+                if ghostPass {
+                    if timeCovers(input, track: note.track, tick: tick, end: end) {
+                        addSelectionRing(&borders, box: box, input: input)
+                    }
+                    continue
+                }
                 noteFaces.append(NoteNameFace(
                     pitch: pitch,
                     box: (box.x, box.y, box.w, box.h),
                     fillColor: fillColor, ghost: false))
-                if input.isSelected(note.noteId) {
-                    let requested = m.selectionRingPixels
-                    let ring = m.fittedFrameThickness(
-                        rectWidth: box.w, rectHeight: box.h,
-                        requestedPixels: requested, insetPixels: 0)
-                    if ring > 0 {
-                        addFrame(
-                            &borders, box: box, color: p.selectionRing,
-                            thicknessPixels: ring, insetPixels: 0, metrics: m)
-                        addNoteBorder(&borders, box: box, insetPixels: ring, input: input)
-                    } else {
-                        borders.append(
-                            SceneRect(
-                                x: box.x, y: box.y, width: box.w,
-                                height: box.h, fillColor: p.selectionRing))
-                    }
+                if input.isSelected(note.noteId)
+                    || timeCovers(input, track: note.track, tick: tick, end: end) {
+                    addSelectionRing(&borders, box: box, input: input)
                 } else {
                     addNoteBorder(&borders, box: box, insetPixels: 0, input: input)
                 }
@@ -741,6 +768,23 @@ public final class GridScene {
                     &overlay, box: (x0, y0, x1 - x0, y1 - y0), clip: clip,
                     color: p.selectionEdge, metrics: m)
             }
+        }
+
+        if let selection = input.timeSelection, selection.isActive,
+            case let .tracks(scope) = selection.scope,
+            scope.contains(input.selectedTrack), input.selectedTrack >= 0,
+            input.selectedTrack < input.usedTrackCount {
+            let x0 = camera.displayX(tick: Double(selection.range.startTick), origin: 0, dpr: m.dpr)
+            let x1 = camera.displayX(tick: Double(selection.range.endTick), origin: 0, dpr: m.dpr)
+            overlay.append(SceneRect(
+                x: x0, y: 0, width: x1 - x0, height: snapshot.rollHeight,
+                fillColor: p.selectionFill))
+            overlay.append(SceneRect(
+                x: x0 - m.pixel / 2, y: 0, width: m.pixel, height: snapshot.rollHeight,
+                fillColor: p.selectionEdge))
+            overlay.append(SceneRect(
+                x: x1 - m.pixel / 2, y: 0, width: m.pixel, height: snapshot.rollHeight,
+                fillColor: p.selectionEdge))
         }
         sync(pianoDrawPreviewFill, preview)
         sync(pianoOverlay, overlay)

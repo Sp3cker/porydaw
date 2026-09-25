@@ -24,8 +24,11 @@ WorkspaceTabsTest::transportVolumesAndRaster covers the transport bar before any
 tabs_transport.cpp contributes 73 sites: 7 MATCHED, 5 PARTIAL, 42 GAP, 19 RETIRED-REPRESENTATION. The
 shell-transport TestCase mounts ShellWindow with a live project and two tabs;
 
-Command: deno task build:checks; deno task verify --filter swiftcore; deno task verify:shell --filter shell-transport --verbose
-Result: PASS; build:checks ok; swiftcore 1/31 ok (30 skipped); shell-transport 1/13 ok (12 skipped).
+Command: deno task verify --filter projectstore --filter swiftcore --verbose
+Result: PASS — 24 applicable entries, 7 filtered skips (controller-run final run on the frozen
+sources pinned above; the ledger agent did not run it).
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS — shell-transport 1/1 applicable (4.78s).
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h
@@ -509,7 +512,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A072 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:224
 Disposition: PARTIAL
-Mapping/reason: PARTIAL: tst_ShellTransport.qml test_transportControlTransitionsAndSettings passed focused Space starting and pausing transport without changing master-volume text; direct native QLineEdit ShortcutOverride delivery is no longer represented.
+Mapping/reason: Related predicates S186, S187, S188 (mounted shell-transport: with the song master-volume field focused, Space starts and then pauses the audio transport while the field keeps its edited value 87); unproved: the original's direct native QLineEdit ShortcutOverride accept/ignore state, which the mounted QML surface does not expose.
 Source context since previous assertion:
   ;
       QKeyEvent space(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier, QStringLiteral(" "));
@@ -1089,3 +1092,12 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
+
+S186 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Space still starts playback with the volume field focused"
+
+S187 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Space does not insert into the numeric field"
+
+S188 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the same Space shortcut pauses playback"

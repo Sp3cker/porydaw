@@ -9,8 +9,13 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS — 1/14 ok (controller-recorded post-change run, replayed here verbatim); the
-swiftcore projectSession suite executed note_rendering.swift (S001–S012).
+Result: PASS — 1/31 ok (30 skipped); runtime swiftcore 16.53s, build 27.27 (controller-recorded final run).
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: PASS — 3 Qt results (initTestCase, projectSession, cleanupTestCase), 0 failed, 947ms
+(controller-recorded run on the refrozen sources; full output artifact://459). The projectSession
+suite executed note_rendering.swift S001-S022: checkGhostNotes now provisions its own second
+track with an undo teardown instead of skipping on the session fixture, and the artifact lists
+its live ghost rows (roles, fill, frame, selection, modes, cleanup).
 Command: deno task verify:shell --verbose
 Result: PASS — 11/11 ok (controller-recorded post-change run); the shell note-visuals lane
 executed the framebuffer border/ring/thinning probes cited as S013.
@@ -315,7 +320,7 @@ Original expression:
 
 A016 | PianoRollTest::ghostNoteRaster | src/checks/rollcheck/note_rendering.cpp:214
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Mapping/reason: Fixture-seed guard: the refrozen ghost counterpart asserts its own fixture precondition (S022) and the projection roles (S017), both executed, but neither covers this painting-seed clause. Open setup obligation.
 Source context since previous assertion:
   }
 
@@ -327,8 +332,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A017 | PianoRollTest::ghostNoteRaster | src/checks/rollcheck/note_rendering.cpp:248
-Disposition: GAP
-Mapping/reason: Ghost-note rendering does not exist in the production grid: PianoGrid never emits ghost GridNote primitives, so no Swift predicate can observe this ghost face edge/interior equality. Open obligation.
+Disposition: PARTIAL
+Mapping/reason: S018/S019 (checkGhostNotes, executed) map the clause to the published scene at dpr 2: the other-track face carries the track-identity ghost mix and publishes no border or ring rect at its box. Unproved: the legacy Quick surface's framebuffer edge/interior pixels; the predicate observes published scene rectangles, not rendered pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -505,8 +510,8 @@ Original expression:
   QFAIL("velocity hue does not fall monotonically from purple to red");
 
 A031 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:333
-Disposition: GAP
-Mapping/reason: Ghost-note rendering does not exist in the production grid (PianoGrid emits no ghost GridNote primitives), so the velocity-colour mode's invariance for a ghost note has no Swift counterpart. Open obligation.
+Disposition: PARTIAL
+Mapping/reason: S020 (checkGhostNotes, executed) enables the velocity-color mode over the live ghost face and asserts its published fill stays byte-identical; S014/S015 cover the same invariance for a synthetic ghost face in both modes. Unproved: the legacy Quick surface's sampled ghost pixels under the mode flip.
 Source context since previous assertion:
               break;
           }
@@ -566,8 +571,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A036 | PianoRollTest::noteNameRaster | src/checks/rollcheck/note_rendering.cpp:414
-Disposition: GAP
-Mapping/reason: Note-name mode and ghost-note rendering are both absent from the production grid — no note-name toggle or label painting exists and no ghost GridNote is emitted — so this slot's ghost-invariance comparison has no Swift counterpart. Open obligation.
+Disposition: PARTIAL
+Mapping/reason: S021 (checkGhostNotes, executed) enables note-name mode with the ghost and the primary note in view and asserts no ghost label is published; S016 covers the label layout for a synthetic ghost face. Unproved: the legacy Quick surface's pixel identity of the ghost across the mode flip.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -1032,9 +1037,11 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S012 are report.expect predicates in the registered swiftcore check
-src/checks/rollcheck/note_rendering.swift, executed by deno task verify --filter swiftcore
---verbose. S013 is the shell note-visuals Qt Quick Test predicate
+S001..S022 are report.expect predicates in the registered swiftcore check
+src/checks/rollcheck/note_rendering.swift, all executed by the recorded
+deno task verify --filter swiftcore --qt projectSession run; checkGhostNotes provisions its own
+second track rather than skipping on the session fixture. S013 is the shell note-visuals Qt
+Quick Test predicate
 (src/checks/editorqml/tst_ShellNoteVisuals.qml) executed by deno task verify:shell --verbose.
 The retired swiftrollgated C++ source (notevisuals.cpp) that the former S001..S041 entries
 indexed is not on disk and is not registered in this checkout; its live equivalent is S013.
@@ -1079,3 +1086,30 @@ Anchor: message "A025 published middle velocity differs from both endpoints"
 
 S013 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: function
+
+S014 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "velocity mode leaves the ghost fill on its identity mix"
+
+S015 | checkVelocityColorMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ghost fill is identical with the mode off"
+
+S016 | checkNoteNameMode | src/checks/rollcheck/note_rendering.swift
+Anchor: message "ghost notes are never labeled"
+
+S017 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A016 both fixture notes project, other-track note as ghost"
+
+S018 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A017 ghost face uses the track-identity mix"
+
+S019 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A017 ghost face edge matches its interior: no border or ring"
+
+S020 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A031 velocity-color mode leaves the ghost fill byte-identical"
+
+S021 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A036 ghost notes are never labeled"
+
+S022 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A016 a distinct other track exists for the ghost seed"

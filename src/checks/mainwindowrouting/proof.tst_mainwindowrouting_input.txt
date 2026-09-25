@@ -15,6 +15,7 @@ Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
 Additional Swift counterpart: src/checks/workspace/session_time_routing.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTransport.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -25,6 +26,9 @@ ledger agent did not run it.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS — build ok (0.16s); ok shellwindow (3.74s); verify 1/11 ok (10 skipped);
 run_checks PASS. Controller-run on the same frozen tree; the ledger agent did not run it.
+
+Command: deno task verify:shell --filter shell-transport --verbose
+Result: PASS — shell-transport 1/1 applicable (4.78s).
 
 A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
 Disposition: GAP
@@ -244,37 +248,24 @@ Original expression:
         QVERIFY(focused && (focused == session->a || session->a->isAncestorOf(focused)))
 
 A016 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:134
-Disposition: GAP
-Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
-Source context since previous assertion:
-        window.m_workspace->selectSongTab(session->b);
-
-        constexpr uint64_t tick = 24;
-        window.stopPlayback();
-        session->b->view().commitEditCursor(0);
-        session->b->view().requestPlayPauseFrom(tick);
-Original expression:
-        QCOMPARE(window.m_audio.transport(), Transport::Playing)
+Disposition: MATCHED
+Mapping: S217, S218
 
 A017 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:135
 Disposition: PARTIAL
-Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/session_playback.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing) and S222 (the mounted ruler sweep leaves the edit cursor away from the origin in test_toolbarResumeAndSpaceRestartAtEditCursor); unproved: the retired requestPlayPauseFrom(tick) route's own cursor commit — no final-surface play route writes the edit cursor, so the exact tick a play request anchors is unobserved.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(session->b->view().editCursorTick(), tick)
 
 A018 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:137
-Disposition: GAP
-Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
-Source context since previous assertion:
-        session->b->view().requestPlayPauseFrom(tick);
-Original expression:
-        QCOMPARE(window.m_audio.transport(), Transport::Paused)
+Disposition: MATCHED
+Mapping: S219
 
 A019 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:138
-Disposition: GAP
-Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S220, S221 (the mounted paused ruler seek presents the exact committed target on the shared playhead and preserves the Paused transport); unproved: the original observes the paused playhead immediately after the second requestPlayPauseFrom(tick), a play-then-pause anchored at that tick, while the mounted predicates observe a seek performed while already paused — the paused-at-the-just-started-tick state is not asserted.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2818,3 +2809,21 @@ Anchor: function
 
 S215 | runTimeRoutingChecks | src/checks/workspace/session_time_routing.swift
 Anchor: message "one undo restores exact all-track removal bytes"
+
+S217 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Play presents playing when its action completes"
+
+S218 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Space presents playing when its action completes"
+
+S219 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the same Space shortcut pauses playback"
+
+S220 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the paused press immediately presents the exact target on the shared playhead"
+
+S221 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "ruler seek preserves the paused transport"
+
+S222 | test_toolbarResumeAndSpaceRestartAtEditCursor | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "the stopped edit cursor is away from the origin"

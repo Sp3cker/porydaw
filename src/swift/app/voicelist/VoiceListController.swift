@@ -61,6 +61,13 @@ public final class VoiceListArgChoice {
     }
 }
 
+@MainActor
+struct VoiceListEditOrigin {
+    let session: DocumentSession
+    let sourcePath: String
+    let sectionLabel: String
+}
+
 /// Swift presenter for the voicegroup dock's list contract, mirroring
 /// VoicegroupBrowser's observable behavior over DocumentSession's published
 /// bank view (bankSlots/bankDirty/bankLoadName) instead of the native
@@ -213,6 +220,22 @@ public final class VoiceListController {
     @QtIgnored
     public func bindSession(_ session: DocumentSession) {
         self.session = session
+    }
+
+    @QtIgnored
+    func editOrigin() -> VoiceListEditOrigin? {
+        guard let session else { return nil }
+        return VoiceListEditOrigin(session: session,
+                                   sourcePath: session.bankLease.sourcePath,
+                                   sectionLabel: session.bankLease.sectionLabel)
+    }
+
+    @QtIgnored
+    func isCurrentEditOrigin(_ origin: VoiceListEditOrigin) -> Bool {
+        guard let session else { return false }
+        return session === origin.session && !session.isClosed
+            && session.bankLease.sourcePath == origin.sourcePath
+            && session.bankLease.sectionLabel == origin.sectionLabel
     }
 
     /// Full owner-equivalent sync: bind the session, rebind the bank view,

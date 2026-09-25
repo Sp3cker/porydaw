@@ -6,6 +6,10 @@ Original SHA-256: 04258c2fe60a26ad1d11f8457296b0150ed1890a4d3bf09626f8775af7fff1
 Swift counterpart: src/checks/drawerpresentation/velocity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
+Command: deno task verify:qml --verbose
+Result: PASS — drawer lane PASS (drawer 1/1; profiles all 4) on the task-6 settled
+tst_EditorDrawer.qml. Controller-run; the ledger agent did not run it.
+
 A001 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:39
 Disposition: RETIRED-REPRESENTATION
 
@@ -81,7 +85,7 @@ Original expression:
 
 A014 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:119
 Disposition: PARTIAL
-Mapping/reason: The QML cases read the grid's own notes and require at least one; the route-101 song's note list non-emptiness for this fixture is unproved. [S101]
+Mapping/reason: The QML pointer-edit case requires at least one editable primary note from the composed grid's own summary (its primary filter drops ghosts and other tracks) before it clicks one; the native document notesForTrack(0) guard for this fixture is unproved. [S101]
 Original expression:
   QVERIFY(!notes.empty())
 
@@ -1034,7 +1038,7 @@ S100 | test_productionVelocityPageMountsAndRenders | src/checks/editorqml/tst_Ed
 Anchor: message "the drawer control toggles the velocity preference"
 
 S101 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
-Anchor: message "the grid published its notes"
+Anchor: message "the grid published editable primary notes"
 
 S102 | test_productionVelocityPointerEdit | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "a live drag reports an active interaction to the container"

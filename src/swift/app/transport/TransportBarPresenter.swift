@@ -112,7 +112,7 @@ public final class TransportBarPresenter {
 
     public func play() {
         guard state != 0, state != 3 else { return }
-        session?.playPause()
+        session?.play()
         refresh()
     }
 

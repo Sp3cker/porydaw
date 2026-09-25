@@ -11,14 +11,9 @@ Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/t
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore projectSession suite executed runKeyboardChecks (S043..S060) and EditorGridCameraChecks commandRouting (S029..S042), not the gated S001..S028.
-Command: deno task verify --filter swiftcore --qt projectSession
-Result: PASS — 1/31 ok (local checkKeyboardKeepsEditedNoteVisible; transpose/nudge viewport and undo assertions executed).
-Command: deno task verify:qml-roll --verbose
-Result: PASS — 1/1 ok (controller-recorded post-change run); no keyboard site depends on the roll QML lane.
-Command: deno task verify:shell --verbose
-Result: PASS — 11/11 ok (controller-recorded post-change run); no keyboard site depends on the shell lane.
+Command: deno task verify --filter projectstore --filter swiftcore --verbose
+Result: PASS — 24 applicable entries, 7 filtered skips; runtime swiftcore 20.39s (controller-recorded run; frozen keyboard.swift source unchanged).
+The swiftcore lane executes the four checkKeyboardSkipsGhosts report.expect predicates indexed as S078–S081 under cppID swiftcore/PianoRoll::keyboardTranspose, and build/proof-evidence/swiftcore.json records all four anchor literals.
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -176,8 +171,8 @@ Original expression:
   QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
 
 A025 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:197
-Disposition: GAP
-Mapping/reason: GAP — no ruler-drag time selection in the Swift roll: PianoGrid has no time-selection state (the automation page owns it separately) and no ruler pointer handling.
+Disposition: PARTIAL
+Mapping/reason: S072 (ruler_loop_menu.swift checkRulerSweepScopeTapAndChip, executed) sweeps from the snapped anchor to the aligned far tick and asserts that exact range with an exact primary-only track scope. Unproved: the native/QML left-drag delivery into the ruler input, including the start-drag threshold; the presenter sweep stands in for the drag.
 Source context since previous assertion:
       const qreal rulerDpr = rulerInput->devicePixelRatio();
       // Press at the drawn-cell edge: snapCell ticks past the cell start can
@@ -214,8 +209,8 @@ Original expression:
                "plain ruler drag did not create a primary-only time selection");
 
 A026 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:232
-Disposition: GAP
-Mapping/reason: GAP — no ruler-drag scope derivation in the Swift roll: modified-drag track-scope computation is unmodelled.
+Disposition: PARTIAL
+Mapping/reason: S073 (checkRulerSweepScopeTapAndChip, executed) runs the Control sweep and asserts the exact range with a scope containing the primary and the intersecting track (two used tracks in the fixture). Unproved: the native Ctrl-drag delivery, and the original exact track-bitmask equality the predicate replaces with containment.
 Source context since previous assertion:
       uint32_t expectedScope = uint32_t{1} << track;
       const ViewNote *scopedGhost = nullptr;
@@ -283,8 +278,8 @@ Original expression:
                "time-scoped ghost note is outside the horizontal viewport");
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — framebuffer pixel observation: isSelectionRingColor at device pixels. Swift predicates assert model state (tick/pitch/duration), never rendered pixels.
+Disposition: PARTIAL
+Mapping/reason: S076 (keyboard.swift checkTimeSelectionHighlights, executed) rings the covered note and its time-scoped ghost at dpr 2 through the same track-scoped provider the roll reads. Unproved: the framebuffer ring pixels this row samples at device pixels; the predicate asserts published scene frames.
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
       const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
@@ -340,8 +335,8 @@ Original expression:
                    "time-scoped secondary header did not render its selection indicator");
 
 A035 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:288
-Disposition: GAP
-Mapping/reason: GAP — no ruler mouse handling in the Swift roll: outside-selection click retention is unmodelled.
+Disposition: PARTIAL
+Mapping/reason: S074/S075 (checkRulerSweepScopeTapAndChip, executed) tap outside the selection and assert the selection survives with the cursor committed and published through the session observer. Unproved: the native/QML press-release delivery into the ruler input.
 Source context since previous assertion:
       }
 
@@ -601,8 +596,8 @@ Original expression:
                "time shortcut seed did not reach the expected post-transpose state");
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — framebuffer selection-ring pixel observation on a time-selected note: Swift asserts model state, never rendered pixels.
+Disposition: PARTIAL
+Mapping/reason: S076 (checkTimeSelectionHighlights, executed) asserts the time-covered note and its time-scoped ghost publish the selection ring. Unproved: the framebuffer ring pixel this row samples.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
       band.startTick = d.tick + snapCell;
@@ -624,13 +619,8 @@ Original expression:
                "time-selected note did not show the normal selection ring");
 
 A054 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:449
-Disposition: GAP
-Mapping/reason: GAP — PianoGrid owns only the note selection: time-selected-versus-note-selected leakage has no observable counterpart (PianoGrid has no time-selection state).
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(view.selectionModel().noteSelection().empty(),
-               "time-selected note leaked into the explicit note selection");
+Disposition: MATCHED
+Mapping: S077
 
 A055 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:466
 Disposition: GAP
@@ -1215,7 +1205,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that drove the Swift grid; source retired in 4d7fa617, pinned blob at 5f0924e8): they execute nowhere in the current tree and close no A entry. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that drove the Swift grid; source retired in 4d7fa617, pinned blob at 5f0924e8): they execute nowhere in the current tree and close no A entry. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. S043–S071 are report.expect predicates in the registered swiftcore checks keyboard.swift and its seed helper swiftcore/PianoRoll::withKeyboardSeed. S072–S075 are the ruler sweep, tap and cursor-publication predicates of src/checks/rollcheck/ruler_loop_menu.swift (checkRulerSweepScopeTapAndChip), cited here for the timelineRulerScope sites; the two sweep predicates assert the exact swept range. S076–S077 are the checkTimeSelectionHighlights predicates in keyboard.swift, executed once that check provisions its own second track. S078–S081 are the four checkKeyboardSkipsGhosts predicates in keyboard.swift — second-track setup, ghost projection, selected-note transpose+nudge, and ghost-note conservation — executing under the same swiftcore filter; no original keyboard.cpp assertion covers keyboard remaps with a projected other-track ghost, so they close no A entry. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
@@ -1429,3 +1419,33 @@ Anchor: message "undo restores the pre-gesture song bytes"
 
 S071 | checkKeyboardKeepsEditedNoteVisible | src/checks/rollcheck/keyboard.swift
 Anchor: message "every Left nudge keeps the whole note in the viewport"
+
+S072 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A025: a plain ruler drag sweeps the exact range with primary-only scope"
+
+S073 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A026: a Control ruler drag sweeps the exact range with intersecting-track scope"
+
+S074 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A035: tapping the ruler outside the selection commits the cursor without clearing it"
+
+S075 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A035: the tap commit publishes the cursor through the session observer"
+
+S076 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "A053/A029 covered notes ring, including the time-scoped ghost"
+
+S077 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "A054 time-covered notes never leak into the note selection"
+
+S078 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
+Anchor: message "a distinct second track exists for keyboard ghost editing"
+
+S079 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
+Anchor: message "the other-track note projects as a ghost"
+
+S080 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
+Anchor: message "transpose and nudge remap the selected note with ghosts present"
+
+S081 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
+Anchor: message "keyboard remaps leave other-track ghost notes untouched"

@@ -1860,6 +1860,12 @@ TestCase {
         return JSON.parse(testCase.surface.gridModel.noteSummary)
     }
 
+    function primaryGridNotes() {
+        return testCase.gridNotes().filter(function(note) {
+            return !note.ghost && note.track === testCase.surface.gridModel.trackIndex
+        })
+    }
+
     /// The one note the production page's own selection holds, or -1. The page's
     /// projection is the live one: the grid's summary is only as fresh as the
     /// grid's last publication.
@@ -1871,7 +1877,7 @@ TestCase {
     }
 
     function noteVelocity(noteId) {
-        var notes = testCase.gridNotes()
+        var notes = testCase.primaryGridNotes()
         for (var i = 0; i < notes.length; ++i) {
             if (notes[i].id === noteId)
                 return notes[i].velocity
@@ -2634,8 +2640,17 @@ TestCase {
         fuzzyCompare(plot.height, page.height, 0.01, "the plot spans the body height")
 
         var nodes = testCase.velocityNodes()
-        compare(nodes.length, testCase.gridNotes().length,
+        var trackNotes = testCase.primaryGridNotes()
+        compare(nodes.length, trackNotes.length,
                 "every note of the primary track published a node")
+        var published = nodes.map(function(node) {
+            return node.parent.model.noteIdText + ":" + node.parent.model.value
+        }).sort()
+        var primary = trackNotes.map(function(note) {
+            return String(note.id) + ":" + note.velocity
+        }).sort()
+        compare(JSON.stringify(published), JSON.stringify(primary),
+                "the velocity page publishes each primary note identity and value")
         verify(testCase.collectByName(ruler, "velocityTick", []).length
                    + testCase.collectByName(ruler, "velocityGraduation", []).length > 0,
                "the ruler rendered its value ladder")
@@ -2683,8 +2698,8 @@ TestCase {
         testCase.mountProductionVelocity(location)
         var nodes = testCase.velocityNodes()
         verify(nodes.length > 0, "the page drew at least one node")
-        var notes = testCase.gridNotes()
-        compare(notes.length > 0, true, "the grid published its notes")
+        var notes = testCase.primaryGridNotes()
+        verify(notes.length > 0, "the grid published editable primary notes")
 
         var input = testCase.velocityPlotInput()
         var node = nodes[0]
@@ -2694,7 +2709,7 @@ TestCase {
                   1000, "a node click selected exactly its own note")
 
         var targetId = testCase.selectedNoteId()
-        verify(targetId >= 0, "the click left one note selected in the grid's own summary")
+        verify(targetId >= 0, "the click left one primary note selected")
         var before = testCase.noteVelocity(targetId)
         var raised = center.y - 24
         mousePress(input, center.x, center.y, Qt.LeftButton)

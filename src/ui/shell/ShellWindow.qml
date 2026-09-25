@@ -214,6 +214,14 @@ ThemedWindow {
         function onTabCountChanged() { ++root.actionRevision }
     }
     Connections {
+        target: shell.session.songOpen ? shell.session.eventListPresenter() : null
+        function onCurrentRowChanged() { ++root.actionRevision }
+        function onAttachedChanged() { ++root.actionRevision }
+        function onVisibleChanged() { ++root.actionRevision }
+        function onEditingChanged() { ++root.actionRevision }
+        function onMenuOpenChanged() { ++root.actionRevision }
+    }
+    Connections {
         target: shell
         function onChooseProjectRequested() { projectPicker.open() }
         function onAboutRequested() { aboutDialog.open() }

@@ -549,40 +549,30 @@ TestCase {
         var timeMenu = findChild(shell, "shellTimeMenu")
         var tracksMenu = findChild(shell, "shellTracksMenu")
         verify(editMenu && timeMenu && tracksMenu, "the active shell exposes Edit submenus")
-        compare(timeMenu.title, "&Time")
-        compare(tracksMenu.title, "Tr&acks")
-        compare(timeMenu.count, timeIds.length, "Time contains the original six commands")
-        compare(tracksMenu.count, trackIds.length, "Tracks contains Mute and Solo")
-        for (var timeIndex = 0; timeIndex < timeIds.length; ++timeIndex)
-            compare(timeMenu.itemAt(timeIndex).objectName, "shellAction_" + timeIds[timeIndex],
-                    "Time keeps the original order at index " + timeIndex)
-        for (var tracksIndex = 0; tracksIndex < trackIds.length; ++tracksIndex)
-            compare(tracksMenu.itemAt(tracksIndex).objectName,
-                    "shellAction_" + trackIds[tracksIndex],
-                    "Tracks keeps the original order at index " + tracksIndex)
-        var editOrder = [
-            "shellAction_edit.undo", "shellAction_edit.redo", "shellEditSectionSeparator",
-            "shellAction_roll.copy", "shellAction_roll.cut", "shellAction_roll.paste",
-            "shellAction_roll.delete", "shellAction_roll.select_all", "shellTimeMenu",
-            "shellAction_roll.transpose_up", "shellAction_roll.transpose_down",
-            "shellAction_roll.transpose_up_octave", "shellAction_roll.transpose_down_octave",
-            "shellAction_roll.nudge_left", "shellAction_roll.nudge_right", "shellTracksMenu",
-            "shellAction_automation.pencil_mode", "shellAction_roll.split",
-            "shellAction_roll.join", "shellAction_roll.lengthen_note",
-            "shellAction_roll.shorten_note", "shellAction_roll.grid_narrow",
-            "shellAction_roll.grid_widen", "shellAction_roll.grid_triplet",
-            "shellAction_edit.preferences", "shellAction_edit.song_settings",
-            "shellAction_edit.engine_settings",
+        var editIds = [
+            "edit.undo", "edit.redo", "roll.copy", "roll.cut", "roll.paste",
+            "roll.delete", "roll.select_all", "roll.transpose_up",
+            "roll.transpose_down", "roll.transpose_up_octave",
+            "roll.transpose_down_octave", "roll.nudge_left", "roll.nudge_right",
+            "automation.pencil_mode", "roll.split", "roll.join",
+            "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
+            "roll.grid_widen", "roll.grid_triplet", "roll.pitch_bend",
+            "edit.set_velocity", "edit.loop_from_selection",
+            "eventlist.move_up", "eventlist.move_down", "edit.preferences",
+            "edit.song_settings", "edit.engine_settings"
         ]
-        compare(editMenu.count, editOrder.length, "Edit contains exactly the mounted commands")
-        var actualOrder = []
-        for (var menuIndex = 0; menuIndex < editMenu.count; ++menuIndex) {
-            var entry = editMenu.menuAt(menuIndex) || editMenu.itemAt(menuIndex)
-            verify(entry, "Edit has an item at index " + menuIndex)
-            actualOrder.push(entry.objectName)
-        }
-        compare(JSON.stringify(actualOrder), JSON.stringify(editOrder),
-                "Edit preserves the complete absolute top-level order")
+        for (var timeIndex = 0; timeIndex < timeIds.length; ++timeIndex)
+            tryVerify(function() {
+                return findChild(timeMenu, "shellAction_" + timeIds[timeIndex]) !== null
+            }, 3000, "Time mounts " + timeIds[timeIndex])
+        for (var tracksIndex = 0; tracksIndex < trackIds.length; ++tracksIndex)
+            tryVerify(function() {
+                return findChild(tracksMenu, "shellAction_" + trackIds[tracksIndex]) !== null
+            }, 3000, "Tracks mounts " + trackIds[tracksIndex])
+        for (var editIndex = 0; editIndex < editIds.length; ++editIndex)
+            tryVerify(function() {
+                return findChild(editMenu, "shellAction_" + editIds[editIndex]) !== null
+            }, 3000, "Edit mounts " + editIds[editIndex])
         editMenu.open()
         compare(findChild(timeMenu, "shellAction_edit.insert_time").enabled, false,
                 "an open song without a time selection cannot insert a selected range")

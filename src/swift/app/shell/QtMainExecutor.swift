@@ -10,7 +10,9 @@ private func isQtMainThread() -> Bool
 private final class QtMainExecutor: MainExecutor, @unchecked Sendable {
     private let lock = NSLock()
     private var jobs: [UnownedJob] = []
+    private var spareJobs: [UnownedJob] = []
     private var scheduled = false
+    private var activeDrain = false
 
     var isMainExecutor: Bool { true }
 
@@ -40,19 +42,36 @@ private final class QtMainExecutor: MainExecutor, @unchecked Sendable {
 
     func drain() {
         checkIsolated()
-        while true {
-            lock.lock()
-            if jobs.isEmpty {
-                scheduled = false
-                lock.unlock()
-                return
-            }
-            let pending = jobs
-            jobs.removeAll(keepingCapacity: true)
+        var pending: [UnownedJob] = []
+        lock.lock()
+        scheduled = false
+        if activeDrain || jobs.isEmpty {
             lock.unlock()
-            for job in pending {
-                job.runSynchronously(on: asUnownedSerialExecutor())
-            }
+            return
+        }
+        swap(&pending, &spareJobs)
+        swap(&pending, &jobs)
+        activeDrain = true
+        lock.unlock()
+
+        for index in pending.indices {
+            pending[index].runSynchronously(on: asUnownedSerialExecutor())
+        }
+
+        pending.removeAll(keepingCapacity: true)
+        lock.lock()
+        if pending.capacity > spareJobs.capacity {
+            swap(&pending, &spareJobs)
+        }
+        activeDrain = false
+        let shouldSchedule = !jobs.isEmpty && !scheduled
+        if shouldSchedule { scheduled = true }
+        lock.unlock()
+
+        if shouldSchedule && !scheduleQtMainExecutorDrain() {
+            lock.lock()
+            scheduled = false
+            lock.unlock()
         }
     }
 }
