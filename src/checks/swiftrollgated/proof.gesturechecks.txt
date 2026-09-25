@@ -1009,7 +1009,7 @@ Original expression:
 
 A065 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:567
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058. No QWidget layer exists in the Swift app.
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Grid replacement is MATCHED by S058; the mounted scene close and page retirement execute in src/checks/rollqml/tst_SwiftRoll.qml cleanupTestCase, but that does not observe a new native QQuickView replacing the old one.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1032,7 +1032,7 @@ Original expression:
 
 A067 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:580
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
+Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: Native QQuickView QPointer nullness after DeferredDelete remains unobserved: the mounted cleanupTestCase in src/checks/rollqml/tst_SwiftRoll.qml exercises pageReleased and acknowledged scene removal, while S058 covers in-place grid replacement, not native-view destruction.
 Source context since previous assertion:
     }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -1041,12 +1041,8 @@ Original expression:
     QVERIFY(finalView.isNull());
 
 A068 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/gesturechecks.cpp) no longer builds or runs. Previous native note: QPointer deletion-after-teardown (DeferredDelete) has no QML counterpart; release is owned by SongTabs.pageReleased and ApplicationSession.acknowledgeGridDetached. Replacement lifetime is MATCHED by S058.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QVERIFY(finalGrid.isNull());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QPointer finalGrid nullness after native DeferredDelete pins the deleted QQuickView proxy; mounted pageReleased retires its Swift workspace after page destruction (src/checks/rollqml/tst_SwiftRoll.qml cleanupTestCase), while S058 proves in-place grid replacement.
 
 A069 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:587
 Disposition: MATCHED
@@ -1086,8 +1082,8 @@ Original expression:
     QVERIFY(item != nullptr);
 
 A073 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:598
-Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S059 executes the command it guards. No QWidget layer exists in the Swift app.
+Disposition: PARTIAL
+Mapping/reason: S059 checks Nudge Right availability after real selection, but does not assert that its mounted Edit-menu item exists.
 Source context since previous assertion:
     const QPoint center = item->mapToScene(item->boundingRect().center()).toPoint();
     QTest::mouseClick(fixture.view(), Qt::LeftButton, Qt::NoModifier, center);
@@ -1096,8 +1092,8 @@ Original expression:
     QVERIFY(nudge != nullptr);
 
 A074 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:599
-Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S059 executes the command it guards. No QWidget layer exists in the Swift app.
+Disposition: PARTIAL
+Mapping/reason: S059 checks Nudge Right command availability after selection, but no cited predicate compares its mounted menu enabled state.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1154,8 +1150,8 @@ Original expression:
     QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 A080 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:618
-Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S060 executes the command it guards. No QWidget layer exists in the Swift app.
+Disposition: PARTIAL
+Mapping/reason: S060 proves Delete is blocked during a pointer gesture, but not that the mounted Delete menu item exists and is enabled beforehand.
 Source context since previous assertion:
     QAction *const deleteNotes = fixture.action(QStringLiteral("Delete Notes"));
 Original expression:
@@ -1274,7 +1270,7 @@ Original expression:
 
 A093 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:653
 Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled (same gate as QAction::triggered); S061 executes the command it guards. No QWidget layer exists in the Swift app.
+Mapping/reason: S062 finds the mounted Play/Pause menu item and compares its enabled state with the available command authority; S061 executes the same window shortcut from the focused grid.
 Source context since previous assertion:
     QAction *const playPause = fixture.action(QStringLiteral("Play/Pause"));
 Original expression:
@@ -1666,14 +1662,17 @@ S058 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: message "mus_route101"
     grid.setTrack(1) publishes trackIndex 1 with all notes/faces on track 1; session.openSong("mus_route101") replaces the grid in place (same window, tabCount 1, pendingCloseId -1, new grid object) and resets trackIndex 0 with published notes
 
-S059 | test_focusedRouting keys | src/checks/editorqml/tst_ShellGridInput.qml
-Anchor: function
+S059 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Nudge Right is enabled for the selection"
     left click selects; actionEnabled roll.nudge_right; Right nudges tick by one snap; B toggles pencilMode true and auto-repeat B is consumed without retoggling
 
-S060 | test_focusedRouting mid-gesture | src/checks/editorqml/tst_ShellGridInput.qml
-Anchor: function
+S060 | test_focusedRouting | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Delete is blocked mid-gesture"
     held left press: Delete blocked (noteSummary unchanged); B toggles Pencil twice with notes unchanged; release commits nothing
 
 S061 | test_bareSpace | src/checks/editorqml/tst_ShellGridInput.qml
-Anchor: function
+Anchor: message "Play/Pause is enabled with a song open"
     actionEnabled transport.play_pause; bare Space with grid focus starts transport (playhead.playing) with noteSummary unchanged; second Space stops it
+
+S062 | test_transportButtonMenuCommandParity | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "Play/Pause menu and shortcut share enabled authority"

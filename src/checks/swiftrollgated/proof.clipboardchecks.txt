@@ -386,8 +386,8 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A011 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:286
-Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
+Disposition: PARTIAL
+Mapping/reason: S065 proves Copy availability after selection, but no cited predicate asserts the mounted Copy/Paste/Undo/Redo menu items all exist.
 Source context since previous assertion:
 
     QAction *const copy = actionNamed(window, QStringLiteral("Copy Notes"));
@@ -399,7 +399,7 @@ Original expression:
 
 A012 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:287
 Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
+Mapping/reason: S063 observes the command authority disable Undo on the clean loaded song; ShellWindow binds the mounted Edit row to that authority.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -407,7 +407,7 @@ Original expression:
 
 A013 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:288
 Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
+Mapping/reason: S064 observes the command authority disable Redo on the clean loaded song; ShellWindow binds the mounted Edit row to that authority.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -415,7 +415,7 @@ Original expression:
 
 A014 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:289
 Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
+Mapping/reason: S065 checks Copy availability after real pointer selection; the mounted Edit row binds to this authority and dispatches through activate.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -533,7 +533,7 @@ Original expression:
 
 A026 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:331
 Disposition: MATCHED
-Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S056 executes the command it guards. No QWidget layer exists in the Swift app.
+Mapping/reason: S066 checks Copy availability returns after the real pointer release; the mounted Edit row binds to this same gate.
 Source context since previous assertion:
 
     QTest::mouseRelease(surface.view, Qt::LeftButton, Qt::NoModifier, pressPoint);
@@ -1628,3 +1628,15 @@ Anchor: function
 S062 | pastedAt | src/checks/editorqml/tst_ShellClipboard.qml
 Anchor: function
     staged span-96 single-note clip tiles at tileStart with cursor advancing 96 per paste; tiled Undos remove second-then-first tile restoring baseline notes and dirty state; clip remains staged
+
+S063 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Undo starts disabled"
+
+S064 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Redo starts disabled"
+
+S065 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Copy is enabled"
+
+S066 | test_roundTripReplacement | src/checks/editorqml/tst_ShellClipboard.qml
+Anchor: message "Copy returns after release"

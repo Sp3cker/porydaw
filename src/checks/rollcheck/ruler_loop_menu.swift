@@ -485,11 +485,26 @@ private func checkRulerChip(
                    chipTick: Double(chipOff))
     report.expect(session.editCursor == chipOff && menu.isOpen && menu.menuKind == 1,
                   cppID: id,
-                  message: "A039/A059: a chip press commits the chip's exact event tick")
+                  message: "A059: an off-grid chip press commits the chip's exact event tick")
     menu.close()
     report.expect(session.document.history.undoDocument()
                   && coreTimeBytes(session.document) == preSigBytes, cppID: id,
                   message: "one undo restores the bytes before the chip signature")
+
+    session.document.setTimeSignature(tick: endTick, numerator: 5, denominatorPower: 2)
+    session.editCursor = fixture.anchor
+    menu.openRuler(contentX: session.camera.contentX(tick: Double(endTick)),
+                   chipTick: Double(endTick))
+    report.expect(session.editCursor == endTick && menu.isOpen && menu.menuKind == 1
+                  && (0..<menu.rows.count).contains(where: {
+                      menu.rows[$0].actionId == 10 && menu.rows[$0].enabled
+                  }),
+                  cppID: id,
+                  message: "A039: a snap-aligned chip press commits the chip tick and enables Remove Time Signature")
+    menu.close()
+    report.expect(session.document.history.undoDocument()
+                  && coreTimeBytes(session.document) == preSigBytes, cppID: id,
+                  message: "one undo restores the bytes before the snap-aligned chip signature")
 }
 
 @MainActor

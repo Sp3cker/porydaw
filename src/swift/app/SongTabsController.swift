@@ -298,8 +298,8 @@ public final class SongTabsController {
         select(tabId: tabId)
     }
 
-    /// Shows or hides the selected tab's event list, mirroring the legacy
-    /// View-menu check. Ignored without a selected tab; the mounted page
+    /// Shows or hides the selected tab's event list.
+    /// Ignored without a selected tab; the mounted page
     /// follows through its session binding.
     public func setSelectedTabEventsVisible(visible: Bool) {
         guard let page = selectedPage else { return }

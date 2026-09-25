@@ -197,6 +197,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         songTabs.attach(app: self)
         transportBar.attach(session: self)
+        transportBar.onAvailabilityChanged = { [weak self] in
+            self?.transportAvailabilityChanged()
+        }
         songDock.attach(session: self)
     }
 
@@ -495,6 +498,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     @QtSignal public func gridCommandAvailabilityChanged()
+    @QtSignal public func transportAvailabilityChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
     @QtSignal public func allTabsClosed()
@@ -1112,44 +1116,53 @@ public final class ApplicationSession: QmlInstantiableStatus {
         guard let audio, audio.songLoaded else { return }
         if audio.transport == AudioTransportState.stopped.rawValue,
            let session = workspace?.session {
-            let target = session.timeline.sample(for: session.editCursor)
-            audio.seek(sample: target)
-            audio.play()
-            playhead.observe(sample: target, transport: audio.transport)
+            publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
+            transportBar.refresh()
         } else {
             audio.play()
-            playhead.refreshImmediate()
+            refreshTransportPresentation()
         }
-        transportBar.refresh()
     }
 
     public func playPause() {
         guard let audio, audio.songLoaded else { return }
         if audio.transport == SharedPlayheadPolicy.playingTransport {
             audio.pause()
-            playhead.refreshImmediate()
+            refreshTransportPresentation()
         } else if let session = workspace?.session {
-            let target = session.timeline.sample(for: session.editCursor)
-            audio.seek(sample: target)
-            audio.play()
-            playhead.observe(sample: target, transport: audio.transport)
+            publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
+            transportBar.refresh()
+        } else {
+            transportBar.refresh()
         }
-        transportBar.refresh()
     }
 
     public func stop() {
         audio?.stop()
         // Stop's rewind comes from the audio service; this presents whatever
         // sample and transport the service reports now. No tick is synthesized.
+        refreshTransportPresentation()
+    }
+
+    private func publishSeek(tick: Tick, timeline: PlaybackTimeline, startPlayback: Bool) {
+        guard let audio else { return }
+        let target = timeline.sample(for: tick)
+        audio.seek(sample: target)
+        if startPlayback {
+            audio.play()
+        }
+        playhead.observe(sample: target, transport: audio.transport)
+    }
+
+    private func refreshTransportPresentation() {
         playhead.refreshImmediate()
         transportBar.refresh()
     }
+
     private func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
         guard workspace === origin, let audio, audio.songLoaded,
               audio.transport != AudioTransportState.stopped.rawValue else { return }
-        let target = origin.session.timeline.sample(for: tick)
-        audio.seek(sample: target)
-        playhead.observe(sample: target, transport: audio.transport)
+        publishSeek(tick: tick, timeline: origin.session.timeline, startPlayback: false)
     }
 
     private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {

@@ -30,8 +30,8 @@ struct TrackHeaderSnapshot: Equatable {
     var titleRect = HeaderRect()
     var subtitleRect = HeaderRect()
     var selectedTitleOffset = HeaderPoint()
-    var titleFont = GridFontSpec(family: "", pixelSize: 0, weight: 400, letterSpacing: 0)
-    var subtitleFont = GridFontSpec(family: "", pixelSize: 0, weight: 400, letterSpacing: 0)
+    var titleFont: GridFontSpec
+    var subtitleFont: GridFontSpec
     var baseColor = "#00000000"
     var overlayColor = "#00000000"
     var titleColor = "#00000000"
@@ -229,11 +229,11 @@ extension TrackHeadersPresenter {
         let name = session.document.trackName(track)
         let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
-        var row = TrackHeaderSnapshot(track: track,
-            title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)")
+        var row = TrackHeaderSnapshot(
+            track: track, title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)",
+            titleFont: TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx, bold: primary),
+            subtitleFont: TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx))
         row.titleBold = primary
-        row.titleFont = TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx, bold: primary)
-        row.subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx)
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground

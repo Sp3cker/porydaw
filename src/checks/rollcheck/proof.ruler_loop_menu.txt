@@ -20,7 +20,12 @@ Result: PASS — shell-transport 3.99s, run 4.00 (controller-recorded final run)
 affected shell lane passed its own final build. It executed
 test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped, the source of S020-S024; the added
 test_backgroundRulerSeekCannotMoveSelectedSong stays unmapped because no original clause pins it.
-Counts: MATCHED 15, PARTIAL 17, GAP 81, NATIVE 0.
+Command: deno task verify:shell --filter shell-grid-menu --verbose
+Result: PASS — 11/11 ShellGridMenu rows (Totals line: 9 test_ functions plus initTestCase and
+cleanupTestCase); controller run of `deno task verify:shell --filter shell-grid-menu` —
+shell-grid-menu PASS. It executed the mounted cases that source S026-S065. The swiftcore projectSession run also executes
+the split checkRulerChip predicates S014 (off-grid chip) and S025 (snap-aligned chip).
+Counts: MATCHED 40, PARTIAL 13, GAP 60, NATIVE 0.
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
 Disposition: GAP
@@ -177,7 +182,7 @@ QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
 
 A004 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:134
 Disposition: MATCHED
-Mapping: S001
+Mapping: S026
 
 A005 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:145
 Disposition: GAP
@@ -229,7 +234,7 @@ QVERIFY2(startMenu.session && !startMenu.session->isOpen(),
 
 A009 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:153
 Disposition: MATCHED
-Mapping: S002
+Mapping: S027
 
 A010 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:155
 Disposition: GAP
@@ -241,14 +246,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo + 1)
 
 A011 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:156
-Disposition: PARTIAL
-Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels asserts ruler focus restored after a rendered Set Loop Start click; execution remains for orchestrator verification.
-Source context since previous assertion:
-;
-
-Original expression:
-QTRY_VERIFY2(input->hasActiveFocus(),
-                 "the ordinary loop-start command did not refocus the ruler band")
+Disposition: MATCHED
+Mapping: S028
 
 A012 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:160
 Disposition: GAP
@@ -283,7 +282,7 @@ QVERIFY2(quick_popup::clickMenuRow(*endMenu.session, setEndRow),
 
 A015 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:166
 Disposition: MATCHED
-Mapping: S003
+Mapping: S029
 
 A016 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:168
 Disposition: GAP
@@ -295,8 +294,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo + 2)
 
 A017 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:170
-Disposition: MATCHED
-Mapping: S003
+Disposition: PARTIAL
+Mapping/reason: S029/S030 (tst_ShellGridMenu.qml test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel, mounted) render both loop markers at their clicked ticks after the rendered Set Loop Start/End clicks and assert the document revision advanced; S003 remains model-level byte evidence. Unproved: the mounted song-byte comparison (QML observes rendered markers and the revision, not bytes).
 
 A018 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:175
 Disposition: GAP
@@ -312,40 +311,20 @@ Original expression:
 QVERIFY2(removeMenu.session, qUtf8Printable(removeMenu.diagnostic))
 
 A019 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:177
-Disposition: PARTIAL
-Mapping/reason: src/checks/rollcheck/ruler_loop_menu.swift checkRenderedRulerMenuCommands asserts enabled Remove Loop when markers exist; execution and the exact native fixture remain unverified.
-Source context since previous assertion:
-;
-    const int removeRow = rulerRow(*removeMenu.model, songview::RulerMenuAction::RemoveLoop);
-
-Original expression:
-QVERIFY2(removeRow >= 0 && removeMenu.model->itemAt(removeRow)->enabled,
-             "Remove loop markers stayed disabled while both markers existed")
+Disposition: MATCHED
+Mapping: S031
 
 A020 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:179
-Disposition: PARTIAL
-Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerLoopAndSelectedTimeRowsExecuteFromRenderedPanels clicks the enabled Remove Loop row and observes a document revision change; execution remains for orchestrator verification.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*removeMenu.session, removeRow),
-             "the Remove loop markers row did not receive a real click")
+Disposition: MATCHED
+Mapping: S032
 
 A021 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:182
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
-             "the Remove loop activation left the ruler menu open")
+Disposition: MATCHED
+Mapping: S032
 
 A022 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:184
 Disposition: MATCHED
-Mapping: S004
+Mapping: S033
 
 A023 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:187
 Disposition: GAP
@@ -359,15 +338,15 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
 
 A024 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:190
 Disposition: MATCHED
-Mapping: S005
+Mapping: S034
 
 A025 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:194
 Disposition: MATCHED
-Mapping: S006
+Mapping: S035
 
 A026 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:197
-Disposition: MATCHED
-Mapping: S006
+Disposition: PARTIAL
+Mapping/reason: S035 (tst_ShellGridMenu.qml test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel, mounted) asserts the second undo after the rendered Remove Loop click renders both loop markers at their set ticks; S006 remains model-level byte evidence. Unproved: the mounted byte equality with the post-set song.
 
 A027 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:210
 Disposition: GAP
@@ -414,7 +393,7 @@ QVERIFY2(quick_popup::clickMenuRow(*selectionMenu.session, loopSelectionRow),
 
 A030 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:218
 Disposition: MATCHED
-Mapping: S007
+Mapping: S036
 
 A031 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:221
 Disposition: GAP
@@ -428,11 +407,11 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
 
 A032 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:224
 Disposition: MATCHED
-Mapping: S008
+Mapping: S037
 
 A033 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:228
-Disposition: MATCHED
-Mapping: S009
+Disposition: PARTIAL
+Mapping/reason: S038 (tst_ShellGridMenu.qml test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel, mounted) asserts the second undo after the rendered Loop from Selection click renders the manual loop markers again; S009 remains model-level evidence. Unproved: the mounted byte equality with the post-set song.
 
 A034 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:238
 Disposition: GAP
@@ -476,7 +455,7 @@ QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
 
 A037 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:250
 Disposition: MATCHED
-Mapping: S010
+Mapping: S044
 
 A038 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:263
 Disposition: GAP
@@ -498,94 +477,36 @@ Original expression:
 QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A039 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:264
-Disposition: PARTIAL
-Mapping/reason: S014 (checkRulerSweepScopeTapAndChip, executed) opens the ruler at a chip tick and asserts the cursor commits that exact chip tick with the cursor menu open. Unproved: the snap-aligned chip fixture of this row (S014 exercises the off-grid chip of A059), the production chip hit-test plus QML press delivery, and the rendered menu row set.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(view.editCursorTick() == chipTick,
-             "the chip press did not commit its exact tick as the edit cursor")
+Disposition: MATCHED
+Mapping: S045, S025
 
 A040 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:267
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    const int removeLoopRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveLoop);
-
-Original expression:
-QVERIFY2(removeLoopRow >= 0 && !opened.model->itemAt(removeLoopRow)->enabled,
-             "Remove loop markers was enabled while both markers were absent")
+Disposition: MATCHED
+Mapping: S046
 
 A041 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:269
-Disposition: PARTIAL
-Mapping/reason: src/checks/rollcheck/ruler_loop_menu.swift checkRenderedRulerMenuCommands asserts positional rows absent when a swept range is active; the complementary no-selection row set is structurally implemented, pending orchestrator execution.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
-                 rulerRow(*opened.model, songview::RulerMenuAction::Duplicate) < 0 &&
-                 rulerRow(*opened.model, songview::RulerMenuAction::RemoveContents) < 0 &&
-                 rulerRow(*opened.model, songview::RulerMenuAction::ClearSelection) < 0,
-             "the ruler menu exposed selection-scoped rows without an active selection")
+Disposition: MATCHED
+Mapping: S047
 
 A042 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:275
-Disposition: PARTIAL
-Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars checks the rendered standalone Insert Time row is enabled and opens the original prompt; orchestrator execution and original native popup parity remain open.
-Source context since previous assertion:
-;
-    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
-
-Original expression:
-QVERIFY2(insertRow >= 0 && opened.model->itemAt(insertRow)->enabled,
-             "the cursor menu omitted an enabled Insert Time row")
+Disposition: MATCHED
+Mapping: S048
 
 A043 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:278
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    const int removeSigRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveTimeSig);
-
-Original expression:
-QVERIFY2(removeSigRow >= 0 && opened.model->itemAt(removeSigRow)->enabled,
-             "Remove time signature was disabled at an explicit signature cursor")
+Disposition: MATCHED
+Mapping: S049
 
 A044 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:280
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::EditTimeSig) >= 0,
-             "the ruler menu has no time-signature edit row")
+Disposition: MATCHED
+Mapping: S050
 
 A045 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:285
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-    // A real click on the disabled Remove loop row neither dispatches nor
-    // dismisses: the menu stays open for the explicit-chip removal next.
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeLoopRow),
-             "the disabled Remove loop row did not receive a real click")
+Disposition: MATCHED
+Mapping: S051
 
 A046 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:288
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(opened.session && opened.session->isOpen(),
-             "a click on the disabled Remove loop row dismissed the menu")
+Disposition: MATCHED
+Mapping: S051
 
 A047 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:290
 Disposition: GAP
@@ -597,31 +518,16 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo)
 
 A048 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:293
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-    // Removing the explicit chip is one command.
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeSigRow),
-             "the Remove time signature row did not receive a real click")
+Disposition: MATCHED
+Mapping: S052
 
 A049 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:296
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(opened.session && !opened.session->isOpen(),
-             "the Remove time signature activation left the ruler menu open")
+Disposition: MATCHED
+Mapping: S052
 
 A050 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:298
 Disposition: MATCHED
-Mapping: S011
+Mapping: S053
 
 A051 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:301
 Disposition: GAP
@@ -648,8 +554,8 @@ Original expression:
 QVERIFY2(implicitMenu.session, qUtf8Printable(implicitMenu.diagnostic))
 
 A053 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:311
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S054 (tst_ShellGridMenu.qml test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel, mounted) presses the ruler tick row two snap cells past the chip tick and asserts the rendered Remove Time Signature row is disabled at a cursor without an explicit signature. Unproved: the chip-present fixture; Swift's timeSigChipTick ignores the press row, so the mounted F3 press runs after the F1 chip is removed and the production marker-row chip guard is not reproduced.
 Source context since previous assertion:
 ;
     const int implicitRemoveRow =
@@ -660,29 +566,16 @@ QVERIFY2(implicitRemoveRow >= 0 && !implicitMenu.model->itemAt(implicitRemoveRow
              "Remove time signature was enabled without an explicit signature at the cursor")
 
 A054 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:313
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*implicitMenu.session, implicitRemoveRow),
-             "the disabled Remove time signature row did not receive a real click")
+Disposition: MATCHED
+Mapping: S055
 
 A055 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:316
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(implicitMenu.session && implicitMenu.session->isOpen(),
-             "a click on the disabled Remove time signature row dismissed the menu")
+Disposition: MATCHED
+Mapping: S055
 
 A056 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:318
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
+Disposition: PARTIAL
+Mapping/reason: S056 (tst_ShellGridMenu.qml test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel, mounted) asserts the document revision is unchanged after the disabled Remove Time Signature click. Unproved: the byte comparison against the pre-fixture song and the undo-index conjunct (no history-depth predicate).
 Source context since previous assertion:
 ;
 
@@ -691,16 +584,8 @@ QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo,
              "a disabled ruler-menu row mutated the document")
 
 A057 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:322
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QTest::keyClick(implicitMenu.session->window(), Qt::Key_Escape);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(implicitMenu.session && !implicitMenu.session->isOpen(),
-             "Escape did not dismiss the ruler menu")
+Disposition: MATCHED
+Mapping: S057
 
 A058 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:329
 Disposition: GAP
@@ -717,37 +602,16 @@ Original expression:
 QVERIFY2(exactChip.session, qUtf8Printable(exactChip.diagnostic))
 
 A059 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:330
-Disposition: PARTIAL
-Mapping/reason: S014 (checkRulerSweepScopeTapAndChip, executed) opens the ruler at the signature chip one tick past the snap lattice and asserts the cursor commits that exact event tick. Unproved: the production chip hit-test and QML press delivery, and the rendered menu panel rows (Remove time signature enablement, Escape dismissal).
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(view.editCursorTick() == chipTick + 1,
-             "the chip press did not commit the chip's exact event tick")
+Disposition: MATCHED
+Mapping: S058, S014
 
 A060 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:333
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    const int exactRemoveRow = rulerRow(*exactChip.model, songview::RulerMenuAction::RemoveTimeSig);
-
-Original expression:
-QVERIFY2(exactRemoveRow >= 0 && exactChip.model->itemAt(exactRemoveRow)->enabled,
-             "Remove time signature was disabled at the exact chip tick")
+Disposition: MATCHED
+Mapping: S059
 
 A061 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:337
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QTest::keyClick(exactChip.session->window(), Qt::Key_Escape);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(exactChip.session && !exactChip.session->isOpen(),
-             "Escape did not dismiss the exact-chip ruler menu")
+Disposition: MATCHED
+Mapping: S060
 
 A062 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:348
 Disposition: GAP
@@ -932,15 +796,8 @@ QVERIFY2(view.editCursorTick() == tick,
              "the outside ruler press did not commit the clicked edit cursor")
 
 A076 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:411
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QTest::keyClick(opened.session->window(), Qt::Key_Escape);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(opened.session && !opened.session->isOpen(), "Escape did not dismiss the ruler menu")
+Disposition: MATCHED
+Mapping: S039
 
 A077 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:412
 Disposition: GAP
@@ -954,24 +811,12 @@ QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
              "dismissing the ruler menu mutated the document")
 
 A078 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:415
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QTRY_VERIFY2(input->hasActiveFocus(),
-                 "dismissing the ruler menu did not return focus to the ruler band")
+Disposition: MATCHED
+Mapping: S040
 
 A079 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:417
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(view.editCursorTick() == tick,
-             "dismissing the ruler menu restored the old edit cursor")
+Disposition: MATCHED
+Mapping: S041
 
 A080 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:423
 Disposition: GAP
@@ -1110,27 +955,12 @@ Original expression:
 QVERIFY2(found, "no ruler point outside the menu frame stayed inside the live input")
 
 A090 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:478
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-    QTest::mouseClick(outside.session->window(), Qt::LeftButton, Qt::NoModifier,
-                      input->mapToScene(outsideLocal).toPoint());
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(outside.session && !outside.session->isOpen(),
-             "an outside press did not dismiss the ruler menu")
+Disposition: MATCHED
+Mapping: S042
 
 A091 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:480
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
-             "the outside dismissal retargeted the ruler menu")
+Disposition: MATCHED
+Mapping: S043
 
 A092 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:482
 Disposition: GAP
@@ -1207,27 +1037,8 @@ QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &sele
              "the ruler insert seed did not reach its expected state")
 
 A098 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:522
-Disposition: PARTIAL
-Mapping/reason: S015 (checkRulerSweepScopeTapAndChip, executed) opens the ruler menu one tick inside the interval and asserts the menu stays open on the selection. Unproved: the rendered menu session/panel and the native/QML press delivery at that raw coordinate.
-Source context since previous assertion:
-;
-
-    const quick_popup::PromptGuard guard(view);
-
-    // A selection-scoped ruler menu opened at a raw coordinate inside the
-    // interval that would snap to its end: the selection path finishes
-    // before snapping is reachable, so the selection and edit cursor stay
-    // untouched and the rendered Insert Time row inserts over the
-    // selection, not the click position.
-    view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
-    const Tick cursorBefore = view.editCursorTick();
-    const QByteArray before = doc.smf().write();
-    const int undoIndex = doc.undoStack()->index();
-    const SharedRulerMenu opened = openRulerMenu(view, *input, insertEnd - 1);
-
-Original expression:
-QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+Disposition: MATCHED
+Mapping: S061
 
 A099 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:523
 Disposition: PARTIAL
@@ -1251,39 +1062,20 @@ Original expression:
 QVERIFY2(insertRow >= 0, "the ruler menu has no Insert Time row")
 
 A101 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:528
-Disposition: GAP
-Mapping/reason: GAP: feature not yet ported: ruler loop menu (no ruler menu UI exists in Swift; only the document setLoop API, which is model-tested). Menu activation, typed-row presence/enablement, rendered clicks, focus restoration, menu-driven history depth, and dismissal/cursor/selection observations below remain open.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(opened.model->itemAt(insertRow)->enabled,
-             "the ruler menu rendered an enabled Insert Time row as disabled")
+Disposition: MATCHED
+Mapping: S062
 
 A102 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:530
-Disposition: PARTIAL
-Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars clicks the rendered row and observes the actual InsertTimePrompt surface; pending orchestrator execution and native popup parity.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
-             "the Insert Time row did not receive a real click")
+Disposition: MATCHED
+Mapping: S063
 
 A103 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:533
-Disposition: PARTIAL
-Mapping/reason: src/checks/editorqml/tst_ShellGridMenu.qml test_rulerInsertTimeOpensExistingPromptAndCommitsBars checks that the row closes the rendered menu while displaying InsertTimePrompt; pending orchestrator execution and native popup parity.
-Source context since previous assertion:
-;
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(opened.session && !opened.session->isOpen(),
-             "the Insert Time activation left the ruler menu open")
+Disposition: MATCHED
+Mapping: S063
 
 A104 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:535
 Disposition: PARTIAL
-Mapping/reason: S012 | src/checks/rollcheck/ruler_loop_menu.swift shifts the seed note to the interval end with changed song bytes and a new history identity. Unproved: the exact undo-index +1 conjunct (no executing history-depth predicate); the menu-row click delivery itself is unported.
+Mapping/reason: S064 (tst_ShellGridMenu.qml test_rulerSelectionInsertTimeRowsShiftNotesAndUndo, mounted) clicks the rendered in-selection Insert Time row and asserts the rendered notes shift with a new document revision; S012 remains the model-level exact-shift evidence. Unproved: the exact undo-index +1 conjunct (no executing history-depth predicate) and the mounted exact landing tick of the shifted note.
 Source context since previous assertion:
 ;
 
@@ -1327,11 +1119,11 @@ QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
 
 A108 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:547
 Disposition: MATCHED
-Mapping: S012
+Mapping: S064
 
 A109 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:550
-Disposition: MATCHED
-Mapping: S013
+Disposition: PARTIAL
+Mapping/reason: S065 (tst_ShellGridMenu.qml test_rulerSelectionInsertTimeRowsShiftNotesAndUndo, mounted) asserts one undo after the rendered in-selection Insert Time click restores the rendered note layout; S013 remains model-level byte evidence. Unproved: the mounted byte equality (QML observes rendered notes, not song bytes).
 
 A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
 Disposition: PARTIAL
@@ -1386,15 +1178,19 @@ only model observations, not rendered ruler menu activation. The split helpers e
 presenter policy directly: checkRulerSweepScope (S072/S073, indexed in proof.keyboard.txt for the
 timelineRulerScope sites) asserts the exact swept range, checkRulerTapAndCancel the outside tap and
 cancellation, checkRulerPressPolicy the inside press and the exact-end press (S015-S017), and
-checkRulerChip the chip press (S014); none routes through the QML input or renders a menu panel.
+checkRulerChip the off-grid (S014) and snap-aligned (S025) chip presses; none routes through the
+QML input or renders a menu panel.
 S018-S019 cover the seek emission callback and
 its playhead projection only: the live audio seek is wired in ApplicationSession.
 S020-S023 are predicates of the mounted shell-transport test
 (src/checks/editorqml/tst_ShellTransport.qml), which right-clicks the mounted ruler and
 observes the committed cursor, the paused playhead target, the stopped guard and the paused
 clock beat; S024 observes that same mounted ruler menu mounting before its Escape dismissal.
-None of them reproduces the exact selection-end boundary press or renders the native widget
-menu.
+S026-S065 are predicates of the mounted shell-grid-menu test
+(src/checks/editorqml/tst_ShellGridMenu.qml): they right-click the mounted ruler, read the rendered
+rulerMenuRow_ items, click them, and observe the menu, rendered loop markers and signature labels,
+cursor, focus and document revision. None of them reproduces the exact selection-end boundary
+press or renders the native widget menu.
 
 S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A004: both markers begin absent"
@@ -1436,7 +1232,7 @@ S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A109: one undo restores the song before ruler insertion"
 
 S014 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
-Anchor: message "A039/A059: a chip press commits the chip's exact event tick"
+Anchor: message "A059: an off-grid chip press commits the chip's exact event tick"
 
 S015 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A098/A099: a press inside the interval keeps the selection and cursor"
@@ -1468,6 +1264,129 @@ Anchor: message "paused audio seek updates the mounted clock and lands in the ta
 S024 | test_rulerSeekPresentsTargetWhilePausedAndGuardsWhileStopped | src/checks/editorqml/tst_ShellTransport.qml
 Anchor: message "the stopped ruler menu mounts before keyboard dismissal"
 
+S025 | checkRulerChip | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A039: a snap-aligned chip press commits the chip tick and enables Remove Time Signature"
+
+S026 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Remove Loop renders disabled once both loop markers are absent"
+
+S027 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Set Loop Start renders the loop start marker at the pressed tick"
+
+S028 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Set Loop Start activation returns focus to the ruler"
+
+S029 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the isolated Set Loop End click renders the end marker and keeps the start"
+
+S030 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "setting both loop markers advances the document revision"
+
+S031 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Remove Loop renders enabled while both loop markers exist"
+
+S032 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Remove Loop activation closes the ruler menu"
+
+S033 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Remove Loop clears both rendered loop markers"
+
+S034 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the first undo after Remove Loop restores only the loop end marker"
+
+S035 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the second undo after Remove Loop restores both loop markers"
+
+S036 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Loop from Selection renders the loop markers at the selection bounds"
+
+S037 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the first undo after Loop from Selection restores only the old loop end"
+
+S038 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the second undo after Loop from Selection restores the manual loop markers"
+
+S039 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape dismisses the ruler menu"
+
+S040 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape returns focus to the ruler"
+
+S041 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape keeps the committed ruler cursor"
+
+S042 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "an outside press dismisses the ruler menu"
+
+S043 | test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the outside dismissal unmounts the ruler menu panel"
+
+S044 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F1: the 5/4 chip renders at the snap-aligned ruler tick"
+
+S045 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F1: the snap-aligned chip press commits the chip's exact tick"
+
+S046 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Remove Loop renders disabled at the chip while both loop markers are absent"
+
+S047 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the chip cursor menu exposes no selection-scoped rows without a time selection"
+
+S048 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the chip cursor menu offers an enabled Insert Time row"
+
+S049 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F1: Remove Time Signature renders enabled at the snap-aligned chip"
+
+S050 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the chip cursor menu offers the Edit Time Signature row"
+
+S051 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a click on the disabled Remove Loop row keeps the chip menu open"
+
+S052 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the Remove Time Signature activation closes the ruler menu"
+
+S053 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Remove Time Signature deletes the explicit chip at its exact tick"
+
+S054 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F3: Remove Time Signature renders disabled at a tick-row press without an explicit signature"
+
+S055 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a click on the disabled Remove Time Signature row keeps the menu open"
+
+S056 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the disabled Remove Time Signature click leaves the document unchanged"
+
+S057 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape dismisses the F3 ruler menu"
+
+S058 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F2: the off-grid chip press commits the chip's exact event tick"
+
+S059 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "F2: Remove Time Signature renders enabled at the exact off-grid chip tick"
+
+S060 | test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape dismisses the exact-chip ruler menu"
+
+S061 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the inside ruler press opens the in-selection menu"
+
+S062 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the in-selection menu offers an enabled Insert Time row"
+
+S063 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the in-selection Insert Time activation closes the ruler menu"
+
+S064 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the in-selection Insert Time row shifts the rendered notes"
+
+S065 | test_rulerSelectionInsertTimeRowsShiftNotesAndUndo | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "one undo restores the rendered notes before the ruler insertion"
+
 Remaining original source (closing sequence and helper bodies):
 ;
     QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
@@ -1475,8 +1394,8 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The counterpart predicates for this suite are the S001-S024 indexed above: S001-S013 cover the
-document and menu-model rows, S014-S017 the presenter sweep, chip and press policy, S018-S019 the
-ruler seek emission, and S020-S024 the mounted ruler press, transport presentation and menu-mount
-observations. None of them reproduces the exact selection-end boundary press or renders the native
-widget menu.
+The counterpart predicates for this suite are the S001-S065 indexed above: S001-S013 cover the
+document and menu-model rows, S014-S017 and S025 the presenter sweep, chip and press policy,
+S018-S019 the ruler seek emission, S020-S024 the mounted ruler press, transport presentation and
+menu-mount observations, and S026-S065 the mounted rendered-panel rows, clicks and dismissals.
+None of them reproduces the exact selection-end boundary press or renders the native widget menu.

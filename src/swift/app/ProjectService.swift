@@ -19,7 +19,7 @@ public enum ProjectServiceError: Error, Equatable, Sendable {
 
 // MARK: - Public bank vocabulary
 
-/// VgMacro ordinals, mirroring VgMacro's declaration in VoiceValues.swift.
+/// VgMacro ordinals.
 public enum BankVoiceMacro {
     public static let directSound: Int32 = 0
     public static let directSoundNoResample: Int32 = 1
@@ -36,7 +36,7 @@ public enum BankVoiceMacro {
     public static let keysplitAll: Int32 = 12
 }
 
-/// VgLineKind ordinals, mirroring VoiceValues.swift.
+/// VgLineKind ordinals.
 public enum BankSlotKind {
     public static let none: Int32 = 0
     public static let other: Int32 = 1
@@ -46,7 +46,7 @@ public enum BankSlotKind {
     public static let broken: Int32 = 5
 }
 
-/// One editable voice's parsed macro arguments, mirroring VgVoice.
+/// One editable voice's parsed macro arguments.
 public struct BankVoice: Equatable, Sendable {
     public var macro: Int32
     public var key: Int32
@@ -96,9 +96,7 @@ public struct BankToneAdsr: Equatable, Sendable {
 }
 
 /// The immutable loaded bank's tone for a slot the source model does not
-/// cover with a parsed voice (read-only cry lines, broken lines, headers) —
-/// the same fallback VoicegroupBrowser::updateRow inks from
-/// bank->voices[slot].
+/// cover with a parsed voice (read-only cry lines, broken lines, headers).
 public struct BankTone: Equatable, Sendable {
     /// Trimmed voiceNames[slot]; empty when the tone carries no name.
     public var name: String
@@ -117,7 +115,7 @@ public struct BankTone: Equatable, Sendable {
     }
 }
 
-/// One published bank slot, mirroring VoicegroupSlotView.
+/// One published bank slot.
 public struct BankSlotView: Equatable, Sendable {
     /// BankSlotKind ordinal.
     public var kind: Int32
@@ -193,8 +191,8 @@ public final class NativeBankLease: Sendable {
 
 // MARK: - Operation results
 
-/// One playable song's listing metadata, mirroring SongInfo as SongListPanel
-/// consumes it. `id` is the SongInfo identity: the numeric song ID when
+/// One playable song's listing metadata.
+/// `id` is the SongInfo identity: the numeric song ID when
 /// registered, the project snapshot index for unregistered strays — stable
 /// within one listing and the identity every song-list callback carries.
 public struct SongListing: Equatable, Sendable {

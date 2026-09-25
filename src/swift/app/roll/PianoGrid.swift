@@ -65,6 +65,7 @@ public final class PianoGrid {
     private var lastCommandAvailability: [Bool] = []
     private var lastCommandGestureActive = false
     private var keyboardAuditionKey: Int?
+    private var keyboardAuditionTrack: Int?
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
     private var didApplyInitialHome = false
@@ -80,6 +81,10 @@ public final class PianoGrid {
     /// the whole document, so it is only re-encoded when its inputs change.
     private var summaryNotes: [GridNote]?
     private var summarySelection: [NoteID]?
+    @QtIgnored public var noteSummaryRebuilds = 0
+    private var lastEndTickNotes: [GridNote]?
+    private var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
+    private var lastEndTickLength: Tick?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -830,8 +835,10 @@ public final class PianoGrid {
         let key = pitch(atY: y)
         guard key >= 0, key <= 127, key != keyboardAuditionKey else { return }
         stopAudition()
+        let track = trackIndex
         keyboardAuditionKey = key
-        onAudition?(trackIndex, key, min(127, max(1, lastVelocity)))
+        keyboardAuditionTrack = track
+        onAudition?(track, key, min(127, max(1, lastVelocity)))
         hoverKey = key
         scene.rebuildHover(sceneInput())
     }
@@ -889,9 +896,10 @@ public final class PianoGrid {
 
     @QtIgnored
     private func stopAudition() {
-        guard let key = keyboardAuditionKey else { return }
-        onAudition?(trackIndex, key, 0)
+        guard let key = keyboardAuditionKey, let track = keyboardAuditionTrack else { return }
+        onAudition?(track, key, 0)
         keyboardAuditionKey = nil
+        keyboardAuditionTrack = nil
     }
 
     @QtIgnored
@@ -1053,7 +1061,7 @@ public final class PianoGrid {
             noteNameOccupiedHeight: typography?.noteNameOccupiedHeight ?? 0,
             timeSelection: timeSelectionSource?(),
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex)
+            selectedTrack: trackIndex, geometryStable: !interactionActive)
     }
 
     @QtIgnored
@@ -1100,7 +1108,15 @@ public final class PianoGrid {
 
     @QtIgnored
     private func recomputeContentEndTick() {
-        var end = max(Int(session.timeline.lengthTicks), GridMetrics.songLengthTicks)
+        let length = session.timeline.lengthTicks
+        if notes == lastEndTickNotes, length == lastEndTickLength,
+            drawPreview?.tick == lastEndTickPreview?.tick,
+            drawPreview?.duration == lastEndTickPreview?.duration,
+            drawPreview?.pitch == lastEndTickPreview?.pitch { return }
+        lastEndTickNotes = notes
+        lastEndTickPreview = drawPreview
+        lastEndTickLength = length
+        var end = max(Int(length), GridMetrics.songLengthTicks)
         for note in notes { end = max(end, note.tick + note.duration) }
         if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
         contentEndTick = end
@@ -1276,6 +1292,7 @@ public final class PianoGrid {
         if notes != summaryNotes || selection != summarySelection {
             summaryNotes = notes
             summarySelection = selection
+            noteSummaryRebuilds += 1
             let parts = notes.map { note in
                 "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
                     + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"

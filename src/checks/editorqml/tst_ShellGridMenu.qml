@@ -423,4 +423,466 @@ TestCase {
         tryVerify(function() { return grid.appliedRevisionText !== before }, 3000)
     }
 
+    function rulerTickX(tick) {
+        var grid = surface().gridModel
+        return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+    }
+
+    function rulerCellPixels() {
+        var grid = surface().gridModel
+        return Math.max(1, grid.snapTicks) * grid.beatWidth / grid.ticksPerBeat
+    }
+
+    function rulerPanel() {
+        var menu = findChild(surface(), "quickMenuPanelRoot")
+        return menu !== null && menu.rowObjectNamePrefix === "rulerMenuRow_" && menu.visible
+            ? menu : null
+    }
+
+    function rulerMenuShown() {
+        return rulerPanel() !== null
+    }
+
+    function rulerMenuGone() {
+        return findChild(surface(), "quickMenuPanelRoot") === null && !timeSigHost.timeSigMenuOpen
+    }
+
+    function openRulerMenu(x, y) {
+        tryVerify(rulerMenuGone, 3000)
+        mouseClick(control("timelineRulerInput"), x, y, Qt.RightButton)
+        tryCompare(timeSigHost, "timeSigMenuOpen", true)
+        tryVerify(rulerMenuShown, 5000)
+        var menu = rulerPanel()
+        verify(rulerRowIndex(menu, 11) < 0)
+        return menu
+    }
+
+    function openTimeMenu(x) {
+        tryVerify(rulerMenuGone, 3000)
+        var roll = control("swiftRollInput")
+        mouseClick(roll, x, roll.height * 0.5, Qt.RightButton)
+        tryVerify(rulerMenuShown, 5000)
+        var menu = rulerPanel()
+        tryCompare(menu, "rowCount", 9)
+        verify(rulerRowIndex(menu, 11) === 0)
+        return menu
+    }
+
+    function rulerRowIndex(menu, actionId) {
+        tryVerify(function() { return menu.rowCount > 0 }, 3000)
+        for (var index = 0; index < menu.rowCount; ++index) {
+            tryVerify(function() { return menu.rowItem(index) !== null }, 3000)
+            if (menu.rowItem(index).itemData.actionId === actionId)
+                return index
+        }
+        return -1
+    }
+
+    function rulerRowEnabled(menu, actionId) {
+        var index = rulerRowIndex(menu, actionId)
+        verify(index >= 0)
+        return menu.rowItem(index).itemData.enabled
+    }
+
+    function clearRulerLoop(x, y) {
+        var menu = openRulerMenu(x, y)
+        var index = rulerRowIndex(menu, 4)
+        if (menu.rowItem(index).itemData.enabled) {
+            clickRow(menu, index)
+            tryVerify(rulerMenuGone, 3000)
+            menu = openRulerMenu(x, y)
+        }
+        return menu
+    }
+
+    function loopMarkerAt(name, tick) {
+        var marker = findChild(surface(), name)
+        return marker !== null && Math.abs(marker.x + 0.5 - rulerTickX(tick)) <= 0.75
+    }
+
+    function loopMarkerAbsent(name) {
+        return findChild(surface(), name) === null
+    }
+
+    function rulerLabelAt(text, tick) {
+        var ruler = control("timelineRulerInput")
+        var labels = ruler.parent.children
+        var x = rulerTickX(tick)
+        for (var index = 0; index < labels.length; ++index) {
+            var label = labels[index]
+            if (label.labelText === text && label.x >= x - 1
+                && label.x <= x + surface().gridModel.baseFontPx)
+                return true
+        }
+        return false
+    }
+
+    function noteLayout() {
+        return JSON.stringify(JSON.parse(surface().gridModel.noteSummary).map(function(note) {
+            return [note.track, note.tick, note.duration, note.pitch, note.velocity]
+        }).sort())
+    }
+
+    function sweepNoteRange() {
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var notes = JSON.parse(grid.noteSummary)
+        var note = null
+        for (var index = 0; index < notes.length && note === null; ++index) {
+            var left = rulerTickX(notes[index].tick)
+            var right = rulerTickX(notes[index].tick + notes[index].duration)
+            if (!notes[index].ghost && notes[index].track === grid.trackIndex
+                && left > ruler.width * 0.15 && right < ruler.width * 0.6)
+                note = notes[index]
+        }
+        verify(note !== null, "a whole primary-track note lies inside the ruler sweep band")
+        var startX = rulerTickX(note.tick) - rulerCellPixels()
+        var endX = rulerTickX(note.tick + note.duration) + rulerCellPixels()
+        var y = ruler.height * 0.75
+        mousePress(ruler, startX, y, Qt.LeftButton)
+        mouseMove(ruler, endX, y, -1, Qt.LeftButton)
+        mouseRelease(ruler, endX, y, Qt.LeftButton)
+        return { startX: startX, endX: endX, midX: (startX + endX) / 2 }
+    }
+
+    function test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel() {
+        var session = openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var y = ruler.height * 0.75
+        var startX = ruler.width * 0.3
+        var endX = ruler.width * 0.45
+
+        var menu = clearRulerLoop(startX, y)
+        var removeIndex = rulerRowIndex(menu, 4)
+        compare(menu.rowItem(removeIndex).itemData.enabled, false,
+                "Remove Loop renders disabled once both loop markers are absent")
+        var startTick = grid.editCursorTick
+        verify(Math.abs(rulerTickX(startTick) - startX) <= rulerCellPixels() / 2 + 1,
+               "the outside ruler press commits the clicked edit cursor")
+        var revision = grid.appliedRevisionText
+        clickRow(menu, removeIndex)
+        wait(50)
+        compare(rulerMenuShown() && timeSigHost.timeSigMenuOpen, true,
+                "a click on the disabled Remove Loop row keeps the ruler menu open")
+        compare(grid.appliedRevisionText, revision,
+                "a click on the disabled Remove Loop row writes nothing")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000,
+                  "Escape dismisses the ruler menu")
+        compare(grid.appliedRevisionText, revision,
+                "Escape dismisses the ruler menu without a write")
+        compare(grid.editCursorTick, startTick,
+                "Escape keeps the committed ruler cursor")
+        tryVerify(function() { return ruler.activeFocus }, 3000,
+                  "Escape returns focus to the ruler")
+
+        menu = openRulerMenu(startX, y)
+        var staleIndex = rulerRowIndex(menu, 2)
+        grid.setEditCursorTick(startTick + Math.max(1, grid.snapTicks))
+        clickRow(menu, staleIndex)
+        tryVerify(rulerMenuGone, 3000)
+        wait(50)
+        compare(grid.appliedRevisionText, revision,
+                "a cursor change between open and click retires Set Loop Start without a write")
+
+        menu = openRulerMenu(startX, y)
+        compare(grid.editCursorTick, startTick)
+        var setStartIndex = rulerRowIndex(menu, 2)
+        verify(menu.rowItem(setStartIndex).itemData.enabled)
+        clickRow(menu, setStartIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the Set Loop Start activation closes the ruler menu")
+        tryVerify(function() { return loopMarkerAt("loopStartMarker", startTick) }, 3000,
+                  "Set Loop Start renders the loop start marker at the pressed tick")
+        tryVerify(function() { return loopMarkerAbsent("loopEndMarker") }, 3000,
+                  "Set Loop Start leaves the loop end absent")
+        tryVerify(function() { return ruler.activeFocus }, 3000,
+                  "the Set Loop Start activation returns focus to the ruler")
+
+        menu = openRulerMenu(endX, y)
+        var endTick = grid.editCursorTick
+        verify(endTick > startTick)
+        var setEndIndex = rulerRowIndex(menu, 3)
+        verify(menu.rowItem(setEndIndex).itemData.enabled)
+        clickRow(menu, setEndIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the Set Loop End activation closes the ruler menu")
+        tryVerify(function() {
+            return loopMarkerAt("loopEndMarker", endTick)
+                && loopMarkerAt("loopStartMarker", startTick)
+        }, 3000, "the isolated Set Loop End click renders the end marker and keeps the start")
+        verify(grid.appliedRevisionText !== revision,
+               "setting both loop markers advances the document revision")
+
+        menu = openRulerMenu(startX, y)
+        removeIndex = rulerRowIndex(menu, 4)
+        verify(menu.rowItem(removeIndex).itemData.enabled,
+               "Remove Loop renders enabled while both loop markers exist")
+        clickRow(menu, removeIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the Remove Loop activation closes the ruler menu")
+        tryVerify(function() {
+            return loopMarkerAbsent("loopStartMarker") && loopMarkerAbsent("loopEndMarker")
+        }, 3000, "Remove Loop clears both rendered loop markers")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAt("loopEndMarker", endTick) && loopMarkerAbsent("loopStartMarker")
+        }, 5000), "the first undo after Remove Loop restores only the loop end marker")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAt("loopStartMarker", startTick) && loopMarkerAt("loopEndMarker", endTick)
+        }, 5000), "the second undo after Remove Loop restores both loop markers")
+
+        var selectionStart = startTick - Math.max(1, grid.snapTicks)
+        mousePress(ruler, rulerTickX(selectionStart), y, Qt.LeftButton)
+        mouseMove(ruler, rulerTickX(startTick), y, -1, Qt.LeftButton)
+        mouseRelease(ruler, rulerTickX(startTick), y, Qt.LeftButton)
+        menu = openRulerMenu(rulerTickX((selectionStart + startTick) / 2), y)
+        var loopSelectionIndex = rulerRowIndex(menu, 5)
+        verify(loopSelectionIndex >= 0 && menu.rowItem(loopSelectionIndex).itemData.enabled)
+        clickRow(menu, loopSelectionIndex)
+        tryVerify(rulerMenuGone, 3000)
+        tryVerify(function() {
+            return loopMarkerAt("loopStartMarker", selectionStart)
+                && loopMarkerAt("loopEndMarker", startTick)
+        }, 3000, "Loop from Selection renders the loop markers at the selection bounds")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAt("loopStartMarker", selectionStart)
+                && loopMarkerAt("loopEndMarker", endTick)
+        }, 5000), "the first undo after Loop from Selection restores only the old loop end")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAt("loopStartMarker", startTick) && loopMarkerAt("loopEndMarker", endTick)
+        }, 5000), "the second undo after Loop from Selection restores the manual loop markers")
+
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAt("loopStartMarker", startTick) && loopMarkerAbsent("loopEndMarker")
+        }, 5000), "undoing Set Loop End restores only the loop start marker")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return loopMarkerAbsent("loopStartMarker") && loopMarkerAbsent("loopEndMarker")
+        }, 5000), "undoing Set Loop Start clears the loop start marker")
+
+        menu = openRulerMenu(startX, y)
+        var cursor = grid.editCursorTick
+        revision = grid.appliedRevisionText
+        var frame = findChild(menu, "quickMenuFrame")
+        verify(frame !== null)
+        var outsideX = ruler.width * 0.9
+        var outside = ruler.mapToItem(surface(), outsideX, y)
+        var frameOrigin = frame.mapToItem(surface(), 0, 0)
+        verify(outside.x < frameOrigin.x || outside.x > frameOrigin.x + frame.width
+               || outside.y < frameOrigin.y || outside.y > frameOrigin.y + frame.height)
+        mouseClick(ruler, outsideX, y)
+        tryVerify(rulerMenuGone, 3000,
+                  "an outside press dismisses the ruler menu")
+        tryVerify(function() { return findChild(surface(), "quickMenuPanelRoot") === null }, 3000,
+                  "the outside dismissal unmounts the ruler menu panel")
+        compare(grid.editCursorTick, cursor,
+                "the outside dismissal does not retarget the ruler cursor")
+        compare(grid.appliedRevisionText, revision, "the outside dismissal writes nothing")
+    }
+
+    function test_rulerSignatureChipPressesCommitExactTicksFromRenderedPanel() {
+        var session = openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var markerY = ruler.height * 0.25
+        var tickY = ruler.height * 0.75
+        var cell = Math.max(1, grid.snapTicks)
+        var seedX = ruler.width * 0.35
+        verify(timeSigHost.timeSigChipTick(seedX) < 0)
+
+        var menu = clearRulerLoop(seedX, markerY)
+        var chipTick = grid.editCursorTick
+        compare(rulerRowEnabled(menu, 10), false,
+                "Remove Time Signature renders disabled before the chip is seeded")
+        verify(rulerRowEnabled(menu, 9), "Edit Time Signature renders enabled in the cursor menu")
+        clickRow(menu, rulerRowIndex(menu, 9))
+        tryVerify(function() {
+            return findChild(surface(), "quickMenuPanelRoot") === null && timeSigHost.timeSigPromptOpen
+        }, 3000,
+                  "the Edit Time Signature row closes the menu and opens the signature prompt")
+        var revision = grid.appliedRevisionText
+        timeSigHost.acceptTimeSigPrompt(5, 2)
+        tryVerify(function() {
+            return grid.appliedRevisionText !== revision && rulerLabelAt("5/4", chipTick)
+        }, 3000, "F1: the 5/4 chip renders at the snap-aligned ruler tick")
+
+        tryVerify(function() { return !timeSigHost.timeSigPromptOpen }, 3000)
+        grid.setEditCursorTick(chipTick + 4 * cell)
+        tryCompare(grid, "editCursorTick", chipTick + 4 * cell)
+        menu = openRulerMenu(rulerTickX(chipTick), markerY)
+        compare(grid.editCursorTick, chipTick,
+                "F1: the snap-aligned chip press commits the chip's exact tick")
+        verify(rulerRowEnabled(menu, 10),
+               "F1: Remove Time Signature renders enabled at the snap-aligned chip")
+        compare(rulerRowEnabled(menu, 4), false,
+                "Remove Loop renders disabled at the chip while both loop markers are absent")
+        verify(rulerRowIndex(menu, 5) < 0 && rulerRowIndex(menu, 6) < 0
+               && rulerRowIndex(menu, 7) < 0 && rulerRowIndex(menu, 8) < 0,
+               "the chip cursor menu exposes no selection-scoped rows without a time selection")
+        verify(rulerRowEnabled(menu, 1), "the chip cursor menu offers an enabled Insert Time row")
+        verify(rulerRowIndex(menu, 9) >= 0, "the chip cursor menu offers the Edit Time Signature row")
+        revision = grid.appliedRevisionText
+        clickRow(menu, rulerRowIndex(menu, 4))
+        wait(50)
+        compare(rulerMenuShown() && timeSigHost.timeSigMenuOpen, true,
+                "a click on the disabled Remove Loop row keeps the chip menu open")
+        compare(grid.appliedRevisionText, revision,
+                "the disabled Remove Loop click leaves the document unchanged")
+        clickRow(menu, rulerRowIndex(menu, 10))
+        tryVerify(rulerMenuGone, 3000,
+                  "the Remove Time Signature activation closes the ruler menu")
+        tryVerify(function() {
+            return grid.appliedRevisionText !== revision && !rulerLabelAt("5/4", chipTick)
+        }, 3000, "Remove Time Signature deletes the explicit chip at its exact tick")
+
+        var f3X = rulerTickX(chipTick + 2 * cell)
+        verify(timeSigHost.timeSigChipTick(f3X) < 0)
+        revision = grid.appliedRevisionText
+        menu = openRulerMenu(f3X, tickY)
+        compare(grid.editCursorTick, chipTick + 2 * cell)
+        compare(rulerRowEnabled(menu, 10), false,
+                "F3: Remove Time Signature renders disabled at a tick-row press without an explicit signature")
+        clickRow(menu, rulerRowIndex(menu, 10))
+        wait(50)
+        compare(rulerMenuShown() && timeSigHost.timeSigMenuOpen, true,
+                "a click on the disabled Remove Time Signature row keeps the menu open")
+        compare(grid.appliedRevisionText, revision,
+                "the disabled Remove Time Signature click leaves the document unchanged")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000,
+                  "Escape dismisses the F3 ruler menu")
+        session.requestUndo()
+        verify(waitForNative(function() { return rulerLabelAt("5/4", chipTick) }, 5000),
+               "one undo restores the removed F1 chip")
+
+        timeSigHost.openTimeSigPrompt(chipTick + 1)
+        tryCompare(timeSigHost, "timeSigPromptOpen", true)
+        revision = grid.appliedRevisionText
+        timeSigHost.acceptTimeSigPrompt(7, 2)
+        tryVerify(function() { return grid.appliedRevisionText !== revision }, 3000)
+        tryVerify(function() { return !timeSigHost.timeSigPromptOpen }, 3000)
+        grid.setEditCursorTick(chipTick + 4 * cell)
+        tryCompare(grid, "editCursorTick", chipTick + 4 * cell)
+        menu = openRulerMenu(rulerTickX(chipTick + 1), markerY)
+        compare(grid.editCursorTick, chipTick + 1,
+                "F2: the off-grid chip press commits the chip's exact event tick")
+        verify(rulerRowEnabled(menu, 10),
+               "F2: Remove Time Signature renders enabled at the exact off-grid chip tick")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000,
+                  "Escape dismisses the exact-chip ruler menu")
+    }
+
+    function test_rulerClipboardRowsFollowClipAndTimeSelection() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var y = ruler.height * 0.75
+        var cursorX = ruler.width * 0.85
+        verify(bootstrap.clearClipboardProbe())
+
+        var menu = openRulerMenu(cursorX, y)
+        var pasteIndex = rulerRowIndex(menu, 13)
+        verify(pasteIndex >= 0, "the cursor menu renders a Paste row")
+        compare(menu.rowItem(pasteIndex).itemData.enabled, false,
+                "the cursor menu disables Paste while the clipboard holds no decodable clip")
+        verify(rulerRowIndex(menu, 11) < 0 && rulerRowIndex(menu, 12) < 0,
+               "the cursor menu offers no Copy or Cut row without a time selection")
+        var revision = grid.appliedRevisionText
+        clickRow(menu, pasteIndex)
+        wait(50)
+        compare(rulerMenuShown() && timeSigHost.timeSigMenuOpen, true,
+                "a click on the disabled cursor-menu Paste row keeps the menu open")
+        compare(grid.appliedRevisionText, revision,
+                "the disabled cursor-menu Paste click writes nothing")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+
+        var range = sweepNoteRange()
+        menu = openTimeMenu(range.midX)
+        verify(rulerRowEnabled(menu, 11) && rulerRowEnabled(menu, 12),
+               "Copy and Cut render enabled while a time selection is active")
+        pasteIndex = rulerRowIndex(menu, 13)
+        verify(pasteIndex >= 0, "the time-selection menu renders a Paste row")
+        compare(menu.rowItem(pasteIndex).itemData.enabled, false,
+                "the time-selection menu disables Paste while the clipboard holds no decodable clip")
+        clickRow(menu, pasteIndex)
+        wait(50)
+        compare(rulerMenuShown(), true,
+                "a click on the disabled time-menu Paste row keeps the menu open")
+        compare(grid.appliedRevisionText, revision,
+                "the disabled time-menu Paste click writes nothing")
+        clickRow(menu, rulerRowIndex(menu, 11))
+        tryVerify(rulerMenuGone, 3000,
+                  "the Copy activation closes the time-selection menu")
+        compare(grid.appliedRevisionText, revision, "the Copy row leaves the document unchanged")
+        var clip = JSON.parse(bootstrap.copiedClipSummary())
+        verify(clip.length === 3 && clip[0] > 0 && clip[1] > 0,
+               "the Copy row writes a decodable non-empty range clip")
+
+        menu = openTimeMenu(range.midX)
+        pasteIndex = rulerRowIndex(menu, 13)
+        verify(menu.rowItem(pasteIndex).itemData.enabled,
+               "the reopened time-selection menu enables Paste for the copied range clip")
+        clickRow(menu, pasteIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the enabled time-menu Paste activation closes the menu")
+
+        menu = openRulerMenu(cursorX, y)
+        verify(rulerRowIndex(menu, 11) < 0 && rulerRowIndex(menu, 12) < 0,
+               "an outside ruler press drops Copy and Cut with the time selection")
+        verify(rulerRowEnabled(menu, 13),
+               "the reopened cursor menu enables Paste for the copied range clip")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+    }
+
+    function test_rulerSelectionInsertTimeRowsShiftNotesAndUndo() {
+        var session = openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var menuOwner = surface().rulerMenu
+
+        var range = sweepNoteRange()
+        var layout = noteLayout()
+        var menu = openRulerMenu(range.midX, ruler.height * 0.75)
+        verify(rulerRowIndex(menu, 5) >= 0, "the inside ruler press opens the in-selection menu")
+        var insertIndex = rulerRowIndex(menu, 1)
+        verify(menu.rowItem(insertIndex).itemData.enabled,
+               "the in-selection menu offers an enabled Insert Time row")
+        var revision = grid.appliedRevisionText
+        clickRow(menu, insertIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the in-selection Insert Time activation closes the ruler menu")
+        compare(menuOwner.insertTimePromptOpen, false)
+        tryVerify(function() {
+            return grid.appliedRevisionText !== revision && noteLayout() !== layout
+        }, 3000, "the in-selection Insert Time row shifts the rendered notes")
+        session.requestUndo()
+        verify(waitForNative(function() { return noteLayout() === layout }, 5000),
+               "one undo restores the rendered notes before the ruler insertion")
+
+        range = sweepNoteRange()
+        menu = openTimeMenu(range.midX)
+        insertIndex = rulerRowIndex(menu, 1)
+        verify(menu.rowItem(insertIndex).itemData.enabled,
+               "the time-selection menu offers an enabled Insert Time row")
+        revision = grid.appliedRevisionText
+        clickRow(menu, insertIndex)
+        tryVerify(rulerMenuGone, 3000,
+                  "the time-menu Insert Time activation closes the menu")
+        tryVerify(function() {
+            return grid.appliedRevisionText !== revision && noteLayout() !== layout
+        }, 3000, "the time-menu Insert Time row shifts the rendered notes")
+        session.requestUndo()
+        verify(waitForNative(function() { return noteLayout() === layout }, 5000),
+               "one undo restores the rendered notes before the time-menu insertion")
+    }
+
 }

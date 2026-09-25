@@ -120,6 +120,7 @@ struct GridSceneInput {
     var timeSelection: AutomationTimeSelection? = nil
     var usedTrackCount = 0
     var selectedTrack = 0
+    var geometryStable = false
 }
 
 @MainActor
@@ -147,6 +148,37 @@ public final class GridScene {
     private var keyboardTextSignatures: [String] = []
     private var noteTextSignatures: [String] = []
     private var loadingTextSignatures: [String] = []
+    @QtIgnored public var boxesProjected = 0
+    @QtIgnored public var fillWrites = 0
+
+    private struct NoteFillKey: Equatable {
+        var notes: [GridNote]
+        var snapshot: EditorCamera.Snapshot
+        var projection: PitchProjection
+        var scale: ScaleProjection
+        var dpr: Double
+        var noteMinWidth: Double
+        var noteMinHeight: Double
+        var pixel: Double
+        var velocityColorMode: Bool
+        var velocityZeroColor: String
+    }
+
+    private struct CachedNoteGeometry {
+        var noteId: NoteID
+        var tick: Int
+        var end: Int
+        var pitch: Int
+        var track: Int
+        var ghost: Bool
+        var box: (x: Double, y: Double, w: Double, h: Double)
+        var fillColor: String
+    }
+
+    private var noteFillKey: NoteFillKey?
+    private var cachedNoteFills: [SceneRect] = []
+    private var cachedNoteGeometries: [CachedNoteGeometry] = []
+    private var cachedNoteFaces: [NoteNameFace] = []
 
     /// QListModel.reset always emits modelReset, which tears down every text
     /// delegate. Rebuilds run per pointer sample, so skip the reset when the
@@ -663,24 +695,65 @@ public final class GridScene {
 
     @QtIgnored
     func rebuildNotes(_ input: GridSceneInput) {
+        let key = NoteFillKey(
+            notes: input.notes, snapshot: input.camera.snapshot,
+            projection: input.camera.projection, scale: input.scale,
+            dpr: input.metrics.dpr, noteMinWidth: input.metrics.noteMinWidth,
+            noteMinHeight: input.metrics.noteMinHeight, pixel: input.metrics.pixel,
+            velocityColorMode: input.velocityColorMode,
+            velocityZeroColor: input.palette.noteVelocityZero)
+        if !input.geometryStable || key != noteFillKey {
+            let built = buildNoteFills(input)
+            cachedNoteFills = built.fills
+            cachedNoteGeometries = built.geometries
+            cachedNoteFaces = built.faces
+            noteFillKey = input.geometryStable ? key : nil
+        }
+        emitNoteSelection(input)
+        emitNoteRemainder(input)
+    }
+
+    @QtIgnored
+    private func emitNoteSelection(_ input: GridSceneInput) {
+        var borders: [SceneRect] = []
+        for geometry in cachedNoteGeometries {
+            if geometry.ghost {
+                if timeCovers(input, track: geometry.track, tick: geometry.tick, end: geometry.end) {
+                    addSelectionRing(&borders, box: geometry.box, input: input)
+                }
+                continue
+            }
+            if input.isSelected(geometry.noteId)
+                || timeCovers(input, track: geometry.track, tick: geometry.tick, end: geometry.end) {
+                addSelectionRing(&borders, box: geometry.box, input: input)
+            } else {
+                addNoteBorder(&borders, box: geometry.box, insetPixels: 0, input: input)
+            }
+        }
+        sync(pianoNoteFills, cachedNoteFills)
+        sync(pianoNoteBordersAndSelection, borders)
+    }
+
+    @QtIgnored
+    private func buildNoteFills(_ input: GridSceneInput)
+        -> (fills: [SceneRect], geometries: [CachedNoteGeometry], faces: [NoteNameFace]) {
         let m = input.metrics
         let p = input.palette
         let camera = input.camera
         let snapshot = camera.snapshot
         var fills: [SceneRect] = []
-        var borders: [SceneRect] = []
-        var noteFaces: [NoteNameFace] = []
-
+        var geometries: [CachedNoteGeometry] = []
+        var faces: [NoteNameFace] = []
         for ghostPass in [true, false] {
             for note in input.notes where note.ghost == ghostPass {
                 let (tick, end, pitch) = input.displayedNote(note)
-                if ghostPass, input.scale.fold,
+                let x0 = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+                let x1 = camera.displayX(tick: Double(end), origin: 0, dpr: m.dpr)
+                guard x1 + m.noteMinWidth > 0, x0 < snapshot.viewportWidth else { continue }
+                if (0..<128).contains(pitch),
                     camera.projection.row(forPitch: pitch) == PitchProjection.hiddenRow { continue }
-                let box = m.noteBox(
-                    camera: camera,
-                    x0: camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr),
-                    x1: camera.displayX(tick: Double(end), origin: 0, dpr: m.dpr),
-                    pitch: pitch)
+                let box = m.noteBox(camera: camera, x0: x0, x1: x1, pitch: pitch)
+                boxesProjected += 1
                 guard box.w > 0, box.h > 0,
                       box.x + box.w > 0, box.x < snapshot.viewportWidth,
                       box.y + box.h > 0, box.y < snapshot.rollHeight
@@ -707,26 +780,30 @@ public final class GridScene {
                         x: box.x, y: box.y, width: box.w, height: box.h,
                         fillColor: fillColor,
                         primitiveName: name))
-                if ghostPass {
-                    if timeCovers(input, track: note.track, tick: tick, end: end) {
-                        addSelectionRing(&borders, box: box, input: input)
-                    }
-                    continue
-                }
-                noteFaces.append(NoteNameFace(
-                    pitch: pitch,
-                    box: (box.x, box.y, box.w, box.h),
-                    fillColor: fillColor, ghost: false))
-                if input.isSelected(note.noteId)
-                    || timeCovers(input, track: note.track, tick: tick, end: end) {
-                    addSelectionRing(&borders, box: box, input: input)
-                } else {
-                    addNoteBorder(&borders, box: box, insetPixels: 0, input: input)
+                fillWrites += 1
+                geometries.append(
+                    CachedNoteGeometry(
+                        noteId: note.noteId, tick: tick, end: end, pitch: pitch,
+                        track: note.track, ghost: ghostPass,
+                        box: (box.x, box.y, box.w, box.h), fillColor: fillColor))
+                if !ghostPass {
+                    faces.append(
+                        NoteNameFace(
+                            pitch: pitch,
+                            box: (box.x, box.y, box.w, box.h),
+                            fillColor: fillColor, ghost: false))
                 }
             }
         }
-        sync(pianoNoteFills, fills)
-        sync(pianoNoteBordersAndSelection, borders)
+        return (fills, geometries, faces)
+    }
+
+    @QtIgnored
+    private func emitNoteRemainder(_ input: GridSceneInput) {
+        let m = input.metrics
+        let p = input.palette
+        let camera = input.camera
+        let snapshot = camera.snapshot
 
         var preview: [SceneRect] = []
         var overlay: [SceneRect] = []
@@ -793,7 +870,7 @@ public final class GridScene {
             syncText(
                 pianoNoteTextModel,
                 NoteNameLabels.labels(
-                    faces: noteFaces, keyHeight: snapshot.keyHeight,
+                    faces: cachedNoteFaces, keyHeight: snapshot.keyHeight,
                     occupiedHeight: input.noteNameOccupiedHeight,
                     pixel: m.pixel, spaceHalf: m.spaceHalf, spaceTwo: m.spaceTwo,
                     advance: input.noteNameAdvance, font: input.fontSpec(.noteName),

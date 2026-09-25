@@ -170,27 +170,29 @@ TestCase {
         wait(0)
     }
 
-    // The suite hands the document presentation back the way the host does at
-    // close, around the one composition the lane mounted: polling stops, the
-    // session cancels while the scene still exists, the scene is removed, and
-    // the acknowledgment — `detachGridScene()`'s own call — releases the page
-    // slot, the grid, the audio binding and the document session.
     function cleanupTestCase() {
         bootstrap.pausePlayheadPolling()
-        if (session.songOpen)
-            verify(bootstrap.hostClosing(),
-                   "the session still presents its document while the scene exists")
+        verify(bootstrap.bridgeStaleSelectionReleased(),
+               "the stale selectedReference cannot reactivate a released BridgeProbe")
+        verify(bootstrap.bridgeReturnedRowReleased(),
+               "lastReturnedRow survives probe release without reactivating a replacement")
+        verify(bootstrap.hostClosing(),
+               "the session retains its page and song catalog until scene removal")
+        verify(bootstrap.releasePresentedPage(),
+               "closing the presented tab removes its page through the production strip")
+        tryVerify(function() { return bootstrap.pageWorkspaceReleased() }, 5000,
+                  "pageReleased retires the tabPageReleased workspace after page destruction")
         var retired = testCase.overlay
         testCase.overlay = null
         if (retired) {
             retired.destroy()
-            // The host removes the scene before it acknowledges the removal, so
-            // the composition is really gone — its bindings included — before
-            // the session releases the document-bound owners they read.
             wait(0)
             verify(bootstrap.acknowledgeSceneRemoval(),
-                   "the session released its document presentation after the"
-                   + " acknowledged scene removal")
+                   "acknowledged scene removal releases the remaining document presentation")
+            verify(bootstrap.releasedDocumentCannotPublish(),
+                   "released camera, playback and document callbacks cannot mutate the old grid")
+            verify(bootstrap.acknowledgeSceneRemovalAgain(),
+                   "a second scene-removal acknowledgment does not re-release presentation")
         }
         verify(bootstrap.restoreSettings(), "restored the caller's native settings")
     }

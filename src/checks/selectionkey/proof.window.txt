@@ -4,11 +4,16 @@ Reference revision: 0d03b1612987993f5972da3d0df8661d26bbd395
 Original: src/checks/selectionkey/window.cpp
 Original SHA-256: 24b508983d6d19c9f2e2656750ebda853fa6b302d7b5075d06d56dd13cdf4599
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
+Command: deno task verify:shell --filter shell-grid-input --verbose (R16)
+Command: deno task verify:shell --filter shell-tabs --verbose (R16)
+Result: pending controller run. S009-S016 are shell-lane predicates under windowing=offscreen, which cannot deliver OS deactivation, OS ungrab, focus loss to another application, or window-manager close: S009, S011 and S012 invoke the production slots EditorSurface onCanceled and ShellWindow onActiveChanged / editor-scene onActiveFocusChanged call; S010 hides the mounted EditorSurface; S013-S016 close through SongTabsController.requestClose and the ShellWindow close walk.
 
 A001 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:133
 Disposition: GAP
@@ -168,24 +173,8 @@ Original expression:
                "the production shell is missing the window actions")
 
 A004 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:147
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Qt active-window arbitration requires the native shell and cannot
-be established by a presenter-level Swift check.
-Source context since previous assertion:
-  ;
-
-      // Qt::WindowShortcut matching consults QApplication's active QWidget.
-      // The registered offscreen platform resolves activateWindow() entirely
-      // within Qt; wait for that toolkit state before routing shortcut input.
-      const QPointer<MainWindow> liveShell(m_session.window.get());
-      liveShell->activateWindow();
-Original expression:
-  QVERIFY2(checks::async_wait::waitUntil(
-                   [liveShell] { return liveShell; },
-                   [liveShell] { return QApplication::activeWindow() == liveShell.data(); }, 5000,
-                   10) == checks::async_wait::Result::Ready,
-               "the production shell did not become Qt's active window for shortcut matching")
+Disposition: NATIVE
+Mapping/reason: QApplication::activeWindow() names a QWidget the QQuickWindow Swift shell does not have, and the shell lanes (windowing=offscreen) reach only toolkit-local activation, never OS window-manager activation or deactivation; window deactivation is proven through the production slot ShellWindow.onActiveChanged calls (S011).
 
 A005 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:154
 Disposition: GAP
@@ -203,10 +192,8 @@ A006 | SelectionWindowTierTest::init | src/checks/selectionkey/window.cpp:156
 Disposition: RETIRED-REPRESENTATION
 
 A007 | SelectionWindowTierTest::cleanup | src/checks/selectionkey/window.cpp:208
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/window.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the residual Quick mouse-grab observation requires the native
-window and cannot be established by a presenter-level Swift check.
+Disposition: NATIVE
+Mapping/reason: QQuickWindow::mouseGrabberItem() is not QML-visible and windowing=offscreen cannot deliver an OS ungrab; the lanes instead observe each cancel cause through its production slot (S009-S012), close and teardown cancelling a held band before page retirement (S013, S015), and a fresh click after the close (S014).
 Source context since previous assertion:
   ;
   }
@@ -312,3 +299,27 @@ Anchor: message "cancellation leaves the original document unchanged"
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
+
+S009 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "pointer-ungrab cancels the band with reason 1"
+
+S010 | test_hideCancel | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "hiding the surface mid-band cancels it with reason 2"
+
+S011 | test_windowCancelReasons | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "window deactivation cancels the band with reason 3"
+
+S012 | test_windowCancelReasons | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "editor focus loss cancels the band with reason 0"
+
+S013 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the mid-gesture close cancels the band as hidden before page retirement"
+
+S014 | test_sMidGestureCloseCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the survivor roll takes a fresh click after the mid-gesture close"
+
+S015 | test_tCloseWalkCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the close walk cancels the held band as hidden before page retirement"
+
+S016 | test_tCloseWalkCancelsHeldBand | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the close walk reaches scene detach after cancelling the band"

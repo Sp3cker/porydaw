@@ -219,6 +219,10 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private var absentKeys: Set<String> = []
     private var hasSnapshot = false
     private var timeSigFixtureIdentity: DocumentIdentity?
+    private var releasedDocument: DocumentSession?
+    private var releasedGrid: PianoGrid?
+    private weak var releasingTab: SongTabSession?
+    private var releasingTabId = -1
 
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
@@ -346,15 +350,75 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     // ---- the host's own close path ------------------------------------------
 
     public func hostClosing() -> Bool {
-        guard let session else { return false }
+        guard let session, let tab = session.songTabs.selectedPage else { return false }
+        releasedDocument = session.selectedDocument
+        releasedGrid = tab.grid
+        releasingTab = tab
+        releasingTabId = tab.tabId
         session.hostClosing()
-        return session.songOpen
+        return session.songOpen && releasingTab != nil
+            && !session.songDockController().songListPresenter().songListings.isEmpty
+    }
+
+    public func releasePresentedPage() -> Bool {
+        guard let session, releasingTabId >= 0 else { return false }
+        session.songTabs.requestClose(tabId: releasingTabId)
+        if session.songTabs.pendingCloseId == releasingTabId {
+            session.songTabs.confirmDiscard()
+        }
+        return session.songTabs.tabCount == 0
+    }
+
+    public func pageWorkspaceReleased() -> Bool {
+        releasingTab == nil
     }
 
     public func acknowledgeSceneRemoval() -> Bool {
         guard let session else { return false }
         session.acknowledgeGridDetached()
-        return !session.songOpen
+        return !session.songOpen && session.songTabs.tabCount == 0
+            && session.songTabs.selectedPage == nil
+            && session.songDockController().songListPresenter().songListings.isEmpty
+    }
+
+    public func acknowledgeSceneRemovalAgain() -> Bool {
+        guard let session else { return false }
+        let dock = session.songDockController()
+        dock.confirmation = "dispose-idempotence"
+        defer { dock.confirmation = "" }
+        session.acknowledgeGridDetached()
+        return dock.confirmation == "dispose-idempotence"
+            && !session.songOpen && session.songTabs.tabCount == 0
+    }
+
+    public func releasedDocumentCannotPublish() -> Bool {
+        guard let document = releasedDocument, let grid = releasedGrid else { return false }
+        defer {
+            releasedDocument = nil
+            releasedGrid = nil
+        }
+        guard document.onCameraChange == nil, document.onCameraChangeDetailed == nil,
+              document.onChange == nil, document.onPlayback == nil else { return false }
+        let priorBeatWidth = grid.beatWidth
+        let priorRevisionText = grid.appliedRevisionText
+        let priorRevision = document.document.revision
+        let currentZoom = document.camera.snapshot.pixelsPerBeat
+        let moved = document.mutateCamera { $0.setTimeZoom(currentZoom * 2) }
+        document.document.setTimeSignature(
+            tick: Tick(document.document.ticksPerBeat * 8), numerator: 5, denominatorPower: 2)
+        return moved && document.document.revision > priorRevision
+            && document.onCameraChange == nil && document.onCameraChangeDetailed == nil
+            && document.onChange == nil && document.onPlayback == nil
+            && grid.beatWidth == priorBeatWidth
+            && grid.appliedRevisionText == priorRevisionText
+    }
+
+    public func bridgeStaleSelectionReleased() -> Bool {
+        BridgeProbeLifetimeChecks.staleSelectionReleased()
+    }
+
+    public func bridgeReturnedRowReleased() -> Bool {
+        BridgeProbeLifetimeChecks.returnedRowReleased()
     }
 
     /// The composition's own cancellation path, so a lane case never starts from

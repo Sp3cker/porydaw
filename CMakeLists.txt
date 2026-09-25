@@ -116,6 +116,7 @@ endif()
 
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
 qt_standard_project_setup()
+qt_policy(SET QTP0004 NEW)
 
 function(porydaw_mark_interface_includes_system dependency)
     get_target_property(dependency_include_dirs ${dependency} INTERFACE_INCLUDE_DIRECTORIES)

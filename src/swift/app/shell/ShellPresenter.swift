@@ -66,6 +66,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         Action("transport.stop", "Stop"),
         Action("transport.loop", "Toggle Loop"),
         Action("transport.follow_playhead", "Follow Playhead"),
+        Action("transport.resonance", "Suppress Resonances"),
         Action("view.event_list", "MIDI Event List"),
         Action("view.automation_drawer", "Automation Drawer"),
         Action("view.velocity_drawer", "Velocity Drawer"),
@@ -100,7 +101,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         "eventlist.move_down", "edit.preferences", "edit.song_settings",
         "edit.engine_settings",
     ]
-    private static let transportIds = allActionIds.filter { $0.hasPrefix("transport.") }
+    private static let transportIds = allActionIds.filter {
+        $0.hasPrefix("transport.") && $0 != "transport.resonance"
+    }
     private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
     private static let contextIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.paste",
@@ -176,6 +179,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
     /// The native menu advertises only QAction::shortcut()'s primary sequence.
+    private var lastEventListGate:
+        (attached: Bool, visible: Bool, editing: Bool, menuOpen: Bool,
+         tableRevision: Int)?
+
     public func actionShortcut(id: String) -> String {
         keybindings.sequences(id).first?.nativeText ?? ""
     }
@@ -186,9 +193,16 @@ public final class ShellPresenter: QmlInstantiableStatus {
             || id == "edit.engine_settings" { return true }
         guard sceneActive else { return false }
         if id == "eventlist.move_up" || id == "eventlist.move_down" {
-            guard session.songOpen else { return false }
+            guard session.songOpen else { lastEventListGate = nil; return false }
             let events = session.eventListPresenter()
-            guard events.attached, events.visible, !events.editing, !events.menuOpen else { return false }
+            let gate = (attached: events.attached, visible: events.visible,
+                        editing: events.editing, menuOpen: events.menuOpen,
+                        tableRevision: events.tableRevision)
+            if lastEventListGate.map({ $0 == gate }) != true {
+                lastEventListGate = gate
+                eventListGateChanged()
+            }
+            guard gate.attached, gate.visible, !gate.editing, !gate.menuOpen else { return false }
             return events.model.row(at: events.currentRow)?.eventIndex != nil
         }
         if let command = action.command {
@@ -201,14 +215,53 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "edit.undo": return session.songOpen && session.canUndo
         case "edit.redo": return session.songOpen && session.canRedo
         case "edit.song_settings": return session.songOpen
-        case "transport.go_to_start", "transport.play", "transport.play_pause",
-            "transport.pause", "transport.stop", "transport.loop",
-            "transport.follow_playhead":
+        case "transport.follow_playhead":
             return session.songOpen
+        case "transport.go_to_start", "transport.play_pause":
+            return session.songOpen && session.transportBarPresenter().state != 0
+        case "transport.play":
+            let state = session.transportBarPresenter().state
+            return session.songOpen && state > 0 && state != 3
+        case "transport.pause":
+            return session.songOpen && session.transportBarPresenter().state == 3
+        case "transport.stop":
+            return session.songOpen && session.transportBarPresenter().state > 1
+        case "transport.loop", "transport.resonance":
+            return session.songOpen && session.transportBarPresenter().state != 0
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer":
             return session.songTabs.selectedPage != nil
         default: return true // open project and quit were always enabled
+        }
+    }
+
+    public func actionCheckable(id: String) -> Bool {
+        switch id {
+        case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
+            "view.voice_changes_drawer", "view.polyphony_debugger",
+            "view.velocity_colors", "view.note_names", "transport.loop",
+            "transport.follow_playhead", "transport.resonance":
+            return true
+        default: return false
+        }
+    }
+
+    public func actionChecked(id: String) -> Bool {
+        switch id {
+        case "view.event_list": return session.songTabs.selectedTabShowsEvents
+        case "view.automation_drawer":
+            return session.songTabs.selectedPage?.drawerPresenter().automationSection.visible ?? false
+        case "view.velocity_drawer":
+            return session.songTabs.selectedPage?.drawerPresenter().velocitySection.visible ?? false
+        case "view.voice_changes_drawer":
+            return session.songTabs.selectedPage?.drawerPresenter().voiceChangesSection.visible ?? false
+        case "view.polyphony_debugger": return polyphonyVisible
+        case "view.velocity_colors": return session.velocityColorMode
+        case "view.note_names": return session.noteNameMode
+        case "transport.loop": return session.transportBarPresenter().loopEnabled
+        case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
+        case "transport.resonance": return session.transportBarPresenter().resonanceSuppression
+        default: return false
         }
     }
 
@@ -246,6 +299,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "transport.follow_playhead":
             let followTransport = session.transportBarPresenter()
             followTransport.setFollowPlayhead(enabled: !followTransport.followPlayhead)
+        case "transport.resonance":
+            let transport = session.transportBarPresenter()
+            transport.setResonanceSuppression(enabled: !transport.resonanceSuppression)
         case "view.event_list":
             session.songTabs.setSelectedTabEventsVisible(visible:
                 !session.songTabs.selectedTabShowsEvents)
@@ -415,5 +471,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtSignal public func settingsRequested(songFirst: Bool)
     @QtSignal public func aboutRequested()
     @QtSignal public func quitRequested()
+    @QtSignal public func eventListGateChanged()
     @QtSignal public func criticalRequested(title: String, message: String)
 }

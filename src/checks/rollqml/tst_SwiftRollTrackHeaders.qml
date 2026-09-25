@@ -229,6 +229,20 @@ TestCase {
         verify(Object.keys(h.appearance).length > 0)
     }
 
+    function test_addTrackRowPublishesUsableFonts() {
+        var h = surface().headersModel
+        var rows = item("timelineTrackHeaderRows")
+        verify(rows.count > 1, "the loaded document includes an add-track row")
+        var addRow = rows.itemAt(rows.count - 1)
+        verify(addRow !== null && addRow.isAddTrack, "the final row adds a track")
+        verify(addRow.titleFont.pixelSize > 0 && addRow.titleFont.family.length > 0,
+               "the add-track title has a valid font before its hidden Text evaluates it")
+        verify(addRow.subtitleFont.pixelSize > 0 && addRow.subtitleFont.family.length > 0,
+               "the add-track subtitle has a valid font before its hidden Text evaluates it")
+        compare(addRow.titleFont.pixelSize, h.normalTitleFont.pixelSize)
+        compare(addRow.subtitleFont.pixelSize, h.subtitleFont.pixelSize)
+    }
+
     function test_scrollThumbAtBothLimits() {
         var h = surface().headersModel
         var band = item("timelineQuickTrackHeaders")

@@ -7,7 +7,7 @@ Swift counterpart: src/checks/swiftqtml/BridgeProbeCheck.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftqtml --verbose
+Command: deno task verify:qml-roll --filter swiftroll-window --verbose
 Result: pending integrated run.
 
 A001 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:212
@@ -513,6 +513,7 @@ Original expression:
 
 A060 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:356
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Private QQuickView construction belongs to the deleted probe harness; the mounted swiftroll-window scene executes through src/checks/rollqml/tst_SwiftRoll.qml test_rollWindowMountsAndDraws, and stale-row owner release executes in cleanupTestCase (S001).
 
 A061 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:358
 Disposition: GAP
@@ -640,6 +641,7 @@ Original expression:
 
 A074 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:383
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The deleted harness allocates a private QQuickView; the registered swiftroll-window composition mounts the production scene (src/checks/rollqml/tst_SwiftRoll.qml, test_rollWindowMountsAndDraws).
 
 A075 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:385
 Disposition: GAP
@@ -653,6 +655,7 @@ Original expression:
 
 A076 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:389
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QPointer setup for the deleted harness presenter is native proxy bookkeeping; the retained Swift BridgeProbe lifetime is observed by swiftroll-window cleanupTestCase (S001-S002).
 
 A077 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:390
 Disposition: GAP
@@ -665,6 +668,7 @@ Original expression:
 
 A078 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:397
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QPointer nullness after QQuickView DeferredDelete is deleted-harness proxy representation; Swift probe owner release and surviving-row isolation execute in swiftroll-window cleanupTestCase (S001-S002), not QML-proxy destruction.
 
 A079 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:399
 Disposition: GAP
@@ -678,6 +682,7 @@ Original expression:
 
 A080 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:402
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Recreating the deleted harness QQuickView is fixture setup, not a Swift presenter contract; the mounted composition and teardown are checked in swiftroll-window cleanupTestCase (S003-S006).
 
 A081 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:404
 Disposition: GAP
@@ -729,6 +734,7 @@ Original expression:
 
 A086 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:417
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Allocating a private QQuickView is deleted-harness fixture representation; src/checks/rollqml/tst_SwiftRoll.qml test_rollWindowMountsAndDraws mounts the registered scene and cleanupTestCase observes returned-row ownership (S002).
 
 A087 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:419
 Disposition: GAP
@@ -763,6 +769,7 @@ Original expression:
 
 A090 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:427
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Looking up the deleted harness probeState QObject is fixture pointer representation, not a returned-row outcome; the Swift owner-retention predicate executes in swiftroll-window cleanupTestCase (S002), while QML returned-title and selected-null behavior remain GAP (A089/A092-A096).
 
 A091 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:428
 Disposition: GAP
@@ -833,9 +840,6 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   ;
 
-      // Static M0 boundary assertion: object-argument slot invocation is
-      // Unsupported (crashes) at this pin+patch. The evidence home is the M0
-      // capability probe table in docs/plans/qtbridge-integration-contract.md.
       // On 2026-09-19, two pre-isolation parent-process runs observed SIGSEGV
       // from invoke(root, "attemptObjectArgumentCall"); lldb stopped in QtQml
       // OUTLINED_FUNCTION_2 while its accessor dereferenced a dead/garbage
@@ -856,13 +860,22 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 
-Swift assertion predicates
-No report.expect*/expectEqual calls and no guard-based check predicates exist
-in src/checks/swiftqtml/BridgeProbeCheck.swift: it defines the QML-bindable
-BridgeRow/BridgeProbe types and the sqp_register_probe_types entry point only.
-There are no S entries.
+Swift assertion predicates (registered swiftroll-window mounted cleanup; presenter probes do not claim QQuickView recreation)
 
-Shared helper:
-No shared Swift fixture file carrying expects was identified for this lane.
-swiftcore report.expect*/expectEqual predicates belong to other lanes' proofs
-and are not inventoried here.
+S001 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "the stale selectedReference cannot reactivate a released BridgeProbe"
+
+S002 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "lastReturnedRow survives probe release without reactivating a replacement"
+
+S003 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "pageReleased retires the tabPageReleased workspace after page destruction"
+
+S004 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "acknowledged scene removal releases the remaining document presentation"
+
+S005 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "released camera, playback and document callbacks cannot mutate the old grid"
+
+S006 | cleanupTestCase | src/checks/rollqml/tst_SwiftRoll.qml
+Anchor: message "a second scene-removal acknowledgment does not re-release presentation"

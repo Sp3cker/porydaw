@@ -466,6 +466,67 @@ TestCase {
         }, 5000), "pointer-ungrab cancels the band with reason 1")
     }
 
+    function holdBand(grid, surface, roll) {
+        var target = firstBandedNote(grid, surface, roll)
+        verify(target !== null, "a fully visible note takes a band")
+        verify(!target.selected, "the band target starts unselected")
+        var band = noteBand(roll, surface, target.id)
+        verify(band !== null, "the band fits inside the roll")
+        mouseMove(roll, band.sx, band.sy)
+        mousePress(roll, band.sx, band.sy, Qt.RightButton)
+        mouseMove(roll, band.ex, band.ey, -1, Qt.RightButton)
+        verify(waitForNative(function() {
+            var current = noteById(grid, target.id)
+            return current && current.selected
+        }, 5000), "the band previews its selection while held")
+        return band
+    }
+
+    function test_hideCancel() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        grid.inputCancelled(1)
+        compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-hidden cancel reason")
+        var band = holdBand(grid, surface, roll)
+        surface.visible = false
+        verify(waitForNative(function() {
+            return grid.lastCancelReason === 2 && grid.noteSummary === before
+        }, 5000), "hiding the surface mid-band cancels it with reason 2")
+        surface.visible = true
+        mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
+        verify(waitForNative(function() { return true }, 100))
+        compare(grid.noteSummary, before, "the release after a hidden cancel commits no band")
+        compare(grid.appliedRevisionText, revision, "the hidden cancel is not a history edit")
+    }
+
+    function test_windowCancelReasons() {
+        var session = openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        grid.inputCancelled(1)
+        compare(grid.lastCancelReason, 1, "an idle ungrab primes a non-deactivation cancel reason")
+        var band = holdBand(grid, surface, roll)
+        session.cancelGridInput(3)
+        mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
+        verify(waitForNative(function() {
+            return grid.lastCancelReason === 3 && grid.noteSummary === before
+        }, 5000), "window deactivation cancels the band with reason 3")
+        band = holdBand(grid, surface, roll)
+        session.cancelGridInput(0)
+        mouseRelease(roll, band.ex, band.ey, Qt.RightButton)
+        verify(waitForNative(function() {
+            return grid.lastCancelReason === 0 && grid.noteSummary === before
+        }, 5000), "editor focus loss cancels the band with reason 0")
+        compare(grid.appliedRevisionText, revision, "window cancels are not history edits")
+    }
+
     function test_trackFollowReload() {
         var session = openRoute101()
         var surface = selectedSurface()

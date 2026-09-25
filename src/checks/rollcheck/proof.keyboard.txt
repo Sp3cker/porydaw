@@ -248,8 +248,8 @@ Original expression:
                "modified ruler drag did not derive the overlapping note-track scope");
 
 A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
-Disposition: GAP
-Mapping/reason: GAP — ruler fixture setup with no executing counterpart: no Swift predicate pins the overlapping secondary-track note precondition.
+Disposition: MATCHED
+Mapping: S082
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -1205,7 +1205,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that drove the Swift grid; source retired in 4d7fa617, pinned blob at 5f0924e8): they execute nowhere in the current tree and close no A entry. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. S043–S071 are report.expect predicates in the registered swiftcore checks keyboard.swift and its seed helper swiftcore/PianoRoll::withKeyboardSeed. S072–S075 are the ruler sweep, tap and cursor-publication predicates of src/checks/rollcheck/ruler_loop_menu.swift (checkRulerSweepScopeTapAndChip), cited here for the timelineRulerScope sites; the two sweep predicates assert the exact swept range. S076–S077 are the checkTimeSelectionHighlights predicates in keyboard.swift, executed once that check provisions its own second track. S078–S081 are the four checkKeyboardSkipsGhosts predicates in keyboard.swift — second-track setup, ghost projection, selected-note transpose+nudge, and ghost-note conservation — executing under the same swiftcore filter; no original keyboard.cpp assertion covers keyboard remaps with a projected other-track ghost, so they close no A entry. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S028 index the RETIRED gated Swift-surface suite (C++ QTest checks that drove the Swift grid; source retired in 4d7fa617, pinned blob at 5f0924e8): they execute nowhere in the current tree and close no A entry. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. S043–S071 are report.expect predicates in the registered swiftcore checks keyboard.swift and its seed helper swiftcore/PianoRoll::withKeyboardSeed. S072–S075 are the ruler sweep, tap and cursor-publication predicates of src/checks/rollcheck/ruler_loop_menu.swift (checkRulerSweepScopeTapAndChip), cited here for the timelineRulerScope sites; the two sweep predicates assert the exact swept range. S076–S077 are the checkTimeSelectionHighlights predicates in keyboard.swift, executed once that check provisions its own second track. S078–S081 are the four checkKeyboardSkipsGhosts predicates in keyboard.swift — second-track setup, ghost projection, selected-note transpose+nudge, and ghost-note conservation — executing under the same swiftcore filter; no original keyboard.cpp assertion covers keyboard remaps with a projected other-track ghost, so they close no A entry. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source. S082 is the seed guard of checkRulerSweepSingleTrackScope in note_rendering.swift (swiftcore/PianoRoll::timelineRulerScope), which fails unless the intersecting other-track note is provisioned; it closes A027.
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
@@ -1449,3 +1449,6 @@ Anchor: message "transpose and nudge remap the selected note with ghosts present
 
 S081 | checkKeyboardSkipsGhosts | src/checks/rollcheck/keyboard.swift
 Anchor: message "keyboard remaps leave other-track ghost notes untouched"
+
+S082 | checkRulerSweepSingleTrackScope | src/checks/rollcheck/note_rendering.swift
+Anchor: message "single-track sweep fixture cannot seed the intersecting other-track note"
