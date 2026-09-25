@@ -482,6 +482,7 @@ public actor ProjectService {
                             sustain: Int32(adsr.sustain), release: Int32(adsr.release)))
                     }))
             return VoicegroupCatalog(
+                groupArgs: groups.groupArgs,
                 samples: direct.directSound, waves: VoicegroupSource.progWaveSymbols(root),
                 drumkits: groups.drumkits,
                 keysplits: Dictionary(groups.keysplits.map { ($0.symbol, $0.table) },
