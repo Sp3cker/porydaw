@@ -71,11 +71,12 @@ public final class SceneText {
 
     @QtIgnored
     var signature: String {
-        sceneTextDictSignature(labelRect) + "|"
-            + sceneTextDictSignature(labelBackgroundRect) + "|"
-            + sceneTextDictSignature(labelClipRect) + "|"
-            + sceneTextDictSignature(labelFont) + "|"
-            + labelText + "|" + labelColor + "|" + labelBackground + "|"
+        let rectSig = sceneTextDictSignature(labelRect)
+        let bgSig = sceneTextDictSignature(labelBackgroundRect)
+        let clipSig = sceneTextDictSignature(labelClipRect)
+        let fontSig = sceneTextDictSignature(labelFont)
+        return rectSig + "|" + bgSig + "|" + clipSig + "|" + fontSig
+            + "|" + labelText + "|" + labelColor + "|" + labelBackground + "|"
             + "\(labelHorizontalAlignment)|\(labelVerticalAlignment)"
     }
 }
