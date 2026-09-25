@@ -168,6 +168,7 @@ Item {
                 Layout.fillHeight: true
                 clip: true
                 model: picker.entries
+                // Delegates draw highlight; a following highlight animates frames while hidden.
                 highlightFollowsCurrentItem: false
                 delegate: ItemDelegate {
                     id: entry

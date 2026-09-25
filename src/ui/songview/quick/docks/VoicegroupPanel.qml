@@ -125,6 +125,7 @@ ColumnLayout {
             clip: true
             model: panel.controller.rows
             boundsBehavior: Flickable.StopAtBounds
+            // -1 stops the unused highlight animating ~470 ms of frames after each bank load.
             currentIndex: -1
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             delegate: Rectangle {

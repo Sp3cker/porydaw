@@ -360,6 +360,7 @@ Item {
         }
         footer: DialogButtonBox {
             id: closeButtons
+            // Fusion's contentItem plus currentIndex -1: stock highlight animates frames while hidden.
             contentItem: ListView {
                 implicitWidth: contentWidth
                 model: closeButtons.contentModel
