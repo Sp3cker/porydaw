@@ -265,6 +265,7 @@ endif()
 
 target_link_libraries(porydaw_checks PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+    PorydawApp
     Qt6::Test
 )
 target_precompile_headers(porydaw_checks PRIVATE
@@ -350,6 +351,7 @@ if(APPLE)
     target_link_libraries(editor_qml_tests PRIVATE
         editor_qml_lane
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     # run_checks.ts refuses to start without mid2agb beside the build root.
@@ -399,6 +401,7 @@ if(APPLE)
     target_link_libraries(roll_qml_tests PRIVATE
         roll_qml_lane
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     add_dependencies(roll_qml_tests mid2agb)
@@ -439,6 +442,7 @@ if(APPLE)
     target_link_libraries(shell_qml_tests PRIVATE
         shell_qml_lane
         "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        PorydawApp
         Qt6::QuickTest
     )
     add_dependencies(shell_qml_tests mid2agb)

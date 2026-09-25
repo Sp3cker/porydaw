@@ -351,8 +351,7 @@ porydaw_enable_project_warnings(porydaw_app)
 # release CI refuses a tag that doesn't match it.
 target_compile_definitions(porydaw_app PUBLIC
     "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:PORYDAW_VERSION=\"${PROJECT_VERSION}\">")
-target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine PorydawApp
-    PorydawPlayback)
+target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
 target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick QtBridge)
 if(APPLE)
     # Keep framework headers ahead of stale non-framework Qt installs such
@@ -411,6 +410,7 @@ set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(porydaw PRIVATE
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_shell_entry>"
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+    PorydawApp
 )
 porydaw_link_linux_swift_runtime(porydaw
     porydaw_shell_entry PorydawApp QtBridge PorydawProject PorydawPlayback PorydawCore)
