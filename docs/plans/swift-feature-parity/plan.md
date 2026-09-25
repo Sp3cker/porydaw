@@ -54,8 +54,8 @@ All nontrivial rows route SDD-track because they affect behavior, ownership, or 
 | R17 | pending | Register applicable bridge lifetime observations; retire only obsolete representation with evidence. |
 | R18 | pending | Prove time-menu clipboard availability and each exact chip fixture; correct their mappings. |
 | R19 | complete | Task 2 supplemental proof-only handoff indexed its four executing ghost-keyboard predicates as S078–S081. Frozen source hashes, predicate anchors, structure and execution evidence checked; no A-site disposition changed. Unresolved keyboard behavior prevents whole-ledger retirement. |
-| R20 | pending | Require meaningful MATCHED mappings in the validator; no bulk ledger rewrite. |
-| R21 | pending | Make platform coverage explicit and reject misleading empty-lane success. |
+| R20 | complete | `e7538e42`: `proof check --strict-mappings` fails on MATCHED sites citing no message-anchored predicate; default `check` reports the same list as a non-fatal debt warning (1,456 sites at introduction — remaining GAP-obligation surface). verification.md records the rule; no bulk ledger rewrite performed. |
+| R21 | complete | `f743da6f`: every catalog entry declares `platforms`, the manifest emits them, all 26 Swift lanes register unconditionally as macOS-only, and `run_checks` partitions platform-skipped + exits 2 on a zero-runnable selection. `PORYDAW_CHECK_HOST` simulates a foreign host through `deno task verify`. |
 | R22 | pending | Consolidate shell availability/activation in the existing command authority. |
 | R23 | pending | Reduce avoidable all-track projection/highlight/sweep work while preserving ghost rendering. |
 | R24 | complete | [Task 13](task-13-brief.md): isolated NativeAudio teardown, real null-backend sounding and both final-owner release paths, and actor-qualified dispatch passed. App build, native Metal/Space/normal-exit and consumer gates passed; spec/quality review approved. Native backend coverage remains registered because Swift checks are Apple-gated. |
