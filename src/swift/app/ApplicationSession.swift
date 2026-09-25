@@ -98,7 +98,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         let service: ProjectService
         let labels: [String]
         let songs: [SongListing]
-        let voicegroupArgs: [String]
         let voicegroupCatalog: VoicegroupCatalog
     }
 
@@ -833,7 +832,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private struct ProjectRead: Sendable {
         let service: ProjectService
         let songs: [SongListing]
-        let voicegroupArgs: [String]
         let voicegroupCatalog: VoicegroupCatalog
 
         static func load(path: String) async throws -> ProjectRead {
@@ -841,9 +839,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             do {
                 try await service.open(root: path)
                 let songs = try await service.songs()
-                let voicegroupArgs = try await service.voicegroupArgs()
                 let voicegroupCatalog = try await service.voicegroupCatalog()
-                return ProjectRead(service: service, songs: songs, voicegroupArgs: voicegroupArgs,
+                return ProjectRead(service: service, songs: songs,
                                    voicegroupCatalog: voicegroupCatalog)
             } catch {
                 await service.close()
@@ -879,7 +876,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let candidate = ProjectSwitchCandidate(
                 path: path, label: label, restore: restore, service: loaded.service,
                 labels: loaded.songs.map(\.label), songs: loaded.songs,
-                voicegroupArgs: loaded.voicegroupArgs, voicegroupCatalog: loaded.voicegroupCatalog)
+                voicegroupCatalog: loaded.voicegroupCatalog)
             if self.songTabs.tabCount == 0 {
                 await self.finishProjectSwitch(candidate)
             } else {
@@ -1105,8 +1102,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         labels = candidate.labels
         songDock.install(service: candidate.service, songs: candidate.songs)
         let catalog = candidate.voicegroupCatalog
-        settingsVoicegroups = candidate.voicegroupArgs
-        voiceList.setVoicegroupChoices(candidate.voicegroupArgs)
+        settingsVoicegroups = catalog.groupArgs
+        voiceList.setVoicegroupChoices(catalog.groupArgs)
         voiceList.sampleChoices = catalog.samples
         voiceList.waveSymbols = catalog.waves
         voiceList.drumkitSymbols = catalog.drumkits
