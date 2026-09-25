@@ -228,7 +228,7 @@ extension VelocityPage {
 
     private var typography: GridTypography? {
         guard let session else { return nil }
-        let key = TypographyKey(baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
+        let key = TypographyKey(baseFontPx: baseFontPx,
                                rowHeight: session.camera.snapshot.keyHeight)
         if let typographyCache, typographyCache.key == key { return typographyCache.value }
         let value = VelocityScene.typography(metrics: gridMetrics(session),
