@@ -1271,12 +1271,14 @@ public final class PianoGrid {
         if notes != summaryNotes || selection != summarySelection {
             summaryNotes = notes
             summarySelection = selection
-            let parts = notes.map { note in
-                "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick),"
-                    + "\"duration\":\(note.duration),\"pitch\":\(note.pitch),"
-                    + "\"track\":\(note.track),\"velocity\":\(note.velocity),"
-                    + "\"ghost\":\(note.ghost),"
-                    + "\"selected\":\(session.selectedNotes.contains(note.noteId))}"
+            let selectedNotes = session.selectedNotes
+            let parts = notes.map { note -> String in
+                var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
+                json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
+                json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
+                json += ",\"ghost\":\(note.ghost)"
+                json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
+                return json
             }
             noteSummary = "[" + parts.joined(separator: ",") + "]"
         }
