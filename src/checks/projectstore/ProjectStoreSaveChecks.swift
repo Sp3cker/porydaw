@@ -1,23 +1,6 @@
 import Foundation
 import PorydawProject
 
-private enum SaveFixtureError: Error {
-    case missingFixture
-}
-
-private func saveFixture(_ body: (URL) throws -> Void) throws {
-    guard let root = CheckEnvironment.fixtureRoot,
-          let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
-          FileManager.default.fileExists(atPath: staged) else {
-        throw SaveFixtureError.missingFixture
-    }
-    let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "projectstore-savebank-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: copy) }
-    try FileManager.default.copyItem(at: URL(filePath: root), to: copy)
-    try body(copy)
-}
-
 private func saveExpect(_ row: String, _ condition: Bool, _ report: CheckReport, _ detail: String) {
     report.expect(condition, cppID: "projectstore-savebank/\(row)", message: "\(row): \(detail)")
 }
@@ -34,7 +17,7 @@ private func sameSaveSlots(_ lhs: [VoicegroupSlotView], _ rhs: [VoicegroupSlotVi
 
 internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     do {
-        try saveFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
             let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
@@ -100,7 +83,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     }
 
     do {
-        try saveFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let owner = ProjectStore(projectRoot: root)
             let unopened = ProjectStore(projectRoot: root)
             let ownerOpen = awaitValue { try await owner.open() }
@@ -138,7 +121,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     }
 
     do {
-        try saveFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
             let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
@@ -185,7 +168,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     }
 
     do {
-        try saveFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
             let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
@@ -215,7 +198,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
     }
 
     do {
-        try saveFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-savebank") { root in
             let macros = root.appendingPathComponent("asm/macros/music_voice.inc")
             try FileManager.default.createDirectory(at: macros.deletingLastPathComponent(),
                                                     withIntermediateDirectories: true)

@@ -476,17 +476,17 @@ Anchor: function
 S026 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml
 Anchor: function
 
-S027 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+S027 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "off-grid right-edge drag snaps the end to the ruler grid"
 
-S028 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+S028 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "overshot right-edge drag stops at one snap cell"
 
-S029 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+S029 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "Ctrl+edge drag resizes the grabbed note and the joined selection"
 
-S030 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+S030 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "boundary-right drag resizes the right note's start only"
 
-S031 | checkEdgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift
+S031 | checkEdgeResize | src/checks/rollcheck/resize.swift
 Anchor: message "stationary Ctrl+edge click joins the note without resizing"

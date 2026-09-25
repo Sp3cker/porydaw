@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
@@ -288,4 +288,87 @@ private func checkRemapMetadata(_ report: CheckReport, probe: RemapProbe) {
     report.expectEqual(expected: renamed, actual: document.state, cppID: id, what: "redo restores the metadata name")
     _ = document.history.undoDocument()
     probe.clear()
+}
+
+@MainActor
+func checkTrackOwnerRemap(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::trackOwnerRemap"
+    guard session.document.canAddTrack else {
+        report.fail(id, "fixture document cannot add a track")
+        return
+    }
+    let priorChange = session.onChange
+    var remappedAtDocument: [(muted: Set<Int>, soloed: Set<Int>, selected: Int?)] = []
+    session.onChange = { change in
+        if change.domains.contains(.document) && change.trackRemap != nil {
+            remappedAtDocument.append(
+                (session.mutedTracks, session.soloedTracks, session.selectedTrack))
+        }
+    }
+    defer { session.onChange = priorChange }
+    session.mutedTracks = [0]
+    session.soloedTracks = [0]
+    session.selectedTrack = 0
+    guard let added = session.document.addTrack(voice: 0) else {
+        report.fail(id, "addTrack was rejected by the fixture document")
+        return
+    }
+    report.expect(
+        session.mutedTracks == [0] && session.soloedTracks == [0]
+            && session.selectedTrack == 0,
+        cppID: id, message: "inserted track inherits no mute, solo, or selection owner state")
+    let switchGrid = PianoGrid(session: session)
+    switchGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    switchGrid.setTrack(index: added)
+    let switchedTotal = (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
+        $0 + session.document.notes(in: $1).count
+    }
+    report.expect(
+        switchGrid.trackIndex == added
+            && switchGrid.renderedNoteCount == switchedTotal
+            && switchGrid.notes.allSatisfy { $0.ghost == ($0.track != added) },
+        cppID: id, message: "track switch republishes every track with ghost roles following the new track")
+    switchGrid.setTrack(index: 0)
+    session.soloedTracks = [1]
+    session.selectedTrack = 1
+    remappedAtDocument.removeAll()
+    _ = session.document.moveTrack(0, to: 1)
+    report.expect(
+        session.mutedTracks == [1] && session.soloedTracks == [0]
+            && session.selectedTrack == 0,
+        cppID: id, message: "move remaps mute, solo, and selection owners to the new index")
+    report.expect(
+        remappedAtDocument.last.map {
+            $0.muted == [1] && $0.soloed == [0] && $0.selected == 0
+        } == true,
+        cppID: id, message: "owner remap lands before the document change publishes")
+    _ = session.document.history.undoDocument()
+    report.expect(
+        session.mutedTracks == [0] && session.soloedTracks == [1]
+            && session.selectedTrack == 1,
+        cppID: id, message: "undo applies the inverse remap to every owner")
+    _ = session.document.duplicateTrack(0)
+    report.expect(
+        session.mutedTracks == [0] && session.soloedTracks == [1]
+            && session.selectedTrack == 1,
+        cppID: id, message: "duplicate keeps owner identity on the source track")
+    _ = session.document.history.undoDocument()
+    session.document.deleteTrack(1)
+    report.expect(
+        session.soloedTracks.isEmpty && session.mutedTracks == [0]
+            && session.selectedTrack == 0,
+        cppID: id, message: "delete drops the removed owner and falls selection back")
+    _ = session.document.history.undoDocument()
+    report.expect(
+        session.soloedTracks.isEmpty && session.mutedTracks == [0]
+            && session.selectedTrack == 0
+            && session.document.engineTracks.usedTrackCount == added + 1,
+        cppID: id, message: "undo restores the track without reviving dropped owner state")
+    _ = session.document.history.undoDocument()
+    report.expect(
+        session.document.engineTracks.usedTrackCount == 1
+            && session.mutedTracks == [0] && session.selectedTrack == 0,
+        cppID: id, message: "undoing the add restores the original track count")
+    session.mutedTracks = []
+    session.soloedTracks = []
 }

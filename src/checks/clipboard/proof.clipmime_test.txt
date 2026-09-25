@@ -136,28 +136,28 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S001 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "the production codec and rescaler preserve the single routed track; native MIME transport remains a host assertion"
 
-S002 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S002 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "the exact malformed baseline payload is rejected"
 
-S003 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S003 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "the production decoder rejects the exact corrupt custom-MIME payload; native failure routing remains a host assertion"
 
-S004 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S004 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "exact up-scaled clip"
 
-S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S005 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "half-up down-scaled clip with stable last-wins collisions"
 
-S006 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S006 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "same-TPB clip including duplicate ordering"
 
-S007 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S007 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "saturated clip without wrapping"
 
-S008 | roundTrip | src/checks/editcheck/TimeChecks.swift
+S008 | roundTrip | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "codec round-trip preserves payload"
 
 Shared helpers

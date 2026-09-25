@@ -76,24 +76,6 @@ func drawerVelocityVelocityPageFixture() -> MidiFile {
     ])
 }
 
-/// The three checksum facts one finished transaction must move: the document
-/// revision, the history identity (the Swift analogue of the legacy undo index)
-/// and the undo/redo reachability.
-@MainActor
-struct drawerVelocityDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
-
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
-    }
-}
-
 /// A page attached to a synthetic session that shares the suite's service and
 /// bank lease, plus the composition facts the page needs.
 @MainActor
@@ -139,28 +121,6 @@ struct drawerVelocityVelocityFixture {
         _ = page.pointerMove(x: handle.x + dx, y: handle.y + dy, buttons: 1)
         if release { _ = page.pointerRelease(x: handle.x + dx, y: handle.y + dy, button: 1) }
     }
-}
-
-@MainActor
-func drawerVelocityRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerVelocityRunBlockingTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerVelocityRunBlockingTimeout: Error {
-    case timeout
 }
 
 // MARK: - Suite entry
@@ -232,7 +192,7 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
         return page?.openSelectedVelocityPrompt() ?? false
     }
     let document = fixture.document
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
 
     fixture.session.setSelectedNotes([fixture.notes[0].id])
     grid.setEditCursorTick(tick: Int(fixture.session.editCursor))
@@ -242,7 +202,7 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
     grid.performCommand(command: setVelocity)
     report.expectEqual(expected: 1, actual: requested, cppID: drawerVelocityCommandID,
                        what: "the existing command row asks its owner for the prompt")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                   message: "the command commits no value before prompt acceptance")
 
     page = fixture.page
@@ -252,7 +212,7 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
     report.expect(fixture.page.promptOpen, cppID: drawerVelocityCommandID,
                   message: "the routed command opened the page's captured prompt")
     fixture.page.cancelPrompt()
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCommandID,
                   message: "cancelling the routed prompt still commits nothing")
 
     let row = editCommandTable.first { $0.command == .setVelocity }

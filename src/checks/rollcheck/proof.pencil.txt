@@ -332,7 +332,7 @@ Anchor: function
 S012 | test_undoRedoRerender | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: function
 
-S013 | checkDrawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift
+S013 | checkDrawLatchAndCancel | src/checks/rollcheck/pencil.swift
 Anchor: message "draw commits one note at the default latched velocity"
 
 S014 | test_noteRasterParity | src/checks/editorqml/tst_ShellNoteVisuals.qml

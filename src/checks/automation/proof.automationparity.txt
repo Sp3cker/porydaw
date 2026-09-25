@@ -4,7 +4,9 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/automationparity.cpp
 Original SHA-256: c4bbe92fac0cee53964bc15712503ed0cd350d1836838ad5f546d750b516212f
-Swift counterpart: src/checks/automation/domain/gestures.swift
+Swift counterpart: src/checks/automation/domain/gestureSweep.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
+Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
@@ -624,457 +626,457 @@ Swift assertion predicates
 The S entries are exact predicates called by the paired Swift suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
-S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a 24-tick document's clock lattice steps one tick"
 
-S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a drag sweep waits for the activation distance"
 
-S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a move past the activation distance arms the sweep"
 
-S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "each stepped tick interpolates its value across the stroke"
 
-S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the sweep steps every lattice tick of the stroke"
 
-S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the stroke's current point is its mapped one"
 
-S007 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S007 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the second stroke interpolates across its own span"
 
-S008 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S008 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the second stroke has all six lattice points"
 
-S009 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S009 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
 
-S010 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S010 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp runs from its anchor value to its release value"
 
-S011 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S011 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp's midpoint interpolates linearly"
 
-S012 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S012 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completed ramp is a changed span replacement"
 
-S013 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S013 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp replacement starts at its anchor"
 
-S014 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S014 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp replacement closes one lattice step past its release"
 
-S015 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S015 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the replacement keeps the ramp's first point"
 
-S016 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S016 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completion fixture is an empty lane"
 
-S017 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S017 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: function
 
-S018 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S018 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the empty-lane completion changes the lane"
 
-S019 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S019 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completion itself contains eleven points"
 
-S020 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S020 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completion starts at the anchor"
 
-S021 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S021 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the empty lane adds no trailing held point"
 
-S022 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S022 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the lattice step of this document is 24 ticks"
 
-S023 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S023 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: function
 
-S024 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S024 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the drag over a flat lane is a changed span"
 
-S025 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S025 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the stroke's release point is written"
 
-S026 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S026 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the tail re-anchors the original held value one step past the release"
 
-S027 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S027 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the replacement's span covers the restored tail"
 
-S028 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S028 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp over a flat lane is a changed span"
 
-S029 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S029 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp's release point is written"
 
-S030 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S030 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp's tail re-anchors the original held value too"
 
-S031 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S031 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a stroke that ends at the song's end steps to the song's end"
 
-S032 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S032 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a stroke that ends at the song's end restores no tail"
 
-S033 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S033 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the sweep preview is the stepped draft alone"
 
-S034 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S034 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the draft writes nothing before the release"
 
-S035 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S035 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: function
 
-S036 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S036 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the released sweep commits once"
 
-S037 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S037 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the committed lane holds the stroke and its restored tail"
 
-S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "one released sweep is one revision"
 
-S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the sweep is undoable"
 
-S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "one undo restores the flat lane"
 
-S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the released sweep recorded exactly one history entry"
 
-S042 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S042 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "Pan's neutral is 64, the centered domain's midpoint"
 
-S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the neutral snap radius covers more than one value step"
 
-S044 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S044 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: function
 
-S045 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S045 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the unsnapped value mapping preserves tick 100"
 
-S046 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S046 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the unsnapped value mapping keeps the near-neutral pixel value"
 
-S047 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S047 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "neutral snapping preserves tick 100"
 
-S048 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S048 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the near-neutral pixel snaps to 64"
 
-S049 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S049 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the exact neutral maps to the original tick-200 point"
 
-S050 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S050 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "an unsnapped drag keeps the value under the pointer"
 
-S051 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S051 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a snapped drag lands exactly on the neutral"
 
-S052 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S052 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a pointer on the neutral stays neutral"
 
-S053 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S053 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a value outside the radius keeps its own value"
 
-S054 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S054 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a snap only ever moves a value onto the neutral"
 
-S055 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S055 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a parameter with no neutral keeps the dragged value"
 
-S056 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S056 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a snapped press grabs the node under the pointer"
 
-S057 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S057 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the armed preview keeps the node's own tick"
 
-S058 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S058 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the preview publishes the snapped neutral"
 
-S059 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S059 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the snapped release writes the neutral at the node's own tick"
 
-S060 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S060 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the fixture offers three draggable nodes"
 
-S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a gesture with no target finishes as a no-op"
 
-S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "an empty gesture reports no change"
 
-S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a Shift-held stationary release is a no-op"
 
-S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a Shift-held stationary release changes nothing"
 
-S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a stationary release without Shift deletes"
 
-S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the stationary delete reports no move"
 
-S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a released stroke past the slop is a move"
 
-S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a stroke that never moved the node changes nothing"
 
-S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the moved gesture is still a move"
 
-S070 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S070 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the moved node reports a change"
 
-S071 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S071 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the reported delta is the grabbed node's own tick delta"
 
-S072 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S072 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the target's preview is the mapped destination"
 
-S073 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S073 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the selection releases as a move"
 
-S074 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S074 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the moved selection reports a change"
 
-S075 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S075 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the shared delta is the grabbed node's delta"
 
-S076 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S076 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the finish reports that the whole selection moved"
 
-S077 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S077 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "every selected node moves by the same delta"
 
-S078 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S078 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a leftward drag clamps at tick zero without collapsing the group"
 
-S079 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S079 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the clamped delta is what the finish reports"
 
-S080 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S080 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the clamped group releases as a move"
 
-S081 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S081 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the clamped group reports a change"
 
-S082 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S082 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a time lock keeps the original value"
 
-S083 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S083 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a time lock keeps the mapped tick"
 
-S084 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S084 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a phantom drag only ever locks the value axis"
 
-S085 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S085 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a reset restores the phantom's source value"
 
-S086 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S086 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a reset phantom finishes as no edit"
 
-S087 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S087 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: function
 
-S088 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S088 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a phantom drag never moves in time"
 
-S089 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S089 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a phantom drag clamps into the lane's domain"
 
-S090 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S090 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the phantom's write names its own source tick"
 
-S091 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S091 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: function
 
-S092 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S092 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the committed drag writes once"
 
-S093 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S093 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the node lands on its destination and evicts the occupant there"
 
-S094 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S094 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one drag is one revision"
 
-S095 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S095 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the drag is undoable"
 
-S096 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S096 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo restores the moved node and the evicted occupant"
 
-S097 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S097 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the empty lane displays its projected engine node"
 
-S098 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S098 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: function
 
-S099 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S099 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a write on the projected node resolves to a promotion"
 
-S100 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S100 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the promotion commits"
 
-S101 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S101 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the projected node becomes a written event at its own tick"
 
-S102 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S102 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo returns the lane to its projected node alone"
 
-S103 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S103 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the frozen lane carries the revision it was read at"
 
-S104 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S104 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the original two-point range is unchanged"
 
-S105 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S105 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "dropping the original range endpoint changes it"
 
-S106 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S106 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the original implicit lead-in replacement changes the lane"
 
-S107 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S107 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the original implicit lead-in is restored at the two-point span end"
 
-S108 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S108 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an identical point range is unchanged"
 
-S109 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S109 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "a range the lane does not hold is a change"
 
-S110 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S110 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "a held-span replacement that differs is a change"
 
-S111 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S111 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the held span closes on the original endpoint's value"
 
-S112 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S112 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the replacement names the last tick it covers"
 
-S113 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S113 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "a replacement the lane already holds is unchanged"
 
-S114 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S114 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an unchanged replacement carries no point"
 
-S115 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S115 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an empty replacement over a covered span deletes it"
 
-S116 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S116 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the deleting replacement carries no point"
 
-S117 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S117 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "canonicalization sorts, drops the far tick and keeps the last occupant"
 
-S118 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S118 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "canonicalization clamps into the domain and drops repeated values"
 
-S119 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S119 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the exclusive held lookup skips a point on the tick"
 
-S120 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S120 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the inclusive held lookup takes a point on the tick"
 
-S121 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S121 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the held lookup walks to the last point before the tick"
 
-S122 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S122 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the held lookup reports nothing before the first"
 
-S123 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S123 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an unwritten Modulation lane leads in on its engine default"
 
-S124 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S124 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: function
 
-S125 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S125 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke writes its point and restores the lane's held value"
 
-S126 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S126 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke's preview matches its completion"
 
-S127 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S127 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an empty lane's first stroke is a change"
 
-S128 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S128 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: function
 
-S129 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S129 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "a stroke past the last point re-anchors that point's value"
 
-S130 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S130 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "a stroke past the last point reports a change"
 
-S131 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S131 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke fixture selects its intended value range"
 
-S132 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S132 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "preparing the display range leaves document and history unchanged"
 
-S133 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S133 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the pencil press starts a stroke"
 
-S134 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S134 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the page publishes the painting gesture"
 
-S135 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S135 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the pencil release commits"
 
-S136 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S136 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "one pencil press and release is one revision"
 
-S137 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S137 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the released stroke writes the value under the pointer"
 
-S138 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S138 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke is undoable"
 
-S139 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S139 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "one undo restores the pre-stroke lane"
 
-S140 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S140 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the released stroke recorded exactly one history entry"
 
-S141 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
+S141 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "core held-span replacement including the trailing held-value seam"
 
-S142 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
+S142 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "core empty-lane replacement stores the pencil value and restored tail"
 
-S143 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
+S143 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "core lane write retains the explicit post-sweep held-value seam"
 
-S144 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S144 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: function
 
-S145 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S145 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "node value move records its own transaction"
 
-S146 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S146 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the move actually changes document state"
 
-S147 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S147 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "awaited undo completes"
 
-S148 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S148 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo restores all four written Pan occurrences"
 
-S149 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S149 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "awaited redo completes"
 
-S150 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S150 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "redo restores the node value move"
 
-S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "only a second undo removes the preceding Pan sweep"
 
 S152 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift

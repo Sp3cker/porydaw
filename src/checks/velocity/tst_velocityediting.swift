@@ -19,10 +19,10 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
 
     fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     page.refreshFromDocument()
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let before = fixture.handle(notes[0])?.y ?? 0
     fixture.drag(notes[0], dy: -24)
-    let committed = drawerVelocityDocumentSnapshot(document)
+    let committed = DocumentSnapshot(document)
     report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityTransactionID,
                        what: "one released drag advances the document revision once")
     report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
@@ -41,7 +41,7 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                       + "\(document.note(notes[0].id)?.velocity ?? 0) level "
                       + "\(fixture.handle(notes[0])?.level ?? -99)")
 
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
     report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(notes[0].id)?.velocity ?? 0),
                        cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0),
@@ -49,16 +49,16 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     page.refreshFromDocument()
     report.expectEqual(expected: 3, actual: fixture.handles.count, cppID: drawerVelocityHistoryID,
                        what: "Undo rebuilds the page without losing its handles")
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.redo() }
-    report.expectEqual(expected: committed.identity, actual: drawerVelocityDocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
+    _ = try? runBlocking { try await fixture.session.redo() }
+    report.expectEqual(expected: committed.identity, actual: DocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
                        what: "Redo restores the committed history identity")
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
 
     // A press that never leaves the activation distance is a selection, not an
     // edit: no preview, no history.
-    let pointerBaseline = drawerVelocityDocumentSnapshot(document)
+    let pointerBaseline = DocumentSnapshot(document)
     fixture.drag(notes[0], dy: 0)
-    report.expectEqual(expected: pointerBaseline.revision, actual: drawerVelocityDocumentSnapshot(document).revision,
+    report.expectEqual(expected: pointerBaseline.revision, actual: DocumentSnapshot(document).revision,
                        cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
     report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
                   message: "a stationary click selects only its own note")
@@ -67,7 +67,7 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     // selection returns.
     fixture.session.setSelectedNotes([notes[2].id, notes[0].id])
     page.refreshFromDocument()
-    let cancelBaseline = drawerVelocityDocumentSnapshot(document)
+    let cancelBaseline = DocumentSnapshot(document)
     if let handle = fixture.handle(notes[0]) {
         _ = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1, modifiers: 0)
         _ = page.pointerMove(x: handle.x, y: handle.y - 30, buttons: 1)
@@ -80,7 +80,7 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     }
     report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityCancellationID,
                   message: "Escape clears the frozen preview")
-    report.expect(drawerVelocityDocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
+    report.expect(DocumentSnapshot(document) == cancelBaseline, cppID: drawerVelocityCancellationID,
                   message: "Escape writes nothing at all")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
                   message: "Escape restores selection membership and insertion order")
@@ -98,13 +98,13 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
         report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID,
                       message: "a stale release ends the gesture")
     }
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
     page.refreshFromDocument()
 
     // The ruler click-sets the selected notes and commits once.
     fixture.session.setSelectedNotes([notes[0].id])
     page.refreshFromDocument()
-    let rulerBaseline = drawerVelocityDocumentSnapshot(document)
+    let rulerBaseline = DocumentSnapshot(document)
     let rulerY = (page.axisModel.top + page.axisModel.bottom) / 2
     report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
                   cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
@@ -115,14 +115,14 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                   message: "one ruler click makes one history entry")
     report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
                   cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
     page.refreshFromDocument()
 
     // Middle-drag pan asks the one shared camera for its own scroll and writes
     // no document state.
     fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
-    let panBaseline = drawerVelocityDocumentSnapshot(document)
+    let panBaseline = DocumentSnapshot(document)
     let panScroll = fixture.session.camera.snapshot.scrollX
     _ = page.pointerPress(x: 200, y: 40, surface: 1, button: 4, modifiers: 0)
     _ = page.pointerMove(x: 170, y: 40, buttons: 4)
@@ -133,7 +133,7 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                   message: "a live pan suspends follow through the page's own interaction")
     _ = page.pointerRelease(x: 150, y: 40, button: 4)
     report.expect(!page.hasGesture, cppID: drawerVelocityTransactionID, message: "the pan ends on release")
-    report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
+    report.expect(DocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                   message: "panning writes no document state")
 
     // The detent control: available for a PSG context, and turning it off puts
@@ -165,16 +165,16 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
         report.expect(abs(handle.y - exactY) < 0.001, cppID: drawerVelocityTransactionID,
                       message: "a disabled detent set places nodes at their exact velocity")
     }
-    report.expect(drawerVelocityDocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
+    report.expect(DocumentSnapshot(document) == panBaseline, cppID: drawerVelocityTransactionID,
                   message: "the detent toggle writes no document state")
     page.setUseDetents(enabled: true)
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
     page.refreshFromDocument()
 
     // A band gesture resolves a selection and commits nothing.
     fixture.session.clearSelectedNotes()
     page.refreshFromDocument()
-    let bandBaseline = drawerVelocityDocumentSnapshot(document)
+    let bandBaseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: 0, y: 0, surface: 1, button: 2, modifiers: 0)
     _ = page.pointerMove(x: 400, y: 120, buttons: 2)
     _ = page.pointerRelease(x: 400, y: 120, button: 2)

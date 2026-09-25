@@ -12,33 +12,12 @@ internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSess
     headerReconciliationStructural(report, suite: session, service: service)
     commandMixStatePublishesImmediately(report, suite: session, service: service)
     do {
-        try trackHeadersRunBlocking {
+        try runBlocking {
             try await coreHeaderVoiceUndoRegression(report, suite: session, service: service)
         }
     } catch {
         report.fail("swiftcore/TrackHeaders::supplementalAwaitedVoiceUndo", "history regression failed: \(error)")
     }
-}
-
-@MainActor
-private func trackHeadersRunBlocking<T>(
-    _ operation: @escaping @MainActor () async throws -> T
-) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do { outcome = .success(try await operation()) }
-        catch { outcome = .failure(error) }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw TrackHeadersCheckTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-private enum TrackHeadersCheckTimeout: Error {
-    case timeout
 }
 
 @MainActor

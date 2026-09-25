@@ -116,22 +116,6 @@ func drawerAutomationAutomationMidi(division: UInt16 = 24, volume: [(Tick, UInt8
     ])
 }
 
-/// The document facts one transaction claim compares against.
-struct drawerAutomationAutomationDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
-
-    @MainActor
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
-    }
-}
-
 @MainActor
 struct drawerAutomationAutomationFixture {
     let session: DocumentSession
@@ -180,7 +164,7 @@ struct drawerAutomationAutomationFixture {
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
-    var snapshot: drawerAutomationAutomationDocumentSnapshot { drawerAutomationAutomationDocumentSnapshot(document) }
+    var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
     var songEndTick: Tick { session.timeline.lengthTicks }
     var volumeLane: AutomationParameter {
         .controlChange(track: 0, controller: TimeDefaults.ccVolume)
@@ -264,7 +248,7 @@ struct drawerAutomationAutomationFixture {
         _ = page.activateParameter(index: AutomationCatalog.index(of: parameter, track: 0) ?? 0)
     }
 
-    func undo() -> Bool { (try? drawerAutomationRunBlocking { try await session.undo() }) ?? false }
+    func undo() -> Bool { (try? runBlocking { try await session.undo() }) ?? false }
 
     /// One node drag through the page's public pointer route, in plot
     /// coordinates, carrying the raw Qt modifier bits a QML event supplies. The
@@ -291,28 +275,6 @@ struct drawerAutomationAutomationFixture {
                                 modifiers: modifiers)
         return pressed
     }
-}
-
-@MainActor
-func drawerAutomationRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerAutomationAutomationCheckTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerAutomationAutomationCheckTimeout: Error {
-    case timeout
 }
 
 // MARK: - Suite entry
@@ -402,7 +364,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationLegacyDefaultPromotion(report, camera: session.camera.snapshot)
     drawerAutomationLegacySpanRows(report, camera: session.camera.snapshot)
     do {
-        try drawerAutomationRunBlocking {
+        try runBlocking {
             try await coreAutomationPanUndoRegression(report, suite: session, service: service)
         }
     } catch {

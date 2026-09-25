@@ -56,7 +56,7 @@ func drawerVelocityPaintCommitsOnce(_ report: CheckReport, session: DocumentSess
     let endX = lastHandle.x
     let endY = page.axisModel.velocityToY(91)
     report.expect(pressX != endX, cppID: drawerVelocityPaintID, message: "the paint endpoints span two note columns")
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: endX, y: endY, buttons: 1)
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityPaintID, what: "the press column previews its literal paint velocity")
@@ -109,7 +109,7 @@ func drawerVelocityRampCommitsOnce(_ report: CheckReport, session: DocumentSessi
     let endY = page.axisModel.velocityToY(93)
     report.expect(pressX != endX, cppID: drawerVelocityRampID, message: "the ramp endpoints span two note columns")
     report.expect(middleHandle.x > min(pressX, endX) && middleHandle.x < max(pressX, endX), cppID: drawerVelocityRampID, message: "the middle note sits inside the swept span")
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: shift)
     let middleExpected = page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: pressX, y0: pressY, x1: endX, y1: endY))
     _ = page.pointerMove(x: endX, y: endY, buttons: 1)
@@ -158,7 +158,7 @@ func drawerVelocityRulerUnlockKeepsRaw(_ report: CheckReport, session: DocumentS
     report.expect(page.detentsAvailable && page.detentsEnabled, cppID: drawerVelocityRulerUnlockID, message: "the square context offers the enabled detent control")
     let rulerY = page.axisModel.velocityToY(73)
     drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
-    var baseline = drawerVelocityDocumentSnapshot(document)
+    var baseline = DocumentSnapshot(document)
     report.expect(page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: unlock), cppID: drawerVelocityRulerUnlockID, message: "the unlocked ruler consumes its own press")
     _ = page.pointerRelease(x: rulerX, y: rulerY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRulerUnlockID, what: "one unlocked ruler click makes one revision")
@@ -171,7 +171,7 @@ func drawerVelocityRulerUnlockKeepsRaw(_ report: CheckReport, session: DocumentS
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRulerUnlockID, what: "the bare release after the captured unlock writes nothing more")
     page.setUseDetents(enabled: false)
     drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     report.expect(page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: 0), cppID: drawerVelocityRulerUnlockID, message: "the detents-disabled ruler consumes its own press")
     _ = page.pointerRelease(x: rulerX, y: rulerY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRulerUnlockID, what: "one detents-disabled ruler click makes one revision")
@@ -185,7 +185,7 @@ func drawerVelocityRulerUnlockKeepsRaw(_ report: CheckReport, session: DocumentS
     page.refreshFromDocument()
     report.expectEqual(expected: VelocityAxisModel.Mode.intrinsic.rawValue, actual: page.axisMode, cppID: drawerVelocityRulerUnlockID, what: "the noise pair presents the intrinsic ruler")
     drawerVelocityPaintSetOrigins(document, page, notes[2], 33, secondNoise, 87)
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: unlock)
     _ = page.pointerRelease(x: rulerX, y: rulerY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRulerUnlockID, what: "one unlocked noise ruler click makes one revision")
@@ -193,7 +193,7 @@ func drawerVelocityRulerUnlockKeepsRaw(_ report: CheckReport, session: DocumentS
     report.expectEqual(expected: 73, actual: Int(document.note(secondNoise.id)?.velocity ?? 0), cppID: drawerVelocityRulerUnlockID, what: "the modifier-unlocked noise click sets every selected note raw")
     page.setUseDetents(enabled: false)
     drawerVelocityPaintSetOrigins(document, page, notes[2], 33, secondNoise, 87)
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: rulerX, y: rulerY, surface: 0, button: 1, modifiers: 0)
     _ = page.pointerRelease(x: rulerX, y: rulerY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRulerUnlockID, what: "one detents-disabled noise ruler click makes one revision")
@@ -223,7 +223,7 @@ func drawerVelocityLockedPaintUsesDetents(_ report: CheckReport, session: Docume
         return
     }
     let pressY = page.axisModel.velocityToY(73)
-    var baseline = drawerVelocityDocumentSnapshot(document)
+    var baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: pressY, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: secondHandle.x, y: pressY, buttons: 1)
     report.expectEqual(expected: 76, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked square sweep previews the detent above raw 73")
@@ -247,7 +247,7 @@ func drawerVelocityLockedPaintUsesDetents(_ report: CheckReport, session: Docume
         report.fail(drawerVelocityLockedPaintID, "the noise pair published no handles")
         return
     }
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: noiseHandle.x, y: pressY, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: noiseSecondHandle.x, y: pressY, buttons: 1)
     report.expectEqual(expected: 76, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityLockedPaintID, what: "the locked noise sweep previews the detent above raw 73")
@@ -290,7 +290,7 @@ func drawerVelocityUnlockedPaintKeepsRaw(_ report: CheckReport, session: Documen
     }
     let firstY = page.axisModel.velocityToY(37)
     let lastY = page.axisModel.velocityToY(91)
-    var baseline = drawerVelocityDocumentSnapshot(document)
+    var baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: firstY, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: secondHandle.x, y: lastY, buttons: 1)
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedPaintID, what: "the unlocked square sweep previews the first raw velocity")
@@ -313,7 +313,7 @@ func drawerVelocityUnlockedPaintKeepsRaw(_ report: CheckReport, session: Documen
         report.fail(drawerVelocityUnlockedPaintID, "the noise pair published no handles")
         return
     }
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     let noisePressX = noiseHandle.x - 40
     let noiseSlope = (lastY - firstY) / (noiseSecondHandle.x - noiseHandle.x)
     let noisePressY = firstY - noiseSlope * 40
@@ -353,7 +353,7 @@ func drawerVelocityLateUnlockKeepsSnapped(_ report: CheckReport, session: Docume
         report.fail(drawerVelocityLateUnlockID, "the square pair published no handles")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: firstHandle.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: firstHandle.x, y: page.axisModel.levelToY(5), buttons: 1)
     report.expectEqual(expected: 44, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked quiet note previews its snapped level")
@@ -379,7 +379,7 @@ func drawerVelocityLateUnlockKeepsSnapped(_ report: CheckReport, session: Docume
         report.fail(drawerVelocityLateUnlockID, "the noise pair published no handles")
         return
     }
-    let noiseBaseline = drawerVelocityDocumentSnapshot(document)
+    let noiseBaseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: noiseHandle.x, y: noiseHandle.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: noiseHandle.x, y: page.axisModel.levelToY(5), buttons: 1)
     report.expectEqual(expected: 44, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityLateUnlockID, what: "the press-locked noise note previews its snapped level")
@@ -421,7 +421,7 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
     }
     let moveY = firstHandle.y - 24
     let moveDelta = page.axisModel.yToVelocity(moveY) - page.axisModel.yToVelocity(firstHandle.y)
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: firstHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: firstHandle.x, y: moveY, buttons: 1)
     report.expectEqual(expected: 33 + moveDelta, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked quiet note takes the shared raw delta")
@@ -449,7 +449,7 @@ func drawerVelocityUnlockedRelativeKeepsOffsets(_ report: CheckReport, session: 
     }
     let noiseMoveY = noiseHandle.y - 24
     let noiseMoveDelta = page.axisModel.yToVelocity(noiseMoveY) - page.axisModel.yToVelocity(noiseHandle.y)
-    let noiseBaseline = drawerVelocityDocumentSnapshot(document)
+    let noiseBaseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: noiseHandle.x, y: noiseHandle.y, surface: 1, button: 1, modifiers: unlock)
     _ = page.pointerMove(x: noiseHandle.x, y: noiseMoveY, buttons: 1)
     report.expectEqual(expected: 33 + noiseMoveDelta, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRelativeID, what: "the unlocked noise note takes the shared raw delta")
@@ -498,7 +498,7 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     let pressY = page.axisModel.velocityToY(37)
     let endY = page.axisModel.velocityToY(93)
     report.expect(middleHandle.x > min(firstHandle.x, lastHandle.x) && middleHandle.x < max(firstHandle.x, lastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the square middle note sits inside the swept span")
-    var baseline = drawerVelocityDocumentSnapshot(document)
+    var baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: firstHandle.x, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
     _ = page.pointerMove(x: lastHandle.x, y: endY, buttons: 1)
     let squareMiddleExpected = page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: firstHandle.x, y0: pressY, x1: lastHandle.x, y1: endY))
@@ -528,7 +528,7 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
         return
     }
     report.expect(noiseMiddleHandle.x > min(noiseFirstHandle.x, noiseLastHandle.x) && noiseMiddleHandle.x < max(noiseFirstHandle.x, noiseLastHandle.x), cppID: drawerVelocityUnlockedRampID, message: "the noise middle note sits inside the swept span")
-    baseline = drawerVelocityDocumentSnapshot(document)
+    baseline = DocumentSnapshot(document)
     _ = page.pointerPress(x: noiseFirstHandle.x, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
     _ = page.pointerMove(x: noiseLastHandle.x, y: endY, buttons: 1)
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked noise ramp starts raw")

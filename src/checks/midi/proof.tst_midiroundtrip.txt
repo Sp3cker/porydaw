@@ -5,7 +5,7 @@ Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
 Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
 Original: src/checks/midi/tst_midiroundtrip.cpp
 Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
-Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift counterpart: src/checks/midi/MidiSmfCodecChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -17,12 +17,12 @@ Swift pairing command: deno task verify --filter swiftcore --verbose
 Result: controller-observed run 2026-09-24 — build ok; ok: swiftcore (10.20s);
 verify: 1/6 ok (5 skipped); run_checks: PASS, which executes
 runMidiCodecSuite and therefore runMidiExportEquivalence (called at
-src/checks/midi/MidiChecks.swift). This reconciliation did not re-run the
+src/checks/midi/MidiSmfCodecChecks.swift). This reconciliation did not re-run the
 lane.
 
 A001 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:82
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   #include "checks/midi/tst_midiroundtrip.h"
 
@@ -111,7 +111,7 @@ Original expression:
 
 A002 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:84
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       auto error = QString{};
@@ -121,7 +121,7 @@ Original expression:
 
 A003 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:87
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -133,7 +133,7 @@ Original expression:
 
 A004 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:89
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -143,7 +143,7 @@ Original expression:
 
 A005 | MidiRoundtripTest::songM2Roundtrip_data | src/checks/midi/tst_midiroundtrip.cpp:96
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
   }
@@ -157,7 +157,7 @@ Original expression:
 
 A006 | MidiRoundtripTest::songM2Roundtrip_data | src/checks/midi/tst_midiroundtrip.cpp:107
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -176,7 +176,7 @@ Original expression:
 
 A007 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:114
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
   }
@@ -191,7 +191,7 @@ Original expression:
 
 A008 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:116
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       const SongInfo &song = songs[songIndex];
@@ -201,7 +201,7 @@ Original expression:
 
 A009 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:119
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -217,7 +217,7 @@ Mapping: S005, S006, S007, S008, S009, S010, S011, S012, S013, S001, S003
 
 A011 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:129
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       const QByteArray savedBytes = smf.write();
@@ -229,7 +229,7 @@ Original expression:
 
 A012 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:131
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       const auto scratchDir = QDir{scratch.path()};
@@ -239,7 +239,7 @@ Original expression:
 
 A013 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:132
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -248,7 +248,7 @@ Original expression:
 
 A014 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:135
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -260,7 +260,7 @@ Original expression:
 
 A015 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:139
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       const QString originalMidi = scratchDir.filePath(QStringLiteral("orig/") + name);
@@ -271,7 +271,7 @@ Original expression:
 
 A016 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:140
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
 
@@ -280,7 +280,7 @@ Original expression:
 
 A017 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:143
 Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 in src/checks/midi/MidiChecks.swift; the native export-equivalence helper compiles the same original song bytes with mid2agb under the same song.cfg.rawFlags per song row, and a compile failure clears that row's pass bit (originalCompileFailureBits). Unproved: the C++ compileMid invocation itself remains a native mid2agb compile obligation.
+Mapping/reason: Related predicates S014, S015 in src/checks/midi/MidiSmfCodecChecks.swift; the native export-equivalence helper compiles the same original song bytes with mid2agb under the same song.cfg.rawFlags per song row, and a compile failure clears that row's pass bit (originalCompileFailureBits). Unproved: the C++ compileMid invocation itself remains a native mid2agb compile obligation.
 Source context since previous assertion:
   ;
 
@@ -292,7 +292,7 @@ Original expression:
 
 A018 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:146
 Disposition: PARTIAL
-Mapping/reason: Related predicates S014, S015 in src/checks/midi/MidiChecks.swift; the native export-equivalence helper compiles the Swift-encoded song bytes with mid2agb under the same song.cfg.rawFlags per song row (encodedCompileFailureBits clears the row's pass bit). Unproved: compilability of the C++ smf.write() output itself remains a native mid2agb compile obligation.
+Mapping/reason: Related predicates S014, S015 in src/checks/midi/MidiSmfCodecChecks.swift; the native export-equivalence helper compiles the Swift-encoded song bytes with mid2agb under the same song.cfg.rawFlags per song row (encodedCompileFailureBits clears the row's pass bit). Unproved: compilability of the C++ smf.write() output itself remains a native mid2agb compile obligation.
 Source context since previous assertion:
   ;
       auto savedAssembly = QByteArray{};
@@ -314,7 +314,7 @@ Original expression:
 
 A020 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:202
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
   }
@@ -374,7 +374,7 @@ Original expression:
 
 A021 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:205
 Disposition: PARTIAL
-Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
+Mapping/reason: Related predicates S015, S016, S022-S025 in src/checks/midi/MidiSmfCodecChecks.swift; the swiftcore lane surfaces the same precondition as a row failure (projectOpenFailed/missingSongBits, fixture-root or fixture/export I/O fail) rather than a guard. Unproved: the explicit QTest guard semantics themselves.
 Source context since previous assertion:
   ;
       const QString midPath = scratch.filePath(QStringLiteral("echo_traffic.mid"));
@@ -385,7 +385,7 @@ Original expression:
 
 A022 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:208
 Disposition: PARTIAL
-Mapping/reason: Related predicate S016 in src/checks/midi/MidiChecks.swift; the Swift side writes byte-identical echo traffic and the native helper proves it compiles (xcmdCompileFailed == 0). Unproved: the C++ compileMid invocation itself remains a native mid2agb compile obligation.
+Mapping/reason: Related predicate S016 in src/checks/midi/MidiSmfCodecChecks.swift; the Swift side writes byte-identical echo traffic and the native helper proves it compiles (xcmdCompileFailed == 0). Unproved: the C++ compileMid invocation itself remains a native mid2agb compile obligation.
 Source context since previous assertion:
   ;
 
@@ -421,77 +421,77 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift counterpart execution sites
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S001 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent Swift validity (error=\(swift.error))"
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S002 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'"
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S003 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent canonical byte vector"
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S004 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent format-0 provenance"
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S005 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)"
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S006 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)"
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S007 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded division"
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S008 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded format-0 provenance"
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S009 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk count"
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S010 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk=\(index) end tick"
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S011 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk=\(index) event count"
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S012 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S013 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded event chunk=\(item.chunk) index=\(item.index)"
 
-S014 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S014 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S015 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S015 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S016 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S016 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "mid2agb compiles Swift XCMD traffic"
 
-S017 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S017 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "one xIECV command"
 
-S018 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S018 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "one xIECL command"
 
-S019 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S019 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "xIECV carries value 64"
 
-S020 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S020 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "xIECL carries value 51"
 
-S021 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S021 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "unknown selector emits no echo command"
 
-S022 | compareFixture | src/checks/midi/MidiChecks.swift
+S022 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S023 | compareFixture | src/checks/midi/MidiChecks.swift
+S023 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S024 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S024 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S025 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift
+S025 | runMidiExportEquivalence | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function

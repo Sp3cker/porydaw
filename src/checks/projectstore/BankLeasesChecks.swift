@@ -47,32 +47,30 @@ private func bankFixture(
           FileManager.default.fileExists(atPath: staged) else {
         throw BankLeasesCheckError.failed("fixture_rich.inc is absent")
     }
-    let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "bankleases-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: copy) }
-    try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: copy)
-    let store = ProjectStore(projectRoot: copy)
-    let snapshot = try bankAwait { try await store.open() }
-    try bankRequire(snapshot.isOpen, "fixture project did not open")
-    let song = try bankAwait { try await store.songMeta(label: "mus_gym") }
-    try bankRequire(song.isPlayable, "mus_gym is not playable")
-    do {
-        _ = try bankAwait { try await store.songMeta(label: "mus_absent") }
-        throw BankLeasesCheckError.failed("mus_absent unexpectedly resolved")
-    } catch ProjectStoreReadError.songNotFound(let label) {
-        try bankRequire(label == "mus_absent", "wrong absent-song label")
+    try withTempProjectCopy(prefix: "bankleases") { copy in
+        let store = ProjectStore(projectRoot: copy)
+        let snapshot = try bankAwait { try await store.open() }
+        try bankRequire(snapshot.isOpen, "fixture project did not open")
+        let song = try bankAwait { try await store.songMeta(label: "mus_gym") }
+        try bankRequire(song.isPlayable, "mus_gym is not playable")
+        do {
+            _ = try bankAwait { try await store.songMeta(label: "mus_absent") }
+            throw BankLeasesCheckError.failed("mus_absent unexpectedly resolved")
+        } catch ProjectStoreReadError.songNotFound(let label) {
+            try bankRequire(label == "mus_absent", "wrong absent-song label")
+        }
+        let bank = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
+        try bankRequire(bank.loadName == "fixture_rich" && bank.slotViews.count == voicegroupSize,
+                        "mus_gym did not load fixture_rich with 128 slots")
+        try bankRequire(bank.slotViews[directSoundSlot].kind == .editable &&
+                        bank.slotViews[directSoundSlot].voice != nil,
+                        "slot 0 is not an editable voice")
+        try bankRequire(firstSquareSlot(bank).map {
+            bank.slotViews[$0].kind == .editable && bank.slotViews[$0].voice != nil
+        } == true, "fixture_rich lacks an editable Square 1 voice")
+        try bankRequire(!bank.dirty, "newly loaded bank is dirty")
+        try body(copy, store, song, bank)
     }
-    let bank = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
-    try bankRequire(bank.loadName == "fixture_rich" && bank.slotViews.count == voicegroupSize,
-                    "mus_gym did not load fixture_rich with 128 slots")
-    try bankRequire(bank.slotViews[directSoundSlot].kind == .editable &&
-                    bank.slotViews[directSoundSlot].voice != nil,
-                    "slot 0 is not an editable voice")
-    try bankRequire(firstSquareSlot(bank).map {
-        bank.slotViews[$0].kind == .editable && bank.slotViews[$0].voice != nil
-    } == true, "fixture_rich lacks an editable Square 1 voice")
-    try bankRequire(!bank.dirty, "newly loaded bank is dirty")
-    try body(copy, store, song, bank)
 }
 
 private func editedDirectSound(
@@ -121,28 +119,26 @@ private func serviceBankCase(
               FileManager.default.fileExists(atPath: staged) else {
             throw BankLeasesCheckError.failed("fixture_rich.inc is absent")
         }
-        let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
-            "bankleases-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: copy) }
-        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: copy)
-        let service = ProjectService()
-        defer {
-            do {
-                try runBlocking { await service.close() }
-            } catch {
-                report.fail(cppID, "service close failed: \(error)")
+        try withTempProjectCopy(prefix: "bankleases") { copy in
+            let service = ProjectService()
+            defer {
+                do {
+                    try runBlocking { await service.close() }
+                } catch {
+                    report.fail(cppID, "service close failed: \(error)")
+                }
             }
+            try runBlocking { try await service.open(root: copy.path) }
+            let song = try runBlocking { try await service.openSong(label: "mus_gym") }
+            try bankRequire(song.bankLoadName == "fixture_rich" &&
+                            song.bankSlots.count == voicegroupSize && !song.bankDirty &&
+                            song.bankSlots[directSoundSlot].kind == BankSlotKind.editable &&
+                            song.bankSlots[directSoundSlot].voice?.key == 60 &&
+                            song.bankSlots[blankSlot].kind == BankSlotKind.none,
+                            "mus_gym did not load a clean fixture_rich bank with 128 slots")
+            try body(copy, service, song)
+            report.pass(cppID, row: name)
         }
-        try runBlocking { try await service.open(root: copy.path) }
-        let song = try runBlocking { try await service.openSong(label: "mus_gym") }
-        try bankRequire(song.bankLoadName == "fixture_rich" &&
-                        song.bankSlots.count == voicegroupSize && !song.bankDirty &&
-                        song.bankSlots[directSoundSlot].kind == BankSlotKind.editable &&
-                        song.bankSlots[directSoundSlot].voice?.key == 60 &&
-                        song.bankSlots[blankSlot].kind == BankSlotKind.none,
-                        "mus_gym did not load a clean fixture_rich bank with 128 slots")
-        try body(copy, service, song)
-        report.pass(cppID, row: name)
     } catch {
         report.fail(cppID, "\(name): \(error)")
     }

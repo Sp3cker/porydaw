@@ -3,8 +3,9 @@ Assertion correspondence: midi/tst_midismf.cpp
 Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midismf.cpp
 Original SHA-256: 8020c4710e4f59b87aac42d18cd70d595cf81260c9c12dfd64581a7361efe5c3
-Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift counterpart: src/checks/midi/MidiSmfCodecChecks.swift
 Additional covering Swift files:
+src/checks/midi/MidiSemanticsChecks.swift
 src/checks/editcheck/NoteChecks.swift
 src/checks/editcheck/EventChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
@@ -34,7 +35,7 @@ songM2-style project-song rows are not used here. Data rows, guards
 bodies (expectTempoProjection, invoked for raw and projected timelines;
 analyzeChannelTrack; ccRow/xcmdRow) at the reference revision remain
 authoritative. The Swift counterparts reconstruct the same fixtures, traffic,
-and rows in memory: MidiChecks.swift tempoConversionProjection and
+and rows in memory: MidiSemanticsChecks.swift tempoConversionProjection and
 engineMappingProjection, NoteChecks.swift lifecycleFixturePairing,
 interleavedFixturePairing, and unterminatedPairingLargeFixture, and EventChecks.swift
 importSmfReportRows. Pairing, projection, and report-row observables are
@@ -1342,7 +1343,7 @@ Mapping: S065
 
 A294 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:779
 Disposition: PARTIAL
-Mapping/reason: Swift S069 (MidiChecks.swift) asserts the unexpected-key guard for every mapped note-on event. Unproved: the original guard ran over every non-tempo, non-program event, including note-offs, which the Swift predicate does not iterate.
+Mapping/reason: Swift S069 (MidiSemanticsChecks.swift) asserts the unexpected-key guard for every mapped note-on event. Unproved: the original guard ran over every non-tempo, non-program event, including note-offs, which the Swift predicate does not iterate.
 Source context since previous assertion:
   ;
 
@@ -1366,7 +1367,7 @@ Original expression:
 
 A295 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:781
 Disposition: PARTIAL
-Mapping/reason: Swift S070 (MidiChecks.swift) asserts engine routing for every mapped note-on, keys 60/61/62-74 to engines 1/2/3-15. Unproved: engine routing for note-off events, which the original loop also asserted.
+Mapping/reason: Swift S070 (MidiSemanticsChecks.swift) asserts engine routing for every mapped note-on, keys 60/61/62-74 to engines 1/2/3-15. Unproved: engine routing for note-off events, which the original loop also asserted.
 Source context since previous assertion:
   ;
 
@@ -1411,7 +1412,7 @@ Original expression:
 
 A301 | MidiSmfTest::engineTrackMappingAgreesAcrossProjections | src/checks/midi/tst_midismf.cpp:796
 Disposition: PARTIAL
-Mapping/reason: Swift S071 (MidiChecks.swift) iterates engines 0 through 15 and asserts each chunk mapping, which establishes at least 16 engine tracks. Unproved: the exact engine-track count, since no explicit count predicate exists and an out-of-range index would trap rather than assert.
+Mapping/reason: Swift S071 (MidiSemanticsChecks.swift) iterates engines 0 through 15 and asserts each chunk mapping, which establishes at least 16 engine tracks. Unproved: the exact engine-track count, since no explicit count predicate exists and an out-of-range index would trap rather than assert.
 Source context since previous assertion:
   ;
 
@@ -1725,52 +1726,52 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S001 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent Swift validity (error=\(swift.error))"
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S002 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'"
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S003 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent canonical byte vector"
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S004 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent format-0 provenance"
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S005 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)"
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S006 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)"
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S007 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded division"
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S008 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded format-0 provenance"
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S009 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk count"
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S010 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk=\(index) end tick"
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S011 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk=\(index) event count"
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S012 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift
+S013 | expectDecodedStructure | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded event chunk=\(item.chunk) index=\(item.index)"
 
-S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift
+S014 | runMusicalSemanticsSuite | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: function
 
-S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift
+S015 | coreMidiExpectOracleValue | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "row=\(row) independent expected value"
 
-S016 | coreMidiExpectOracleText | src/checks/midi/MidiChecks.swift
+S016 | coreMidiExpectOracleText | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "row=\(row) independent expected text"
 
 S017 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift
@@ -1791,178 +1792,178 @@ Anchor: function
 S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift
 Anchor: message "moving an unterminated note does not invent an end"
 
-S023 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S023 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "import counts logical XCMD points"
 
-S024 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S024 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "unknown controller is not exported"
 
-S025 | compareFixture | src/checks/midi/MidiChecks.swift
+S025 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S026 | compareFixture | src/checks/midi/MidiChecks.swift
+S026 | compareFixture | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S027 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S027 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent encoded format word is 1"
 
-S028 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S028 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent semantic reparse validity (error=\(reparsed.error))"
 
-S029 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S029 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent semantic reparse division"
 
-S030 | compareCodecCase | src/checks/midi/MidiChecks.swift
+S030 | compareCodecCase | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent semantic reparse chunks"
 
-S031 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+S031 | runMidiCodecSuite | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S032 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+S032 | runMidiCodecSuite | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk count"
 
-S033 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+S033 | runMidiCodecSuite | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent decoded chunk=1 end tick"
 
-S034 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+S034 | runMidiCodecSuite | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: function
 
-S035 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S035 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "tick-one tempo event count"
 
-S036 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S036 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "tick-one tempo sequence in BPM"
 
-S037 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S037 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "tick-one tempo sample positions"
 
-S038 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S038 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "one scheduled note-on"
 
-S039 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S039 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "note-on tick"
 
-S040 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S040 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "note-on sample"
 
-S041 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S041 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "note-on engine track"
 
-S042 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S042 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "note-off tick"
 
-S043 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S043 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "note-off engine track"
 
-S044 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S044 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "sample for tick \(tick)"
 
-S045 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S045 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "sample \(sample) inverts to tick \(tick)"
 
-S046 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S046 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "start/end mark a loop"
 
-S047 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S047 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "loop start tick"
 
-S048 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S048 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "loop end tick"
 
-S049 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S049 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "loop start sample"
 
-S050 | assertTempoProjection | src/checks/midi/MidiChecks.swift
+S050 | assertTempoProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "loop end sample"
 
-S051 | tempoConversionProjection | src/checks/midi/MidiChecks.swift
+S051 | tempoConversionProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "tempo fixture semantic reparse"
 
-S052 | tempoConversionProjection | src/checks/midi/MidiChecks.swift
+S052 | tempoConversionProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document collapses duplicate tempo last-wins"
 
-S053 | tempoConversionProjection | src/checks/midi/MidiChecks.swift
+S053 | tempoConversionProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document maps voice chunk"
 
-S054 | tempoConversionProjection | src/checks/midi/MidiChecks.swift
+S054 | tempoConversionProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "projections do not mutate source MIDI bytes"
 
-S055 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S055 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "raw timeline mapped-track count"
 
-S056 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S056 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "raw timeline dropped-track count"
 
-S057 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S057 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document timeline mapped-track count"
 
-S058 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S058 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document timeline dropped-track count"
 
-S059 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S059 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import mapped-track count"
 
-S060 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S060 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import dropped-track count"
 
-S061 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S061 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import mapped-track rows"
 
-S062 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S062 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "concurrent playback notes"
 
-S063 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S063 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "raw timeline track names"
 
-S064 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S064 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "raw timeline note counts"
 
-S065 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S065 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "pressure-only engine track remains used"
 
-S066 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S066 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "pressure events remain visible"
 
-S067 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S067 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "pressure events map to engine zero"
 
-S068 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S068 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "mapped note-on event count"
 
-S069 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S069 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "unexpected note key \(event.data0)"
 
-S070 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S070 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "engine routing for note key \(event.data0)"
 
-S071 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S071 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document chunk for engine \(engine)"
 
-S072 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S072 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document channel for engine \(engine)"
 
-S073 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S073 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document name for engine \(engine)"
 
-S074 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S074 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import chunk for engine \(engine)"
 
-S075 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S075 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import name for engine \(engine)"
 
-S076 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S076 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "import note count for engine \(engine)"
 
-S077 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S077 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document preserves mapping fixture MIDI content"
 
-S078 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S078 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "document timeline agrees with raw tracks"
 
-S079 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S079 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "mapping projections do not mutate MIDI bytes"
 
-S080 | engineMappingProjection | src/checks/midi/MidiChecks.swift
+S080 | engineMappingProjection | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "mapping fixture semantic reparse"
 
 S081 | lifecycleFixturePairing | src/checks/editcheck/NoteChecks.swift
@@ -2025,29 +2026,29 @@ Anchor: message "first note has no end"
 S100 | unterminatedPairingLargeFixture | src/checks/editcheck/NoteChecks.swift
 Anchor: message "last note has no end"
 
-S102 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S102 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "ordinary controller histogram size"
 
-S103 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S103 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "XCMD histogram size"
 
-S104 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S104 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "ordinary controller \(index) number"
 
-S105 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S105 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "ordinary controller \(index) count"
 
-S106 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S106 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "ordinary controller \(index) support"
 
-S107 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S107 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "XCMD \(index) label"
 
-S108 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S108 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "XCMD \(index) count"
 
-S109 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S109 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "XCMD \(index) support"
 
-S110 | importSmfReportRows | src/checks/editcheck/EventChecks.swift
+S110 | importSmfReportRows | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "XCMD plumbing stays out of ordinary controllers"

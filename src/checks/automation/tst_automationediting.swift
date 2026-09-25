@@ -29,7 +29,7 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
     report.expect(fixture.document.history.canRedo, cppID: drawerAutomationHistoryID,
                   message: "the undone transaction is redoable")
     do {
-        _ = try drawerAutomationRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerAutomationHistoryID, "redo failed: \(error)")
         return

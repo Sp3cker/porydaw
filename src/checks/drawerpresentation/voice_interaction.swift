@@ -82,7 +82,7 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
                   cppID: drawerVoiceMoveID, message: "the source tick no longer holds the occurrence")
 
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.fail(drawerVoiceMoveID, "undo failed: \(error)")
         return
@@ -92,7 +92,7 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceMoveID,
                        what: "undo rebuilds the projection at the restored tick")
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerVoiceMoveID, "redo failed: \(error)")
         return
@@ -307,7 +307,7 @@ func drawerVoiceCollisionDragOutcome(_ report: CheckReport, suite: DocumentSessi
     // One history entry, both sides restored: an unintended second entry would
     // leave one of the two occurrences behind.
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.fail(drawerVoiceCollisionID, "undo failed: \(error)")
         return

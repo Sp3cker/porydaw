@@ -40,23 +40,21 @@ private func withExportFixture(label: String, _ body: (ExportFixture) throws -> 
     guard !label.isEmpty else {
         throw ExportCheckError.failed("exportcheck requires a song label")
     }
-    let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "exportcheck-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: scratch) }
-    try FileManager.default.copyItem(at: URL(filePath: root), to: scratch)
-    let service = ProjectService()
-    let outcome = Result {
-        try runBlocking { try await service.open(root: scratch.path) }
-        let song = try runBlocking { try await service.openSong(label: label) }
-        let file = try MidiFile.decode(song.midiBytes)
-        let timeline = PlaybackTimeline.build(
-            file: file, sampleRate: Double(exportRate),
-            settings: PlaybackSettings(exactGate: song.config.exactGate,
-                                       extendedClocks: song.config.extendedClocks))
-        try body(ExportFixture(song: song, timeline: timeline, scratch: scratch))
+    try withTempProjectCopy(prefix: "exportcheck") { scratch in
+        let service = ProjectService()
+        let outcome = Result {
+            try runBlocking { try await service.open(root: scratch.path) }
+            let song = try runBlocking { try await service.openSong(label: label) }
+            let file = try MidiFile.decode(song.midiBytes)
+            let timeline = PlaybackTimeline.build(
+                file: file, sampleRate: Double(exportRate),
+                settings: PlaybackSettings(exactGate: song.config.exactGate,
+                                           extendedClocks: song.config.extendedClocks))
+            try body(ExportFixture(song: song, timeline: timeline, scratch: scratch))
+        }
+        try runBlocking { await service.close() }
+        try outcome.get()
     }
-    try runBlocking { await service.close() }
-    try outcome.get()
 }
 
 private func appendU16(_ value: UInt16, to bytes: inout Data) {

@@ -54,7 +54,8 @@ porydaw_enable_project_warnings(porydaw_checks)
 if(APPLE)
     add_library(swift_core_check STATIC
         support/corecheck/CoreCheckSupport.swift
-        midi/MidiChecks.swift
+        midi/MidiSmfCodecChecks.swift
+        midi/MidiSemanticsChecks.swift
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
         audio/controllerfixture.swift
@@ -105,13 +106,21 @@ if(APPLE)
         editcheck/EventViewsEditsParity.swift
         editcheck/EventViewsRemapBucketsParity.swift
         editcheck/TrackCorpusChecks.swift
-        editcheck/TimeChecks.swift
+        editcheck/TimeRangeChecks.swift
         editcheck/TimeCorpusChecks.swift
         editcheck/SelectionChecks.swift
         editcheck/TickBoundsChecks.swift
+        editcheck/ClipboardCodecChecks.swift
+        editcheck/ClipboardEditingChecks.swift
+        editcheck/TrackLifecycleChecks.swift
+        editcheck/MidiImportChecks.swift
+        editcheck/XcmdPlaybackChecks.swift
+        editcheck/FormatZeroChecks.swift
         rollcheck/static/camera.swift
         rollcheck/static/geometry.swift
         rollcheck/static/gate.swift
+        rollcheck/camera_grid.swift
+        support/PageCheckSupport.swift
         scrollbar/ScrollbarChecks.swift
         rollcheck/pencil.swift
         rollcheck/resize.swift
@@ -147,7 +156,10 @@ if(APPLE)
         trackheaders/trackheaderraster.swift
         trackheaders/tst_trackactivitymeter.swift
         automation/domain/tst_automationdomain.swift
-        automation/domain/gestures.swift
+        automation/domain/gestureSweep.swift
+        automation/domain/gestureNodeDrag.swift
+        automation/domain/gesturePointRange.swift
+        automation/domain/gesturePencil.swift
         automation/domain/xcmd.swift
         automation/domain/xcmdRanges.swift
         automation/presentation/painting.swift

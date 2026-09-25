@@ -101,7 +101,7 @@ func drawerAutomationTapTempoCadenceAndCommit(_ report: CheckReport, suite: Docu
     report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationTapTempoID,
                   message: "one tempo edit is exactly one history entry")
     do {
-        _ = try drawerAutomationRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerAutomationTapTempoID, "redo failed: \(error)")
         return

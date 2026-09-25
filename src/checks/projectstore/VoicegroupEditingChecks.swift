@@ -40,11 +40,7 @@ private func editingRoot() -> URL {
         "voicegroup-editing-\(UUID().uuidString)", isDirectory: true)
 }
 
-private func editingRichSource(root: URL) throws -> VoicegroupSource {
-    guard let fixture = CheckEnvironment.fixtureRoot else {
-        throw EditingFixtureError.open("staged decompproject fixture root is unavailable")
-    }
-    try FileManager.default.copyItem(at: URL(filePath: fixture), to: root)
+private func openRichSource(at root: URL) throws -> VoicegroupSource {
     let source = VoicegroupSource()
     var error: String?
     guard source.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error) else {
@@ -58,31 +54,31 @@ private enum EditingFixtureError: Error {
 }
 
 private func editingBlankSlot(_ report: CheckReport) {
-    let root = editingRoot()
-    defer { try? FileManager.default.removeItem(at: root) }
     do {
-        let source = try editingRichSource(root: root)
-        let baseline = editingLoad(root: root, name: source.loadName)
-        editingExpect("A001", baseline != nil, report, "fixture session opens source and native baseline")
-        guard let baseline else { return }
-        defer { voicegroup_free(baseline) }
-        let slot = (0..<128).first { source.kindAt(slot: $0) == .none }
-        editingExpect("A003", slot != nil, report, "fixture_rich retains a materializable blank slot")
-        guard let slot else { return }
-        let before = source.sourceBytes()
-        let created = VgVoice(macro: .square1, sustain: 15)
-        let draft = source.voiceDraft(slot: slot, blank: created)
-        editingExpect("A004", draft != nil, report, "blank slot produces a draft")
-        editingExpect("A005", draft?.materializesBlank == true, report, "draft marks materialization")
-        editingEqual("A006", created, draft?.voice, report, "draft retains the requested voice")
-        editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "blank slot accepts voice")
-        editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "inserted voice is present")
-        editingEqual("A009", created, source.voiceAt(slot: slot), report, "inserted voice equals request")
-        editingExpect("A010", source.dirty, report, "materialization marks source dirty")
-        editingExpect("A011", source.restoreSourceBytes(before), report, "original source bytes restore")
-        editingEqual("A012", VgLineKind.none, source.kindAt(slot: slot), report, "restored slot is empty")
-        editingEqual("A013", before, source.sourceBytes(), report, "restored bytes equal original")
-        editingExpect("A014", !source.dirty, report, "restoring pristine bytes clears dirty")
+        try withTempProjectCopy(prefix: "voicegroup-editing") { root in
+            let source = try openRichSource(at: root)
+            let baseline = editingLoad(root: root, name: source.loadName)
+            editingExpect("A001", baseline != nil, report, "fixture session opens source and native baseline")
+            guard let baseline else { return }
+            defer { voicegroup_free(baseline) }
+            let slot = (0..<128).first { source.kindAt(slot: $0) == .none }
+            editingExpect("A003", slot != nil, report, "fixture_rich retains a materializable blank slot")
+            guard let slot else { return }
+            let before = source.sourceBytes()
+            let created = VgVoice(macro: .square1, sustain: 15)
+            let draft = source.voiceDraft(slot: slot, blank: created)
+            editingExpect("A004", draft != nil, report, "blank slot produces a draft")
+            editingExpect("A005", draft?.materializesBlank == true, report, "draft marks materialization")
+            editingEqual("A006", created, draft?.voice, report, "draft retains the requested voice")
+            editingExpect("A007", source.setVoice(slot: slot, voice: created), report, "blank slot accepts voice")
+            editingExpect("A008", source.voiceAt(slot: slot) != nil, report, "inserted voice is present")
+            editingEqual("A009", created, source.voiceAt(slot: slot), report, "inserted voice equals request")
+            editingExpect("A010", source.dirty, report, "materialization marks source dirty")
+            editingExpect("A011", source.restoreSourceBytes(before), report, "original source bytes restore")
+            editingEqual("A012", VgLineKind.none, source.kindAt(slot: slot), report, "restored slot is empty")
+            editingEqual("A013", before, source.sourceBytes(), report, "restored bytes equal original")
+            editingExpect("A014", !source.dirty, report, "restoring pristine bytes clears dirty")
+        }
     } catch {
         report.expect(false, cppID: "voicegroupsourceediting/A001", message: "A001: fixture setup failed: \(error)")
     }
@@ -279,197 +275,197 @@ private func editingChangedLineCount(_ before: Data, _ after: Data) -> Int {
 }
 
 private func editingFamily(_ family: Int, _ report: CheckReport) {
-    let root = editingRoot()
-    defer { try? FileManager.default.removeItem(at: root) }
     do {
-        let source = try editingRichSource(root: root)
-        let file = URL(filePath: source.filePath)
-        let before = try Data(contentsOf: file)
-        let baseline = editingLoad(root: root, name: source.loadName)
-        editingExpect("A042", baseline != nil, report, "fixture session opens source and native baseline")
-        guard let baseline else { return }
-        defer { voicegroup_free(baseline) }
-        let drumkits = VoicegroupSource.drumkitInstruments(root.path)
-        if family >= 5 {
-            editingExpect("A049", drumkits.count >= 2, report, "fixture retains two drumkit definitions")
-            guard drumkits.count >= 2 else { return }
-        }
-        var slot: Int
-        var edited: VgVoice
-        switch family {
-        case 0:
-            let found = editingFirstSlot(source) {
-                $0 == .directSound || $0 == .directSoundNoResample || $0 == .directSoundAlt
+        try withTempProjectCopy(prefix: "voicegroup-editing") { root in
+            let source = try openRichSource(at: root)
+            let file = URL(filePath: source.filePath)
+            let before = try Data(contentsOf: file)
+            let baseline = editingLoad(root: root, name: source.loadName)
+            editingExpect("A042", baseline != nil, report, "fixture session opens source and native baseline")
+            guard let baseline else { return }
+            defer { voicegroup_free(baseline) }
+            let drumkits = VoicegroupSource.drumkitInstruments(root.path)
+            if family >= 5 {
+                editingExpect("A049", drumkits.count >= 2, report, "fixture retains two drumkit definitions")
+                guard drumkits.count >= 2 else { return }
             }
-            editingExpect("A043", found != nil, report, "fixture retains a DirectSound voice")
-            guard let found, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.key = 61
-            voice.attack = 200
-            voice.decay = 100
-            voice.sustain = 50
-            voice.release = 25
-            let donor = source.voiceAt(slot: 1)
-            editingExpect("A044", donor != nil, report, "fixture retains donor at slot 1")
-            guard let donor else { return }
-            voice.symbol = donor.symbol
-            edited = voice
-        case 1:
-            let found = editingFirstSlot(source) { $0 == .square1 || $0 == .square1Alt }
-            editingExpect("A045", found != nil, report, "fixture retains a square-1 voice")
-            guard let found, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.duty = 3
-            voice.sustain = 15
-            voice.sweep = 7
-            edited = voice
-        case 2:
-            let found = editingFirstSlot(source) { $0 == .noise || $0 == .noiseAlt }
-            editingExpect("A046", found != nil, report, "fixture retains a noise voice")
-            guard let found, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.period = 1 - (voice.period & 1)
-            edited = voice
-        case 3:
-            let found = editingFirstSlot(source) { $0 == .progWave || $0 == .progWaveAlt }
-            editingExpect("A047", found != nil, report, "fixture retains a programmable-wave voice")
-            guard let found, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.release = (voice.release & 7) == 5 ? 6 : 5
-            edited = voice
-        case 4:
-            let found = editingFirstSlot(source) { $0 == .keysplit }
-            let donor = found.flatMap { source.voiceAt(slot: $0 + 1) }
-            editingExpect("A048", found != nil && donor?.macro == .keysplit, report,
-                          "fixture retains adjacent keysplit voices")
-            guard let found, let donor, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.symbol = donor.symbol
-            voice.keysplitTable = donor.keysplitTable
-            edited = voice
-        case 5:
-            let found = editingFirstSlot(source) { $0 == .keysplitAll }
-            editingExpect("A050", found != nil, report, "fixture retains a drumkit aggregate")
-            guard let found, var voice = source.voiceAt(slot: found) else { return }
-            slot = found
-            voice.symbol = drumkits[drumkits.count - 1]
-            edited = voice
-        default:
-            slot = 4
-            editingExpect("A051", source.voiceAt(slot: slot) != nil, report,
-                          "conversion slot 4 is populated")
-            edited = VgVoice(macro: .keysplitAll, symbol: drumkits[0])
-        }
-        var aggregateOracleSlot = family == 4 ? slot + 1 : -1
-        if family >= 5 {
-            aggregateOracleSlot = (0..<128).first { index in
-                index != slot && source.voiceAt(slot: index)?.macro == .keysplitAll &&
-                    source.voiceAt(slot: index)?.symbol == edited.symbol
-            } ?? -1
-            editingExpect("A052", aggregateOracleSlot >= 0, report,
-                          "selected drumkit has an existing aggregate")
-        }
-        let expectedName = family == 0 ? editingVoiceName(baseline, 1) :
-            (family == 4 ? editingVoiceName(baseline, slot + 1) :
-                (family >= 5 ? editingLoaderVoiceName(edited.symbol) : editingVoiceName(baseline, slot)))
-        editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "edited voice is accepted")
-        editingExpect("A054", source.dirty, report, "edited voice makes source dirty")
-        let previewDir = root.appendingPathComponent(".porydaw/vgpreview", isDirectory: true)
-        try FileManager.default.createDirectory(at: previewDir, withIntermediateDirectories: true)
-        editingExpect("A055", FileManager.default.fileExists(atPath: previewDir.path), report,
-                      "preview directory is available")
-        let previewFile = previewDir.appendingPathComponent("\(source.loadName).inc")
-        try Data(source.renderPreview()).write(to: previewFile)
-        editingExpect("A056", FileManager.default.fileExists(atPath: previewFile.path), report,
-                      "preview bytes are written to the loader path")
-        var config = VoicegroupLoaderConfig()
-        let previewPathBytes = Array(".porydaw/vgpreview".utf8) + [0]
-        withUnsafeMutableBytes(of: &config.voicegroupPaths) { $0.copyBytes(from: previewPathBytes) }
-        config.voicegroupPathCount = 1
-        let preview = withUnsafePointer(to: &config) {
-            editingLoad(root: root, name: source.loadName, config: $0)
-        }
-        editingExpect("A057", preview != nil, report, "native loader accepts edited preview")
-        guard let preview else { return }
-        defer { voicegroup_free(preview) }
-        editingEqual("A058", expectedName, editingVoiceName(preview, slot), report,
-                     "preview resolves edited display name")
-        editingEqual("A059", vgMacroVoiceType(edited.macro), editingTone(preview, slot).type, report,
-                     "preview loads the edited voice type")
-        if family >= 4 {
-            if aggregateOracleSlot >= 0 {
-                editingExpect("A060", editingSameResolvedTone(
-                    editingTone(preview, slot), editingTone(baseline, aggregateOracleSlot),
-                    key: family >= 5 ? 36 : 60), report,
-                    "preview aggregate resolves the same playable child as existing aggregate")
+            var slot: Int
+            var edited: VgVoice
+            switch family {
+            case 0:
+                let found = editingFirstSlot(source) {
+                    $0 == .directSound || $0 == .directSoundNoResample || $0 == .directSoundAlt
+                }
+                editingExpect("A043", found != nil, report, "fixture retains a DirectSound voice")
+                guard let found, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.key = 61
+                voice.attack = 200
+                voice.decay = 100
+                voice.sustain = 50
+                voice.release = 25
+                let donor = source.voiceAt(slot: 1)
+                editingExpect("A044", donor != nil, report, "fixture retains donor at slot 1")
+                guard let donor else { return }
+                voice.symbol = donor.symbol
+                edited = voice
+            case 1:
+                let found = editingFirstSlot(source) { $0 == .square1 || $0 == .square1Alt }
+                editingExpect("A045", found != nil, report, "fixture retains a square-1 voice")
+                guard let found, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.duty = 3
+                voice.sustain = 15
+                voice.sweep = 7
+                edited = voice
+            case 2:
+                let found = editingFirstSlot(source) { $0 == .noise || $0 == .noiseAlt }
+                editingExpect("A046", found != nil, report, "fixture retains a noise voice")
+                guard let found, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.period = 1 - (voice.period & 1)
+                edited = voice
+            case 3:
+                let found = editingFirstSlot(source) { $0 == .progWave || $0 == .progWaveAlt }
+                editingExpect("A047", found != nil, report, "fixture retains a programmable-wave voice")
+                guard let found, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.release = (voice.release & 7) == 5 ? 6 : 5
+                edited = voice
+            case 4:
+                let found = editingFirstSlot(source) { $0 == .keysplit }
+                let donor = found.flatMap { source.voiceAt(slot: $0 + 1) }
+                editingExpect("A048", found != nil && donor?.macro == .keysplit, report,
+                              "fixture retains adjacent keysplit voices")
+                guard let found, let donor, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.symbol = donor.symbol
+                voice.keysplitTable = donor.keysplitTable
+                edited = voice
+            case 5:
+                let found = editingFirstSlot(source) { $0 == .keysplitAll }
+                editingExpect("A050", found != nil, report, "fixture retains a drumkit aggregate")
+                guard let found, var voice = source.voiceAt(slot: found) else { return }
+                slot = found
+                voice.symbol = drumkits[drumkits.count - 1]
+                edited = voice
+            default:
+                slot = 4
+                editingExpect("A051", source.voiceAt(slot: slot) != nil, report,
+                              "conversion slot 4 is populated")
+                edited = VgVoice(macro: .keysplitAll, symbol: drumkits[0])
+            }
+            var aggregateOracleSlot = family == 4 ? slot + 1 : -1
+            if family >= 5 {
+                aggregateOracleSlot = (0..<128).first { index in
+                    index != slot && source.voiceAt(slot: index)?.macro == .keysplitAll &&
+                        source.voiceAt(slot: index)?.symbol == edited.symbol
+                } ?? -1
+                editingExpect("A052", aggregateOracleSlot >= 0, report,
+                              "selected drumkit has an existing aggregate")
+            }
+            let expectedName = family == 0 ? editingVoiceName(baseline, 1) :
+                (family == 4 ? editingVoiceName(baseline, slot + 1) :
+                    (family >= 5 ? editingLoaderVoiceName(edited.symbol) : editingVoiceName(baseline, slot)))
+            editingExpect("A053", source.setVoice(slot: slot, voice: edited), report, "edited voice is accepted")
+            editingExpect("A054", source.dirty, report, "edited voice makes source dirty")
+            let previewDir = root.appendingPathComponent(".porydaw/vgpreview", isDirectory: true)
+            try FileManager.default.createDirectory(at: previewDir, withIntermediateDirectories: true)
+            editingExpect("A055", FileManager.default.fileExists(atPath: previewDir.path), report,
+                          "preview directory is available")
+            let previewFile = previewDir.appendingPathComponent("\(source.loadName).inc")
+            try Data(source.renderPreview()).write(to: previewFile)
+            editingExpect("A056", FileManager.default.fileExists(atPath: previewFile.path), report,
+                          "preview bytes are written to the loader path")
+            var config = VoicegroupLoaderConfig()
+            let previewPathBytes = Array(".porydaw/vgpreview".utf8) + [0]
+            withUnsafeMutableBytes(of: &config.voicegroupPaths) { $0.copyBytes(from: previewPathBytes) }
+            config.voicegroupPathCount = 1
+            let preview = withUnsafePointer(to: &config) {
+                editingLoad(root: root, name: source.loadName, config: $0)
+            }
+            editingExpect("A057", preview != nil, report, "native loader accepts edited preview")
+            guard let preview else { return }
+            defer { voicegroup_free(preview) }
+            editingEqual("A058", expectedName, editingVoiceName(preview, slot), report,
+                         "preview resolves edited display name")
+            editingEqual("A059", vgMacroVoiceType(edited.macro), editingTone(preview, slot).type, report,
+                         "preview loads the edited voice type")
+            if family >= 4 {
+                if aggregateOracleSlot >= 0 {
+                    editingExpect("A060", editingSameResolvedTone(
+                        editingTone(preview, slot), editingTone(baseline, aggregateOracleSlot),
+                        key: family >= 5 ? 36 : 60), report,
+                        "preview aggregate resolves the same playable child as existing aggregate")
+                } else {
+                    editingExpect("A060", false, report, "preview aggregate has no baseline oracle slot")
+                }
+            }
+            editingExpect("A061", editingSameVoiceFields(source.voiceAt(slot: slot), edited), report,
+                          "edited source retains the requested family fields")
+            editingEqual("A062", before, try Data(contentsOf: file), report,
+                         "preview does not modify the original file")
+            editingExpect("A063", try source.save(), report, "edited source saves")
+            editingExpect("A064", !source.dirty, report, "save clears dirty")
+            editingEqual("A065", 1, editingChangedLineCount(before, try Data(contentsOf: file)), report,
+                         "saving the edit changes exactly one source line")
+            let reloaded = editingLoad(root: root, name: source.loadName)
+            editingExpect("A066", reloaded != nil, report, "saved source loads as native bank")
+            guard let reloaded else { return }
+            defer { voicegroup_free(reloaded) }
+            let tone = editingTone(reloaded, slot)
+            editingEqual("A067", vgMacroVoiceType(edited.macro), tone.type, report,
+                         "saved bank retains edited native voice type")
+            if family >= 4 {
+                editingExpect("A068", tone.subGroup != nil, report, "aggregate has a subgroup")
+                if family == 4 {
+                    editingExpect("A069", tone.keySplitTable != nil, report, "keysplit retains lookup table")
+                }
+                if aggregateOracleSlot >= 0 {
+                    editingExpect("A070", editingSameResolvedTone(
+                        tone, editingTone(baseline, aggregateOracleSlot),
+                        key: family >= 5 ? 36 : 60), report,
+                        "saved aggregate resolves unchanged child")
+                } else {
+                    editingExpect("A070", false, report, "saved aggregate has no baseline oracle slot")
+                }
             } else {
-                editingExpect("A060", false, report, "preview aggregate has no baseline oracle slot")
+                editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "native key")
+                editingEqual("A072", UInt8(truncatingIfNeeded: edited.attack), tone.attack, report, "native attack")
+                editingEqual("A073", UInt8(truncatingIfNeeded: edited.decay), tone.decay, report, "native decay")
+                editingEqual("A074", UInt8(truncatingIfNeeded: edited.sustain), tone.sustain, report, "native sustain")
+                editingEqual("A075", UInt8(truncatingIfNeeded: edited.release), tone.release, report, "native release")
+                if family == 0 || family == 3 {
+                    editingEqual("A076", edited.pan == 0 ? UInt8(0) : UInt8(0x80 | edited.pan),
+                                 tone.panSweep, report, "native sample/wave pan flags")
+                }
+                if family == 1 {
+                    editingEqual("A077", UInt8(truncatingIfNeeded: edited.sweep), tone.panSweep,
+                                 report, "square sweep packing")
+                    editingEqual("A078", UInt(edited.duty & 0x03), UInt(bitPattern: tone.wavePointer),
+                                 report, "square duty packing")
+                } else if family == 2 {
+                    editingEqual("A079", UInt(edited.period & 0x01), UInt(bitPattern: tone.wavePointer),
+                                 report, "noise period packing")
+                }
             }
+            editingEqual("A080", expectedName, editingVoiceName(reloaded, slot), report,
+                         "saved bank resolves edited display name")
+            for untouched in 0..<128 where untouched != slot {
+                editingEqual("A081", editingSnapshot(baseline, untouched), editingSnapshot(reloaded, untouched),
+                             report, "native slot \(untouched) remains equal to baseline")
+            }
+            let roundTrip = VoicegroupSource()
+            var error: String?
+            let opened = roundTrip.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error)
+            editingExpect("A082", opened, report, "saved edited source reopens: \(error ?? "")")
+            guard opened else { return }
+            editingExpect("A083", !roundTrip.dirty, report, "freshly opened source is pristine")
+            editingExpect("A084", roundTrip.voiceAt(slot: slot) != nil, report,
+                          "edited slot remains populated after reopen")
+            editingExpect("A085", editingSameVoiceFields(roundTrip.voiceAt(slot: slot), edited), report,
+                          "edited voice family fields survive save and reopen")
         }
-        editingExpect("A061", editingSameVoiceFields(source.voiceAt(slot: slot), edited), report,
-                      "edited source retains the requested family fields")
-        editingEqual("A062", before, try Data(contentsOf: file), report,
-                     "preview does not modify the original file")
-        editingExpect("A063", try source.save(), report, "edited source saves")
-        editingExpect("A064", !source.dirty, report, "save clears dirty")
-        editingEqual("A065", 1, editingChangedLineCount(before, try Data(contentsOf: file)), report,
-                     "saving the edit changes exactly one source line")
-        let reloaded = editingLoad(root: root, name: source.loadName)
-        editingExpect("A066", reloaded != nil, report, "saved source loads as native bank")
-        guard let reloaded else { return }
-        defer { voicegroup_free(reloaded) }
-        let tone = editingTone(reloaded, slot)
-        editingEqual("A067", vgMacroVoiceType(edited.macro), tone.type, report,
-                     "saved bank retains edited native voice type")
-        if family >= 4 {
-            editingExpect("A068", tone.subGroup != nil, report, "aggregate has a subgroup")
-            if family == 4 {
-                editingExpect("A069", tone.keySplitTable != nil, report, "keysplit retains lookup table")
-            }
-            if aggregateOracleSlot >= 0 {
-                editingExpect("A070", editingSameResolvedTone(
-                    tone, editingTone(baseline, aggregateOracleSlot),
-                    key: family >= 5 ? 36 : 60), report,
-                    "saved aggregate resolves unchanged child")
-            } else {
-                editingExpect("A070", false, report, "saved aggregate has no baseline oracle slot")
-            }
-        } else {
-            editingEqual("A071", UInt8(truncatingIfNeeded: edited.key), tone.key, report, "native key")
-            editingEqual("A072", UInt8(truncatingIfNeeded: edited.attack), tone.attack, report, "native attack")
-            editingEqual("A073", UInt8(truncatingIfNeeded: edited.decay), tone.decay, report, "native decay")
-            editingEqual("A074", UInt8(truncatingIfNeeded: edited.sustain), tone.sustain, report, "native sustain")
-            editingEqual("A075", UInt8(truncatingIfNeeded: edited.release), tone.release, report, "native release")
-            if family == 0 || family == 3 {
-                editingEqual("A076", edited.pan == 0 ? UInt8(0) : UInt8(0x80 | edited.pan),
-                             tone.panSweep, report, "native sample/wave pan flags")
-            }
-            if family == 1 {
-                editingEqual("A077", UInt8(truncatingIfNeeded: edited.sweep), tone.panSweep,
-                             report, "square sweep packing")
-                editingEqual("A078", UInt(edited.duty & 0x03), UInt(bitPattern: tone.wavePointer),
-                             report, "square duty packing")
-            } else if family == 2 {
-                editingEqual("A079", UInt(edited.period & 0x01), UInt(bitPattern: tone.wavePointer),
-                             report, "noise period packing")
-            }
-        }
-        editingEqual("A080", expectedName, editingVoiceName(reloaded, slot), report,
-                     "saved bank resolves edited display name")
-        for untouched in 0..<128 where untouched != slot {
-            editingEqual("A081", editingSnapshot(baseline, untouched), editingSnapshot(reloaded, untouched),
-                         report, "native slot \(untouched) remains equal to baseline")
-        }
-        let roundTrip = VoicegroupSource()
-        var error: String?
-        let opened = roundTrip.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error)
-        editingExpect("A082", opened, report, "saved edited source reopens: \(error ?? "")")
-        guard opened else { return }
-        editingExpect("A083", !roundTrip.dirty, report, "freshly opened source is pristine")
-        editingExpect("A084", roundTrip.voiceAt(slot: slot) != nil, report,
-                      "edited slot remains populated after reopen")
-        editingExpect("A085", editingSameVoiceFields(roundTrip.voiceAt(slot: slot), edited), report,
-                      "edited voice family fields survive save and reopen")
     } catch {
         report.expect(false, cppID: "voicegroupsourceediting/A042", message: "A042: family \(family) fixture failed: \(error)")
     }

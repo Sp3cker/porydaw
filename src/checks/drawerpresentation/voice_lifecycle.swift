@@ -19,7 +19,7 @@ func drawerVoiceUndoRedoRefresh(_ report: CheckReport, suite: DocumentSession,
                        what: "one committed edit rebuilds the projection exactly once")
     let editedBuilds = page.contentBuildCount
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.fail(drawerVoiceHistoryID, "undo failed: \(error)")
         return
@@ -34,7 +34,7 @@ func drawerVoiceUndoRedoRefresh(_ report: CheckReport, suite: DocumentSession,
                        what: "undo restores the context the readout resolves")
     let undoneBuilds = page.contentBuildCount
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerVoiceHistoryID, "redo failed: \(error)")
         return

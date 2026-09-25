@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -22,22 +22,13 @@ func runResizeChecks(_ report: CheckReport, session: DocumentSession) {
     checkResizeMinimum(report, session: session)
     checkResizeAbutting(report, session: session)
     checkResizeHoverCursor(report, session: session)
+    checkEdgeResize(report, session: session)
 }
 
 private struct ResizeCell {
     let tick: Int
     let duration: Int
     let pitch: Int
-}
-
-@MainActor
-private func resizeGrid(_ session: DocumentSession) -> PianoGrid {
-    let grid = PianoGrid(session: session)
-    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
-    grid.refreshCamera()
-    return grid
 }
 
 @MainActor
@@ -100,7 +91,7 @@ private func checkResizeOffGrid(_ report: CheckReport, session: DocumentSession)
     let document = session.document
     let start = document.history.currentIdentity
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
-    let grid = resizeGrid(session)
+    let grid = makeCameraGrid(session: session)
     guard let d = resizeFreeCell(grid, session: session, firstProbe: 88) else {
         report.fail(id, "no free grid cell for the off-grid resize")
         return
@@ -144,7 +135,7 @@ private func checkResizeSelection(_ report: CheckReport, session: DocumentSessio
     let document = session.document
     let start = document.history.currentIdentity
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
-    let grid = resizeGrid(session)
+    let grid = makeCameraGrid(session: session)
     guard let a = resizeFreeCell(grid, session: session, firstProbe: 40),
           let aID = try? document.addNotes([
               NewNote(track: grid.trackIndex, tick: Tick(a.tick), pitch: UInt8(a.pitch),
@@ -221,7 +212,7 @@ private func checkResizeMinimum(_ report: CheckReport, session: DocumentSession)
     let document = session.document
     let start = document.history.currentIdentity
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
-    let grid = resizeGrid(session)
+    let grid = makeCameraGrid(session: session)
     guard let d = resizeFreeCell(grid, session: session, firstProbe: 88),
           let noteID = try? document.addNotes([
               NewNote(track: grid.trackIndex, tick: Tick(d.tick), pitch: UInt8(d.pitch),
@@ -279,7 +270,7 @@ private func checkResizeAbutting(_ report: CheckReport, session: DocumentSession
     let document = session.document
     let start = document.history.currentIdentity
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
-    let grid = resizeGrid(session)
+    let grid = makeCameraGrid(session: session)
     guard let g = resizeFreeCell(grid, session: session),
           let ids = try? document.addNotes([
               NewNote(track: grid.trackIndex, tick: Tick(g.tick), pitch: UInt8(g.pitch),
@@ -342,7 +333,7 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
     let document = session.document
     let start = document.history.currentIdentity
     defer { _ = resizeUndoTo(start, session: session); session.clearSelectedNotes() }
-    let grid = resizeGrid(session)
+    let grid = makeCameraGrid(session: session)
     guard let d = resizeFreeCell(grid, session: session, firstProbe: 88) else {
         report.fail(id, "no free grid cell for the hover cursor")
         return
@@ -378,4 +369,170 @@ private func checkResizeHoverCursor(_ report: CheckReport, session: DocumentSess
     grid.updateHover(x: rect.x + rect.width / 2, y: y)
     report.expect(grid.cursorKind == 0, cppID: id,
                   message: "the note body publishes the arrow cursor")
+}
+
+@MainActor
+private func checkEdgeResize(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::edgeResize"
+    let setupGrid = makeCameraGrid(session: session)
+    let snap = max(1, setupGrid.snapTicks)
+    let track = setupGrid.trackIndex
+    var freePitch = -1
+    pitchScan: for candidateY in stride(from: 300.0, through: 20.0, by: -20) {
+        guard let candidate = session.camera.projection.pitch(
+            atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
+            scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio)
+        else { continue }
+        let occupied = session.document.notes(in: track).contains { note in
+            Int(note.pitch) == candidate
+                && Int(note.tick) < 280 && Int(note.tick) + Int(note.duration) > 0
+        }
+        if !occupied {
+            freePitch = candidate
+            break pitchScan
+        }
+    }
+    guard freePitch >= 0,
+        let added = try? session.document.addNotes([
+            NewNote(track: track, tick: 24, pitch: UInt8(freePitch),
+                    duration: Tick(12 + snap / 4), velocity: 80),
+            NewNote(track: track, tick: 96, pitch: UInt8(freePitch),
+                    duration: 12, velocity: 80)
+        ]), added.count == 2 else {
+        report.fail(id, "edge-resize fixture could not seed a free row")
+        return
+    }
+    defer {
+        session.document.deleteNotes(
+            added.filter { session.document.note($0) != nil })
+    }
+    let grid = makeCameraGrid(session: session)
+    let a = added[0], b = added[1]
+    func rect(_ id: NoteID) -> SceneRect? {
+        firstRect(named: "gridNote_\(id.rawValue)", in: grid.scene.pianoNoteFills)
+    }
+    guard let aRect = rect(a) else {
+        report.fail(id, "edge-resize fixture note is not projected")
+        return
+    }
+    let rowY = aRect.y + aRect.height / 2
+    // The native case starts at 1.25 cells and releases at 1.9 cells,
+    // which must snap the right edge to the second lattice line.
+    let pullX = session.camera.displayX(
+        tick: 24 + 1.9 * Double(snap), origin: 0, dpr: grid.devicePixelRatio)
+    grid.beginPointer(x: aRect.x + aRect.width - 1, y: rowY, modifiers: 0)
+    grid.updatePointer(x: pullX, y: rowY)
+    grid.endPointer(x: pullX, y: rowY)
+    report.expect(
+        session.document.note(a).map { Int($0.duration) == 2 * snap } == true,
+        cppID: id, message: "off-grid right-edge drag snaps the end to the ruler grid")
+    let quarterPx = Double(snap) * session.camera.snapshot.pixelsPerTick / 4
+    // Overshoot trailing drag: pull the right edge before the note start; the
+    // commit clamps the duration at one snap cell.
+    guard let aRect2 = rect(a) else {
+        report.fail(id, "resized fixture note is not projected")
+        return
+    }
+    let overshootX = session.camera.displayX(
+        tick: 0, origin: 0, dpr: grid.devicePixelRatio)
+    grid.beginPointer(x: aRect2.x + aRect2.width - 1, y: rowY, modifiers: 0)
+    grid.updatePointer(x: overshootX, y: rowY)
+    grid.endPointer(x: overshootX, y: rowY)
+    report.expect(
+        session.document.note(a).map { Int($0.duration) == snap } == true,
+        cppID: id, message: "overshot right-edge drag stops at one snap cell")
+    // Leading-edge drag: pull the left edge three quarters of a cell backward;
+    // the commit snaps the start to the lattice and preserves the end tick.
+    guard let aRect3 = rect(a) else {
+        report.fail(id, "collapsed fixture note is not projected")
+        return
+    }
+    grid.beginPointer(x: aRect3.x + 1, y: rowY, modifiers: 0)
+    grid.updatePointer(x: aRect3.x + 1 - 3 * quarterPx, y: rowY)
+    grid.endPointer(x: aRect3.x + 1 - 3 * quarterPx, y: rowY)
+    report.expect(
+        session.document.note(a).map {
+            Int($0.tick) == 24 - snap && Int($0.duration) == 2 * snap
+        } == true,
+        cppID: id, message: "leading-edge drag snaps the start back one cell and keeps the end")
+    // Ctrl+edge: a stationary Ctrl press joins the note to the selection
+    // without resizing; the drag then resizes every selected note.
+    session.setSelectedNotes([a])
+    guard let bRect = rect(b) else {
+        report.fail(id, "second fixture note is not projected")
+        return
+    }
+    let bEdgeX = bRect.x + bRect.width - 1
+    let bRowY = bRect.y + bRect.height / 2
+    grid.beginPointer(x: bEdgeX, y: bRowY, modifiers: 0x0400_0000)
+    grid.endPointer(x: bEdgeX, y: bRowY)
+    report.expect(
+        session.selectedNotes == Set([a, b])
+            && session.document.note(b).map { Int($0.duration) == 12 } == true,
+        cppID: id, message: "stationary Ctrl+edge click joins the note without resizing")
+    grid.beginPointer(x: bEdgeX, y: bRowY, modifiers: 0x0400_0000)
+    grid.updatePointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
+                       y: bRowY)
+    grid.endPointer(x: bEdgeX + Double(snap) * session.camera.snapshot.pixelsPerTick,
+                    y: bRowY)
+    report.expect(
+        session.document.note(b).map { Int($0.duration) == 12 + snap } == true
+            && session.document.note(a).map {
+                Int($0.tick) + Int($0.duration) == 24 + 2 * snap
+            } == true,
+        cppID: id, message: "Ctrl+edge drag resizes the grabbed note and the joined selection")
+    // Abutting boundary: a press just left of the shared boundary grips the
+    // left note's trailing edge; just right grips the right note's leading edge.
+    guard let cPair = try? session.document.addNotes([
+        NewNote(track: track, tick: 240, pitch: UInt8(freePitch),
+                duration: 12, velocity: 80),
+        NewNote(track: track, tick: 252, pitch: UInt8(freePitch),
+                duration: 12, velocity: 80)
+    ]), cPair.count == 2 else {
+        report.fail(id, "abutting fixture could not seed the pair")
+        return
+    }
+    defer {
+        session.document.deleteNotes(
+            cPair.filter { session.document.note($0) != nil })
+    }
+    let abuttingGrid = PianoGrid(session: session)
+    abuttingGrid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    guard let leftRect = firstRect(
+        named: "gridNote_\(cPair[0].rawValue)", in: abuttingGrid.scene.pianoNoteFills)
+    else {
+        report.fail(id, "abutting fixture notes are not projected")
+        return
+    }
+    let boundary = session.camera.displayX(
+        tick: 252, origin: 0, dpr: grid.devicePixelRatio)
+    let boundaryY = leftRect.y + leftRect.height / 2
+    abuttingGrid.beginPointer(x: boundary - 1.6, y: boundaryY, modifiers: 0)
+    abuttingGrid.updatePointer(
+        x: boundary - 1.6 - Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: boundaryY)
+    abuttingGrid.endPointer(
+        x: boundary - 1.6 - Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: boundaryY)
+    report.expect(
+        session.document.note(cPair[0]).map { Int($0.duration) == 12 - snap } == true
+            && session.document.note(cPair[1]).map {
+                Int($0.tick) == 252 && Int($0.duration) == 12
+            } == true,
+        cppID: id, message: "boundary-left drag resizes the left note's end only")
+    abuttingGrid.beginPointer(x: boundary + 1.6, y: boundaryY, modifiers: 0)
+    abuttingGrid.updatePointer(
+        x: boundary + 1.6 + Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: boundaryY)
+    abuttingGrid.endPointer(
+        x: boundary + 1.6 + Double(snap) * session.camera.snapshot.pixelsPerTick,
+        y: boundaryY)
+    report.expect(
+        session.document.note(cPair[1]).map {
+            Int($0.tick) == 252 + snap && Int($0.duration) == 12 - snap
+        } == true
+            && session.document.note(cPair[0]).map {
+                Int($0.tick) == 240 && Int($0.duration) == 12 - snap
+            } == true,
+        cppID: id, message: "boundary-right drag resizes the right note's start only")
 }

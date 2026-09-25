@@ -100,7 +100,7 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                                             jitter.page.previewPoints.first?.value ?? 0],
                        cppID: drawerAutomationCancelID,
                        what: "a sub-threshold move previews the untouched target")
-    report.expectEqual(expected: jitter.snapshot, actual: drawerAutomationAutomationDocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
+    report.expectEqual(expected: jitter.snapshot, actual: DocumentSnapshot(jitter.document), cppID: drawerAutomationCancelID,
                        what: "a sub-threshold move writes nothing")
 }
 

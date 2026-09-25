@@ -821,161 +821,161 @@ midiImport), except S001, which executes under the event-edits suite path
 document track-name queries, not the analyzeForImport budgets or warnings
 asserted in importAnalysis.
 
-S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift
+S001 | trackNameRoles | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "import and document queries select the same bare name"
 
-S002 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S002 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "import counts logical XCMD points"
 
-S003 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S003 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "unknown controller is not exported"
 
-S004 | importTransforms | src/checks/editcheck/EventChecks.swift
+S004 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
 
-S005 | importTransforms | src/checks/editcheck/EventChecks.swift
+S005 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "action-like XCMD selectors are preserved"
 
-S006 | importTransforms | src/checks/editcheck/EventChecks.swift
+S006 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "rescale uses floor arithmetic"
 
-S007 | importTransforms | src/checks/editcheck/EventChecks.swift
+S007 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "end tick uses the same floor arithmetic"
 
-S008 | importTransforms | src/checks/editcheck/EventChecks.swift
+S008 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S009 | importTransforms | src/checks/editcheck/EventChecks.swift
+S009 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "overflow rejection leaves file untouched"
 
-S010 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S010 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S011 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S011 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S012 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S012 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) maps two tracks"
 
-S013 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S013 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) peak concurrent notes"
 
-S014 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S014 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) maps two tracks"
 
-S015 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S015 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) peak concurrent notes"
 
-S016 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S016 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) sample note limit"
 
-S017 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S017 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) warns of timing adjustment"
 
-S018 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S018 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) warns of polyphony"
 
-S019 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S019 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) silent tracks"
 
-S020 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S020 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) second track programs"
 
-S021 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S021 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) analyzed tracks"
 
-S022 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S022 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "\(row) second track programs"
 
-S023 | importTransforms | src/checks/editcheck/EventChecks.swift
+S023 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "external import division after rescale"
 
-S024 | importTransforms | src/checks/editcheck/EventChecks.swift
+S024 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S025 | importTransforms | src/checks/editcheck/EventChecks.swift
+S025 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "external import event 4 tick"
 
-S026 | importTransforms | src/checks/editcheck/EventChecks.swift
+S026 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S027 | importTransforms | src/checks/editcheck/EventChecks.swift
+S027 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S028 | importTransforms | src/checks/editcheck/EventChecks.swift
+S028 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "external import third chunk first tick"
 
-S029 | importTransforms | src/checks/editcheck/EventChecks.swift
+S029 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S030 | importTransforms | src/checks/editcheck/EventChecks.swift
+S030 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S031 | importTransforms | src/checks/editcheck/EventChecks.swift
+S031 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S032 | importTransforms | src/checks/editcheck/EventChecks.swift
+S032 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S033 | importTransforms | src/checks/editcheck/EventChecks.swift
+S033 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S034 | importTransforms | src/checks/editcheck/EventChecks.swift
+S034 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S035 | importTransforms | src/checks/editcheck/EventChecks.swift
+S035 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S036 | importTransforms | src/checks/editcheck/EventChecks.swift
+S036 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
 
-S037 | importTransforms | src/checks/editcheck/EventChecks.swift
+S037 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "duplicate fixture second pass is idempotent"
 
-S038 | importTransforms | src/checks/editcheck/EventChecks.swift
+S038 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S039 | importTransforms | src/checks/editcheck/EventChecks.swift
+S039 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "deduplicated \(name) event count"
 
-S040 | importTransforms | src/checks/editcheck/EventChecks.swift
+S040 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "tempo meta payload remains intact"
 
-S041 | importTransforms | src/checks/editcheck/EventChecks.swift
+S041 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "external import division after rescale"
 
-S042 | importTransforms | src/checks/editcheck/EventChecks.swift
+S042 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "external import division after rescale"
 
-S043 | importTransforms | src/checks/editcheck/EventChecks.swift
+S043 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "tick-zero label \(labelCount) increases"
 
-S044 | importTransforms | src/checks/editcheck/EventChecks.swift
+S044 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "tick-zero program, volume and bend survive"
 
-S045 | importTransforms | src/checks/editcheck/EventChecks.swift
+S045 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "tick-zero label count"
 
-S046 | importTransforms | src/checks/editcheck/EventChecks.swift
+S046 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "rescaled fixture re-encodes byte-identically"
 
-S047 | importTransforms | src/checks/editcheck/EventChecks.swift
+S047 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "rescaled fixture reload division"
 
-S048 | importTransforms | src/checks/editcheck/EventChecks.swift
+S048 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S049 | importTransforms | src/checks/editcheck/EventChecks.swift
+S049 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S050 | importTransforms | src/checks/editcheck/EventChecks.swift
+S050 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S051 | importTransforms | src/checks/editcheck/EventChecks.swift
+S051 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "duplicate fixture removes eight setters"
 
-S052 | importTransforms | src/checks/editcheck/EventChecks.swift
+S052 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "duplicate fixture second pass is idempotent"
 
-S053 | importTransforms | src/checks/editcheck/EventChecks.swift
+S053 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "overflow describes the division and tick limit"

@@ -230,7 +230,7 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
     let fixtureService = ProjectService()
     defer {
         do {
-            try drawerVelocityRunBlocking { await fixtureService.close() }
+            try runBlocking { await fixtureService.close() }
         } catch {
             report.fail(drawerVelocityKeysplitID, "could not close the keysplit fixture: \(error)")
         }
@@ -281,10 +281,10 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
         cfg = cfg.replacingOccurrences(of: unsupportedRoute,
                                        with: "mus_oldale.mid: -E -R50 -G_velocity_unsupported -V100")
         try cfg.write(to: cfgPath, atomically: true, encoding: .utf8)
-        try drawerVelocityRunBlocking { try await fixtureService.open(root: scratch.path) }
+        try runBlocking { try await fixtureService.open(root: scratch.path) }
         loaded = (
-            split: try drawerVelocityRunBlocking { try await fixtureService.openSong(label: "mus_gym") },
-            unsupported: try drawerVelocityRunBlocking { try await fixtureService.openSong(label: "mus_oldale") })
+            split: try runBlocking { try await fixtureService.openSong(label: "mus_gym") },
+            unsupported: try runBlocking { try await fixtureService.openSong(label: "mus_oldale") })
     } catch {
         report.fail(drawerVelocityKeysplitID, "could not load the staged keysplit fixture: \(error)")
         return
@@ -328,23 +328,23 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
                       cppID: drawerVelocityKeysplitID, message: "hover resolves the hovered note key")
         page.pointerLeave()
     }
-    let before = drawerVelocityDocumentSnapshot(document)
+    let before = DocumentSnapshot(document)
     report.expect(page.openSelectedVelocityPrompt(), cppID: drawerVelocityKeysplitID,
                   message: "mixed per-key selection opens its prompt")
     page.updatePromptDraft(draft: "127")
-    report.expect(drawerVelocityDocumentSnapshot(document) == before, cppID: drawerVelocityKeysplitID,
+    report.expect(DocumentSnapshot(document) == before, cppID: drawerVelocityKeysplitID,
                   message: "per-key prompt drafts never mutate history")
     report.expect(page.acceptPrompt(), cppID: drawerVelocityKeysplitID,
                   message: "per-key prompt accepts one captured transaction")
-    let accepted = drawerVelocityDocumentSnapshot(document)
+    let accepted = DocumentSnapshot(document)
     report.expect(document.note(notes[0].id)?.velocity == 127
                       && document.note(notes[1].id)?.velocity == 127
                       && document.note(notes[2].id)?.velocity == notes[2].velocity
                       && accepted.revision == before.revision + 1,
                   cppID: drawerVelocityKeysplitID, message: "acceptance changes only captured notes once")
-    report.expect(!page.acceptPrompt() && drawerVelocityDocumentSnapshot(document) == accepted,
+    report.expect(!page.acceptPrompt() && DocumentSnapshot(document) == accepted,
                   cppID: drawerVelocityKeysplitID, message: "repeated acceptance cannot duplicate a transaction")
-    _ = try? drawerVelocityRunBlocking { try await splitSession.undo() }
+    _ = try? runBlocking { try await splitSession.undo() }
     report.expect(document.note(notes[0].id)?.velocity == notes[0].velocity
                       && document.note(notes[1].id)?.velocity == notes[1].velocity,
                   cppID: drawerVelocityKeysplitID, message: "one undo restores both captured values")
@@ -363,14 +363,14 @@ func drawerVelocityKeysplitPerNoteMapping(_ report: CheckReport, session: Docume
     page.attach(session: invalidSession, palette: GridPalette())
     report.expect(page.contextUnsupported, cppID: drawerVelocityKeysplitID,
                   message: "the invalid bank context advertises that velocity editing is unavailable")
-    let invalidBefore = drawerVelocityDocumentSnapshot(invalidDocument)
+    let invalidBefore = DocumentSnapshot(invalidDocument)
     _ = page.pointerPress(x: 399, y: 0, surface: VelocityInputSurface.plot.rawValue,
                           button: 1, modifiers: 0)
     report.expect(!page.interactionActive, cppID: drawerVelocityKeysplitID,
                   message: "an unsupported paint press never suspends follow or owns Escape")
     _ = page.pointerMove(x: 0, y: 60, buttons: 1)
     _ = page.pointerRelease(x: 0, y: 60, button: 1)
-    report.expect(drawerVelocityDocumentSnapshot(invalidDocument) == invalidBefore,
+    report.expect(DocumentSnapshot(invalidDocument) == invalidBefore,
                   cppID: drawerVelocityKeysplitID,
                   message: "dragging an unsupported velocity context cannot change notes or history")
     page.detach()
@@ -407,7 +407,7 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     page.refreshFromDocument()
     report.expect(fixture.handle(note)?.value == 127, cppID: drawerVelocityProjectionID,
                   message: "document edits invalidate cached note values")
-    _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }
+    _ = try? runBlocking { try await fixture.session.undo() }
     page.refreshFromDocument()
     report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
                   message: "undo invalidates cached note values again")
@@ -438,7 +438,7 @@ func drawerVelocityVoiceContextInvalidation(_ report: CheckReport, session: Docu
                   message: "an unresolved selected voice cannot start a velocity drag")
     page.cancelSectionInteraction()
     do {
-        _ = try drawerVelocityRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.expect(false, cppID: drawerVelocityProjectionID,
                       message: "undoing the unresolved program must succeed: \(error)")
@@ -488,11 +488,11 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
             page?.refreshEditCursor()
         }
     }
-    let cursorDocument = drawerVelocityDocumentSnapshot(fixture.document)
+    let cursorDocument = DocumentSnapshot(fixture.document)
     fixture.session.editCursor = 100
     report.expectEqual(expected: 2, actual: page.context.slot, cppID: drawerVelocityDiagnosticsID,
                        what: "the stopped velocity context consumes the published edit cursor")
-    report.expectEqual(expected: cursorDocument, actual: drawerVelocityDocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
+    report.expectEqual(expected: cursorDocument, actual: DocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
                        what: "cursor-only publication changes no document or history state")
 
     fixture.session.setSelectedNotes([fixture.notes[0].id])

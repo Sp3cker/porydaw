@@ -948,7 +948,7 @@ Anchor: function
 S043 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: function
 
-S044 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S044 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band keeps press order before newly covered notes"
 
 S045 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift

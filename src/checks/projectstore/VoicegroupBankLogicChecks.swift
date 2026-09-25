@@ -17,19 +17,6 @@ private enum BankLogicFixtureError: Error {
     case unexpectedOutcome
 }
 
-private func bankLogicFixture(_ body: (URL, URL) throws -> Void) throws {
-    guard let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
-          let fixtureRoot = CheckEnvironment.fixtureRoot,
-          FileManager.default.fileExists(atPath: staged) else {
-        throw BankLogicFixtureError.missingFixture
-    }
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "projectstore-banklogic-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: root) }
-    try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: root)
-    try body(root, root.appendingPathComponent("sound/voicegroups/fixture_rich.inc"))
-}
-
 private func bankLogicExpect(_ id: String, _ condition: Bool, _ report: CheckReport, _ detail: String) {
     report.expect(condition, cppID: "projectstore-banklogic/\(id)", message: "\(id): \(detail)")
 }
@@ -45,7 +32,7 @@ private func bankLogicConflict(_ id: String, _ outcome: VoicegroupEditResult,
 
 private func bankLogicConflicts(_ report: CheckReport) {
     do {
-        try bankLogicFixture { root, _ in
+        try withTempProjectCopy(prefix: "projectstore-banklogic") { root in
             let store = try VoicegroupStore(projectRoot: root.path)
             let initial = try store.loadBank(voicegroupArg: "_fixture_rich")
             guard let original = initial.slotViews[4].voice else { throw BankLogicFixtureError.missingVoice }
@@ -83,7 +70,8 @@ private func bankLogicConflicts(_ report: CheckReport) {
 
 private func bankLogicMaterialization(_ report: CheckReport) {
     do {
-        try bankLogicFixture { root, path in
+        try withTempProjectCopy(prefix: "projectstore-banklogic") { root in
+            let path = root.appendingPathComponent("sound/voicegroups/fixture_rich.inc")
             let store = try VoicegroupStore(projectRoot: root.path)
             let initial = try store.loadBank(voicegroupArg: "_fixture_rich")
             let originalBytes = try Data(contentsOf: path)
@@ -156,7 +144,8 @@ private func bankLogicMaterialization(_ report: CheckReport) {
 
 private func bankLogicSaveAndFence(_ report: CheckReport) {
     do {
-        try bankLogicFixture { root, path in
+        try withTempProjectCopy(prefix: "projectstore-banklogic") { root in
+            let path = root.appendingPathComponent("sound/voicegroups/fixture_rich.inc")
             let storeA = try VoicegroupStore(projectRoot: root.path)
             let storeB = try VoicegroupStore(projectRoot: root.path)
             let storeC = try VoicegroupStore(projectRoot: root.path)
@@ -223,7 +212,8 @@ private func bankLogicSaveAndFence(_ report: CheckReport) {
 
 private func bankLogicHardFailures(_ report: CheckReport) {
     do {
-        try bankLogicFixture { root, path in
+        try withTempProjectCopy(prefix: "projectstore-banklogic") { root in
+            let path = root.appendingPathComponent("sound/voicegroups/fixture_rich.inc")
             let store = try VoicegroupStore(projectRoot: root.path)
             let initial = try store.loadBank(voicegroupArg: "_fixture_rich")
             let originalBytes = try Data(contentsOf: path)

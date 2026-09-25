@@ -1247,56 +1247,56 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S001 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
     report.expect(session.selectedNoteOrder == [b, a]
         && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
         cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
 
-S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S002 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deselecting and re-adding appends the note"
     report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
                        what: "deselecting and re-adding appends the note")
 
-S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S003 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "replacement preserves first occurrence and removes duplicates")
 
-S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S004 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band keeps press order before newly covered notes"
     report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
         && session.selectedNotes.contains(c),
         cppID: id, message: "band keeps press order before newly covered notes")
 
-S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S005 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band cancellation restores selection order"
     report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
                        what: "band cancellation restores selection order")
 
-S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S006 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement publishes the selection domain"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement publishes the selection domain")
 
-S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S007 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement and additive selection coalesce"
     report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
                        what: "order-only replacement and additive selection coalesce")
 
-S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S008 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "unchanged normalized selection publishes nothing"
     report.expect(publications.isEmpty, cppID: id,
                   message: "unchanged normalized selection publishes nothing")
 
-S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S009 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "selection gestures never mutate document or history"
     report.expect(session.document.revision == revision
         && session.document.history.currentIdentity == history
         && session.document.isDirty == dirty,
         cppID: id, message: "selection gestures never mutate document or history")
 
-S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S010 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
     report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
                   cppID: id, message: "deletion prunes membership and preserves survivor order")
@@ -1535,7 +1535,7 @@ Anchor: message "one edit publishes one coherent playback and document refresh a
         counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
-S046 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+S046 | noteClipboardSemantics | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "exact zero-span 24-TPQN payload retargets across documents without changing the source track"
     report.expect(crossDecoded == DecodedPorydawClip(
         ticksPerBeat: 24, clip: crossExpected) &&
@@ -1545,7 +1545,7 @@ Anchor: message "exact zero-span 24-TPQN payload retargets across documents with
         cppID: "clipcheck/ClipCheckTest::crossViewNoteCopyPaste",
         message: "exact zero-span 24-TPQN payload retargets across documents without changing the source track")
 
-S047 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+S047 | noteClipboardSemantics | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note"
     report.expect(sameDecoded == DecodedPorydawClip(
         ticksPerBeat: 24, clip: sameExpected) &&
@@ -1554,33 +1554,33 @@ Anchor: message "exact zero-span 24-TPQN payload pastes in the source document a
         cppID: "clipcheck/ClipCheckTest::sameViewNoteCopyPaste",
         message: "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note")
 
-S048 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S048 | crossTpbClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "TPQN rescaling feeds production note paste and records one reversible edit"
   report.expect(forward == ["0:70:24:90", "24:60:48:100"] &&
       result?.nextCursor == 72 && undone,
       cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
       message: "TPQN rescaling feeds production note paste and records one reversible edit")
 
-S049 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S049 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically"
     report.expect(clip == expected && expanded && result?.nextCursor == 96 && oneUndo,
         cppID: "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks",
         message: "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically")
 
-S050 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
+S050 | timeRangeClipboardMerge | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically"
     report.expect(merged && oneUndo,
         cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
         message: "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically")
 
-S051 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S051 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "an empty lane merge returns no cursor and changes neither document nor history"
     report.expect(emptyResult == nil && coreTimeBytes(emptyDocument) == emptyBefore &&
         emptyDocument.history.currentIdentity == emptyIdentity,
         cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
         message: "an empty lane merge returns no cursor and changes neither document nor history")
 
-S052 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S052 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "time paste advances by span and each tile is one undo entry"
   report.expect(forward == ["0:60:24:100", "96:60:24:100"] &&
       first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,

@@ -7,7 +7,8 @@ Original SHA-256: f1526e7f5e5571d3ed6b6c940db6f47fdccfa70d74d3993f00f60a0c142053
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
 Additional Swift counterpart: src/checks/automation/automationactions.swift
-Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureSweep.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
@@ -1309,31 +1310,31 @@ Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 S034 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift
 Anchor: message "Qt's alt bit arms the fine lattice"
 
-S035 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S035 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "each stepped tick interpolates its value across the stroke"
 
-S036 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S036 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
 
-S037 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift
+S037 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the completed ramp is a changed span replacement"
 
-S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the stroke's release point is written"
 
-S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the ramp's release point is written"
 
-S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the sweep preview is the stepped draft alone"
 
-S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the released sweep commits once"
 
-S042 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift
+S042 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "the sweep is undoable"
 
-S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift
+S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the unsnapped value mapping preserves tick 100"
 
 S044 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift

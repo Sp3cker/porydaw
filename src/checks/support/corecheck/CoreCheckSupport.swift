@@ -65,6 +65,39 @@ struct CheckReport {
         }
     }
 
+    /// Scoped view that fixes the cppID prefix so call sites stop carrying
+    /// cppID-prefixing helpers. Forwards byte-identically to the unscoped
+    /// methods with the same cppID string.
+    func scoped(cppID: String) -> Scoped {
+        Scoped(report: self, cppID: cppID)
+    }
+
+    struct Scoped {
+        private let report: CheckReport
+        private let cppID: String
+
+        init(report: CheckReport, cppID: String) {
+            self.report = report
+            self.cppID = cppID
+        }
+
+        func pass(row: String = "suite-complete") {
+            report.pass(cppID, row: row)
+        }
+
+        func fail(_ message: String) {
+            report.fail(cppID, message)
+        }
+
+        func expect(_ condition: @autoclosure () -> Bool, message: String) {
+            report.expect(condition(), cppID: cppID, message: message)
+        }
+
+        func expectEqual<T: Equatable>(expected: T, actual: T, what: String) {
+            report.expectEqual(expected: expected, actual: actual, cppID: cppID, what: what)
+        }
+    }
+
     private func invoke(failed: Bool, cppID: String, message: String) {
         guard let callback = state.callback else { return }
         cppID.withCString { cppIDPointer in

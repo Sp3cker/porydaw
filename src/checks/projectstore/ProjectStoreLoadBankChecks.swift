@@ -2,21 +2,7 @@ import Foundation
 import PorydawProject
 
 private enum LoadBankFixtureError: Error {
-    case missingFixture
     case missingVoice
-}
-
-private func loadBankFixture(_ body: (URL) throws -> Void) throws {
-    guard let root = CheckEnvironment.fixtureRoot,
-          let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
-          FileManager.default.fileExists(atPath: staged) else {
-        throw LoadBankFixtureError.missingFixture
-    }
-    let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "projectstore-loadbank-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: copy) }
-    try FileManager.default.copyItem(at: URL(filePath: root), to: copy)
-    try body(copy)
 }
 
 private func loadBankExpect(_ row: String, _ condition: Bool, _ report: CheckReport, _ detail: String) {
@@ -31,7 +17,7 @@ internal func runProjectStoreLoadBankSuite(_ report: CheckReport) {
 
 private func loadBankProjectRows(_ report: CheckReport) {
     do {
-        try loadBankFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-loadbank") { root in
             let store = ProjectStore(projectRoot: root)
             let beforeOpen = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
             if case .failure(let error as VoicegroupStoreError) = beforeOpen,
@@ -126,7 +112,7 @@ private func loadBankMintedSymbols(_ report: CheckReport) {
 
 private func loadBankGraftRow(_ report: CheckReport) {
     do {
-        try loadBankFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-loadbank") { root in
             let store = try VoicegroupStore(projectRoot: root.path)
             let initial = try store.loadBank(voicegroupArg: "_fixture_rich")
             guard let original = initial.slotViews[0].voice else { throw LoadBankFixtureError.missingVoice }

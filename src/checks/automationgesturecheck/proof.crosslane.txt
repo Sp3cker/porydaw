@@ -6,7 +6,8 @@ Original: src/checks/automationgesturecheck/crosslane.cpp
 Original SHA-256: d64dd8505c67f3f32f8c513e8f18ecf7ed6a2d3aef4db374b71e0ab98bc1da03
 Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/domain/xcmdRanges.swift
-Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
+Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
 Disposition tally: 31 sites: 11 MATCHED, 18 PARTIAL, 2 NATIVE.
@@ -558,10 +559,10 @@ Anchor: message "known copied points rebuild canonically"
 S008 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift
 Anchor: message "track expansion builds descriptor traffic through the canonical planner"
 
-S009 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S009 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the move actually changes document state"
 
-S010 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift
+S010 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "core held-span replacement including the trailing held-value seam"
 
 S011 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
@@ -570,46 +571,46 @@ Anchor: message "a cancelled stale gesture never writes on release"
 S012 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "the frozen facts carry the revision"
 
-S013 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S013 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a CC band excludes Tempo"
 
-S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S014 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a Tempo band covers Tempo"
 
-S015 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S015 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a Tempo band excludes CC lanes"
 
-S016 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S016 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a band covers its own lane"
 
-S017 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S017 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "same-tick CC writes keep their order"
 
-S018 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S018 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a move onto a free tick keeps every occupant in order"
 
-S019 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S019 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a move onto an occupied tick evicts its occupant"
 
-S020 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S020 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the mixed delete consumes its selection"
 
-S021 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S021 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a mixed delete clears every covered lane"
 
-S022 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S022 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a CC range edit preserves Tempo"
 
-S023 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S023 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo restores the mixed delete's lanes"
 
-S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S024 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo restores the covered modulation lane"
 
-S025 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S025 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "an unchanged-value tempo move preserves its microseconds"
 
-S026 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestures.swift
+S026 | drawerAutomationGestureContractParity | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "a right-drag band publishes its shared time selection"
 
 S027 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift

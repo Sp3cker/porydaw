@@ -267,43 +267,43 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S001 | crossTpbClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "TPQN rescaling feeds production note paste and records one reversible edit"
 
-S002 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
+S002 | timeRangeClipboardMerge | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically"
 
-S003 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S003 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "an empty lane merge returns no cursor and changes neither document nor history"
 
-S004 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S004 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "time paste advances by span and each tile is one undo entry"
 
-S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift
+S005 | runClipboardCodecSuite | src/checks/editcheck/ClipboardCodecChecks.swift
 Anchor: message "half-up down-scaled clip with stable last-wins collisions"
 
-S006 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S006 | crossTpbClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "track-expanding paste adds exactly one history entry"
 
-S007 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
+S007 | timeRangeClipboardMerge | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "range merge adds exactly one history entry"
 
-S008 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S008 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "two tiled pastes add exactly two history entries"
 
-S009 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift
+S009 | timeRangeClipboardMerge | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "undo explicitly restores both notes, all modulation points and all tempo points"
 
-S010 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S010 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "empty lane paste preserves the existing note and volume point"
 
-S011 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S011 | emptyAndTiledClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "empty lane paste adds no history entry"
 
 S012 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml
 Anchor: function
 
-S013 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift
+S013 | crossTpbClipboardPaste | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "source note copy yields a clip before TPQN rescaling"
 
 Shared helpers

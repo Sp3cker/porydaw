@@ -8,7 +8,7 @@ Swift counterpart: src/checks/automation/automationactions.swift
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
-Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 
 
@@ -16,7 +16,7 @@ Command: deno task verify --filter swiftcore --verbose
 Result: PASS provided by the controller for this worktree — 1/14 harnesses selected,
 13 skipped; swiftcore green including drawerAutomationMiddlePanIsolation
 (automationcanvaslayout.swift), drawerAutomationPointRangeAndPencilReplacements
-(domain/gestures.swift), drawerAutomationCancellationAndNoOps and
+(domain/gesturePointRange.swift), drawerAutomationCancellationAndNoOps and
 drawerAutomationInflightDragInvalidation (automationcanvasediting.swift),
 drawerAutomationRestoredInteractionContracts / drawerAutomationBandIsolatesTempoAndCc
 (automationselection.swift) and drawerAutomationParameterSwitchAndGhosts
@@ -632,31 +632,31 @@ Anchor: message "a pending band preserves selection below the Manhattan threshol
 S019 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "diagonal travel activates at Manhattan ten before Euclidean ten"
 
-S020 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S020 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke writes its point and restores the lane's held value"
 
-S021 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S021 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the pencil press starts a stroke"
 
-S022 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S022 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the page publishes the painting gesture"
 
-S023 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S023 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the pencil release commits"
 
-S024 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S024 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "one pencil press and release is one revision"
 
-S025 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S025 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the released stroke writes the value under the pointer"
 
-S026 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S026 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the stroke is undoable"
 
-S027 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S027 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "one undo restores the pre-stroke lane"
 
-S028 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S028 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "the released stroke recorded exactly one history entry"
 
 S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
@@ -683,7 +683,7 @@ Anchor: message "banding writes nothing"
 S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "activated zero-width band clears selection"
 
-S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift
+S037 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gesturePointRange.swift
 Anchor: message "an empty lane's first stroke is a change"
 
 S038 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift

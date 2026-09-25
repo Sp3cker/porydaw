@@ -764,25 +764,25 @@ Anchor: message "one metadata undo restores the original name"
 S022 | checkRemapMetadata redo | src/checks/rollcheck/remap.swift
 Anchor: message "redo restores the metadata name"
 
-S023 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S023 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "inserted track inherits no mute, solo, or selection owner state"
 
-S024 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S024 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "move remaps mute, solo, and selection owners to the new index"
 
-S025 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S025 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "owner remap lands before the document change publishes"
 
-S026 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S026 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "undo applies the inverse remap to every owner"
 
-S027 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S027 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "duplicate keeps owner identity on the source track"
 
-S028 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S028 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "delete drops the removed owner and falls selection back"
 
-S029 | checkTrackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift
+S029 | checkTrackOwnerRemap | src/checks/rollcheck/remap.swift
 Anchor: message "undo restores the track without reviving dropped owner state"
 
 S030 | test_trackFollowReload | src/checks/editorqml/tst_ShellGridInput.qml

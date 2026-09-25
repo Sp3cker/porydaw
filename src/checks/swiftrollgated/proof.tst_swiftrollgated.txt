@@ -322,34 +322,34 @@ int runSwiftGridBoundaryCheck(const QString &mode, const QString &projectRoot,
 
 Swift assertion predicates
 
-S001 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S001 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
 
-S002 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S002 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deselecting and re-adding appends the note"
 
-S003 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S003 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
 
-S004 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S004 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band keeps press order before newly covered notes"
 
-S005 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S005 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band cancellation restores selection order"
 
-S006 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S006 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement publishes the selection domain"
 
-S007 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S007 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement and additive selection coalesce"
 
-S008 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S008 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "unchanged normalized selection publishes nothing"
 
-S009 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S009 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "selection gestures never mutate document or history"
 
-S010 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S010 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
 
 S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift
@@ -457,7 +457,7 @@ Anchor: message "committed document edit performs no standalone camera publicati
 S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift
 Anchor: message "one edit publishes one coherent playback and document refresh after reconciliation"
 
-S046 | checkPresenterMetrics | src/checks/rollcheck/EditorGridCameraChecks.swift
+S046 | checkPresenterMetrics | src/checks/rollcheck/presentation.swift
 Anchor: message "noteSummary JSON carries every document note field and selection flag"
 
 S047 | test_failedReopenLeavesEmptyStripAndSurfacesError | src/checks/editorqml/tst_ShellOpenFailure.qml

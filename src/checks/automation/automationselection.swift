@@ -30,7 +30,7 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                        what: "undo restores secondary CC lane")
     report.expectEqual(expected: ["0:120", "36:150"], actual: fixture.tempoValues, cppID: id,
                        what: "undo restores secondary Tempo lane")
-    let redone = (try? drawerAutomationRunBlocking { try await fixture.session.redo() }) ?? false
+    let redone = (try? runBlocking { try await fixture.session.redo() }) ?? false
     report.expect(redone, cppID: id, message: "the heterogeneous drag is redoable")
     report.expectEqual(expected: ["0:120", "36:160"], actual: fixture.tempoValues, cppID: id,
                        what: "redo restores the committed Tempo stream")

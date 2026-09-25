@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
@@ -8,6 +8,7 @@ func runPresentationChecks(_ report: CheckReport, session: DocumentSession) {
     checkHeaderRename(report, session: session)
     checkHeaderKeyboardMuteSolo(report, session: session)
     checkHeaderReconciliation(report, session: session)
+    checkPresenterMetrics(report, session: session)
 }
 
 @MainActor
@@ -252,4 +253,58 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
     headers.finishRename(commit: true, restoreRollFocus: false)
     report.expect(document.trackName(0) != "zzz", cppID: structuralID,
                   message: "cancelled draft cannot commit across the replacement")
+}
+
+@MainActor
+private func checkPresenterMetrics(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::presenterMetrics"
+    let grid = makeCameraGrid(session: session)
+    let snapshot = session.camera.snapshot
+    report.expect(
+        gridCameraNear(grid.baseFontPx, 13) && gridCameraNear(grid.devicePixelRatio, 2)
+            && grid.rowHeight > 0 && grid.beatWidth > 0 && grid.keyboardWidth > 0,
+        cppID: id, message: "viewport configuration publishes positive metric scale")
+    report.expect(
+        grid.ticksPerBeat == max(1, session.document.ticksPerBeat)
+            && grid.appliedRevisionText == String(session.document.revision)
+            && grid.renderedNoteCount == (0..<session.document.engineTracks.usedTrackCount).reduce(0) {
+                $0 + session.document.notes(in: $1).count
+            },
+        cppID: id, message: "published beat grid, revision text, and note count match the document")
+    report.expect(
+        snapshot.minHScroll < 0 && snapshot.maxHScroll > 0 && snapshot.maxVScroll >= 0,
+        cppID: id, message: "camera scroll bounds expose a lead pad and forward range")
+    struct SummaryNote: Decodable {
+        let id: Int
+        let tick: Int
+        let duration: Int
+        let pitch: Int
+        let track: Int
+        let velocity: Int
+        let ghost: Bool
+        let selected: Bool
+    }
+    let decoded = (try? JSONDecoder().decode(
+        [SummaryNote].self, from: Data(grid.noteSummary.utf8))) ?? []
+    let trackOrder = [grid.trackIndex]
+        + (0..<session.document.engineTracks.usedTrackCount).filter { $0 != grid.trackIndex }
+    let notes = trackOrder.flatMap { session.document.notes(in: $0) }
+    let summaryMatches = decoded.count == notes.count
+        && zip(decoded, notes).allSatisfy { summary, note in
+            summary.id == note.id.rawValue && summary.tick == Int(note.tick)
+                && summary.duration == Int(note.duration)
+                && summary.pitch == Int(note.pitch) && summary.track == note.track
+                && summary.velocity == Int(note.velocity)
+                && summary.ghost == (note.track != grid.trackIndex)
+                && summary.selected == session.selectedNotes.contains(note.id)
+        }
+    report.expect(
+        summaryMatches,
+        cppID: id, message: "noteSummary JSON carries every document note field and selection flag")
+    grid.configureViewport(width: 640, height: 320, fontPx: 26, dpr: 2)
+    report.expect(
+        gridCameraNear(grid.baseFontPx, 26)
+            && gridCameraNear(grid.cameraMaxVScroll, session.camera.snapshot.maxVScroll),
+        cppID: id, message: "metric scale republish tracks the requested font and camera bounds")
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
 }

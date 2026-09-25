@@ -4,32 +4,6 @@ import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
 
-// MARK: - Synchronous Concurrency Helper
-
-internal enum RunBlockingError: Error {
-    case timeout
-}
-
-@MainActor
-internal func runBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(25.0)
-    while outcome == nil {
-        if Date() > deadline {
-            throw RunBlockingError.timeout
-        }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
 internal func operationFailureMessage(_ error: Error) -> String? {
     guard let serviceError = error as? ProjectServiceError,
           case let .operationFailed(message) = serviceError else {

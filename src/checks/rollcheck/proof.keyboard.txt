@@ -1291,46 +1291,46 @@ Anchor: deleted
 S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp
 Anchor: deleted
 
-S029 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S029 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "nudge right advances the selected note one snap cell"
 
-S030 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S030 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "nudge left returns the selected note one snap cell"
 
-S031 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S031 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "nudge right snaps an off-grid note forward to the lattice"
 
-S032 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S032 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "nudge left snaps an off-grid note back to the lattice"
 
-S033 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S033 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "octave transpose raises the selected note twelve keys"
 
-S034 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S034 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "octave transpose down restores the selected note pitch"
 
-S035 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S035 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "shorten clamps the shorter note at one tick"
 
-S036 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S036 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "repeated shorten at the floor is a no-op"
 
-S037 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S037 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "merged shorten presses undo in one step"
 
-S038 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S038 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "copy leaves the document and published summary untouched"
 
-S039 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S039 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "delete is refused while a pointer gesture owns the grid"
 
-S040 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S040 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "pencil mode still toggles mid-gesture without touching notes"
 
-S041 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S041 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "pencil mode toggles back mid-gesture without touching notes"
 
-S042 | checkCommandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift
+S042 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
 Anchor: message "releasing a zero-delta press commits nothing"
 
 S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift

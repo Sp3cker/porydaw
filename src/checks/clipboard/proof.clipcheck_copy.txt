@@ -566,43 +566,43 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+S001 | noteClipboardSemantics | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "exact zero-span 24-TPQN payload retargets across documents without changing the source track"
 
-S002 | noteClipboardSemantics | src/checks/editcheck/TimeChecks.swift
+S002 | noteClipboardSemantics | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "exact zero-span 24-TPQN payload pastes in the source document and preserves the original note"
 
-S003 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S003 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "track-scoped range clip including the initial voice seed"
 
-S004 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S004 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "multi-track range paste creates tracks, preserves lanes and voices, and undoes atomically"
 
-S005 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+S005 | rangeClipboardDeleteAndCut | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "delete and extract-then-delete cut preserve the exact payload and each restore in one undo"
 
-S006 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S006 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "track-expanding paste adds exactly one history entry"
 
-S007 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+S007 | rangeClipboardDeleteAndCut | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "range delete adds exactly one history entry"
 
-S008 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+S008 | rangeClipboardDeleteAndCut | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "range cut adds exactly one history entry"
 
-S009 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S009 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "the copied time range retains its 24-TPB MIME envelope and full payload"
 
-S010 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S010 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "the scoped clip retains its 24-TPB MIME envelope and all tracks and lanes"
 
-S011 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S011 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "the destination has one engine track before expansion"
 
-S012 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/TimeChecks.swift
+S012 | timeRangeClipboardCopyAndExpansion | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "undo restores the empty notes and modulation lane and the original voice seed"
 
-S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/TimeChecks.swift
+S013 | rangeClipboardDeleteAndCut | src/checks/editcheck/ClipboardEditingChecks.swift
 Anchor: message "cut undo explicitly restores both notes, the voice lane and both tempo points"
 
 S014 | ShellClipboard::test_roundTripReplacement (shell lane, supplementary) | src/checks/editorqml/tst_ShellClipboard.qml

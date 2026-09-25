@@ -927,127 +927,127 @@ int runRulerGridMenuCheck(const QStringList &qtArguments)
 
 Swift assertion predicates
 
-S001 | trackEditing | src/checks/editcheck/EventChecks.swift
+S001 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "new track occupies the next engine slot"
 
-S002 | trackEditing | src/checks/editcheck/EventChecks.swift
+S002 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "new track voice is clamped and seeded"
 
-S003 | trackEditing | src/checks/editcheck/EventChecks.swift
+S003 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "add publishes old engine-track identities"
 
-S004 | trackEditing | src/checks/editcheck/EventChecks.swift
+S004 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "undo publishes the inverse track remap"
 
-S005 | trackEditing | src/checks/editcheck/EventChecks.swift
+S005 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "redo republishes the forward track remap"
 
-S006 | trackEditing | src/checks/editcheck/EventChecks.swift
+S006 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: function
 
-S007 | trackEditing | src/checks/editcheck/EventChecks.swift
+S007 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "duplicate preserves the fixture's literal note"
 
-S008 | trackEditing | src/checks/editcheck/EventChecks.swift
+S008 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "duplicate remints note identities"
 
-S009 | trackEditing | src/checks/editcheck/EventChecks.swift
+S009 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "conductor time signature survives reorder"
 
-S010 | trackEditing | src/checks/editcheck/EventChecks.swift
+S010 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "conductor marker remains in chunk zero"
 
-S011 | trackEditing | src/checks/editcheck/EventChecks.swift
+S011 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "global signature is rescued before chunk deletion"
 
-S012 | trackEditing | src/checks/editcheck/EventChecks.swift
+S012 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "winning loop marker is rescued"
 
-S013 | trackEditing | src/checks/editcheck/EventChecks.swift
+S013 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "deleting the chunk-zero track retains the conductor chunk"
 
-S014 | trackEditing | src/checks/editcheck/EventChecks.swift
+S014 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "rename trims the stored display name"
 
-S015 | trackEditing | src/checks/editcheck/EventChecks.swift
+S015 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "loop-marker-shaped name is rejected"
 
-S016 | trackEditing | src/checks/editcheck/EventChecks.swift
+S016 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "configured track budget rejects an added track"
 
-S017 | trackEditing | src/checks/editcheck/EventChecks.swift
+S017 | trackEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "hardware track ceiling rejects a seventeenth track"
 
-S018 | trackNameRoles | src/checks/editcheck/EventChecks.swift
+S018 | trackNameRoles | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "document query ignores a channel-prefixed name"
 
-S019 | trackNameRoles | src/checks/editcheck/EventChecks.swift
+S019 | trackNameRoles | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "rename changes only bare names after empty-prefix or channel clearing"
 
-S020 | trackNameRoles | src/checks/editcheck/EventChecks.swift
+S020 | trackNameRoles | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "import and document queries select the same bare name"
 
-S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S021 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "raw tempo meta is rejected"
 
-S022 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S022 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "tempo normalization keeps the last same-tick value"
 
-S023 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S023 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "mixed raw and tempo replacement is atomic"
 
-S024 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S024 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "one undo restores both domains"
 
-S025 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S025 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "same-tick signature is replaced"
 
-S026 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S026 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "signature moves with its payload"
 
-S027 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S027 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "signature deletion removes destination"
 
-S028 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift
+S028 | rawTempoAndSignatureEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "move preserves every cross-chunk source signature"
 
-S029 | laneEditing | src/checks/editcheck/EventChecks.swift
+S029 | laneEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "span write replaces and clamps points"
 
-S030 | laneEditing | src/checks/editcheck/EventChecks.swift
+S030 | laneEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "lane move relocates the selected identity"
 
-S031 | laneEditing | src/checks/editcheck/EventChecks.swift
+S031 | laneEditing | src/checks/editcheck/TrackLifecycleChecks.swift
 Anchor: message "foreign-chunk XCMD point cannot delete a local event"
 
-S032 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S032 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "import counts logical XCMD points"
 
-S033 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S033 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "unknown controller is not exported"
 
-S034 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S034 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "player track budget identifies silent tracks"
 
-S035 | importAnalysis | src/checks/editcheck/EventChecks.swift
+S035 | importAnalysis | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "notes before instrument are reported"
 
-S036 | importTransforms | src/checks/editcheck/EventChecks.swift
+S036 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "only eligible same-tick setter is removed"
 
-S037 | importTransforms | src/checks/editcheck/EventChecks.swift
+S037 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "action-like XCMD selectors are preserved"
 
-S038 | importTransforms | src/checks/editcheck/EventChecks.swift
+S038 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "rescale uses floor arithmetic"
 
-S039 | importTransforms | src/checks/editcheck/EventChecks.swift
+S039 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "end tick uses the same floor arithmetic"
 
-S040 | importTransforms | src/checks/editcheck/EventChecks.swift
+S040 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: function
 
-S041 | importTransforms | src/checks/editcheck/EventChecks.swift
+S041 | importTransforms | src/checks/editcheck/MidiImportChecks.swift
 Anchor: message "overflow rejection leaves file untouched"
 
 S042 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift

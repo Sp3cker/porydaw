@@ -132,7 +132,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
         _ = page.pointerPress(x: session.camera.displayX(tick: 144, origin: 0, dpr: 1),
                               y: 10, surface: 1, button: 2, modifiers: 0)
     }
-    let before = drawerVoiceVoiceDocumentSnapshot(document)
+    let before = DocumentSnapshot(document)
     let beforeBytes = bytes()
     openMenu()
     expect(page.menuOpen && page.menuTargetTick == 144, 111)
@@ -146,7 +146,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
     expect(value() != nil, 124)
     expect(value() == 7, 125)
     expect(document.revision == before.revision + 1, 126)
-    let inserted = drawerVoiceVoiceDocumentSnapshot(document)
+    let inserted = DocumentSnapshot(document)
     let insertedBytes = bytes()
 
     openMenu()
@@ -161,7 +161,7 @@ func drawerVoiceOriginalMenuTransactions(_ report: CheckReport, suite: DocumentS
     expect(value() != nil, 143)
     expect(value() == 3, 144)
     expect(document.revision == inserted.revision + 1, 145)
-    let changed = drawerVoiceVoiceDocumentSnapshot(document)
+    let changed = DocumentSnapshot(document)
     let changedBytes = bytes()
 
     openMenu()

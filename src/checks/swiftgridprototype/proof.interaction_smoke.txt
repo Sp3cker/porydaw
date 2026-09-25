@@ -688,34 +688,34 @@ Anchor: message "momentum suppresses pitch zoom without publishing"
 S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift
 Anchor: message "gutter wheel scrolls by negative half-delta exactly once"
 
-S042 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S042 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "Ctrl-add of earlier A(v40) retains later B(v90) as first selection"
 
-S043 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S043 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deselecting and re-adding appends the note"
 
-S044 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S044 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "replacement preserves first occurrence and removes duplicates"
 
-S045 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S045 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band keeps press order before newly covered notes"
 
-S046 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S046 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "band cancellation restores selection order"
 
-S047 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S047 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement publishes the selection domain"
 
-S048 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S048 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "order-only replacement and additive selection coalesce"
 
-S049 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S049 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "unchanged normalized selection publishes nothing"
 
-S050 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S050 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "selection gestures never mutate document or history"
 
-S051 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift
+S051 | checkOrderedSelection | src/checks/rollcheck/selection.swift
 Anchor: message "deletion prunes membership and preserves survivor order"
 
 S052 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift

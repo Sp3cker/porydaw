@@ -102,10 +102,10 @@ Remaining original source (closing sequence and helper bodies):
 Counterpart executable predicate index
 The S entries are representative Swift predicates executed through this exact relay by the swiftcore lane. Their presence alone does not close the NATIVE relay obligation. Preserve their surrounding setup and order in the paired source.
 
-S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift
+S001 | runMidiCodecSuite | src/checks/midi/MidiSmfCodecChecks.swift
 Anchor: message "independent canonical byte vector"
 
-S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift
+S002 | runMusicalSemanticsSuite | src/checks/midi/MidiSemanticsChecks.swift
 Anchor: message "row=key-negative floor modulo"
 
 S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift

@@ -6,7 +6,7 @@ Original: src/checks/automation/automationownership.cpp
 Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb870
 Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
-Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
 
@@ -1070,8 +1070,8 @@ Anchor: message "a track-scoped selection covers the selected track's lanes"
 S067 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift
 Anchor: message "Tempo is uncovered when part of the used set is selected"
 
-S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S068 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "awaited undo completes"
 
-S069 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift
+S069 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "redo restores the node value move"

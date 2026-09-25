@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -11,16 +11,14 @@ func runSelectionChecks(_ report: CheckReport, session: DocumentSession) {
     checkKeyboardAuditionTrackSwitch(report, session: session)
     checkGroupedVelocityDrag(report, session: session)
     checkThresholdDrawCell(report, session: session)
+    checkOrderedSelection(report, session: session)
 }
 
 @MainActor
 private func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::selectionBandSweep"
     let initialSelection = session.selectedNoteOrder
-    let grid = PianoGrid(session: session)
-    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    let grid = makeCameraGrid(session: session)
     let pitch = [160.0, 200, 120, 240, 80].compactMap { y in
         session.camera.projection.pitch(
             atY: y, keyHeight: session.camera.snapshot.keyHeight,
@@ -75,10 +73,7 @@ private func checkSelectionBandSweep(_ report: CheckReport, session: DocumentSes
 private func checkSelectionNonScaleMove(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::selectionNonScaleMove"
     let initialSelection = session.selectedNoteOrder
-    let grid = PianoGrid(session: session)
-    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
+    let grid = makeCameraGrid(session: session)
     let snap = max(1, grid.snapTicks)
     let tick = 240
     let duration = 4 * snap
@@ -200,15 +195,6 @@ private func selectionRect(_ id: NoteID, in model: QListModel<SceneRect>) -> Sce
     }
     return nil
 }
-@MainActor
-private func selectionGrid(session: DocumentSession) -> PianoGrid {
-    let grid = PianoGrid(session: session)
-    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(35) }
-    grid.refreshCamera()
-    return grid
-}
 
 @MainActor
 private func velocityPairSeed(session: DocumentSession, grid: PianoGrid)
@@ -272,7 +258,7 @@ private func selectionRestore(
 private func checkSelectionBandAudition(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::selectionBandSweep"
     let initialSelection = session.selectedNoteOrder
-    let grid = selectionGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-band MIDI bytes")
         return
@@ -349,7 +335,7 @@ private func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, session: Do
     let originalSelection = session.selectedNoteOrder
     let originalCamera = session.camera
     defer { _ = session.mutateCamera { $0 = originalCamera } }
-    let grid = selectionGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     let pressedTrack = grid.trackIndex
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-audition MIDI bytes")
@@ -398,7 +384,7 @@ private func checkKeyboardAuditionTrackSwitch(_ report: CheckReport, session: Do
 private func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::selectionModifierVelocity"
     let initialSelection = session.selectedNoteOrder
-    let grid = selectionGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-drag MIDI bytes")
         return
@@ -507,7 +493,7 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
     let id = "swiftcore/PianoRoll::selectionMinimumDrawDistance"
     let initialSelection = session.selectedNoteOrder
     let oldCamera = session.camera
-    let grid = selectionGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
     grid.refreshCamera()
     for _ in 0..<3 {
@@ -553,4 +539,90 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
     }
     report.expect(drawn.count == 1 && drawn.first.map { Int($0.duration) == snap } == true,
                   cppID: id, message: "a threshold drag draws one snap cell")
+}
+
+@MainActor
+private func checkOrderedSelection(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::orderedSelection"
+    let setupGrid = makeCameraGrid(session: session)
+    guard let pitch = session.camera.projection.pitch(
+        atY: 160, keyHeight: session.camera.snapshot.keyHeight,
+        scrollY: session.camera.snapshot.scrollY, dpr: setupGrid.devicePixelRatio),
+        let added = try? session.document.addNotes([
+            NewNote(track: setupGrid.trackIndex, tick: 24, pitch: UInt8(pitch),
+                    duration: 24, velocity: 40),
+            NewNote(track: setupGrid.trackIndex, tick: 96, pitch: UInt8(pitch),
+                    duration: 24, velocity: 90),
+            NewNote(track: setupGrid.trackIndex, tick: 168, pitch: UInt8(pitch),
+                    duration: 24, velocity: 65)
+        ]), added.count == 3 else {
+        report.fail(id, "ordered-selection fixture could not create visible notes")
+        return
+    }
+    defer { session.document.deleteNotes(added) }
+    let grid = makeCameraGrid(session: session)
+    let a = added[0], b = added[1], c = added[2]
+    guard let aRect = firstRect(named: "gridNote_\(a.rawValue)", in: grid.scene.pianoNoteFills),
+          let bRect = firstRect(named: "gridNote_\(b.rawValue)", in: grid.scene.pianoNoteFills)
+    else {
+        report.fail(id, "ordered-selection fixture notes are not projected")
+        return
+    }
+    let revision = session.document.revision
+    let history = session.document.history.currentIdentity
+    let dirty = session.document.isDirty
+    let priorChange = session.onChange
+    var publications: [SessionChangeDomains] = []
+    session.onChange = { publications.append($0.domains) }
+    defer { session.onChange = priorChange }
+    func click(_ rect: SceneRect, modifiers: Int) {
+        let x = rect.x + rect.width / 2, y = rect.y + rect.height / 2
+        grid.beginPointer(x: x, y: y, modifiers: modifiers)
+        grid.endPointer(x: x, y: y)
+    }
+    session.clearSelectedNotes()
+    click(bRect, modifiers: 0)
+    click(aRect, modifiers: 0x0400_0000)
+    report.expect(session.selectedNoteOrder == [b, a]
+        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
+        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
+    click(bRect, modifiers: 0x0400_0000)
+    click(bRect, modifiers: 0x0400_0000)
+    report.expectEqual(expected: [a, b], actual: session.selectedNoteOrder, cppID: id,
+                       what: "deselecting and re-adding appends the note")
+    session.setSelectedNotes([b, a, b])
+    report.expectEqual(expected: [b, a], actual: session.selectedNoteOrder, cppID: id,
+                       what: "replacement preserves first occurrence and removes duplicates")
+    grid.beginRightPointer(x: 0, y: 0)
+    grid.updateRightPointer(x: 640, y: 320)
+    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
+        && session.selectedNotes.contains(c),
+        cppID: id, message: "band keeps press order before newly covered notes")
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    report.expectEqual(expected: [b, a], actual: session.selectedNoteOrder, cppID: id,
+                       what: "band cancellation restores selection order")
+    publications.removeAll()
+    session.setSelectedNotes([a, b])
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: id,
+                       what: "order-only replacement publishes the selection domain")
+    publications.removeAll()
+    session.withStateChanges {
+        session.setSelectedNotes([b, a])
+        session.addSelectedNote(c)
+    }
+    report.expectEqual(expected: [SessionChangeDomains.selection], actual: publications, cppID: id,
+                       what: "order-only replacement and additive selection coalesce")
+    publications.removeAll()
+    session.setSelectedNotes([b, a, c, b])
+    session.addSelectedNote(b)
+    report.expect(publications.isEmpty, cppID: id,
+                  message: "unchanged normalized selection publishes nothing")
+    report.expect(session.document.revision == revision
+        && session.document.history.currentIdentity == history
+        && session.document.isDirty == dirty,
+        cppID: id, message: "selection gestures never mutate document or history")
+    session.setSelectedNotes([c, b, a])
+    session.document.deleteNotes([b])
+    report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
+                  cppID: id, message: "deletion prunes membership and preserves survivor order")
 }

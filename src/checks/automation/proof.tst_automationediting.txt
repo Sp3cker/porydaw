@@ -5,7 +5,7 @@ Original: src/checks/automation/tst_automationediting.cpp
 Original SHA-256: b230eb77daa26bb9fc832e8029f28c6dd52254390c5f64accbcf1a58f9b2d5a7
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Additional Swift counterpart: src/checks/automation/domain/gestures.swift
+Additional Swift counterpart: src/checks/automation/domain/gestureNodeDrag.swift
 Additional Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 
@@ -461,16 +461,16 @@ Anchor: message "a sub-threshold move previews the untouched target"
 S029 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a sub-threshold move writes nothing"
 
-S030 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S030 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the node lands on its destination and evicts the occupant there"
 
-S031 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S031 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one drag is one revision"
 
-S032 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S032 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "the drag is undoable"
 
-S033 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift
+S033 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "one undo restores the moved node and the evicted occupant"
 
 S034 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift

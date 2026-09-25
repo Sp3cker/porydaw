@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 @MainActor
@@ -9,6 +9,7 @@ func runPencilChecks(_ report: CheckReport, session: DocumentSession) {
     checkPencilAbuttingNotes(report, session: session)
     checkVelocityDoubleClickDelete(report, session: session)
     checkPointerDrawCancellation(report, session: session)
+    checkDrawLatchAndCancel(report, session: session)
 }
 
 private struct PencilCell {
@@ -17,16 +18,6 @@ private struct PencilCell {
     let pitch: Int
     let x: Double
     let y: Double
-}
-
-@MainActor
-private func pencilGrid(session: DocumentSession, zoom: Double = 35) -> PianoGrid {
-    let grid = PianoGrid(session: session)
-    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
-    grid.resetCameraScroll()
-    _ = session.mutateCamera { _ = $0.setTimeZoom(zoom) }
-    grid.refreshCamera()
-    return grid
 }
 
 @MainActor
@@ -107,7 +98,7 @@ private func pencilRestore(
 @MainActor
 private func checkPencilFractionalPlacement(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::pencilFractionalPlacement"
-    let grid = pencilGrid(session: session, zoom: 31.375)
+    let grid = makeCameraGrid(session: session, zoom: 31.375)
     _ = session.mutateCamera { _ = $0.setHScroll(0.625) }
     grid.refreshCamera()
     let snapshot = session.camera.snapshot
@@ -146,7 +137,7 @@ private func checkPencilFractionalPlacement(_ report: CheckReport, session: Docu
 @MainActor
 private func checkPencilPlacement(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::pencilPlacement"
-    let grid = pencilGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let cell = pencilFreeCell(session: session, grid: grid),
           let baseline = try? session.document.captureSave() else {
         report.fail(id, "no free grid cell or pre-draw SMF snapshot")
@@ -166,7 +157,7 @@ private func checkPencilPlacement(_ report: CheckReport, session: DocumentSessio
 @MainActor
 private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::pencilAbuttingRaster"
-    let grid = pencilGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let cell = pencilFreeCell(session: session, grid: grid),
           let baseline = try? session.document.captureSave() else {
         report.fail(id, "no free grid cell or pre-draw SMF snapshot")
@@ -210,7 +201,7 @@ private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSe
 @MainActor
 private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::velocityDoubleClickDelete"
-    let grid = pencilGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let a = pencilFreeCell(session: session, grid: grid, firstProbe: 40),
           let baseline = try? session.document.captureSave(),
           let first = try? session.document.addNotes([
@@ -249,7 +240,7 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
 @MainActor
 private func checkPointerDrawCancellation(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::quickLifecycle"
-    let grid = pencilGrid(session: session)
+    let grid = makeCameraGrid(session: session)
     guard let cell = pencilFreeCell(session: session, grid: grid),
           let baseline = try? session.document.captureSave() else {
         report.fail(id, "no free grid cell for the pointer lifecycle")
@@ -269,4 +260,104 @@ private func checkPointerDrawCancellation(_ report: CheckReport, session: Docume
                       message: "\(reason) discards the staged draw without a document write")
     }
     pencilRestore(report, id: id, session: session, baseline: baseline)
+}
+
+@MainActor
+private func checkDrawLatchAndCancel(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/EditorGridCamera::drawLatchAndCancel"
+    let grid = makeCameraGrid(session: session)
+    let snap = max(1, grid.snapTicks)
+    func emptyCell() -> (x: Double, y: Double, tick: Int, pitch: Int)? {
+        for candidateY in [250.0, 200.0, 150.0, 100.0, 50.0] {
+            guard let pitch = session.camera.projection.pitch(
+                atY: candidateY, keyHeight: session.camera.snapshot.keyHeight,
+                scrollY: session.camera.snapshot.scrollY, dpr: grid.devicePixelRatio)
+            else { continue }
+            for candidateX in [500.0, 550.0, 450.0, 600.0, 400.0] {
+                let tick = Int(session.camera.tickAtContentX(candidateX)) / snap * snap
+                let x = session.camera.displayX(
+                    tick: Double(tick), origin: 0, dpr: grid.devicePixelRatio)
+                let occupied = (0..<grid.scene.pianoNoteFills.count).contains { index in
+                    let rect = grid.scene.pianoNoteFills[index]
+                    return rect.x < x + 20 && rect.x + rect.width > x
+                        && rect.y <= candidateY && rect.y + rect.height >= candidateY
+                }
+                if !occupied { return (x, candidateY, tick, pitch) }
+            }
+        }
+        return nil
+    }
+    guard let first = emptyCell() else {
+        report.fail(id, "no free draw cell resolves through the camera")
+        return
+    }
+    let beforeIDs = Set(session.document.notes(in: grid.trackIndex).map(\.id))
+    let revision = session.document.revision
+    grid.beginPointer(x: first.x, y: first.y, modifiers: 0)
+    grid.updatePointer(x: first.x + 20, y: first.y)
+    grid.endPointer(x: first.x + 20, y: first.y)
+    let created = session.document.notes(in: grid.trackIndex)
+        .first { !beforeIDs.contains($0.id) }
+    report.expect(
+        session.document.revision == revision + 1
+            && created.map { Int($0.velocity) == 100 } == true,
+        cppID: id, message: "draw commits one note at the default latched velocity")
+    grid.lastVelocity = 77
+    guard let second = emptyCell() else {
+        report.fail(id, "no second free draw cell resolves through the camera")
+        return
+    }
+    let beforeSecond = Set(session.document.notes(in: grid.trackIndex).map(\.id))
+    grid.beginPointer(x: second.x, y: second.y, modifiers: 0)
+    grid.updatePointer(x: second.x + 20, y: second.y)
+    grid.endPointer(x: second.x + 20, y: second.y)
+    let latched = session.document.notes(in: grid.trackIndex)
+        .first { !beforeSecond.contains($0.id) }
+    report.expect(
+        latched.map { Int($0.velocity) == 77 } == true,
+        cppID: id, message: "draw commits at the latched last-used velocity")
+    if let latchedID = latched?.id {
+        grid.doublePointer(x: second.x + 10, y: second.y)
+        report.expect(
+            session.document.note(latchedID) == nil,
+            cppID: id, message: "double press deletes the note under the pointer")
+    }
+    // Cancel reasons: a live move gesture cancelled by ungrab, focus loss,
+    // window deactivation, or hiding commits nothing and records the reason.
+    guard let target = session.document.notes(in: grid.trackIndex).first,
+          let targetRect = firstRect(
+              named: "gridNote_\(target.id.rawValue)", in: grid.scene.pianoNoteFills)
+    else {
+        report.fail(id, "cancel fixture exposes no projected note")
+        return
+    }
+    let pressX = targetRect.x + targetRect.width / 2
+    let pressY = targetRect.y + targetRect.height / 2
+    let dragX = Double(snap) * session.camera.snapshot.pixelsPerTick
+    for reason in [GridCancelReason.pointerUngrabbed, .focusLost,
+                   .windowDeactivated, .hidden] {
+        let cancelRevision = session.document.revision
+        let cancelCount = session.document.notes(in: grid.trackIndex).count
+        grid.beginPointer(x: pressX, y: pressY, modifiers: 0)
+        let pressedSummary = grid.noteSummary
+        grid.updatePointer(x: pressX + dragX, y: pressY)
+        grid.inputCancelled(reason: reason.rawValue)
+        report.expect(
+            session.document.revision == cancelRevision
+                && session.document.notes(in: grid.trackIndex).count == cancelCount
+                && grid.lastCancelReason == reason.rawValue
+                && !grid.interactionActive
+                && grid.noteSummary == pressedSummary,
+            cppID: id,
+            message: "\(reason) cancel discards the gesture, records the reason, and keeps the summary")
+    }
+    // Idle Escape clears the ephemeral selection without a document mutation
+    // and is never reported as a host cancel reason.
+    let escapeRevision = session.document.revision
+    session.setSelectedNotes([target.id])
+    _ = grid.handleEscape()
+    report.expect(
+        session.selectedNotes.isEmpty && session.document.revision == escapeRevision
+            && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
+        cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
 }

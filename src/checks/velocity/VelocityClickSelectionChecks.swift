@@ -21,7 +21,7 @@ func drawerVelocityBlankClickDeselects(_ report: CheckReport, session: DocumentS
         report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     let blankX = page.plotWidth - 1
     let blankY = page.axisModel.velocityToY(40)
@@ -33,7 +33,7 @@ func drawerVelocityBlankClickDeselects(_ report: CheckReport, session: DocumentS
     _ = page.pointerRelease(x: blankX, y: blankY, button: 1)
     report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityClickSelectionID, message: "a blank release clears the selection")
     report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a blank release ends the gesture")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "deselecting on release writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "deselecting on release writes nothing")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a blank click leaves every velocity captured")
     }
@@ -67,7 +67,7 @@ func drawerVelocityGraduationClickEdits(_ report: CheckReport, session: Document
         report.fail(drawerVelocityClickSelectionID, "the 127 label row resolved no velocity")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let untouched = document.note(notes[2].id)?.velocity
     let consumed = page.pointerPress(x: 10, y: maximum.y, surface: 0, button: 1, modifiers: 0)
     report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a graduation press is consumed")
@@ -104,7 +104,7 @@ func drawerVelocityClickBelowNodeCommits(_ report: CheckReport, session: Documen
         report.fail(drawerVelocityClickSelectionID, "the fixture's later note has no published handle")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let pressX = laterHandle.x
     var pressY = 0.0
     var pressPreview = 0
@@ -172,7 +172,7 @@ func drawerVelocityBandExpandContract(_ report: CheckReport, session: DocumentSe
         report.fail(drawerVelocityClickSelectionID, "the contracted band cannot split the published handles")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     let pressed = page.pointerPress(x: 0, y: 0, surface: 1, button: 2, modifiers: 0)
     report.expect(pressed, cppID: drawerVelocityClickSelectionID, message: "a band press is consumed")
@@ -182,7 +182,7 @@ func drawerVelocityBandExpandContract(_ report: CheckReport, session: DocumentSe
     _ = page.pointerRelease(x: contractedX, y: 120, button: 2)
     report.expect(fixture.session.selectedNotes == Set([notes[0].id, notes[1].id]), cppID: drawerVelocityClickSelectionID, message: "the contracted band keeps the covered pair and drops the later note")
     report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band release ends the gesture")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a band selection writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a band selection writes nothing")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a band selection leaves every velocity captured")
     }
@@ -208,7 +208,7 @@ func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentS
         report.fail(drawerVelocityClickSelectionID, "the fixture's target note has no published handle")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     _ = page.pointerPress(x: target.x, y: target.y, surface: 1, button: 1, modifiers: 0)
     report.expect(fixture.session.selectedNoteOrder == [notes[1].id], cppID: drawerVelocityClickSelectionID, message: "pressing another node provisionally selects it")
@@ -216,7 +216,7 @@ func drawerVelocityPressCancelRestores(_ report: CheckReport, session: DocumentS
     page.cancelSectionInteraction()
     report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "cancelling clears the provisional gesture")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "cancelling restores selection membership and insertion order")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
     let released = page.pointerRelease(x: target.x, y: target.y, button: 1)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after cancellation is inert")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a late release cannot revive the discarded selection")
@@ -245,7 +245,7 @@ func drawerVelocityBandCancelRestores(_ report: CheckReport, session: DocumentSe
         report.fail(drawerVelocityClickSelectionID, "the fixture's target note has no published handle")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     _ = page.pointerPress(x: target.x, y: target.y, surface: 1, button: 2, modifiers: 0)
     report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a band press holds a live gesture")
@@ -253,7 +253,7 @@ func drawerVelocityBandCancelRestores(_ report: CheckReport, session: DocumentSe
     page.cancelSectionInteraction()
     report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "cancelling clears the live band")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID, message: "a cancelled band restores selection membership and insertion order")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "cancelling writes nothing at all")
     _ = page.pointerMove(x: 400, y: 120, buttons: 2)
     let released = page.pointerRelease(x: 400, y: 120, button: 2)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "input after cancellation starts no band")
@@ -287,7 +287,7 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
         report.fail(drawerVelocityClickSelectionID, "the fixture's lead note has no published handle")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     _ = page.pointerPress(x: lead.x, y: lead.y, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: lead.x, y: lead.y - 30, buttons: 1)
@@ -301,10 +301,10 @@ func drawerVelocityPrimaryTrackSwitchCancels(_ report: CheckReport, session: Doc
     report.expect(!page.hasGesture, cppID: drawerVelocityCancellationID, message: "a primary-track switch ends the live gesture")
     report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track switch clears every preview")
     report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityCancellationID, message: "a primary-track replacement clears rather than revives the old selection")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a primary-track switch writes nothing at all")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a primary-track switch writes nothing at all")
     let released = page.pointerRelease(x: lead.x, y: lead.y - 30, button: 1)
     report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "a release after the switch is inert")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a late release still writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityCancellationID, message: "a late release still writes nothing")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a cancelled drag leaves every velocity captured")
     }
@@ -335,7 +335,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         }
         fixture.session.setSelectedNotes([note.id])
         page.refreshFromDocument()
-        let baseline = drawerVelocityDocumentSnapshot(fixture.document)
+        let baseline = DocumentSnapshot(fixture.document)
         let bytes = coreTimeBytes(fixture.document)
         let undoCount = fixture.document.history.undoCount
         _ = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1, modifiers: 0)
@@ -375,7 +375,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         report.expect(!page.pointerRelease(x: handle.x, y: handle.y - 30, button: 1),
                       cppID: drawerVelocityCancellationID,
                       message: "\(route): held release cannot commit the cancelled gesture")
-        report.expect(drawerVelocityDocumentSnapshot(fixture.document) == baseline
+        report.expect(DocumentSnapshot(fixture.document) == baseline
                       && fixture.document.history.undoCount == undoCount
                       && coreTimeBytes(fixture.document) == bytes,
                       cppID: drawerVelocityCancellationID,
@@ -431,7 +431,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
     var editedVoice = originalVoice
     editedVoice.pan = editedVoice.pan == 15 ? 14 : 15
     do {
-        _ = try drawerVelocityRunBlocking {
+        _ = try runBlocking {
             try await bankFixture.session.applyBankEdit(slot: 0, value: editedVoice,
                                                         expected: originalVoice)
         }
@@ -498,7 +498,7 @@ func drawerVelocityStackedHitPriority(_ report: CheckReport, session: DocumentSe
         return
     }
     report.expectEqual(expected: Int(notes[0].velocity), actual: Int(document.note(overlapID)?.velocity ?? 0), cppID: drawerVelocityHitPriorityID, what: "the overlap note carries the target velocity")
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let capturedOverlap = document.note(overlapID)?.velocity
     let captured = notes.map { document.note($0.id)?.velocity }
     fixture.session.setSelectedNotes([overlapID])
@@ -510,7 +510,7 @@ func drawerVelocityStackedHitPriority(_ report: CheckReport, session: DocumentSe
     report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "pressing the selected circle keeps it over the stem")
     _ = page.pointerRelease(x: circles.x, y: circles.y, button: 1)
     report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the selected circle keeps it")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem click writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem click writes nothing")
     fixture.session.setSelectedNotes([notes[0].id])
     page.refreshFromDocument()
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "the stem selection latches before the press")
@@ -520,7 +520,7 @@ func drawerVelocityStackedHitPriority(_ report: CheckReport, session: DocumentSe
     report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "an unselected circle wins over a selected stem")
     _ = page.pointerRelease(x: circles.x, y: circles.y, button: 1)
     report.expect(fixture.session.selectedNoteOrder == [overlapID], cppID: drawerVelocityHitPriorityID, message: "releasing the winning circle keeps it")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem reselect writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a circle-over-stem reselect writes nothing")
     report.expectEqual(expected: capturedOverlap, actual: document.note(overlapID)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave the overlap velocity captured")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "hit-priority clicks leave every velocity captured")
@@ -560,7 +560,7 @@ func drawerVelocityStemPressKeepsSelection(_ report: CheckReport, session: Docum
             return
         }
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     let consumed = page.pointerPress(x: stemX, y: stem.y, surface: 1, button: 1, modifiers: 0)
     report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a stem-only press is consumed")
@@ -568,7 +568,7 @@ func drawerVelocityStemPressKeepsSelection(_ report: CheckReport, session: Docum
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "a stem-only press keeps the selected stem")
     _ = page.pointerRelease(x: stemX, y: stem.y, button: 1)
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityHitPriorityID, message: "releasing the stem keeps it")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a stem-only click writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a stem-only click writes nothing")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a stem-only click leaves every velocity captured")
     }
@@ -594,7 +594,7 @@ func drawerVelocityMovedNodeNoClickThrough(_ report: CheckReport, session: Docum
         report.fail(drawerVelocityHitPriorityID, "the fixture's notes have no published handles")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     _ = page.pointerPress(x: far.x, y: far.y, surface: 1, button: 1, modifiers: 0)
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "pressing a node selects it")
@@ -616,7 +616,7 @@ func drawerVelocityMovedNodeNoClickThrough(_ report: CheckReport, session: Docum
     report.expectEqual(expected: Int(notes[2].velocity), actual: Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityHitPriorityID, what: "a same-level move previews the captured velocity")
     _ = page.pointerRelease(x: endX, y: endY, button: 1)
     report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityHitPriorityID, message: "a same-value move ends the gesture with no preview left")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a same-value move writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "a same-value move writes nothing")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id], cppID: drawerVelocityHitPriorityID, message: "releasing over another column does not click through")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a moved node leaves every velocity captured")
@@ -643,7 +643,7 @@ func drawerVelocityRightPressPreservesGroup(_ report: CheckReport, session: Docu
         report.fail(drawerVelocityHitPriorityID, "the fixture's lead note has no published handle")
         return
     }
-    let baseline = drawerVelocityDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let captured = notes.map { document.note($0.id)?.velocity }
     let consumed = page.pointerPress(x: lead.x, y: lead.y, surface: 1, button: 2, modifiers: 0)
     report.expect(consumed, cppID: drawerVelocityHitPriorityID, message: "a secondary press on the group is consumed")
@@ -652,7 +652,7 @@ func drawerVelocityRightPressPreservesGroup(_ report: CheckReport, session: Docu
     _ = page.pointerRelease(x: lead.x, y: lead.y, button: 2)
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityHitPriorityID, message: "a secondary release preserves the selected group")
     report.expect(!page.hasGesture, cppID: drawerVelocityHitPriorityID, message: "a secondary release ends the gesture")
-    report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a secondary click writes nothing")
+    report.expect(DocumentSnapshot(document) == baseline, cppID: drawerVelocityHitPriorityID, message: "a secondary click writes nothing")
     for (index, note) in notes.enumerated() {
         report.expectEqual(expected: captured[index], actual: document.note(note.id)?.velocity, cppID: drawerVelocityHitPriorityID, what: "a secondary click leaves every velocity captured")
     }

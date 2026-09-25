@@ -89,22 +89,6 @@ func drawerVoiceVoiceChangesPageFixture(programs: [Int], division: UInt16 = 24) 
     ])
 }
 
-/// The document facts one transaction claim compares against.
-@MainActor
-struct drawerVoiceVoiceDocumentSnapshot: Equatable {
-    var revision: UInt64
-    var identity: DocumentIdentity
-    var canUndo: Bool
-    var canRedo: Bool
-
-    init(_ document: SongDocument) {
-        revision = document.revision
-        identity = document.history.currentIdentity
-        canUndo = document.history.canUndo
-        canRedo = document.history.canRedo
-    }
-}
-
 /// The page attached to its own synthetic session over the suite's service and
 /// bank, plus the composition facts the page needs to project at all.
 @MainActor
@@ -146,7 +130,7 @@ struct drawerVoiceVoiceChangesFixture {
         session.onCameraChange = { [weak page] _ in page?.refreshCamera() }
     }
 
-    var snapshot: drawerVoiceVoiceDocumentSnapshot { drawerVoiceVoiceDocumentSnapshot(document) }
+    var snapshot: DocumentSnapshot { DocumentSnapshot(document) }
 
     func lanePoints() -> [LanePoint] { document.lanePoints(track: 0, lane: .voice) }
 
@@ -159,28 +143,6 @@ struct drawerVoiceVoiceChangesFixture {
     func marker(at tick: Tick) -> VoiceMarkerHandle? {
         page.publishedMarkers.first { Tick($0.tick) == tick }
     }
-}
-
-@MainActor
-func drawerVoiceRunBlocking<T>(_ operation: @escaping @MainActor () async throws -> T) throws -> T {
-    var outcome: Result<T, Error>?
-    Task { @MainActor in
-        do {
-            outcome = .success(try await operation())
-        } catch {
-            outcome = .failure(error)
-        }
-    }
-    let deadline = Date().addingTimeInterval(20)
-    while outcome == nil {
-        if Date() > deadline { throw drawerVoiceVoiceCheckTimeout.timeout }
-        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-    }
-    return try outcome!.get()
-}
-
-enum drawerVoiceVoiceCheckTimeout: Error {
-    case timeout
 }
 
 // MARK: - Suite entry

@@ -64,7 +64,7 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
 
     // Undo and redo follow the document.
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.undo() }
+        _ = try runBlocking { try await fixture.session.undo() }
     } catch {
         report.fail(drawerVoiceInsertionID, "undo failed: \(error)")
         return
@@ -74,7 +74,7 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceInsertionID,
                        what: "undo rebuilds the projection without the insertion")
     do {
-        _ = try drawerVoiceRunBlocking { try await fixture.session.redo() }
+        _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerVoiceInsertionID, "redo failed: \(error)")
         return
@@ -149,7 +149,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     func value(_ tick: Tick) -> Int? {
         document.lanePoints(track: 0, lane: .voice).first { $0.tick == tick }?.value
     }
-    let baseline = drawerVoiceVoiceDocumentSnapshot(document)
+    let baseline = DocumentSnapshot(document)
     let baselineBytes = try! document.captureSave().bytes
     open(48)
     expect(page.pickerOpen, 309)
@@ -172,14 +172,14 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     _ = document.history.redoDocument()
     expect(oneUndoRestored && (try! document.captureSave().bytes) == writtenBytes
         && document.history.currentIdentity == writtenIdentity, 320)
-    let changed = drawerVoiceVoiceDocumentSnapshot(document)
+    let changed = DocumentSnapshot(document)
     open(48)
     expect(page.pickerOpen, 324)
     page.setPickerFilter(text: "005")
     expect(page.pickerRowPrograms == [5] && page.pickerIndex == 0, 326)
     _ = page.acceptPicker()
     expect(!page.pickerOpen, 328)
-    expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 329)
+    expect(DocumentSnapshot(document) == changed, 329)
     open(48)
     expect(page.pickerOpen, 332)
     page.setPickerFilter(text: "not-a-voice")
@@ -188,7 +188,7 @@ func drawerVoiceOriginalPickerRows(_ report: CheckReport, suite: DocumentSession
     expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 336)
     page.cancelPicker()
     expect(!page.pickerOpen, 338)
-    expect(drawerVoiceVoiceDocumentSnapshot(document) == changed, 339)
+    expect(DocumentSnapshot(document) == changed, 339)
     open(96)
     expect(page.pickerOpen, 407)
     expect(page.pickerIndex == 5, 408)

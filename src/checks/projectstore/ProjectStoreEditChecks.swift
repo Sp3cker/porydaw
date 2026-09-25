@@ -1,23 +1,6 @@
 import Foundation
 import PorydawProject
 
-private enum EditFixtureError: Error {
-    case missingFixture
-}
-
-private func editFixture(_ body: (URL) throws -> Void) throws {
-    guard let root = CheckEnvironment.fixtureRoot,
-          let staged = CheckEnvironment.fixturePath("sound/voicegroups/fixture_rich.inc"),
-          FileManager.default.fileExists(atPath: staged) else {
-        throw EditFixtureError.missingFixture
-    }
-    let copy = FileManager.default.temporaryDirectory.appendingPathComponent(
-        "projectstore-edit-\(UUID().uuidString)", isDirectory: true)
-    defer { try? FileManager.default.removeItem(at: copy) }
-    try FileManager.default.copyItem(at: URL(filePath: root), to: copy)
-    try body(copy)
-}
-
 private func editExpect(_ row: String, _ condition: Bool, _ report: CheckReport, _ detail: String) {
     report.expect(condition, cppID: "projectstore-edit/\(row)", message: "\(row): \(detail)")
 }
@@ -40,7 +23,7 @@ private func editExternally(root: URL, fence: TimeInterval) throws -> VgVoice? {
 
 internal func runProjectStoreEditSuite(_ report: CheckReport) {
     do {
-        try editFixture { root in
+        try withTempProjectCopy(prefix: "projectstore-edit") { root in
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
             guard case .success = opened else {
@@ -153,7 +136,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
 
             do {
-                try editFixture { otherRoot in
+                try withTempProjectCopy(prefix: "projectstore-edit") { otherRoot in
                     let otherStore = ProjectStore(projectRoot: otherRoot)
                     let foreignStore = ProjectStore(projectRoot: root)
                     let otherOpen = awaitValue { try await otherStore.open() }
@@ -186,7 +169,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             }
 
             do {
-                try editFixture { expiryRoot in
+                try withTempProjectCopy(prefix: "projectstore-edit") { expiryRoot in
                     let expiryStore = ProjectStore(projectRoot: expiryRoot)
                     guard case .success = awaitValue({ try await expiryStore.open() }),
                           case .success(let base) = awaitValue({
