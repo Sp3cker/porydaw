@@ -273,7 +273,6 @@ public final class VelocityPage: EditorDrawerPage {
 
     struct TypographyKey: Equatable {
         var baseFontPx: Double
-        var devicePixelRatio: Double
         var rowHeight: Double
     }
 
