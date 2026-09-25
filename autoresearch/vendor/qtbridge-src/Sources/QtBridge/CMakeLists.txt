@@ -66,12 +66,12 @@ target_compile_options(QtBridge PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:-DQT_IS_CMAKE_BUILD>"
 )
 
-# Depend on macros being built
-add_dependencies(QtBridge QtBridgeMacros)
-
-# Add macro plugin path for the Swift compiler
+# autoresearch harness: QtBridge's own sources only declare the macros —
+# they never invoke them — so the library compiles without the plugin
+# binary. INTERFACE scope still hands consumers the -load-plugin-executable
+# flag, and the $<TARGET_FILE:> genex preserves their dependency on the exe.
 if(DEFINED QTBRIDGE_MACROS_PLUGIN_PATH)
-    target_compile_options(QtBridge PUBLIC
+    target_compile_options(QtBridge INTERFACE
         "$<$<COMPILE_LANGUAGE:Swift>:-load-plugin-executable>"
         "$<$<COMPILE_LANGUAGE:Swift>:${QTBRIDGE_MACROS_PLUGIN_PATH}>"
     )
