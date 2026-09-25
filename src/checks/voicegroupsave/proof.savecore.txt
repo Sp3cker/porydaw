@@ -1000,3 +1000,15 @@ Anchor: message "failed later stage does not clean the song"
 
 S011 | test_zzzzSharedBankBetweenTwoLiveTabs | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "clean saved bank and numeric editor publish back to the first tab"
+
+S012 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "S19: an overlapping disk edit refuses save and keeps disk and pending bytes"
+
+S013 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "S20: a malformed selected label refuses save and keeps disk and pending bytes"
+
+S014 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "S21: a missing source refuses save without recreating it"
+
+S015 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "S22: save writes only the selected section into the sibling-changed image"

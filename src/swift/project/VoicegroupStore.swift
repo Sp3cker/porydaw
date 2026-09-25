@@ -82,10 +82,12 @@ public final class VoicegroupStore {
         self.context = context
     }
 
-    /// Resolves a song's voicegroup argument, reusing an unchanged canonical bank.
+    /// Resolves a song's voicegroup argument, reusing a canonical bank whose section is unchanged
+    /// and rebasing its unsaved edits onto sibling changes in the same source file.
     /// - Parameter voicegroupArg: The song's `-G` argument; empty selects `_dummy`.
     /// - Returns: An immutable bank publication for the resolved source identity.
-    /// - Throws: `VoicegroupStoreError` if the source or native bank cannot load.
+    /// - Throws: `VoicegroupStoreError` if the source or native bank cannot load, or if disk
+    ///   changed a section that has unsaved edits.
     public func loadBank(voicegroupArg: String) throws -> LoadedBankView {
         let arg = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
         if let memo = memos[arg], let record = records[memo.id],
@@ -110,9 +112,26 @@ public final class VoicegroupStore {
         guard let time = modificationTime(path) else {
             throw VoicegroupStoreError.operationFailed("Cannot read \(path)")
         }
-        if let record = records[id], record.sourceFileTime == time {
-            memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
-            return record.published
+        if var record = records[id] {
+            if record.sourceFileTime == time {
+                memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
+                return record.published
+            }
+            let retained: Bool
+            do {
+                retained = try record.source.rebasePreservingEdits(from: source)
+            } catch {
+                throw VoicegroupStoreError.operationFailed(error.localizedDescription)
+            }
+            if retained {
+                record.sourceFileTime = time
+                if record.published.dirty != record.source.dirty {
+                    record.published = Self.publish(id: id, source: record.source, bank: record.current)
+                }
+                records[id] = record
+                memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
+                return record.published
+            }
         }
         guard let bank = context.load(target: .init(filePath: path, sectionLabel: source.sectionLabel)) else {
             throw VoicegroupStoreError.operationFailed("Could not load voicegroup source \(path).")
@@ -196,6 +215,8 @@ public final class VoicegroupStore {
         let saved: Bool
         do {
             saved = try record.source.save()
+        } catch let conflict as VoicegroupSourceConflict {
+            throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath): \(conflict.message)")
         } catch {
             throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath)")
         }

@@ -8,6 +8,7 @@ internal let saveCoreRowIDs: [String] = ["A079"]
 internal func runSaveCoreSuite(_ report: CheckReport) {
     saveCoreBankRoundTrip(report)
     saveCoreSourceSaveAndPreview(report)
+    saveCoreSectionRefusals(report)
 }
 
 private func saveCoreBankRoundTrip(_ report: CheckReport) {
@@ -134,5 +135,75 @@ private func saveCoreSourceSaveAndPreview(_ report: CheckReport) {
                            what: "S17: preview never persists its section to the project file")
     } catch {
         report.fail("source-save/S1", "S1: source fixture or save failed: \(error)")
+    }
+}
+
+private func saveCoreRefused(_ source: VoicegroupSource) -> Bool {
+    do {
+        _ = try source.save()
+        return false
+    } catch {
+        return true
+    }
+}
+
+private func saveCoreSectionRefusals(_ report: CheckReport) {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("porydaw-section-refusal-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let path = root.appendingPathComponent("sound/voice_groups.inc")
+    let second = "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 3\n"
+    let original = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" + second).utf8)
+    let overlapping = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 7\n\t.align 2\n" + second).utf8)
+    let malformed = Data(("voicegroup_first:\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" + second).utf8)
+    let sibling = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" +
+                        "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
+    let expected = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n" +
+                         "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
+    do {
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try original.write(to: path)
+        let source = VoicegroupSource()
+        var error: String?
+        guard source.open(projectRoot: root.path, voicegroupArg: "_first", error: &error),
+              var voice = source.voiceAt(slot: 0) else {
+            report.fail("source-save/S19", "S19: could not open section fixture: \(error ?? "unknown")")
+            return
+        }
+        voice.release = 2
+        guard source.setVoice(slot: 0, voice: voice) else {
+            report.fail("source-save/S19", "S19: section edit did not apply")
+            return
+        }
+        let pending = source.sourceBytes()
+        func keepsPending() -> Bool {
+            source.dirty && source.voiceAt(slot: 0) == voice && source.sourceBytes() == pending
+        }
+
+        try overlapping.write(to: path)
+        let overlapRefused = saveCoreRefused(source)
+        let overlapDisk = try Data(contentsOf: path)
+        report.expect(overlapRefused && overlapDisk == overlapping && keepsPending(),
+                      cppID: "source-save/S19",
+                      message: "S19: an overlapping disk edit refuses save and keeps disk and pending bytes")
+        try malformed.write(to: path)
+        let malformedRefused = saveCoreRefused(source)
+        let malformedDisk = try Data(contentsOf: path)
+        report.expect(malformedRefused && malformedDisk == malformed && keepsPending(),
+                      cppID: "source-save/S20",
+                      message: "S20: a malformed selected label refuses save and keeps disk and pending bytes")
+        try FileManager.default.removeItem(at: path)
+        report.expect(saveCoreRefused(source) && !FileManager.default.fileExists(atPath: path.path) &&
+                      keepsPending(), cppID: "source-save/S21",
+                      message: "S21: a missing source refuses save without recreating it")
+        try sibling.write(to: path)
+        let saved = (try? source.save()) == true
+        let savedDisk = try Data(contentsOf: path)
+        report.expect(saved && savedDisk == expected && !source.dirty && source.sourceBytes() == Array(expected),
+                      cppID: "source-save/S22",
+                      message: "S22: save writes only the selected section into the sibling-changed image")
+    } catch {
+        report.fail("source-save/S19", "S19: section refusal fixture failed: \(error)")
     }
 }

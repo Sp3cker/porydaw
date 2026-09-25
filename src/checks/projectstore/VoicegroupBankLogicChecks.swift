@@ -6,6 +6,9 @@ internal func runVoicegroupBankLogicSuite(_ report: CheckReport) {
     bankLogicMaterialization(report)
     bankLogicSaveAndFence(report)
     bankLogicHardFailures(report)
+    bankLogicSameFilePreservation(report)
+    bankLogicSiblingInsertionOffset(report)
+    bankLogicSameTimestampSibling(report)
 }
 
 private enum BankLogicFixtureError: Error {
@@ -265,5 +268,172 @@ private func bankLogicHardFailures(_ report: CheckReport) {
         }
     } catch {
         report.fail("projectstore-banklogic/B18", "B18: hard-failure fixture or operation failed: \(error)")
+    }
+}
+
+private func bankLogicSameFilePreservation(_ report: CheckReport) {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-banklogic-shared-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let path = root.appendingPathComponent("sound/voice_groups.inc")
+    let firstSection = "voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n"
+    let original = Data((firstSection + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 3\n").utf8)
+    let expectedDisk = Data((firstSection + "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\n").utf8)
+    do {
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try original.write(to: path)
+        let store = try VoicegroupStore(projectRoot: root.path)
+        let first = try store.loadBank(voicegroupArg: "_first")
+        let second = try store.loadBank(voicegroupArg: "_second")
+        guard let firstVoice = first.slotViews[0].voice, let secondVoice = second.slotViews[0].voice else {
+            throw BankLogicFixtureError.missingVoice
+        }
+        var firstEdit = firstVoice
+        firstEdit.release = 2
+        guard case .applied(let firstApplied) = try store.applyVoicegroupEdit(input: .init(
+            id: first.id, operation: .set(.init(slot: 0, value: firstEdit, expected: firstVoice)))) else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        var secondEdit = secondVoice
+        secondEdit.release = 5
+        guard case .applied = try store.applyVoicegroupEdit(input: .init(
+            id: second.id, operation: .set(.init(slot: 0, value: secondEdit, expected: secondVoice)))),
+              let saved = try store.saveVoicegroup(id: second.id), !saved.dirty else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        let reloaded = try store.loadBank(voicegroupArg: "_first")
+        bankLogicExpect("B20", reloaded.slotViews[0].voice == firstEdit, report,
+                        "saving a sibling section keeps the unsaved edit of a bank sharing its file")
+        bankLogicExpect("B21", reloaded.dirty, report,
+                        "saving a sibling section keeps the other bank sharing its file dirty")
+        bankLogicExpect("B22", try Data(contentsOf: path) == expectedDisk, report,
+                        "sibling save writes only its own section and leaves the unsaved bank's bytes original")
+        bankLogicExpect("B20A", reloaded.bank === firstApplied.view.bank, report,
+                        "a sibling save reuses the retained bank's canonical native bank")
+        let fresh = try VoicegroupStore(projectRoot: root.path)
+        let freshFirst = try fresh.loadBank(voicegroupArg: "_first")
+        let freshSecond = try fresh.loadBank(voicegroupArg: "_second")
+        bankLogicExpect("B23", freshFirst.slotViews[0].voice == firstVoice && !freshFirst.dirty &&
+                        freshSecond.slotViews[0].voice == secondEdit &&
+                        saved.slotViews[0].voice == secondEdit, report,
+                        "an independent disk reload agrees with the saved sibling and the untouched bank")
+        guard let savedFirst = try store.saveVoicegroup(id: first.id) else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        let lateDisk = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n" +
+                             "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\n").utf8)
+        let lateBytes = try Data(contentsOf: path)
+        bankLogicExpect("B24", !savedFirst.dirty && savedFirst.slotViews[0].voice == firstEdit &&
+                        lateBytes == lateDisk, report,
+                        "a later save of the retained bank persists it and preserves the saved sibling exactly")
+    } catch {
+        report.fail("projectstore-banklogic/B20", "B20: shared-file fixture or operation failed: \(error)")
+    }
+}
+
+private func bankLogicSiblingInsertionOffset(_ report: CheckReport) {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-banklogic-offset-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let path = root.appendingPathComponent("sound/voice_groups.inc")
+    let secondTail = Data(("@ sibling comment\r\nvoicegroup_second::\r\n" +
+                           "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 3\r\n").utf8)
+    let original = Data("voicegroup_first::\r\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\r\n\t.align 2\r\n".utf8) +
+        secondTail
+    let inserted = VgVoice(macro: .square1, sustain: 15)
+    do {
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try original.write(to: path)
+        let store = try VoicegroupStore(projectRoot: root.path)
+        let first = try store.loadBank(voicegroupArg: "_first")
+        let second = try store.loadBank(voicegroupArg: "_second")
+        guard let secondVoice = second.slotViews[0].voice else { throw BankLogicFixtureError.missingVoice }
+        guard case .applied(let secondInsertion) = try store.applyVoicegroupEdit(input: .init(
+            id: second.id, operation: .set(.init(slot: 1, value: inserted)))),
+              let secondToken = secondInsertion.materializationToken,
+              case .applied = try store.applyVoicegroupEdit(input: .init(
+                id: first.id, operation: .set(.init(slot: 1, value: inserted)))),
+              let savedFirst = try store.saveVoicegroup(id: first.id), !savedFirst.dirty else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        let afterFirst = try Data(contentsOf: path)
+        let firstLines = ProjectFileStore.splitLines(afterFirst).lines
+        bankLogicExpect("B25", afterFirst.count > original.count && afterFirst.suffix(secondTail.count) == secondTail &&
+                        firstLines.count == ProjectFileStore.splitLines(original).lines.count + 1 &&
+                        firstLines.allSatisfy { $0.last == 13 }, report,
+                        "an earlier sibling's CRLF line insertion leaves the unsaved bank's bytes and comment intact")
+        let shifted = try store.loadBank(voicegroupArg: "_second")
+        bankLogicExpect("B26", shifted.slotViews[1].voice == inserted && shifted.dirty &&
+                        shifted.bank === secondInsertion.view.bank, report,
+                        "a sibling insertion above the bank rebases its unsaved materialization")
+        guard case .applied(let undone) = try store.revertBlankSlot(id: second.id,
+                                                                     materializationToken: secondToken) else {
+            bankLogicExpect("B27", false, report, "narrow materialization undo must survive a sibling save")
+            return
+        }
+        let undoneBytes = try Data(contentsOf: path)
+        bankLogicExpect("B27", undone.view.slotViews[1].voice == nil && !undone.view.dirty &&
+                        undone.view.slotViews[0].voice == secondVoice && undoneBytes == afterFirst,
+                        report, "narrow materialization undo after a sibling save restores the clean shifted bank")
+        var secondEdit = secondVoice
+        secondEdit.release = 5
+        guard case .applied = try store.applyVoicegroupEdit(input: .init(
+            id: second.id, operation: .set(.init(slot: 0, value: secondEdit, expected: secondVoice)))),
+              let savedSecond = try store.saveVoicegroup(id: second.id), !savedSecond.dirty else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        let expected = afterFirst.prefix(afterFirst.count - secondTail.count) +
+            Data(("@ sibling comment\r\nvoicegroup_second::\r\n" +
+                  "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 5\r\n").utf8)
+        let finalBytes = try Data(contentsOf: path)
+        let fresh = try VoicegroupStore(projectRoot: root.path)
+        let freshFirst = try fresh.loadBank(voicegroupArg: "_first")
+        let freshSecond = try fresh.loadBank(voicegroupArg: "_second")
+        bankLogicExpect("B28", finalBytes == expected && freshFirst.slotViews[1].voice == inserted &&
+                        freshSecond.slotViews[0].voice == secondEdit && freshSecond.slotViews[1].voice == nil,
+                        report, "saving the shifted bank writes its section into the sibling's inserted image")
+    } catch {
+        report.fail("projectstore-banklogic/B25", "B25: sibling-insertion fixture or operation failed: \(error)")
+    }
+}
+
+private func bankLogicSameTimestampSibling(_ report: CheckReport) {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "projectstore-banklogic-sametime-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let path = root.appendingPathComponent("sound/voice_groups.inc")
+    let original = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" +
+                         "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 3\n").utf8)
+    let siblingChanged = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 1\n\t.align 2\n" +
+                               "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
+    let expected = Data(("voicegroup_first::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 2\n\t.align 2\n" +
+                         "voicegroup_second::\n\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 9\n").utf8)
+    let fence = Date(timeIntervalSince1970: 1_700_000_000)
+    do {
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try original.write(to: path)
+        try FileManager.default.setAttributes([.modificationDate: fence], ofItemAtPath: path.path)
+        let store = try VoicegroupStore(projectRoot: root.path)
+        let first = try store.loadBank(voicegroupArg: "_first")
+        guard let firstVoice = first.slotViews[0].voice else { throw BankLogicFixtureError.missingVoice }
+        var firstEdit = firstVoice
+        firstEdit.release = 2
+        guard case .applied = try store.applyVoicegroupEdit(input: .init(
+            id: first.id, operation: .set(.init(slot: 0, value: firstEdit, expected: firstVoice)))) else {
+            throw BankLogicFixtureError.unexpectedOutcome
+        }
+        try siblingChanged.write(to: path)
+        try FileManager.default.setAttributes([.modificationDate: fence], ofItemAtPath: path.path)
+        let fenced = try FileManager.default.attributesOfItem(atPath: path.path)[.modificationDate] as? Date
+        let saved = try store.saveVoicegroup(id: first.id)
+        let savedBytes = try Data(contentsOf: path)
+        bankLogicExpect("B29", fenced == fence && saved?.dirty == false &&
+                        saved?.slotViews[0].voice == firstEdit && savedBytes == expected, report,
+                        "save reconciles a same-timestamp sibling change instead of overwriting it")
+    } catch {
+        report.fail("projectstore-banklogic/B29", "B29: same-timestamp fixture or operation failed: \(error)")
     }
 }

@@ -26,6 +26,18 @@ private func editFail(_ rows: [String], _ report: CheckReport, _ detail: String)
     for row in rows { report.fail("projectstore-edit/\(row)", detail) }
 }
 
+private func editExternally(root: URL, fence: TimeInterval) throws -> VgVoice? {
+    let writer = VoicegroupSource()
+    var error: String?
+    guard writer.open(projectRoot: root.path, voicegroupArg: "_fixture_rich", error: &error),
+          var voice = writer.voiceAt(slot: 0) else { return nil }
+    voice.release = voice.release == 3 ? 4 : 3
+    guard writer.setVoice(slot: 0, voice: voice), try writer.save() else { return nil }
+    try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: fence)],
+                                          ofItemAtPath: writer.filePath)
+    return voice
+}
+
 internal func runProjectStoreEditSuite(_ report: CheckReport) {
     do {
         try editFixture { root in
@@ -180,35 +192,80 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                           case .success(let base) = awaitValue({
                               try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
                           }),
-                          let blankSlot = base.slotViews.firstIndex(where: { $0.kind == .none }) else {
-                        editExpect("E10", false, report, "expiry fixture failed to open its bank")
+                          let externalValue = try editExternally(root: expiryRoot, fence: 3600),
+                          case .success(let fresh) = awaitValue({
+                              try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                          }),
+                          let blankSlot = fresh.slotViews.firstIndex(where: { $0.kind == .none }) else {
+                        editExpect("E10", false, report, "expiry fixture failed to reload an external change")
                         return
                     }
                     let blankValue = VgVoice(macro: .square1, sustain: 15)
-                    guard case .success(.applied(_, let maybeToken)) = awaitValue({
+                    guard case .success(.applied(let materialized, let maybeToken)) = awaitValue({
                         try await expiryStore.applyVoicegroupEdit(
-                            lease: base,
+                            lease: fresh,
                             operation: .set(.init(slot: blankSlot, value: blankValue, expected: nil)))
-                    }), let liveToken = maybeToken else {
-                        editExpect("E10", false, report, "blank-slot insertion minted no token")
+                    }), let liveToken = maybeToken,
+                          case .success(let saved?) = awaitValue({
+                              try await expiryStore.saveVoicegroup(lease: materialized)
+                          }),
+                          let replacedValue = try editExternally(root: expiryRoot, fence: 7200) else {
+                        editExpect("E10", false, report, "blank-slot insertion minted no token or failed to save")
                         return
                     }
-                    try FileManager.default.setAttributes(
-                        [.modificationDate: Date(timeIntervalSinceNow: 3600)],
-                        ofItemAtPath: base.sourcePath)
-                    let reloaded = awaitValue {
+                    let replaced = awaitValue {
                         try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
                     }
                     let expired = awaitValue {
-                        try await expiryStore.revertBlankSlot(lease: base, materializationToken: liveToken)
+                        try await expiryStore.revertBlankSlot(lease: saved, materializationToken: liveToken)
                     }
-                    if case .success(let fresh) = reloaded,
-                       case .success(.conflict(let id)) = expired {
-                        editExpect("E10", id == base.id && fresh.bankToken != base.bankToken, report,
-                                   "on-disk change reloads the bank and burns its minted tokens")
-                    } else {
+                    guard case .success(let current) = replaced, case .success(.conflict(let id)) = expired else {
                         editExpect("E10", false, report,
                                    "reload or expired-token revert misbehaved: \(String(describing: expired))")
+                        return
+                    }
+                    editExpect("E10", fresh.bankToken != base.bankToken &&
+                               fresh.slotViews[0].voice == externalValue && !saved.dirty &&
+                               current.bankToken != saved.bankToken && current.slotViews[0].voice == replacedValue &&
+                               current.slotViews[blankSlot].voice == blankValue && id == saved.id, report,
+                               "an external byte change to a clean bank reloads it and burns its minted tokens")
+
+                    guard let pendingSlot = current.slotViews.firstIndex(where: { $0.kind == .none }),
+                          case .success(.applied(let pending, let maybePendingToken)) = awaitValue({
+                              try await expiryStore.applyVoicegroupEdit(
+                                  lease: current,
+                                  operation: .set(.init(slot: pendingSlot, value: blankValue, expected: nil)))
+                          }), let pendingToken = maybePendingToken else {
+                        editExpect("E11", false, report, "second blank-slot insertion minted no token")
+                        return
+                    }
+                    let sourcePath = URL(filePath: current.sourcePath)
+                    let baseline = try Data(contentsOf: sourcePath)
+                    guard try editExternally(root: expiryRoot, fence: 10800) != nil else {
+                        editExpect("E11", false, report, "overlapping external edit failed to write")
+                        return
+                    }
+                    let overlapped = awaitValue {
+                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                    }
+                    try baseline.write(to: sourcePath)
+                    try FileManager.default.setAttributes(
+                        [.modificationDate: Date(timeIntervalSinceNow: 14400)], ofItemAtPath: sourcePath.path)
+                    let retained = awaitValue {
+                        try await expiryStore.loadBank(voicegroupArg: "_fixture_rich")
+                    }
+                    let undone = awaitValue {
+                        try await expiryStore.revertBlankSlot(lease: pending, materializationToken: pendingToken)
+                    }
+                    if case .failure(let conflict) = overlapped, conflict is VoicegroupStoreError,
+                       case .success(let kept) = retained,
+                       case .success(.applied(let restored, _)) = undone {
+                        editExpect("E11", kept.dirty && kept.slotViews[pendingSlot].voice == blankValue &&
+                                   !restored.dirty && restored.slotViews[pendingSlot].voice == nil, report,
+                                   "an external change overlapping pending edits fails visibly and keeps them")
+                    } else {
+                        editExpect("E11", false, report,
+                                   "overlap reload or retained revert misbehaved: \(String(describing: undone))")
                     }
                 }
             } catch {
