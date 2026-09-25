@@ -66,9 +66,10 @@ deno task verify:qml-roll --verbose            # Swift roll window QML lane
 Debug build, including song restoration and a settled rendered window. It is
 not a portable fixture-based check.
 
-Track-name and automation-lane scans borrow a Swift `Span` from an explicitly
-scoped array owner to reduce Debug-build iterator allocations. They still read
-the current document without caching results or copying the event buffer.
+Track-name, automation-lane, and time-signature scans borrow a Swift `Span`
+from an explicitly scoped array owner to reduce Debug-build iterator
+allocations. They still read the current document without caching results
+or copying the event buffer.
 
 ## License
 
