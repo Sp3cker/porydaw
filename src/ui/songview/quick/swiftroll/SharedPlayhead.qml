@@ -44,6 +44,14 @@ Item {
     /// The shared plot origin: where projected x == 0 lands on the surface.
     readonly property real plotOrigin: rollPlotRect.x
     readonly property real plotWidth: Math.max(rollPlotRect.width, 0)
+    readonly property real devicePixelRatio: Screen.devicePixelRatio > 0
+        ? Screen.devicePixelRatio : 1
+    readonly property real hairline: 1 / devicePixelRatio
+    // Keep the core centered on one physical pixel as the camera moves through
+    // fractional positions; otherwise its apparent width pulses on Windows.
+    readonly property real alignedContentX:
+        (Math.round((plotOrigin + presenter.contentX) * devicePixelRatio - 0.5)
+         + 0.5) / devicePixelRatio - plotOrigin
 
     // One clipped segment. `available` is the kind's own availability; the roll
     // segment is always available while a timeline is attached. The roll's
@@ -83,10 +91,10 @@ Item {
             // changes alter only its fixed geometry, never the segment layout.
             Item {
                 id: playheadVisual
-                x: root.presenter.contentX - root.presenter.glowLeft
+                x: root.alignedContentX - root.presenter.glowLeft
                 y: 0
                 width: root.presenter.glowLeft
-                       + root.presenter.lineWidthPx
+                       + root.hairline
                        + root.presenter.glowRight
                 height: segment.height
 
@@ -220,9 +228,9 @@ Item {
 
                 Rectangle {
                     objectName: "sharedPlayheadLine"
-                    x: root.presenter.glowLeft - root.presenter.lineWidthPx / 2
+                    x: root.presenter.glowLeft - root.hairline / 2
                     y: 0
-                    width: root.presenter.lineWidthPx
+                    width: root.hairline
                     height: segment.height
                     color: root.playheadColor
                 }
@@ -243,7 +251,7 @@ Item {
 
             Shape {
                 id: rulerTriangle
-                x: root.presenter.contentX
+                x: root.alignedContentX
                 y: 0
                 width: 2 * root.presenter.triangleHalfWidthPx
                 height: root.presenter.triangleHeightPx
