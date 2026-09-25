@@ -42,3 +42,28 @@ Controller-run named checks after the writer freezes:
 # Task-specific constraints
 
 Runs after R17 (shared `proof.gesturechecks.txt`). Do not edit `ApplicationSession.swift` facades, `KeybindingRegistry` data, or `EditCommands`/`EditKeyArbiter` policy — the authority structure exists; this task closes the bypasses around it. No new menu items, no shortcut remapping, no dead-action mounts. If an action legitimately cannot route through `activate` (e.g. needs a target parameter the authority cannot supply), report it instead of building a second dispatcher.
+
+# Landed notes (post-review controller record)
+
+Two presentation seams were added to close notification gaps discovered during
+gate review; both belong to the session layer because presenter-targeted
+declarative `Connections` proved undeliverable under QtBridge:
+
+- `TransportBarPresenter.onAvailabilityChanged` fires on real
+  `(state, loopEnabled, resonanceSuppression)` transitions inside `refresh()`
+  and `setFollowPlayhead`; `ApplicationSession` forwards it as
+  `transportAvailabilityChanged`, which `ShellWindow`'s session-level
+  `Connections` (proven delivery) folds into `actionRevision`.
+- `ShellPresenter.eventListGateChanged` is a lazy gate-diff: `actionEnabled`
+  for `eventlist.move_up`/`move_down` snapshots
+  `(attached, visible, editing, menuOpen, tableRevision)` and emits when it
+  drifts, closing the stale-enabled window without per-mutation plumbing.
+
+Verified defect, reusable fact: `Connections { target: x.y.methodReturningPresenter() }`
+never fires its handlers — the `target:` binding resolves through a QML
+property chain the bridge does not route emissions for, even though an
+imperatively-attached Connections to the identical proxy object does fire.
+Session/presenter-root level `Connections` (`target: shell.session`, `target:
+shell`) deliver normally. Any future surface needing presenter-signal
+notification must bounce through the session or a presenter-root level signal,
+not a nested presenter target.
