@@ -348,7 +348,10 @@ public final class SongDocument {
             }
         }
         var result: [LanePoint] = []
-        for (index, event) in state.file.chunks[mapping.chunk].events.enumerated() {
+        let sourceEvents = state.file.chunks[mapping.chunk].events
+        let events = sourceEvents.span
+        for index in events.indices {
+            let event = events[index]
             guard case let .channel(status, data0, data1) = event.payload,
                   status & 0x0F == mapping.channel else { continue }
             let type = status >> 4
