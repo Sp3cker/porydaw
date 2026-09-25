@@ -90,7 +90,7 @@ Deno.test("setup finds the Qt installer layouts on each platform", async () => {
   try {
     const kits: [QtInstallation, string][] = [
       [{ host: "linux_arm64", architecture: "linux_gcc_arm64" }, "gcc_arm64"],
-      [{ host: "linux", architecture: "gcc_64" }, "gcc_64"],
+      [{ host: "linux", architecture: "linux_gcc_64" }, "gcc_64"],
       [{ host: "mac", architecture: "clang_64" }, "clang_64"],
       [{ host: "windows", architecture: "win64_msvc2022_64" }, "msvc2022_64"],
     ];

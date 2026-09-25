@@ -35,7 +35,7 @@ export function currentQtInstallation(): QtInstallation {
       return { host: "mac", architecture: "clang_64" };
     case "linux":
       if (Deno.build.arch === "x86_64") {
-        return { host: "linux", architecture: "gcc_64" };
+        return { host: "linux", architecture: "linux_gcc_64" };
       }
       if (Deno.build.arch === "aarch64") {
         return { host: "linux_arm64", architecture: "linux_gcc_arm64" };
@@ -102,6 +102,8 @@ export async function localQtPrefix(
   const directory = qtInstallationDirectory(root, installation);
   const kitDirectory = installation.host === "windows"
     ? "msvc2022_64"
+    : installation.architecture === "linux_gcc_64"
+    ? "gcc_64"
     : installation.architecture === "linux_gcc_arm64"
     ? "gcc_arm64"
     : installation.architecture;
@@ -178,9 +180,7 @@ export async function swiftToolchainArgument(
 }
 
 function defaultGeneratorArguments(): string[] {
-  return currentQtInstallation().host === "windows"
-    ? ["-G", "Visual Studio 17 2022", "-A", "x64"]
-    : ["-G", "Ninja"];
+  return ["-G", "Ninja"];
 }
 
 export async function cmakeBuildUsesNinja(
@@ -188,7 +188,7 @@ export async function cmakeBuildUsesNinja(
 ): Promise<boolean> {
   const cache = join(buildDirectory, "CMakeCache.txt");
   if (!(await exists(cache))) {
-    return currentQtInstallation().host !== "windows";
+    return true;
   }
   const content = await Deno.readTextFile(cache);
   const generator = /^CMAKE_GENERATOR:INTERNAL=(.+)$/m.exec(content)?.[1];

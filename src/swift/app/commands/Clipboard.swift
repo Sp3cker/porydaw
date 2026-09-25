@@ -1,4 +1,6 @@
+#if canImport(CoreFoundation)
 import CoreFoundation
+#endif
 import Foundation
 import PorydawCore
 import PorydawBankLease
@@ -224,9 +226,17 @@ public enum ClipboardCodec {
         return result
     }
 
+    private static func isBoolean(_ number: NSNumber) -> Bool {
+        #if canImport(CoreFoundation)
+        CFGetTypeID(number) == CFBooleanGetTypeID()
+        #else
+        String(cString: number.objCType) == "B"
+        #endif
+    }
+
     private static func unsigned(_ value: Any?, maximum: UInt64) -> UInt64? {
         guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID()
+              !isBoolean(number)
         else { return nil }
         let value = number.doubleValue
         guard value.isFinite, value >= 0, value <= largestExactJSONInteger,
@@ -237,7 +247,7 @@ public enum ClipboardCodec {
 
     private static func signed(_ value: Any?) -> Int? {
         guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID()
+              !isBoolean(number)
         else { return nil }
         let value = number.doubleValue
         guard value.isFinite, value >= Double(Int32.min), value <= Double(Int32.max),

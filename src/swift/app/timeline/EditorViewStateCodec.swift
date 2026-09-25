@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreFoundation)
 import CoreFoundation
+#endif
 import QtBridgeCpp
 
 /// The historical QSettings workspace recipe. These keys are application-wide,
@@ -259,6 +261,7 @@ private indirect enum JSONValue: Codable {
     }
 }
 
+#if canImport(CoreFoundation)
 private struct SettingsStore {
     let applicationID: CFString
 
@@ -313,3 +316,21 @@ private struct SettingsStore {
         return result
     }
 }
+#else
+private struct SettingsStore {
+    let defaults: UserDefaults
+
+    init(applicationName: String) {
+        defaults = UserDefaults(suiteName: "com.sp3cker." + applicationName) ?? .standard
+    }
+
+    func string(_ key: String) -> String? { defaults.string(forKey: key) }
+    func strings(_ key: String) -> [String]? { defaults.stringArray(forKey: key) }
+    func data(_ key: String) -> Data? { defaults.data(forKey: key) }
+
+    func setString(_ key: String, _ value: String?) { defaults.set(value, forKey: key) }
+    func setStrings(_ key: String, _ value: [String]?) { defaults.set(value, forKey: key) }
+    func setData(_ key: String, _ value: Data) { defaults.set(value, forKey: key) }
+    func sync() { _ = defaults.synchronize() }
+}
+#endif

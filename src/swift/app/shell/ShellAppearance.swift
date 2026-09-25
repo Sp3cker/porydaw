@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(CoreFoundation)
 import CoreFoundation
+#endif
 
 @MainActor
 public enum ShellAppearance {
@@ -86,6 +88,7 @@ public enum ShellAppearance {
     /// setValue(undefined) persists "@Invalid()" instead. CFPreferences also
     /// supports the app's own bundle, which UserDefaults(suiteName:) rejects.
     static func removeLegacyCustomKeys(applicationName: String) {
+        #if canImport(CoreFoundation)
         func cfString(_ text: String) -> CFString {
             guard let result = text.withCString({
                 CFStringCreateWithCString(kCFAllocatorDefault, $0,
@@ -99,6 +102,12 @@ public enum ShellAppearance {
         CFPreferencesSetAppValue(cfString("theme.primary"), nil, applicationID)
         CFPreferencesSetAppValue(cfString("theme.accent"), nil, applicationID)
         _ = CFPreferencesAppSynchronize(applicationID)
+        #else
+        let defaults = UserDefaults(suiteName: "com.sp3cker." + applicationName) ?? .standard
+        defaults.removeObject(forKey: "theme.primary")
+        defaults.removeObject(forKey: "theme.accent")
+        _ = defaults.synchronize()
+        #endif
     }
 
     public static func apply(to palette: GridPalette, mode: String, contrast: Int) {

@@ -195,14 +195,15 @@ public struct KeybindingRegistry {
     private static func resolve(_ definition: Definition) -> [KeybindingSequence] {
         let portable = QtKeybindings.QKeySequence.SequenceFormat(rawValue: 1)
         if let standard = definition.standard {
-            let bindings = QtKeybindings.QKeySequence.keyBindings(
-                QtKeybindings.QKeySequence.StandardKey(rawValue: standard.rawValue)
-            )
-            if !bindings.isEmpty() || definition.keys.isEmpty {
+            let bindingCount = Int(QtKeybindings.porydawStandardKeyBindingCount(
+                Int32(standard.rawValue)))
+            if bindingCount > 0 || definition.keys.isEmpty {
                 var converted: [KeybindingSequence] = []
-                converted.reserveCapacity(Int(bindings.size()))
-                for index in 0..<Int(bindings.size()) {
-                    converted.append(value(bindings[Int64(index)], portable: portable))
+                converted.reserveCapacity(bindingCount)
+                for index in 0..<bindingCount {
+                    converted.append(value(
+                        QtKeybindings.porydawStandardKeyBindingAt(
+                            Int32(standard.rawValue), Int32(index)), portable: portable))
                 }
                 return converted
             }

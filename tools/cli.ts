@@ -1,9 +1,9 @@
 // Singular CLI for porydaw build/verify/format lanes.
 // Builds print only summaries and diagnostics; verify uses a quiet reporter with a live name line.
 // Usage:
-// deno task build:app [--release] -> Debug porydaw; --release opts into Release
-// deno task build:checks [--release] -> Debug porydaw + checks + mid2agb
-// deno task build:render [--release] -> Debug porydaw_render_cli; --release opts into Release
+// deno task build:app [--release] -> porydaw (Release on Windows, Debug elsewhere)
+// deno task build:checks [--release] -> app + checks + mid2agb
+// deno task build:render [--release] -> Swift-backed offline renderer
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
 // deno task verify:qml-roll [verify options] -> build roll_qml_tests + mid2agb, run that lane
@@ -64,7 +64,7 @@ function help(command?: Subcommand): string {
           ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
-  --release       configure and build Release; default is Debug
+  --release       configure and build Release; Windows defaults to Release
   --verbose, -v   accepted; successful builds remain concise
   --help          show this help without building
 
@@ -222,11 +222,86 @@ async function runBuild(
   release = false,
   buildChecks = true,
 ): Promise<void> {
+  const selectedRelease = release || Deno.build.os === "windows";
+  if (Deno.build.os === "windows") {
+    const vswhere = join(
+      Deno.env.get("ProgramFiles(x86)") ?? "C:\\Program Files (x86)",
+      "Microsoft Visual Studio",
+      "Installer",
+      "vswhere.exe",
+    );
+    const found = await new Deno.Command(vswhere, {
+      args: ["-latest", "-products", "*", "-property", "installationPath"],
+    }).output();
+    const vsRoot = decoder.decode(found.stdout).trim();
+    if (!found.success || !vsRoot) {
+      throw new Error(
+        "Visual Studio C++ tools are required for Windows builds",
+      );
+    }
+    const devCmd = join(vsRoot, "Common7", "Tools", "VsDevCmd.bat");
+    const envScript = await Deno.makeTempFile({ suffix: ".cmd" });
+    let devEnv;
+    try {
+      await Deno.writeTextFile(
+        envScript,
+        `@echo off\r\ncall "${devCmd}" -arch=x64 -host_arch=x64 >nul\r\nif errorlevel 1 exit /b 1\r\nset\r\n`,
+      );
+      devEnv = await new Deno.Command("cmd.exe", {
+        args: ["/d", "/c", envScript],
+      }).output();
+    } finally {
+      await Deno.remove(envScript);
+    }
+    if (!devEnv.success) {
+      throw new Error(decoder.decode(devEnv.stderr));
+    }
+    for (const line of decoder.decode(devEnv.stdout).split(/\r?\n/)) {
+      const equal = line.indexOf("=");
+      if (equal > 0) Deno.env.set(line.slice(0, equal), line.slice(equal + 1));
+    }
+    const version = (await Deno.readTextFile(".swift-version")).trim();
+    const swiftRoot = join(
+      Deno.env.get("LOCALAPPDATA") ?? "",
+      "Programs",
+      "Swift",
+    );
+    const toolchainBin = join(
+      swiftRoot,
+      "Toolchains",
+      `${version}+Asserts`,
+      "usr",
+      "bin",
+    );
+    const runtimeBin = join(swiftRoot, "Runtimes", version, "usr", "bin");
+    const sdk = join(
+      swiftRoot,
+      "Platforms",
+      version,
+      "Windows.platform",
+      "Developer",
+      "SDKs",
+      "Windows.sdk",
+    );
+    if (
+      !(await exists(join(toolchainBin, "swiftc.exe"))) ||
+      !(await exists(runtimeBin)) || !(await exists(sdk))
+    ) {
+      throw new Error(
+        `Swift ${version} toolchain, runtime, and SDK are required under ${swiftRoot}`,
+      );
+    }
+    Deno.env.set("SDKROOT", sdk);
+    Deno.env.set(
+      "PATH",
+      `${toolchainBin};${runtimeBin};${Deno.env.get("PATH") ?? ""}`,
+    );
+  }
   const started = performance.now();
-  await ensureConfigured(release, buildChecks);
+  await ensureConfigured(selectedRelease, buildChecks);
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
-  if (release || (await usesMultiConfigBuild())) {
+  if (selectedRelease || (await usesMultiConfigBuild())) {
     args.push("--config", "Release");
   }
   if (targets.length > 0) {
