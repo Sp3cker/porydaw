@@ -70,6 +70,8 @@ Track-name, automation-lane, and time-signature scans borrow a Swift `Span`
 from an explicitly scoped array owner to reduce Debug-build iterator
 allocations. They still read the current document without caching results
 or copying the event buffer.
+Catalog parsing likewise iterates borrowed line spans while reading project
+files live.
 
 ## License
 

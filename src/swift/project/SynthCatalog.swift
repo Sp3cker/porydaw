@@ -212,7 +212,9 @@ private enum CatalogLines {
             guard let lines = AsmLine.lines(path) else { continue }
             var samplePending: String?
             var synthPending: String?
-            for raw in lines {
+            let lineSpan = lines.span
+            for index in lineSpan.indices {
+                let raw = lineSpan[index]
                 if let name = label(raw) {
                     if let samplePending { samples.append(samplePending) }
                     samplePending = name
@@ -239,7 +241,9 @@ private enum CatalogLines {
         var seen: Set<String> = []
         for path in files("\(root)/asm/macros", recursive: false) {
             guard let lines = AsmLine.lines(path) else { continue }
-            for line in lines {
+            let lineSpan = lines.span
+            for index in lineSpan.indices {
+                let line = lineSpan[index]
                 guard let word = synthMacroWord(line), seen.insert(word).inserted else { continue }
                 result.synths.macroWords.append(word)
             }
@@ -256,7 +260,9 @@ private enum CatalogLines {
         var symbols: [String: [UInt32: Int]] = [:]
         for path in voicegroupFiles(root) {
             guard let lines = AsmLine.lines(path) else { continue }
-            for raw in lines {
+            let lineSpan = lines.span
+            for index in lineSpan.indices {
+                let raw = lineSpan[index]
                 var cursor = AsmLine(raw)
                 cursor.skipSpaces()
                 if let head = cursor.word() {
@@ -327,7 +333,9 @@ extension VoicegroupSource {
         guard let lines = AsmLine.lines("\(projectRoot)/sound/programmable_wave_data.inc") else { return [] }
         var symbols: [String] = []
         var pending: String?
-        for line in lines {
+        let lineSpan = lines.span
+        for index in lineSpan.indices {
+            let line = lineSpan[index]
             if let label = CatalogLines.label(line) {
                 if let pending { symbols.append(pending) }
                 pending = label
