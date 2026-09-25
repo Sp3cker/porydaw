@@ -12,6 +12,8 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
+QML counterpart: src/checks/editorqml/tst_ShellTabs.qml
+QML counterpart: src/checks/editorqml/tst_ShellTransport.qml
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -30,149 +32,72 @@ A002 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_pe
 Disposition: RETIRED-REPRESENTATION
 
 A003 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:57
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-          SongTab *initialFirst = open(window, m_songA);
-Original expression:
-  QVERIFY(initialFirst)
+Disposition: MATCHED
+Mapping: S186
 
 A004 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:60
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-          const SongView::ViewState firstCanonical = initialFirst->view().viewState();
-          SongTab *second = open(window, m_songB);
-Original expression:
-  QVERIFY(second)
+Disposition: MATCHED
+Mapping: S187
 
 A005 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:61
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(workspace->openTabCount(), qsizetype(1))
+Disposition: MATCHED
+Mapping: S188
 
 A006 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:64
-Disposition: GAP
-Mapping/reason: GAP. Per-tab editor-state set/propagate/restore owned in Swift by SongTabsController hidden-tab preservation (src/swift/app/SongTabsController.swift) over DocumentSession.camera/editor state (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-
-          workspace->setEditorViewState(editorState);
-Original expression:
-  QCOMPARE(second->view().editorViewState(), editorState)
+Disposition: MATCHED
+Mapping: S189
 
 A007 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:66
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-          SongTab *first = open(window, m_songA, true);
-Original expression:
-  QVERIFY(first)
+Disposition: MATCHED
+Mapping: S190, S191
 
 A008 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:67
-Disposition: GAP
-Mapping/reason: GAP. Per-tab editor-state set/propagate/restore owned in Swift by SongTabsController hidden-tab preservation (src/swift/app/SongTabsController.swift) over DocumentSession.camera/editor state (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->view().editorViewState(), editorState)
+Disposition: MATCHED
+Mapping: S192
 
 A009 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:71
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-
-          const SongView::ViewState defaults;
-          const SongView::ViewState fresh = first->view().viewState();
-Original expression:
-  QVERIFY(fresh.valid)
+Disposition: MATCHED
+Mapping: S193
 
 A010 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:72
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(std::abs(fresh.pxPerBeat - defaults.pxPerBeat) < 0.5)
+Disposition: MATCHED
+Mapping: S194
 
 A011 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:73
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.keyHeight, defaults.keyHeight)
+Disposition: MATCHED
+Mapping: S195
 
 A012 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:74
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.scrollPx, -first->view().camera().leadPadPx())
+Disposition: MATCHED
+Mapping: S196
 
 A013 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:75
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.scrollY, firstCanonical.scrollY)
+Disposition: MATCHED
+Mapping: S197
 
 A014 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:76
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.selectedTrack, firstCanonical.selectedTrack)
+Disposition: MATCHED
+Mapping: S198
 
 A015 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:77
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.editCursorTick, uint64_t(0))
+Disposition: MATCHED
+Mapping: S199
 
 A016 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:78
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(fresh.gridSelection, songview::GridSelection::automatic())
+Disposition: MATCHED
+Mapping: S200
 
 A017 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:79
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!fresh.gridTriplet)
+Disposition: MATCHED
+Mapping: S201
 
 A018 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:80
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!fresh.eventList)
+Disposition: MATCHED
+Mapping: S202
 
 A019 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:81
-Disposition: GAP
-Mapping/reason: GAP. Fresh-tab camera/selection/grid defaults owned in Swift by DocumentSession.camera (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (src/checks/workspace/tabs_persistence.cpp uncompiled in every CMake target, WorkspaceTabsTest unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!first->view().eventListVisible())
+Disposition: MATCHED
+Mapping: S203
 
 A020 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:82
 Disposition: RETIRED-REPRESENTATION
@@ -187,79 +112,42 @@ A023 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_pe
 Disposition: RETIRED-REPRESENTATION
 
 A024 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:89
-Disposition: GAP
-Mapping/reason: GAP. Relaunch persistence round-trip (lastOpenSongs order, lastSongLabel, output volume 37) owned in Swift by ApplicationSession session restore (src/swift/app/ApplicationSession.swift,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-
-          QSettings settings;
-          const QStringList expectedOpenSongs{m_songB, m_songA};
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("lastOpenSongs")).toStringList(), expectedOpenSongs)
+Disposition: MATCHED
+Mapping: S204
 
 A025 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:90
-Disposition: GAP
-Mapping/reason: GAP. Relaunch persistence round-trip (lastOpenSongs order, lastSongLabel, output volume 37) owned in Swift by ApplicationSession session restore (src/swift/app/ApplicationSession.swift,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(settings.value(QStringLiteral("lastSongLabel")).toString(), m_songA)
+Disposition: MATCHED
+Mapping: S206
 
 A026 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:92
 Disposition: RETIRED-REPRESENTATION
 
 A027 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:94
-Disposition: GAP
-Mapping/reason: GAP. Relaunch persistence round-trip (lastOpenSongs order, lastSongLabel, output volume 37) owned in Swift by ApplicationSession session restore (src/swift/app/ApplicationSession.swift,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-          outputDial->setValue(37);
-Original expression:
-  QCOMPARE(window.m_audio.outputVolume(), 37)
+Disposition: MATCHED
+Mapping: S211
 
 A028 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:96
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-          const std::vector<SongTab *> tabs = workspace->tabsInDisplayOrder();
-Original expression:
-  QCOMPARE(tabs.size(), size_t(2))
+Disposition: MATCHED
+Mapping: S204
 
 A029 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:97
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tabs[0], second)
+Disposition: MATCHED
+Mapping: S207
 
 A030 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:98
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tabs[1], first)
+Disposition: MATCHED
+Mapping: S207
 
 A031 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:99
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(workspace->selectedSongTab(), first)
+Disposition: MATCHED
+Mapping: S206
 
 A032 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:105
 Disposition: RETIRED-REPRESENTATION
 
 A033 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:106
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QTRY_COMPARE(workspace->openTabCount(), qsizetype(2))
+Disposition: MATCHED
+Mapping: S205
 
 A034 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:109
 Disposition: RETIRED-REPRESENTATION
@@ -271,60 +159,35 @@ A036 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_pe
 Disposition: RETIRED-REPRESENTATION
 
 A037 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:115
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-      const std::vector<SongTab *> tabs = workspace->tabsInDisplayOrder();
-Original expression:
-  QCOMPARE(tabs.size(), size_t(2))
+Disposition: MATCHED
+Mapping: S205
 
 A038 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:116
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tabs[0], second)
+Disposition: MATCHED
+Mapping: S204, S205
 
 A039 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:117
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(tabs[1], first)
+Disposition: MATCHED
+Mapping: S204, S205
 
 A040 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:118
-Disposition: GAP
-Mapping/reason: GAP. Tab open/display-order/selection behavior owned in Swift by SongTabsController (src/swift/app/SongTabsController.swift,238,246,265,325,388; hidden tabs preserve grid/pages/camera/history per :7); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(workspace->selectedSongTab(), first)
+Disposition: MATCHED
+Mapping: S208
 
 A041 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:119
-Disposition: GAP
-Mapping/reason: GAP. Per-tab editor-state set/propagate/restore owned in Swift by SongTabsController hidden-tab preservation (src/swift/app/SongTabsController.swift) over DocumentSession.camera/editor state (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(first->view().editorViewState(), editorState)
+Disposition: MATCHED
+Mapping: S209
 
 A042 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:120
-Disposition: GAP
-Mapping/reason: GAP. Per-tab editor-state set/propagate/restore owned in Swift by SongTabsController hidden-tab preservation (src/swift/app/SongTabsController.swift) over DocumentSession.camera/editor state (src/swift/app/DocumentSession.swift,226); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QCOMPARE(second->view().editorViewState(), editorState)
+Disposition: MATCHED
+Mapping: S210
 
 A043 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:122
 Disposition: RETIRED-REPRESENTATION
 
 A044 | WorkspaceTabsTest::persistenceRestoresTabs | src/checks/workspace/tabs_persistence.cpp:123
-Disposition: GAP
-Mapping/reason: GAP. Relaunch persistence round-trip (lastOpenSongs order, lastSongLabel, output volume 37) owned in Swift by ApplicationSession session restore (src/swift/app/ApplicationSession.swift,491); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
+Disposition: PARTIAL
+Mapping/reason: Related predicate S211 (test_transportControlTransitionsAndSettings: changing output volume never dirties the song — in-session volume set-readback); unproved: the relaunched dial value 37 — no predicate restores mixer volume across relaunch (the session recipe covers tabs and selection only).
 Source context since previous assertion:
   ;
 Original expression:
@@ -382,25 +245,15 @@ A061 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persiste
 Disposition: RETIRED-REPRESENTATION
 
 A062 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:224
-Disposition: GAP
-Mapping/reason: GAP. Shared-bank edit isolation across tabs (observer tab stays clean) owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!observer->document().isDirty())
+Disposition: MATCHED
+Mapping: S212
 
 A063 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:225
 Disposition: RETIRED-REPRESENTATION
 
 A064 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:228
-Disposition: GAP
-Mapping/reason: GAP. Shared-bank edit isolation across tabs (observer tab stays clean) owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-
-      workspace->selectSongTab(observer);
-Original expression:
-  QVERIFY(!workspace->selectedSongDirty())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S212
 
 A065 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:233
 Disposition: RETIRED-REPRESENTATION
@@ -409,12 +262,8 @@ A066 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persiste
 Disposition: RETIRED-REPRESENTATION
 
 A067 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:235
-Disposition: GAP
-Mapping/reason: GAP. Shared-bank edit isolation across tabs (observer tab stays clean) owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!observer->document().isDirty())
+Disposition: MATCHED
+Mapping: S212
 
 A068 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:240
 Disposition: RETIRED-REPRESENTATION
@@ -426,12 +275,8 @@ A070 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persiste
 Disposition: RETIRED-REPRESENTATION
 
 A071 | WorkspaceTabsTest::voicegroupRefresh | src/checks/workspace/tabs_persistence.cpp:251
-Disposition: GAP
-Mapping/reason: GAP. Shared-bank edit isolation across tabs (observer tab stays clean) owned in Swift by DocumentSession (document history plus isDirty; src/swift/app/DocumentSession.swift,264); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled in every CMake target, unregistered in src/checks/checkcatalog.cpp).
-Source context since previous assertion:
-  ;
-Original expression:
-  QVERIFY(!observer->document().isDirty())
+Disposition: MATCHED
+Mapping: S212
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -991,3 +836,84 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
+
+S186 | test_aOpenSwitchAndGeometry | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the strip appends tabs in open order"
+
+S187 | test_dOpenIndependentWorkspace | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the appended tab's page is presented"
+
+S188 | test_pReplaceInPlaceRetainsOneTab | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "replacing the selected song leaves one tab with the replacement page"
+
+S189 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "setting the first tab's editor range updates its rendered value axis"
+
+S190 | test_dOpenIndependentWorkspace | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "each tab owns its page"
+
+S191 | test_iReopenExistingFocusesTab | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "re-opening focuses the open tab"
+
+S192 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "setting the editor range propagates to the other tab's value axis"
+
+S193 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab has a valid rendered document"
+
+S194 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab uses the default pixels per beat"
+
+S195 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab uses the default keyboard row height"
+
+S196 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab uses the default lead-pad horizontal scroll"
+
+S197 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts at its song's canonical vertical scroll"
+
+S198 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab selects the first track"
+
+S199 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts its edit cursor at zero"
+
+S200 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts with automatic grid selection"
+
+S201 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab starts with straight grid feel"
+
+S202 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab has no event list"
+
+S203 | test_oFreshTabViewStateDefaults | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab does not display the event list"
+
+S204 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "final-close walk stores the tab recipe in display order"
+
+S205 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "startup reconstructs the prior two-tab recipe"
+
+S206 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "final-close walk retains the previously selected tab"
+
+S207 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the current strip order is different from opening order"
+
+S208 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "startup restores the selected tab"
+
+S209 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the selected tab renders its saved editor range after relaunch"
+
+S210 | test_kStartupRestoresTabsAndFreshCamera | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the sibling tab renders the same editor range after relaunch"
+
+S211 | test_transportControlTransitionsAndSettings | src/checks/editorqml/tst_ShellTransport.qml
+Anchor: message "changing output volume never dirties the song"
+
+S212 | twoOpenSessionsShareBankEdit | src/checks/workspace/bank_sharing.swift
+Anchor: message "shared bank edit marks observer bank dirty without dirtying its song"

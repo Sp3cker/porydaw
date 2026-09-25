@@ -41,6 +41,8 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
                            cppID: id, what: "already-open peer sees the edited voice without reopening")
         report.expectEqual(true, peer.bankDirty,
                            cppID: id, what: "already-open peer sees the dirty bank")
+        report.expect(!peer.document.isDirty && peer.bankDirty, cppID: id,
+                      message: "shared bank edit marks observer bank dirty without dirtying its song")
         let late = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test2")
         }

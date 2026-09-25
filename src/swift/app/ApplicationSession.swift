@@ -791,11 +791,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
     }
 
-    /// The gate approved reopening a song in place: the tab closed, and the same
-    /// label opens again at the index it had.
+    /// Reload keeps presentation and tab identity, not document history.
     @QtIgnored
-    func reloadApproved(label: String, index: Int) {
-        startOpen(label: label, at: index)
+    func reloadApproved(label: String, index: Int, restoring tab: ReloadedTab) {
+        startOpen(label: label, at: index, restoring: tab)
     }
 
     /// A document in one tab published a state change: every caption follows its
@@ -925,17 +924,17 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// in the order they were asked for, and never while the host is closing. The
     /// session is held weakly until the open actually starts, for the same reason
     /// a queued project switch is.
-    private func startOpen(label: String, at index: Int?) {
+    private func startOpen(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
-            await self?.openTab(label: label, at: index)
+            await self?.openTab(label: label, at: index, restoring: tab)
         }
     }
 
     /// Builds one workspace and installs its tab. A load that fails reports and
     /// installs nothing: a tab exists only for a document that opened.
-    private func openTab(label: String, at index: Int?) async {
+    private func openTab(label: String, at index: Int?, restoring tab: ReloadedTab? = nil) async {
         guard let service = catalogService else {
             failOpen("Open a project before opening a song.")
             return
@@ -949,10 +948,41 @@ public final class ApplicationSession: QmlInstantiableStatus {
         do {
             let session = try await DocumentSession.open(
                 service: service, label: label, sampleRate: audio.sampleRate)
+            if let tab {
+                session.selectedTrack = tab.selectedTrack
+                session.editCursor = tab.editCursor
+            }
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 callbacks: makeCallbacks(for: session))
+            if let tab {
+                // The first viewport normally homes the roll to the song's
+                // pitches. Complete that one-time initialization before
+                // restoring the outgoing camera, so mounting QML cannot
+                // overwrite the retained vertical scroll.
+                if tab.camera.rollHeight > 0 {
+                    workspace.grid.configureViewport(
+                        width: tab.camera.viewportWidth, height: tab.camera.rollHeight,
+                        fontPx: tab.baseFontPx, dpr: tab.devicePixelRatio)
+                }
+                session.mutateCamera { camera in
+                    camera.restore(pixelsPerBeat: tab.camera.pixelsPerBeat,
+                                   keyHeight: tab.camera.keyHeight,
+                                   scrollX: tab.camera.scrollX, scrollY: tab.camera.scrollY)
+                }
+                workspace.grid.refreshCamera()
+            }
+            if let tab {
+                if tab.snapScale != 0 {
+                    workspace.grid.openGridMenu(kind: 1)
+                    workspace.grid.activateGridMenuRow(actionId: tab.snapScale)
+                }
+                if tab.tripletGrid {
+                    workspace.grid.openGridMenu(kind: 2)
+                    workspace.grid.activateGridMenuRow(actionId: 1)
+                }
+            }
             workspace.rulerMenu.onSeek = { [weak self, weak workspace] tick in
                 guard let self, let workspace else { return }
                 self.seekToTick(tick, in: workspace)
@@ -983,9 +1013,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 _ = await session.close()
                 return
             }
-            let tab = SongTabSession(tabId: songTabs.reserveTabId(), title: label,
-                                     workspace: workspace, app: self)
-            songTabs.add(tab, at: index)
+            let tabSession = SongTabSession(tabId: tab?.tabId ?? songTabs.reserveTabId(),
+                                            title: label, workspace: workspace, app: self)
+            tabSession.showsEvents = tab?.showsEvents ?? false
+            songTabs.add(tabSession, at: index)
         } catch {
             if !Task.isCancelled { failOpen(String(describing: error)) }
         }

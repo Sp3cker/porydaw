@@ -81,7 +81,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | PJ03 | blocked | New Song UI/transaction requires scope authorization. |
 | PJ04 | blocked | File-picker MIDI import workflow requires scope authorization. |
 | PJ05 | pending | Ordered document/config/bank saves, conflicts, stale completion and byte conservation. |
-| PJ06 | pending | Tab open/reload/reorder/close, shared-bank lifetime and restored recipe. |
+| PJ06 | complete | [Task 18](task-18-brief.md) accepted: `proof.tabs_lifecycle.txt` retired (74 MATCHED via new shell-tabs test_o/p/q/r + amended e/j/k + swiftcore); `proof.tabs_persistence.txt` 34 MATCHED/1 PARTIAL (A044 mixer-volume relaunch belongs to transport-settings surface)/36 RETIRED-*. Reload preserves same `tabId` + seeded view state (BEHAVIOR-GAP repaired in `SongTabsController`/`ApplicationSession`); fresh tab homes `scrollX` to `minHScroll` (repaired in `PianoGrid.configureViewport`). Shared-bank lifetime + restored recipe proven. Remaining `proof.session`/`tabs_scale`/`tabs_transport` GAPs route to PJ07/ED05/AU03. |
 | PJ07 | pending | View/lane/workspace persistence without writing project song sidecars. |
 | VG01 | pending | Existing browsing, typed voice edits, readonly forms and audition. |
 | VG02 | pending | Symbol pickers, metadata, unknown symbols and audition envelopes. |

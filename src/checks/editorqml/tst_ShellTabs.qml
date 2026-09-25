@@ -677,6 +677,7 @@ TestCase {
         var secondId = ids[1]
         clickSelectTab(firstId)
 
+        var firstBeforeEdit = summaryOf(firstId)
         var drawn = drawNote(firstId)
         var editedSummary = summaryOf(firstId)
         verify(session().canUndo, "the real edit armed the tab's history")
@@ -700,6 +701,11 @@ TestCase {
         clickSelectTab(secondId)
         compare(summaryOf(secondId), siblingSummary, "the sibling tab is untouched")
         verify(!session().canUndo, "the sibling tab never inherits the edited history")
+        session().requestUndo()
+        compare(summaryOf(secondId), siblingSummary,
+                "undo in the untouched sibling leaves its notes unchanged")
+        verify(!session().documentDirty,
+               "undo in the untouched sibling leaves its document clean")
         verify(!pageOf(firstId).visible, "the hidden tab's page is hidden")
 
         clickSelectTab(firstId)
@@ -714,6 +720,17 @@ TestCase {
         verify(JSON.parse(editedSummary).some(function(note) {
             return note.id === drawn.id
         }), "the drawn note survived the round trip")
+        session().requestUndo()
+        verify(waitForNative(function() {
+            return summaryOf(firstId) === firstBeforeEdit
+        }, 5000), "undo in the edited tab restores only its original notes")
+        verify(!session().documentDirty, "undo in the edited tab clears its dirty state")
+        clickSelectTab(secondId)
+        compare(summaryOf(secondId), siblingSummary,
+                "the edited tab's undo never changes the sibling notes")
+        verify(!session().documentDirty, "the edited tab's undo leaves the sibling clean")
+        clickSelectTab(firstId)
+        verify(session().canRedo, "the edited tab retains its own redo history")
     }
 
     function test_fReorderPreservesIdentities() {
@@ -939,6 +956,7 @@ TestCase {
         verify(dirtyBefore.length > 0, "the staged dirty song is readable")
         verify(otherBefore.length > 0, "the staged other song is readable")
 
+        var dirtyOriginal = summaryOf(dirtyId)
         drawNote(dirtyId)
         verify(session().documentDirty, "the drawn note dirtied the tab")
         verify(session().canUndo, "the drawn note armed the tab's history")
@@ -969,6 +987,19 @@ TestCase {
         compare(summaryOf(dirtyId), dirtySummary, "Cancel keeps the unsaved work")
         verify(pageOf(dirtyId) === dirtyPage, "Cancel keeps the tab's page")
         verify(session().documentDirty, "Cancel keeps the tab's unsaved work flagged")
+        verify(session().canUndo, "Cancel retains the dirty tab's undo history")
+        session().requestUndo()
+        verify(waitForNative(function() {
+            return summaryOf(dirtyId) === dirtyOriginal
+        }, 5000), "undo after Cancel restores the unsaved tab's original notes")
+        verify(waitForNative(function() {
+            return !session().documentDirty && !session().canUndo && session().canRedo
+        }, 5000), "undo after Cancel clears the dirty marker and exhausts undo history")
+        session().requestRedo()
+        verify(waitForNative(function() {
+            return summaryOf(dirtyId) !== dirtyOriginal && session().documentDirty
+        }, 5000), "redo after Cancel restores the uncommitted edit")
+        verify(session().documentDirty, "redo after Cancel returns the dirty marker")
         compare(fileProbe.fileFingerprint(dirtyPath), dirtyBefore,
                 "Cancel wrote no song bytes")
         verify(waitForNative(function() { return strip().enabled }, 5000),
@@ -1023,6 +1054,22 @@ TestCase {
                 && note.duration === saved.duration
         })
         verify(persisted, "the saved song carries the note the user drew")
+        verify(!session().documentDirty, "a saved and reopened tab starts clean")
+        verify(!session().canUndo, "a saved and reopened tab has no previous undo history")
+    }
+
+    function volumeAxisLabels(tabId) {
+        var plot = findChild(pageOf(tabId), "automationPlot")
+        if (!plot)
+            return []
+        var labels = []
+        for (var i = 0; i < plot.children.length; ++i) {
+            var item = plot.children[i]
+            if (typeof item.text === "string" && item.width > 0
+                    && item.x >= 0 && item.x < plot.width / 3)
+                labels.push(item.text)
+        }
+        return labels
     }
 
     function test_kStartupRestoresTabsAndFreshCamera() {
@@ -1041,15 +1088,29 @@ TestCase {
             return Math.abs(gridOf(ids[0]).cameraScrollY - freshScrollY) > 0.5
         }, 5000), "first tab's runtime camera moved before shutdown")
 
+        verify(waitForNative(function() {
+            return volumeAxisLabels(ids[0]).indexOf("127") >= 0
+        }, 5000), "the initial volume axis shows its full-range maximum")
         var automation = pageOf(ids[0]).session.automationPage()
         verify(automation.openParameterMenu(0, 0, 0), "volume's real range menu opens")
         verify(automation.consumeMenuAction(16), "the 0–64 range is a cosmetic lane change")
         verify(!session().documentDirty, "changing an editor lane preference does not dirty MIDI")
+        verify(waitForNative(function() {
+            return volumeAxisLabels(ids[0]).indexOf("64") >= 0
+        }, 5000), "setting the first tab's editor range updates its rendered value axis")
+        clickSelectTab(ids[1])
+        verify(waitForNative(function() {
+            return volumeAxisLabels(ids[1]).indexOf("64") >= 0
+        }, 5000), "setting the editor range propagates to the other tab's value axis")
+        clickSelectTab(ids[0])
 
         shell.close()
         verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
                "the clean host close releases its tab pages")
         settings.sync()
+        compare(settings.value("lastOpenSongs").join(","),
+                ["mus_littleroot_test", "mus_route101"].join(","),
+                "final-close walk stores the tab recipe in display order")
         compare(settings.value("lastSongLabel"), "mus_route101",
                 "final-close walk retains the previously selected tab")
         shell.destroy()
@@ -1070,6 +1131,13 @@ TestCase {
         compare(tabs().selectedId, restored[1], "startup restores the selected tab")
         fuzzyCompare(gridOf(restored[1]).cameraScrollY, freshScrollY, 0.01,
                      "reopened tab starts with a fresh camera, not a saved camera")
+        verify(waitForNative(function() {
+            return volumeAxisLabels(restored[1]).indexOf("64") >= 0
+        }, 5000), "the selected tab renders its saved editor range after relaunch")
+        clickSelectTab(restored[0])
+        verify(waitForNative(function() {
+            return volumeAxisLabels(restored[0]).indexOf("64") >= 0
+        }, 5000), "the sibling tab renders the same editor range after relaunch")
     }
 
     function bankPath() { return bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc" }
@@ -1250,4 +1318,148 @@ TestCase {
         compare(fileProbe.fileFingerprint(bankPath()), bankBefore, "Discard wrote no bank bytes")
         compare(fileProbe.fileFingerprint(songPath), songBefore, "Discard wrote no song bytes")
     }
+
+    function test_oFreshTabViewStateDefaults() {
+        var ids = openShell(["mus_route101", "mus_route102"])
+        var first = gridOf(ids[0])
+        var fresh = gridOf(ids[1])
+        verify(fresh.renderedNoteCount > 0, "a fresh tab has a valid rendered document")
+        compare(fresh.beatWidth, first.beatWidth,
+                "a fresh tab uses the default pixels per beat")
+        compare(fresh.rowHeight, first.rowHeight,
+                "a fresh tab uses the default keyboard row height")
+        compare(fresh.cameraScrollX, fresh.cameraMinHScroll,
+                "a fresh tab uses the default lead-pad horizontal scroll")
+        var defaultScrollY = fresh.cameraScrollY
+        var shiftedY = defaultScrollY < fresh.cameraMaxVScroll - 30
+            ? defaultScrollY + 30 : defaultScrollY - 30
+        fresh.setCameraVScroll(shiftedY)
+        verify(Math.abs(fresh.cameraScrollY - defaultScrollY) > 1,
+               "the fresh tab camera can move away from its default pitch position")
+        var close = closeButton(ids[1])
+        mouseClick(close, close.width / 2, close.height / 2)
+        tryCompare(tabs(), "tabCount", 1, 5000)
+        verify(waitForNative(function() { return pageOf(ids[1]) === null }, 5000),
+               "the previous tab's page is released before reopening its song")
+        session().openSong("mus_route102")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 || session().lastSaveError.length > 0
+        }, 30000), "the closed song reopens" + openDiagnostics(session()))
+        compare(tabs().tabCount, 2, "the closed song installs a fresh tab"
+                + openDiagnostics(session()))
+        var reopenedId = tabs().selectedId
+        verify(reopenedId !== ids[1], "reopening a closed song creates a fresh tab")
+        waitForPage(reopenedId)
+        fuzzyCompare(gridOf(reopenedId).cameraScrollY, defaultScrollY, 0.01,
+                     "a fresh tab starts at its song's canonical vertical scroll")
+        fresh = gridOf(reopenedId)
+        compare(fresh.trackIndex, 0, "a fresh tab selects the first track")
+        compare(fresh.editCursorTick, 0, "a fresh tab starts its edit cursor at zero")
+        compare(fresh.gridDivisionControlText, "Auto",
+                "a fresh tab starts with automatic grid selection")
+        verify(!fresh.tripletGrid, "a fresh tab starts with straight grid feel")
+        verify(!pageOf(reopenedId).session.showsEvents, "a fresh tab has no event list")
+        verify(!tabs().selectedTabShowsEvents,
+               "a fresh tab does not display the event list")
+    }
+
+    function test_pReplaceInPlaceRetainsOneTab() {
+        var originalId = openShell(["mus_route101"])[0]
+        var originalPage = tabs().selectedPage
+        var songs = session().songDockController().songListPresenter()
+        songs.selectCategory(0)
+        songs.updateSearch("mus_route102")
+        compare(songs.rowCount, 1, "replacement song is the only filtered Songs dock row")
+        songs.activateSong(songs.songId(0))
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedId === originalId
+                && tabs().selectedPage !== originalPage
+                && tabs().selectedPage.title === "mus_route102"
+                && tabs().selectedPage.gridPresenter().renderedNoteCount > 0
+        }, 30000), "replacing the selected song leaves one tab with the replacement page")
+        compare(tabs().tabCount, 1, "the replaced tab keeps a single strip entry")
+        compare(tabs().selectedPage.tabId, originalId,
+                "the replacement remains at the original tab identity")
+        compare(tabs().selectedPage.title, "mus_route102",
+                "the original tab identity resolves to the replacement song")
+        verify(tabs().selectedPage.title !== "mus_route101",
+               "the replaced song's label no longer resolves to an open tab")
+    }
+
+    function test_qReloadPreservesViewAndClearsHistory() {
+        var id = openShell(["mus_route101"])[0]
+        var grid = gridOf(id)
+        var beforeNotes = summaryOf(id)
+        drawNote(id)
+        session().requestUndo()
+        verify(waitForNative(function() {
+            return summaryOf(id) === beforeNotes
+        }, 5000), "undo restores the song before its reload")
+        verify(session().canRedo, "the old document has redo history before reload")
+        grid.handleWheel(0, 120, 0, 0, 0, 0, false, 100, 20)
+        grid.handleWheel(0, 120, 0, 0, Qt.ControlModifier, 0, true, 100, 20)
+        grid.setCameraHScroll(20)
+        grid.setEditCursorTick(96)
+        grid.openGridMenu(1)
+        grid.activateGridMenuRow(2)
+        grid.openGridMenu(2)
+        grid.activateGridMenuRow(1)
+        var prior = {
+            beat: grid.beatWidth, height: grid.rowHeight, x: grid.cameraScrollX,
+            y: grid.cameraScrollY, track: grid.trackIndex, cursor: grid.editCursorTick,
+            division: grid.gridDivisionControlText, triplet: grid.tripletGrid
+        }
+        tabs().setSelectedTabEventsVisible(true)
+        prior.events = tabs().selectedTabShowsEvents
+        verify(prior.cursor > 0 && prior.triplet && prior.events,
+               "the reloaded tab's view is seeded with non-default cursor, feel and events")
+        session().openSong("mus_route101")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedId === id
+                && tabs().selectedPage.gridPresenter() !== grid
+                && tabs().selectedPage.gridPresenter().renderedNoteCount > 0
+        }, 30000), "the reloaded song returns in the same tab identity")
+        var landed = tabs().selectedPage.gridPresenter()
+        compare(tabs().selectedPage.tabId, id,
+                "the reloaded song keeps the original tab identity")
+        compare(tabs().tabCount, 1, "reloading does not add a tab")
+        compare(tabs().selectedPage.title, "mus_route101",
+                "reloading retains the selected song label")
+        fuzzyCompare(landed.beatWidth, prior.beat, 0.01,
+                     "reload retains the seeded pixels per beat")
+        fuzzyCompare(landed.rowHeight, prior.height, 0.01,
+                     "reload retains the seeded key height")
+        fuzzyCompare(landed.cameraScrollX, prior.x, 0.01,
+                     "reload retains the seeded horizontal scroll")
+        fuzzyCompare(landed.cameraScrollY, prior.y, 0.01,
+                     "reload retains the seeded vertical scroll")
+        compare(landed.trackIndex, prior.track, "reload retains the selected track")
+        compare(landed.editCursorTick, prior.cursor, "reload retains the edit cursor")
+        compare(landed.gridDivisionControlText, prior.division,
+                "reload retains the selected grid division")
+        compare(landed.tripletGrid, prior.triplet, "reload retains triplet grid feel")
+        compare(tabs().selectedTabShowsEvents, prior.events,
+                "reload retains event list visibility")
+        verify(!session().canUndo && !session().canRedo,
+               "reload clears the old document's undo and redo history")
+    }
+
+    function test_rTabSwitchStopsPlayback() {
+        var ids = openShell(["mus_route101", "mus_route102"])
+        clickSelectTab(ids[0])
+        var bar = findChild(shell, "transportToolbar")
+        var play = findChild(bar, "transport.play")
+        verify(play && play.actionable, "the first tab can play before switching")
+        mouseClick(play, play.width / 2, play.height / 2)
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return bar.presenter.state === 3
+        }, 5000), "the first tab starts real transport playback")
+        clickSelectTab(ids[1])
+        verify(waitForNative(function() {
+            bar.presenter.refresh()
+            return bar.presenter.state === 1
+        }, 5000), "switching tabs stops the old workspace's transport")
+    }
+
 }

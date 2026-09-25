@@ -329,7 +329,13 @@ public final class PianoGrid {
                 _ = camera.setTimeZoom(scaledPixelsPerBeat)
                 _ = camera.setKeyHeight(scaledKeyHeight)
             }
+            let oldViewport = camera.snapshot
+            let wasAtHome = oldViewport.scrollX == oldViewport.minHScroll
             camera.updateViewport(width: max(0, width), rollHeight: max(0, height))
+            let newViewport = camera.snapshot
+            if wasAtHome && newViewport.scrollX == oldViewport.minHScroll {
+                _ = camera.setHScroll(newViewport.minHScroll)
+            }
             camera.updateTimeDomain(
                 ticksPerBeat: UInt32(max(1, session.document.ticksPerBeat)),
                 lengthTicks: UInt64(session.timeline.lengthTicks))

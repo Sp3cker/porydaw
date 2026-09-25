@@ -126,6 +126,33 @@ internal struct BankCloseTarget {
     }
 }
 
+/// Presentation-only state retained by an in-place reload or replacement.
+/// Document data and history come from the newly opened song.
+@MainActor
+internal struct ReloadedTab {
+    let tabId: Int
+    let camera: EditorCamera.Snapshot
+    let selectedTrack: Int?
+    let editCursor: UInt32
+    let baseFontPx: Double
+    let devicePixelRatio: Double
+    let snapScale: Int
+    let tripletGrid: Bool
+    let showsEvents: Bool
+
+    init(_ tab: SongTabSession) {
+        tabId = tab.tabId
+        camera = tab.workspace.session.camera.snapshot
+        selectedTrack = tab.workspace.session.selectedTrack
+        editCursor = tab.workspace.session.editCursor
+        baseFontPx = tab.workspace.grid.baseFontPx
+        devicePixelRatio = tab.workspace.grid.devicePixelRatio
+        snapScale = tab.workspace.grid.metrics.snapScale
+        tripletGrid = tab.workspace.grid.metrics.tripletGrid
+        showsEvents = tab.showsEvents
+    }
+}
+
 /// The song tab strip: the model its Repeaters read, the selection the strip and
 /// the pages bind, and the close gate the unsaved-changes dialog answers.
 ///
@@ -493,6 +520,7 @@ public final class SongTabsController {
     /// Removes one tab and publishes the surviving selection.
     private func closeTab(index: Int) {
         let tab = tabs[index]
+        let reloadState = reloadId == tab.tabId ? ReloadedTab(tab) : nil
         let tabId = tab.tabId
         let closingSelected = tabId == selectedId
         if pendingCloseId == tabId { pendingCloseId = -1 }
@@ -518,7 +546,10 @@ public final class SongTabsController {
             tabs[survivorIndex].workspace.activate()
         }
         app?.tabsDidChange()
-        if reopening { app?.reloadApproved(label: replacement ?? tab.title, index: index) }
+        if let reloadState {
+            app?.reloadApproved(label: replacement ?? tab.title, index: index,
+                                restoring: reloadState)
+        }
     }
 
     private func advanceCloseAll() {
