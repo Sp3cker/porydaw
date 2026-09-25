@@ -830,43 +830,61 @@ public final class ApplicationSession: QmlInstantiableStatus {
         startProjectSwitch(path: path, label: label, restore: nil)
     }
 
-    private func startProjectSwitch(path: String, label: String?,
-                                    restore: WorkspaceTabRecipe?) {
-        let priorTask = activeReplacementTask
-        let replacement = Task { [weak self] in
-            _ = await priorTask?.value
-            guard let self, !Task.isCancelled else { return }
-            self.lastSaveError = ""
+    private struct ProjectRead: Sendable {
+        let service: ProjectService
+        let songs: [SongListing]
+        let voicegroupArgs: [String]
+        let voicegroupCatalog: VoicegroupCatalog
+
+        static func load(path: String) async throws -> ProjectRead {
             let service = ProjectService()
             do {
                 try await service.open(root: path)
-                let listings = try await service.songs()
-                let labels = listings.map(\.label)
+                let songs = try await service.songs()
                 let voicegroupArgs = try await service.voicegroupArgs()
                 let voicegroupCatalog = try await service.voicegroupCatalog()
-                guard !self.isDisposed, !Task.isCancelled else {
-                    await service.close()
-                    return
-                }
-                let candidate = ProjectSwitchCandidate(
-                    path: path, label: label, restore: restore, service: service, labels: labels,
-                    songs: listings,
-                    voicegroupArgs: voicegroupArgs, voicegroupCatalog: voicegroupCatalog)
-                if self.songTabs.tabCount == 0 {
-                    await self.finishProjectSwitch(candidate)
-                } else {
-                    self.pendingProjectSwitch = candidate
-                    self.songTabs.startProjectSwitchCloseAll()
-                }
+                return ProjectRead(service: service, songs: songs, voicegroupArgs: voicegroupArgs,
+                                   voicegroupCatalog: voicegroupCatalog)
             } catch {
                 await service.close()
-                guard !Task.isCancelled else { return }
+                throw error
+            }
+        }
+    }
+
+    private func startProjectSwitch(path: String, label: String?,
+                                    restore: WorkspaceTabRecipe?) {
+        let priorTask = activeReplacementTask
+        let read = Task { @concurrent in try await ProjectRead.load(path: path) }
+        let replacement = Task { [weak self] in
+            _ = await priorTask?.value
+            let loaded: ProjectRead
+            do {
+                loaded = try await read.value
+            } catch {
+                guard let self, !Task.isCancelled else { return }
                 if restore != nil, !self.settingsApplicationName.isEmpty {
                     EditorViewStateCodec.saveTabs(
                         WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
                         applicationName: self.settingsApplicationName)
                 }
                 self.failOpen(String(describing: error))
+                return
+            }
+            guard let self, !self.isDisposed, !Task.isCancelled else {
+                await loaded.service.close()
+                return
+            }
+            self.lastSaveError = ""
+            let candidate = ProjectSwitchCandidate(
+                path: path, label: label, restore: restore, service: loaded.service,
+                labels: loaded.songs.map(\.label), songs: loaded.songs,
+                voicegroupArgs: loaded.voicegroupArgs, voicegroupCatalog: loaded.voicegroupCatalog)
+            if self.songTabs.tabCount == 0 {
+                await self.finishProjectSwitch(candidate)
+            } else {
+                self.pendingProjectSwitch = candidate
+                self.songTabs.startProjectSwitchCloseAll()
             }
         }
         activeReplacementTask = replacement
