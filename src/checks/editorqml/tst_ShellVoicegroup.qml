@@ -17,6 +17,15 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     ApplicationSession { id: app }
+    property var fullShell: null
+    Component {
+        id: fullShellComponent
+        ShellWindow {
+            width: testCase.width * 2.5
+            height: testCase.height
+            visible: true
+        }
+    }
     Pane {
         anchors.fill: parent
         padding: 0
@@ -187,6 +196,154 @@ TestCase {
         compare(controller.currentSlot, 12)
     }
 
+    function test_trackHeaderRevealRoutesToMountedDock() {
+        const controller = app.voiceListController()
+        const headers = app.trackHeadersPresenter()
+        headers.configureViewport(panel.width, panel.height, app.baseFontPx, 1)
+        const rows = findChild(panel, "voicegroupRows")
+        for (const slot of [0, 2, 4, 8, 12]) {
+            rows.positionViewAtIndex(slot, ListView.Contain)
+            const row = findChild(panel, "voicegroupRow_" + slot)
+            verify(row && row.used === controller.slotIsMarkedUsed(slot),
+                   "used marks match the assigned programs and clear on undo")
+        }
+        verify(headers.rowHeight > 0,
+               "the song publishes header geometry: " + headers.rowHeight)
+        controller.selectSlot(12)
+        const before = controller.revealRequest
+        const x = headers.voiceLineRect.x + headers.voiceLineRect.width / 2
+        const y = headers.rowHeight / 2
+        verify(headers.beginPointer(x, y, Qt.LeftButton, Qt.NoModifier),
+               "the mounted song accepts a header press")
+        verify(headers.endPointer(x, y, Qt.LeftButton, Qt.NoModifier),
+               "the mounted song accepts a header release")
+        verify(controller.currentSlot === 0 && controller.revealSlotId === 0
+               && controller.revealRequest === before + 1,
+               "revealing a track voice selects its program")
+        const mounted = findChild(panel, "voicegroupRow_0")
+        verify(mounted && mounted.used,
+               "revealing a track voice selects its program")
+    }
+
+    function test_typeColumnFamiliesAndAlternateChips() {
+        const controller = app.voiceListController()
+        const header = findChild(panel, "voicegroupTypeHeader")
+        const firstIcon = findChild(panel, "voicegroupTypeIcon_0")
+        verify(firstIcon.width >= header.implicitWidth
+               && firstIcon.width >= app.baseFontPx * 1.5
+                   + 2 * app.layoutSpaces.two,
+               "the type column fits its header and icon at base-font sizing")
+        const types = ["Sample", "Sample", "Sample (fixed pitch)", "Sample (reverse)",
+                       "Square 1", "Square 2", "Wave", "Noise", "Keysplit", "Keysplit",
+                       "Drumkit", "Drumkit", "Sample"]
+        const keys = [0, 0, 0, 2, 4, 6, 8, 10, 12, 12, 14, 14, 0]
+        const rows = findChild(panel, "voicegroupRows")
+        for (let slot = 0; slot < types.length; ++slot) {
+            rows.positionViewAtIndex(slot, ListView.Contain)
+            const row = findChild(panel, "voicegroupRow_" + slot)
+            const icon = findChild(panel, "voicegroupTypeIcon_" + slot)
+            verify(!!row && !!icon, "every populated family renders its glyph")
+            compare(row.typeName, types[slot],
+                    "the type column publishes family names through tooltip and accessible text")
+            compare(icon.Accessible.name, types[slot],
+                    "the type column publishes family names through tooltip and accessible text")
+            compare(icon.ToolTip.text, types[slot],
+                    "the type column publishes family names through tooltip and accessible text")
+            compare(row.typeIconKey, keys[slot], "every populated family renders its glyph")
+        }
+        controller.selectSlot(13)
+        rows.positionViewAtIndex(13, ListView.Contain)
+        const blank = findChild(panel, "voicegroupRow_13")
+        const blankIcon = findChild(panel, "voicegroupTypeIcon_13")
+        verify(blank && blankIcon && blank.title.indexOf("[Blank]") >= 0
+               && blank.typeName === "" && blank.typeIconKey === -1
+               && blankIcon.Accessible.name === "",
+               "blank rows publish no type, glyph or accessible name")
+        const headers = app.trackHeadersPresenter()
+        headers.configureViewport(panel.width, panel.height, app.baseFontPx, 1)
+        const headerX = headers.voiceLineRect.x + headers.voiceLineRect.width / 2
+        const headerY = headers.rowHeight / 2
+        verify(headers.beginPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier),
+               "the header press remains active while the voicegroup changes")
+        const selector = findChild(panel, "vgArgCombo")
+        selector.forceActiveFocus()
+        selector.editText = "fixture_alt"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_alt"
+                   || app.lastSaveError.length > 0
+        }, 15000), "a typed alternate group commits while a header press lands: "
+                   + app.lastSaveError + " edit=" + selector.editText
+                   + " selector=" + controller.selectorText
+                   + " load=" + controller.bankLoadName)
+        compare(app.lastSaveError, "")
+        headers.endPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier)
+        verify(headers.beginPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier)
+               && headers.endPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier)
+               && controller.currentSlot === 0 && controller.revealSlotId === 0,
+               "the next header press restores the primary track")
+        const alt = ["Square 1 (Alt)", "Square 2 (Alt)", "Wave (Alt)", "Noise (Alt)"]
+        for (let i = 0; i < alt.length; ++i) {
+            const slot = i + 2
+            rows.positionViewAtIndex(slot, ListView.Contain)
+            const row = findChild(panel, "voicegroupRow_" + slot)
+            const icon = findChild(panel, "voicegroupTypeIcon_" + slot)
+            verify(row && icon && row.altChip && row.typeIconKey % 2 === 1
+                   && row.typeName === alt[i] && icon.Accessible.name === alt[i],
+                   "alternate groups publish alt family names on grey chips")
+        }
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich"
+                   && controller.selectorText === "fixture_rich"
+        }, 15000), "undo restores the home voicegroup binding")
+        controller.selectSlot(12)
+        verify(headers.beginPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier)
+               && headers.endPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier)
+               && controller.currentSlot === 0,
+               "the next header press restores the primary track")
+    }
+
+    function test_blankTemplateAndDockWidth() {
+        const controller = app.voiceListController()
+        const baseline = panel.Layout.minimumWidth
+        controller.selectSlot(13)
+        const draft = controller.editorModel()
+        const notice = findChild(panel, "voicegroupEditorNotice")
+        const type = findChild(panel, "vgTypeCombo")
+        const add = findChild(panel, "vgNewSampleButton")
+        const edit = findChild(panel, "vgEditSampleButton")
+        tryCompare(notice, "visible", false)
+        verify(draft.editable && !notice.visible && draft.macro === 0
+               && add.width === edit.width && add.height === edit.height,
+               "a blank slot shows no notice, matching buttons and the DirectSound default: "
+               + "editable=" + draft.editable + " notice=" + notice.visible
+               + " macro=" + draft.macro + " sizes=" + add.width + "x" + add.height
+               + "," + edit.width + "x" + edit.height)
+        draft.changeType(3, "")
+        verify(waitForNative(function() {
+            return draft.macro === 3 && controller.bankDirty
+        }, 15000), "the blank template materializes Square 1 undoably")
+        compare(type.currentValue, 3)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.macro === 0 && !controller.bankDirty
+        }, 15000), "the blank template materializes Square 1 undoably")
+        app.requestRedo()
+        verify(waitForNative(function() {
+            return draft.macro === 3 && controller.bankDirty
+        }, 15000), "the blank template materializes Square 1 undoably")
+        app.requestUndo()
+        verify(waitForNative(function() { return !controller.bankDirty }, 15000),
+               "blank materialization undo settles the bank")
+        for (const slot of [0, 4, 6, 7, 8, 13]) {
+            controller.selectSlot(slot)
+            compare(panel.Layout.minimumWidth, baseline,
+                    "the dock's minimum width ignores the selected voice's family")
+        }
+    }
+
     function test_editorAndUndo() {
         const controller = app.voiceListController()
         controller.selectSlot(4)
@@ -209,6 +366,32 @@ TestCase {
         app.requestUndo()
         verify(waitForNative(function() { return draft.release === initial }, 15000),
                "undo restores original ADSR")
+    }
+
+    function test_editorSpinKeyCommitsAndUndo() {
+        const controller = app.voiceListController()
+        controller.selectSlot(4)
+        const draft = controller.editorModel()
+        const release = findChild(panel, "vgReleaseSpin")
+        const scroll = findChild(panel, "voiceEditorScrollView")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(release)
+        const position = release.mapToItem(scroll, 0, 0)
+        verify(position.y >= 0 && position.y + release.height <= scroll.height + 1,
+               "the ADSR control is reachable after scrolling the mounted form")
+        const before = draft.release
+        release.forceActiveFocus()
+        keyClick(before === release.to ? Qt.Key_Down : Qt.Key_Up)
+        verify(waitForNative(function() {
+            return draft.release === before + (before === release.to ? -1 : 1)
+                   && controller.bankDirty
+        }, 15000), "a release spin edit commits through the bank pipeline: "
+                   + "before=" + before + " control=" + release.value
+                   + " draft=" + draft.release + " dirty=" + controller.bankDirty)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.release === before && !controller.bankDirty
+        }, 15000), "undo restores release after a focused spin edit")
     }
 
     function test_editorQueuedEditsKeepTheirSlot() {
@@ -252,6 +435,116 @@ TestCase {
         compare(draft.release, initial === 7 ? 6 : initial + 1)
     }
 
+    function cleanup() {
+        if (!fullShell)
+            return
+        fullShell.close()
+        if (fullShell.shellPresenter.session.songTabs.pendingCloseId >= 0)
+            fullShell.shellPresenter.session.songTabs.confirmDiscard()
+        fullShell.destroy()
+        fullShell = null
+        wait(0)
+    }
+
+    function test_xSpaceInFocusedAdsrFieldTogglesTransport() {
+        fullShell = fullShellComponent.createObject(null)
+        const shell = fullShell
+        verify(shell !== null, "the production window mounts the voice editor and transport")
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "the mounted song loads: " + session.lastSaveError)
+        compare(session.lastSaveError, "")
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true, 5000)
+        voice.selectSlot(4)
+        const bar = findChild(shell, "transportToolbar")
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        waitForRendering(scroll)
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        tryVerify(function() { return !!findChild(editor, "vgReleaseSpin") }, 3000,
+                  "the ADSR row mounts after the selected bank voice refreshes")
+        const release = findChild(editor, "vgReleaseSpin")
+        verify(bar && release && scroll, "the production window mounts the ADSR field: "
+               + "bar=" + !!bar + " release=" + !!release + " scroll=" + !!scroll
+               + " bank=" + voice.bankLoadName + " slot=" + voice.currentSlot
+               + " macro=" + voice.editorModel().macro
+               + " editable=" + voice.editorModel().editable)
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(release)
+        const initial = release.value
+        release.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Space)
+        tryCompare(bar.presenter, "state", 3, 3000,
+                   "Space in a focused ADSR field toggles transport once")
+        verify(release.value === initial && release.contentItem.activeFocus,
+               "Space does not edit the ADSR field or steal its focus")
+        keyClick(Qt.Key_Space)
+        tryCompare(bar.presenter, "state", 2, 3000,
+                   "the same ADSR focus pauses transport on the next Space")
+        cleanup()
+    }
+
+    function test_yPickerReturnFallbackAndWaveUndo() {
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        const sampleOriginal = draft.symbol
+        function openPicker() {
+            const trigger = findChild(panel, "vgSamplePickerButton")
+            mouseClick(trigger, trigger.width / 2, trigger.height / 2)
+            const popup = findChild(panel, "vgSamplePickerPopup")
+            tryCompare(popup, "opened", true)
+            return popup
+        }
+        let popup = openPicker()
+        let search = findChild(popup, "vgSamplePickerSearch")
+        let list = findChild(popup, "vgSamplePickerList")
+        search.text = "unlisted_typography_sample"
+        verify(list.model.some(row => row.typed && row.symbol === search.text),
+               "the picker offers a fallback row for an unlisted symbol")
+        search.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        tryCompare(popup, "opened", false)
+        verify(waitForNative(function() {
+            return draft.symbol === "unlisted_typography_sample"
+        }, 15000), "an unlisted typed symbol commits via the fallback row")
+        app.requestUndo()
+        verify(waitForNative(function() { return draft.symbol === sampleOriginal }, 15000),
+               "picker undo restores the symbol and preview")
+        draft.changeType(7, "ProgrammableWaveData_fixture_pulse")
+        verify(waitForNative(function() { return draft.macro === 7 }, 15000),
+               "wave mode lists the catalog's waves with full symbols")
+        popup = openPicker()
+        search = findChild(popup, "vgSamplePickerSearch")
+        list = findChild(popup, "vgSamplePickerList")
+        verify(list.model.some(row => row.symbol === "ProgrammableWaveData_fixture_saw")
+               && list.model.every(row => !row.symbol
+                                    || row.symbol.startsWith("ProgrammableWaveData_")),
+               "wave mode lists the catalog's waves with full symbols")
+        search.text = "ProgrammableWaveData_fixture_saw"
+        const index = list.model.findIndex(row => row.symbol === search.text)
+        verify(index >= 0 && list.currentIndex === index,
+               "filtering a wave auditions as wave")
+        search.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        tryCompare(popup, "opened", false)
+        verify(waitForNative(function() {
+            return draft.symbol === "ProgrammableWaveData_fixture_saw"
+        }, 15000), "Return commits the typed wave symbol")
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.symbol === "ProgrammableWaveData_fixture_pulse" && draft.macro === 7
+        }, 15000), "wave undo restores the wave voice and the DirectSound original")
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return draft.symbol === sampleOriginal && draft.macro === 0
+        }, 15000), "wave undo restores the wave voice and the DirectSound original")
+    }
+
     function test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit() {
         const controller = app.voiceListController()
         controller.selectSlot(0)
@@ -286,6 +579,15 @@ TestCase {
                     "sample picker width follows the session base")
             compare(popup.height, app.baseFontPx * 35,
                     "sample picker height follows the session base")
+            compare(popup.background.border.color.toString().toLowerCase(),
+                    panel.colors.outline.toString().toLowerCase(),
+                    "sample popup outline follows the dock palette")
+            if (draft.macro === 7 || draft.macro === 8) {
+                verify(list.model.some(row => row.symbol === "ProgrammableWaveData_fixture_saw")
+                       && list.model.every(row => !row.symbol
+                                           || row.symbol.startsWith("ProgrammableWaveData_")),
+                       "wave mode filters out samples and keysplits")
+            }
             if (symbol === "DirectSoundWaveData_fixture_bass") {
                 const headingIndex = list.model.findIndex(row => !row.symbol)
                 verify(headingIndex >= 0, "sample picker preserves grouped section headings")
@@ -322,12 +624,17 @@ TestCase {
             compare(draft.symbol, before, "first click only auditions")
             verify(waitForNative(function() { return controller.pickerSampleDetail.length > 0 },
                                  15000), "resolved audition details for " + symbol)
+            if (symbol === "DirectSoundWaveData_fixture_loop")
+                verify(findChild(popup, "vgSamplePickerLoop").visible
+                       && controller.pickerSampleLoop,
+                       "the sampled loop publishes a mounted loop badge")
             mouseClick(item, item.width / 2, item.height / 2)
             tryCompare(popup, "opened", false)
             verify(waitForNative(function() { return draft.symbol === symbol }, 15000),
                    "second click commits " + symbol)
             compare(controller.pickerSampleDetail, "", "popup close ends the audition")
         }
+        choose("DirectSoundWaveData_fixture_loop")
         choose("DirectSoundWaveData_fixture_bass")
         draft.changeType(7, "ProgrammableWaveData_fixture_pulse")
         verify(waitForNative(function() { return draft.macro === 7 }, 15000),
@@ -348,6 +655,11 @@ TestCase {
         draft.changeType(-1, draft.symbol)
         verify(waitForNative(function() { return draft.isSynth && controller.bankDirty },
                              15000), "synth type creates an unsaved bank edit")
+        const row = findChild(panel, "voicegroupRow_0")
+        const icon = findChild(panel, "voicegroupTypeIcon_0")
+        verify(row.typeName === "Synth (Golden Sun)"
+               && row.typeIconKey === 0 && icon.Accessible.name === row.typeName,
+               "the adopted synth publishes its type and sample glyph")
         const waveform = findChild(panel, "vgSynthWaveformCombo")
         verify(waveform !== null && waveform.visible, "mounted synth waveform is visible")
         compare(draft.waveform, 0)

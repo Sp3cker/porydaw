@@ -215,7 +215,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     }
 
     bankPreviewFailure(report: report, session: session, projectDir: projectDir)
-    bankBlankMaterialization(report: report, session: session)
+    bankBlankMaterialization(report: report, session: session, service: service)
     bankMergeSealing(report: report, session: session)
     bankConflicts(report: report, session: session, service: service)
 

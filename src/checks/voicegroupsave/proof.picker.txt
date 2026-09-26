@@ -4,15 +4,21 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/voicegroupsave/picker.cpp
 Original SHA-256: 08389b21540bc73dc1509b6107f92b0e02d0f0e99eb36bfee69fd78780a09a0b
 Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 
 
 Command: deno task verify:shell --filter shell-voicegroup --verbose.
-Result: PASS for the mounted QML predicates; retained native checks
-are not Swift parity evidence.
+Result: PASS (1/26 functions, build/proof-evidence/shell-voicegroup.json) for the
+mounted QML predicates; retained native checks are not Swift parity evidence.
+
+Command: deno task verify --filter swiftcore-projectsession --verbose.
+Result: the picker presenter predicates executed (build/proof-evidence/swiftcore-projectsession.json);
+the lane run itself was not clean at this freeze — the unrelated
+swiftcore/PianoRoll::timeMenuDuplicateAvailability test failed the suite.
 
 A001 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:41
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -63,8 +69,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A003 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:43
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
 ;
 
@@ -72,8 +78,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerReplacesSymbolCombo())
 
 A004 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:45
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S013 (test_yPickerReturnFallbackAndWaveUndo, "filtering a wave auditions as wave") asserts the picker's current row follows the filter text in the wave journey; the popup's current symbol at open, which this row reads from the selected voice, is unproved on either lane.
 Source context since previous assertion:
 ;
     const VgVoice before = *m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice;
@@ -82,8 +88,8 @@ Original expression:
 QCOMPARE(m_browser->samplePickerCurrentSymbol(), before.symbol)
 
 A005 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:63
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 ;
 
@@ -109,11 +115,11 @@ QVERIFY(search)
 
 A006 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:64
 Disposition: MATCHED
-Mapping: S002
+Mapping: S008
 
 A007 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:65
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
 ;
 
@@ -121,8 +127,8 @@ Original expression:
 QCOMPARE(m_browser->samplePickerPopupCornerColor(), themes::color(themes::Role::menu_outline))
 
 A008 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:66
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
 ;
 
@@ -130,8 +136,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerSymbolRowCount() >= 2)
 
 A009 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:67
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S011
 Source context since previous assertion:
 ;
 
@@ -140,8 +146,8 @@ QVERIFY2(settle([this] { return m_browser->samplePickerBadgedRowCount() > 0; }),
              "picker did not render a loop badge after its production lazy load")
 
 A010 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:70
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the native driver screenshot helper VoicegroupBrowserDriver::saveSamplePickerPopup (src/checks/support/voicegroupbrowserdriver.cpp:409, declared voicegroupbrowserdriver.h:92 at Reference revision a7fcaa3e) — a native QQuickWindow grab path with no Swift counterpart. The shell lane's own reference capture supersedes it: tst_ShellVoicegroup.qml test_referenceProfileCapture renders the production panel through panel.grabToImage (S: "rendered the production VoicegroupPanel") and bootstrap.voicegroupReferenceJson.
 Source context since previous assertion:
 ;
     if (!m_screenshotPath.isEmpty()) {
@@ -150,8 +156,8 @@ Original expression:
 QVERIFY(m_browser->saveSamplePickerPopup(m_screenshotPath))
 
 A011 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:72
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins the native driver screenshot helper VoicegroupBrowserDriver::saveBrowser (src/checks/support/voicegroupbrowserdriver.cpp:417, declared voicegroupbrowserdriver.h:93 at Reference revision a7fcaa3e) — a native QQuickWindow grab path with no Swift counterpart; the shell lane's test_referenceProfileCapture grabToImage capture supersedes it.
 Source context since previous assertion:
 ;
         const QFileInfo path(m_screenshotPath);
@@ -161,8 +167,8 @@ QVERIFY(m_browser->saveBrowser(path.path() + QLatin1Char('/') + path.completeBas
                                        QStringLiteral("-dock.") + path.suffix()))
 
 A012 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:77
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
 ;
     }
@@ -173,8 +179,8 @@ Original expression:
 QVERIFY2(!target.isEmpty(), "fixture has no alternate plain sample for picker commit contract")
 
 A013 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:79
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
 ;
     search->setText(target);
@@ -183,8 +189,8 @@ Original expression:
 QVERIFY(auditioned.contains(target))
 
 A014 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:80
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
 ;
 
@@ -193,8 +199,8 @@ QVERIFY2(settle([this] { return m_window->m_workspace->sampleSet() != nullptr; }
              "first picker audition did not load the shared sample set")
 
 A015 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:82
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 ;
 
@@ -202,8 +208,8 @@ Original expression:
 QCOMPARE(m_browser->currentPickerRowSymbol(), target)
 
 A016 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:84
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S002, S014
 Source context since previous assertion:
 ;
     m_browser->clickCurrentPickerRow();
@@ -213,7 +219,7 @@ QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A017 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:85
 Disposition: PARTIAL
-Mapping/reason: S003 asserts the first picker row click leaves the editor draft symbol unchanged; the original inspects the published bank slot directly.
+Mapping/reason: S003 asserts the mounted first picker row click leaves the editor draft symbol unchanged; this row inspects the published bank slot directly, and no presenter predicate asserts the bank slot after an audition.
 Source context since previous assertion:
 ;
 
@@ -221,8 +227,8 @@ Original expression:
 QCOMPARE(m_browser->selectedBankView()->slotViews.at(m_dsSlot).voice->symbol, before.symbol)
 
 A018 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:87
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 ;
     m_browser->clickCurrentPickerRow();
@@ -231,8 +237,8 @@ Original expression:
 QVERIFY(!m_browser->samplePickerPopupIsVisible())
 
 A019 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:88
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 ;
 
@@ -240,8 +246,8 @@ Original expression:
 QVERIFY(stops > 0)
 
 A020 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:89
-Disposition: PARTIAL
-Mapping/reason: S004 asserts the mounted second click commits the selected symbol into the editor draft; the original additionally reads the published bank slot.
+Disposition: MATCHED
+Mapping: S004, S016
 Source context since previous assertion:
 ;
 
@@ -254,8 +260,8 @@ QVERIFY2(settle([this, &target] {
              "second picker click did not commit selected sample symbol")
 
 A021 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:95
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -263,8 +269,8 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A022 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:96
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -272,8 +278,8 @@ Original expression:
 QVERIFY(m_browser->selectedBankView()->dirty)
 
 A023 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:98
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S018, S019
 Source context since previous assertion:
 ;
     requestUndo();
@@ -287,8 +293,8 @@ QVERIFY2(settle([this, &before] {
              "sample picker undo did not restore the voice symbol")
 
 A024 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:104
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S018 asserts the mounted undo restores the editor draft symbol; the picker's republished current symbol after that undo is unproved on either lane.
 Source context since previous assertion:
 ;
 
@@ -296,8 +302,8 @@ Original expression:
 QCOMPARE(m_browser->samplePickerCurrentSymbol(), before.symbol)
 
 A025 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:108
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 ;
 
@@ -308,8 +314,8 @@ Original expression:
 QVERIFY(search)
 
 A026 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:112
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 ;
     const QString unlisted = QStringLiteral("VgSaveCheckUnlisted");
@@ -325,8 +331,8 @@ QVERIFY2(settle([this, &unlisted] {
              "unlisted typed picker symbol did not commit")
 
 A027 | VoicegroupSaveTest::samplePickerAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:119
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
 ;
     requestUndo();
@@ -340,8 +346,8 @@ QVERIFY2(settle([this, &before] {
              "unlisted typed picker symbol undo did not restore clean voice")
 
 A028 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:130
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
 ;
 }
@@ -354,8 +360,8 @@ Original expression:
 QVERIFY(m_browser->hasSamplePickerEditor())
 
 A029 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:138
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
 ;
     QList<VgAuditionKind> kinds;
@@ -370,8 +376,8 @@ Original expression:
 QVERIFY(m_browser->samplePickerPopupIsVisible())
 
 A030 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:139
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
 ;
 
@@ -381,8 +387,8 @@ QVERIFY2(m_browser->selectFirstKeysplitPickerRow(),
              "and sound/voicegroups/fixture_rich.inc")
 
 A031 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:142
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 ;
 
@@ -390,8 +396,8 @@ Original expression:
 QVERIFY(!kinds.isEmpty())
 
 A032 | VoicegroupSaveTest::samplePickerKeysplitAuditions | src/checks/voicegroupsave/picker.cpp:143
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 ;
 
@@ -399,8 +405,8 @@ Original expression:
 QCOMPARE(kinds.last(), VgAuditionKind::Keysplit)
 
 A033 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:149
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
 }
@@ -414,8 +420,8 @@ QVERIFY2(waves.size() >= 2, "required staged programmable waves missing: >=2 ent
                                 "sound/programmable_wave_data.inc")
 
 A034 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:161
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
 ;
     m_window->show();
@@ -433,8 +439,8 @@ Original expression:
 QVERIFY(m_browser->activateVoiceType(VgMacro::ProgWave))
 
 A035 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:162
-Disposition: PARTIAL
-Mapping/reason: S006 asserts the mounted editor switches to wave macro; the original also inspects the published bank slot after worker apply.
+Disposition: MATCHED
+Mapping: S016, S023
 Source context since previous assertion:
 ;
 
@@ -447,8 +453,8 @@ QVERIFY2(settle([this] {
              "switching the DirectSound slot to programmable wave did not settle")
 
 A036 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:168
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
 ;
 
@@ -460,8 +466,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A038 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:171
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S022 asserts the wave list holds only catalog wave symbols; the picker's current symbol at open, which this row reads from the slot's wave voice, is unproved on either lane.
 Source context since previous assertion:
 ;
 
@@ -469,8 +475,8 @@ Original expression:
 QCOMPARE(m_browser->samplePickerCurrentSymbol(), waveVoice.symbol)
 
 A039 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:174
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
     m_browser->openSamplePickerPopup();
@@ -481,8 +487,8 @@ QVERIFY(std::all_of(listed.cbegin(), listed.cend(),
                         [&waves](const QString &symbol) { return waves.contains(symbol); }))
 
 A040 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:176
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
 
@@ -490,8 +496,8 @@ Original expression:
 QVERIFY(m_browser->pickerRowsShowFullSymbols())
 
 A041 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:178
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
 ;
     const QString alternative = m_browser->firstAlternatePickerSymbol(waveVoice.symbol);
@@ -502,8 +508,8 @@ QVERIFY2(!alternative.isEmpty(),
              "sound/programmable_wave_data.inc")
 
 A042 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:182
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 ;
     QLineEdit *const search = m_browser->samplePickerFilterField();
@@ -512,8 +518,8 @@ Original expression:
 QVERIFY(search)
 
 A043 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:184
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
 ;
     search->setText(alternative);
@@ -522,8 +528,8 @@ Original expression:
 QVERIFY(!kinds.isEmpty())
 
 A044 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:185
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
 ;
 
@@ -531,8 +537,8 @@ Original expression:
 QCOMPARE(kinds.last(), VgAuditionKind::Wave)
 
 A045 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:187
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
 ;
     events::sendKey(*search, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QString(), false, 1);
@@ -546,8 +552,8 @@ QVERIFY2(settle([this, &alternative] {
              "typed wave picker commit did not apply")
 
 A046 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:194
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
 ;
     requestUndo();
@@ -561,8 +567,8 @@ QVERIFY2(settle([this, &waveVoice] {
              "wave symbol undo did not restore the wave preview")
 
 A047 | VoicegroupSaveTest::samplePickerWaveModeAuditionsAndCommits | src/checks/voicegroupsave/picker.cpp:201
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
 ;
     requestUndo();
@@ -601,3 +607,66 @@ Anchor: message "keysplit symbol switches to keysplit macro"
 
 S006 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "wave macro is selected"
+
+S007 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "sample picker becomes visible for macro "
+
+S008 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "sample picker search"
+
+S009 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "sample popup outline follows the dock palette"
+
+S010 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "search finds "
+
+S011 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the sampled loop publishes a mounted loop badge"
+
+S012 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "resolved audition details for "
+
+S013 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "filtering a wave auditions as wave"
+
+S014 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "popup close ends the audition"
+
+S015 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "closing the picker stops the current sample audition"
+
+S016 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a committed voice edit lands in the published bank"
+
+S017 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a bank edit preserves song dirtiness while dirtying the bank"
+
+S018 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "picker undo restores the symbol and preview"
+
+S019 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "voice edit undo restores the published voice"
+
+S020 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "an unlisted typed symbol commits via the fallback row"
+
+S021 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "keysplit and wave auditions carry their kind and the voice envelope"
+
+S022 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave mode lists the catalog's waves with full symbols" #2
+
+S023 | test_zPickerAuditionsAndCommitsSampleWaveAndKeysplit | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave macro is selected"
+
+S024 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "Return commits the typed wave symbol"
+
+S025 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "wave audition masks the selected CGB envelope to its hardware range"
+
+S026 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave undo restores the wave voice and the DirectSound original" #1
+
+S027 | test_yPickerReturnFallbackAndWaveUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "wave undo restores the wave voice and the DirectSound original" #2

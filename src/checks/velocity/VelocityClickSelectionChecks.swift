@@ -470,6 +470,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         playheadGuides: guides, eventList: eventList, palette: GridPalette(),
         typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
+            revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
     defer {

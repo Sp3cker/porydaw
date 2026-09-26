@@ -119,11 +119,20 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
         _ = try runBlocking {
             try await first.applyBankEdit(slot: 0, value: newer, expected: stale)
         }
+        let staleCount = peer.document.history.undoCount
+        let staleIndex = peer.document.history.undoIndex
+        let songBeforeStale = peer.document.state.file
         try runBlocking { _ = try await peer.undo() }
         report.expectEqual(expected: newer, actual: peer.bankSlots[0].voice, cppID: id,
                            what: "same-slot stale peer undo cannot replace the newer edit")
         report.expect(peer.document.history.canUndo && peer.document.isDirty,
                       cppID: id, message: "stale bank command prunes without dropping document history")
+        report.expect(peer.document.history.undoCount == staleCount - 1
+                      && peer.document.history.undoIndex == staleIndex - 1
+                      && peer.document.state.file == songBeforeStale
+                      && peer.bankSlots[0].voice == newer,
+                      cppID: id,
+                      message: "stale conflicts prune exactly one command preserving identities")
         try runBlocking { try await first.save() }
         report.expect(!first.bankDirty && !peer.bankDirty && !first.document.isDirty
                       && peer.document.isDirty,
@@ -549,6 +558,35 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
     report.expect(squareChannel == 0 && noiseChannel == 3, cppID: id,
                   message: "mounted voicegroup edit reaches the peer tab's audio "
                       + "as Sq1 then Noise native channels (\(squareChannel) -> \(noiseChannel))")
+    let releaseID = "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline"
+    guard let oldRelease = peer.bankSlots[0].voice?.release,
+          let nativeBefore = peer.bankLease.withVoices({ $0?.pointee.release }) else {
+        report.fail(releaseID, "selected peer has no native release envelope")
+        return
+    }
+    let nextRelease = oldRelease == 7 ? 6 : oldRelease + 1
+    dock.selectSlot(slot: 0)
+    dock.editorModel().change(field: "release", value: Int(nextRelease))
+    guard until({ peer.bankSlots[0].voice?.release == nextRelease
+                  && first.bankSlots[0].voice?.release == nextRelease }, seconds: 15) else {
+        report.fail(releaseID, "mounted release edit did not reach both shared bank views")
+        return
+    }
+    report.expect(peer.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease)
+                  && first.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease)
+                  && nativeBefore != UInt8(nextRelease),
+                  cppID: releaseID,
+                  message: "release edits and undo reach the audio-bound voicegroup bytes")
+    app.requestUndo()
+    guard until({ peer.bankSlots[0].voice?.release == oldRelease
+                  && first.bankSlots[0].voice?.release == oldRelease }, seconds: 15) else {
+        report.fail(releaseID, "mounted release undo did not restore both shared bank views")
+        return
+    }
+    report.expect(peer.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore
+                  && first.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore,
+                  cppID: releaseID,
+                  message: "release edits and undo reach the audio-bound voicegroup bytes")
 }
 
 @MainActor
@@ -675,6 +713,20 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
         report.expectEqual(expected: result.0.lease.bankToken, actual: coordinatorSession.bankLease.bankToken,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                            what: "coordinator adopts the applied transition lease")
+        report.expect(coordinatorSession.document.history.undoIndex == 1
+                      && coordinatorSession.document.history.undoCount == 1,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                      message: "the session gate routes transitions and prunes stale conflicts")
+        try runBlocking { _ = try await coordinatorSession.undo() }
+        report.expect(coordinatorSession.document.history.undoIndex == 0
+                      && coordinatorSession.bankSlots[0].voice == original,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                      message: "the session gate routes transitions and prunes stale conflicts")
+        try runBlocking { _ = try await coordinatorSession.redo() }
+        report.expect(coordinatorSession.document.history.undoIndex == 1
+                      && coordinatorSession.bankSlots[0].voice == firstVoice,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                      message: "the session gate routes transitions and prunes stale conflicts")
     } catch {
         report.fail("voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                     "coordinator serialization scenario failed: \(error)")

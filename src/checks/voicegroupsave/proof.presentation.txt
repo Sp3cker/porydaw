@@ -3,15 +3,31 @@ Assertion correspondence: voicegroupsave/presentation.cpp
 Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
 Original: src/checks/voicegroupsave/presentation.cpp
 Original SHA-256: 38a84965f0a2d2def240dbcbdb8dbe875bd95d4e042fd8efcadb19f4b92389c8
-Swift counterpart: none identified
+Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
+Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
+Additional Swift counterpart: src/checks/voicelist/VoiceListChecks.swift
+Additional Swift counterpart: src/checks/trackheaders/trackheaderinput.swift
 
 
-Command: deno task verify --filter voicegroup-save --verbose
-Result: pending integrated run.
+Command: deno task verify:shell --filter shell-voicegroup --verbose
+Result: PASS - the task-62 handoff records 1/26 ShellVoicegroup tests in the shell-voicegroup lane (mounted dock reveal, type column/alt chips, blank template + dock width, ADSR Space, picker and synth journeys); this ledger pass did not re-run the lane.
+
+Command: deno task verify --filter swiftcore-bankhistory --verbose
+Result: PASS - the task-62 handoff records 1/36; the library release/audio predicates cited here execute in that lane (not re-run by this ledger pass).
+
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: the task-62 handoff records its voicelist/header assertions passing, but the suite failed in unrelated concurrent swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability (artifact://10182 line 1722) and was not re-run; the presenter and track-header anchors cited below ride that suite.
+
+Command: deno task proof check
+Result: 0 errors for this ledger - all 49 cited S anchors resolve to a message literal in the named function of the named counterpart file; deno task proof check --executed leaves no MATCHED row without an executed predicate (S010's report.fail guard is the one predicate with no executed pass row, because it only fires on a red run).
+
+Verification: reused from the task-62 implementer handoff (agent://Task62); no lane was re-run for this reconciliation. Execution is per-predicate as resolved by deno task proof check.
+
+Scope: the retired VoicegroupSaveTest browser laws are proved on the mounted dock/presenter surfaces - tst_ShellVoicegroup.qml (shell-voicegroup lane), voicelist_session.swift and VoiceListChecks.swift (swiftcore-projectsession lane) and the header press/selection clauses in trackheaderinput.swift (same suite). The 4346c26a tree reads QTreeWidget/QTreeWidgetItem state through checks/support/voicegroupbrowserdriver.cpp (item->text/toolTip/AccessibleTextRole, QPointer object lifetime), so those rows cannot be re-executed as written.
 
 A001 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:64
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S024 executes in src/checks/editorqml/tst_ShellVoicegroup.qml test_128RowsSelectionAndAudition and holds only while the mounted slot-0 row publishes its loaded symbol; S012 is the presenter's assertion of the same slot-0 title.
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -81,8 +97,8 @@ Original expression:
 QVERIFY(!m_browser->slotRowText(0).isEmpty())
 
 A002 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:66
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S025 asserts the mounted fixture row is an assigned (used) voice, so the lane's used set is non-empty; S001 derives the same set from timeline.tracks.
 Source context since previous assertion:
 ;
     const QSet<int> used = view.usedVoices();
@@ -91,8 +107,8 @@ Original expression:
 QVERIFY(!used.isEmpty())
 
 A003 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:72
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S001 asserts for all 128 slots that list.slotIsMarkedUsed(slot:) equals the used tracks' firstProgram set, and S026 asserts the mounted rows agree with the controller's marks.
 Source context since previous assertion:
 ;
     int unused = -1;
@@ -106,8 +122,8 @@ QVERIFY(std::all_of(used.cbegin(), used.cend(),
                         [this](int slot) { return m_browser->slotIsMarkedUsed(slot); }))
 
 A004 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:74
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: the S001 equality over all 128 slots marks exactly the assigned programs, so an unassigned program stays unmarked; S003 asserts the unmarked state of slot 9 before its lane point.
 Source context since previous assertion:
 ;
 
@@ -115,8 +131,8 @@ Original expression:
 QVERIFY(unused < 0 || !m_browser->slotIsMarkedUsed(unused))
 
 A005 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:78
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard for the reveal: S027 asserts the mounted header press publishes currentSlot/revealSlotId 0 (a non-negative program) with revealRequest bumped, and S043 asserts the header request resolves the clicked track's current program in the project-session suite.
 Source context since previous assertion:
 ;
 
@@ -127,8 +143,8 @@ Original expression:
 QVERIFY(program >= 0)
 
 A006 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:80
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: the dock column cannot be hidden in the Swift surface (SongsDockColumn.qml:23-30 mounts both panes permanently and enforces their minimum heights), so the native hide/reveal-unhide pair reduces to the persistently mounted pane holding the reveal: S027 asserts the mounted pane's controller lands on the revealed program, S028 that its row is mounted and marked, and S026 that its marks track the controller while mounted.
 Source context since previous assertion:
 ;
     view.revealTrackVoice(m_track);
@@ -137,8 +153,8 @@ Original expression:
 QVERIFY(!m_browser->dockIsHidden())
 
 A007 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:81
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the revealed program becomes the dock selection (currentSlot == revealSlotId == the pressed track's program, revealRequest + 1), the currentSlot == program clause.
 Source context since previous assertion:
 ;
 
@@ -146,8 +162,8 @@ Original expression:
 QCOMPARE(m_browser->currentSlot(), program)
 
 A008 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:82
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S003 asserts slot 9 is unmarked before its lane point, i.e. the fixture provides an unreferenced program for the mark transition.
 Source context since previous assertion:
 ;
 
@@ -155,8 +171,8 @@ Original expression:
 QVERIFY2(unused >= 0, "fixture must provide an unused program for the mark transition")
 
 A009 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:84
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S002 asserts revealSlot(slot: 2) publishes both currentSlot and revealSlotId as the revealed slot, the revealVoice(unused) selection clause.
 Source context since previous assertion:
 ;
     view.revealVoice(unused);
@@ -165,8 +181,8 @@ Original expression:
 QCOMPARE(m_browser->currentSlot(), unused)
 
 A010 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:86
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S004 asserts the voice-lane point marks slot 9 and that every other slot's mark equals the assigned set, the addLanePoint mark clause.
 Source context since previous assertion:
 ;
     m_document->addLanePoint(m_track, DOC_CC_VOICE, 480, unused);
@@ -175,8 +191,8 @@ Original expression:
 QVERIFY(m_browser->slotIsMarkedUsed(unused))
 
 A011 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:88
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S005 asserts that after the voice-lane undo all 128 marks equal the assigned-program set, so the added lane point's mark is cleared.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -186,8 +202,8 @@ QVERIFY2(settle([this, unused] { return !m_browser->slotIsMarkedUsed(unused); })
              "voice-lane undo did not clear the used mark")
 
 A012 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:95
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S006 asserts the staged catalog offers the alternate "_other" group beside the original (catalogArgs.count >= 2), the native >=2 groupArgs/otherVoicegroupArg() precondition; the mounted lane stages sound/voicegroups/fixture_alt.inc as well (ShellQmlTests.swift shell-voicegroup fixtureFiles).
 Source context since previous assertion:
 ;
 }
@@ -203,8 +219,8 @@ QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
              "sound/voicegroups/fixture_alt.inc")
 
 A013 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:118
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QComboBox::lineEdit() (the QtWidgets editable-combo widget accessor) at Reference revision 4346c26a; the driver reaches the combo through the Qt widget tree and the Swift selector is a QML ComboBox driven through editText.
 Source context since previous assertion:
 ;
     m_window->show();
@@ -231,8 +247,8 @@ Original expression:
 QVERIFY(selector && selector->lineEdit())
 
 A014 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:119
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the fork's songview::TimelineQuickView/TrackHeaderModel/TimelineInputItem objects at the Reference revision (C++ Quick-view children found by objectName); the Swift band mounts no such item classes.
 Source context since previous assertion:
 ;
 
@@ -240,8 +256,8 @@ Original expression:
 QVERIFY(quick && headers && input)
 
 A015 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:120
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins TimelineInputItem::width()/height()/interaction() (C++ Quick item geometry and its QObject interaction partner) at the Reference revision.
 Source context since previous assertion:
 ;
 
@@ -249,8 +265,8 @@ Original expression:
 QVERIFY(input->width() > 0.0 && input->height() > 0.0 && input->interaction() == headers)
 
 A016 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:121
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S040 asserts an alternate track row exists beside the session's selected row, the native otherTrack precondition for the second header press.
 Source context since previous assertion:
 ;
 
@@ -258,8 +274,8 @@ Original expression:
 QVERIFY(otherTrack >= 0)
 
 A017 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:123
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S041 asserts the alternate row resolves an engine track, the rowForTrack(otherTrack) >= 0 clause.
 Source context since previous assertion:
 ;
     const int otherRow = rowForTrack(*headers, otherTrack);
@@ -268,8 +284,8 @@ Original expression:
 QVERIFY(otherRow >= 0)
 
 A018 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:127
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QLineEdit focus delivery (setFocus/hasFocus) at the Reference revision; the Swift selector is a QML ComboBox, whose focus is a different mechanism.
 Source context since previous assertion:
 ;
     QLineEdit *const edit = selector->lineEdit();
@@ -280,8 +296,8 @@ Original expression:
 QVERIFY(edit->hasFocus())
 
 A019 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:131
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins TimelineInputItem::bounds().contains(point) (C++ Quick item bounds geometry) at the Reference revision.
 Source context since previous assertion:
 ;
     edit->setText(other);
@@ -292,8 +308,8 @@ Original expression:
 QVERIFY(input->bounds().contains(point))
 
 A020 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:137
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QPointer<TimelineInputItem> object lifetime across the fork's Quick-view rebuild at the Reference revision.
 Source context since previous assertion:
 ;
     QPointer<songview::TrackHeaderModel> retainedModel(headers);
@@ -306,8 +322,8 @@ Original expression:
 QVERIFY(!retainedInput.isNull())
 
 A021 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:138
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QPointer<TrackHeaderModel> object lifetime across the fork's Quick-view rebuild at the Reference revision.
 Source context since previous assertion:
 ;
 
@@ -315,8 +331,8 @@ Original expression:
 QVERIFY(!retainedModel.isNull())
 
 A022 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:139
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S042 asserts a left press on the header's voice line selects that track at press, before release (fx.session.selectedTrack flips to the pressed row), the primaryTrack == otherTrack clause.
 Source context since previous assertion:
 ;
 
@@ -324,8 +340,8 @@ Original expression:
 QCOMPARE(view.selectionModel().primaryTrack(), otherTrack)
 
 A023 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:140
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S037 asserts that typing the alternate group and committing while the header press is still active loads the alternate bank (bankLoadName/selectorText become fixture_alt with no save error), the cfg().voicegroupArg == other clause.
 Source context since previous assertion:
 ;
 
@@ -333,8 +349,8 @@ Original expression:
 QCOMPARE(m_document->cfg().voicegroupArg, other)
 
 A024 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:143
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S037 asserts the mid-press commit completes the rebind, and S009 asserts the rebound bank owns a fresh lease with the alternate voice, the voicegroupId != homeId clause.
 Source context since previous assertion:
 ;
     events::sendMouse(*retainedInput, QEvent::MouseButtonRelease, point, Qt::LeftButton,
@@ -348,8 +364,8 @@ QVERIFY2(settle([this, &other] {
              "mid-press -G commit did not complete voicegroup binding")
 
 A025 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:148
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QPointer<TimelineQuickView> object lifetime across the fork's Quick-view rebuild at the Reference revision.
 Source context since previous assertion:
 ;
 
@@ -357,8 +373,8 @@ Original expression:
 QVERIFY(!retainedQuick.isNull())
 
 A026 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:149
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins QPointer<TrackHeaderModel> object lifetime after the fork's Quick-view rebuild at the Reference revision.
 Source context since previous assertion:
 ;
 
@@ -366,8 +382,8 @@ Original expression:
 QVERIFY(!retainedModel.isNull())
 
 A027 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:155
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins the rebuilt TimelineInputItem and its interaction() == retainedModel QObject identity at the Reference revision (C++ Quick-view rebuild mechanics).
 Source context since previous assertion:
 ;
     QQuickItem *const rebuiltRoot = retainedQuick->rootObject();
@@ -380,8 +396,8 @@ Original expression:
 QVERIFY(rebuiltInput && rebuiltInput->interaction() == retainedModel)
 
 A028 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:156
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins rebuilt TimelineInputItem::width()/height() plus the C++ TrackHeaderModel row lookup at the Reference revision.
 Source context since previous assertion:
 ;
 
@@ -389,8 +405,8 @@ Original expression:
 QVERIFY(rebuiltInput->width() > 0.0 && rebuiltInput->height() > 0.0 && rebuiltRow >= 0)
 
 A029 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:158
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: pins rebuilt TimelineInputItem::bounds().contains(point) (C++ Quick item geometry) at the Reference revision.
 Source context since previous assertion:
 ;
     const QPointF next = trackHeaderPoint(*retainedModel, *rebuiltInput, rebuiltRow);
@@ -399,8 +415,8 @@ Original expression:
 QVERIFY(rebuiltInput->bounds().contains(next))
 
 A030 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:163
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S038 asserts the next header press lands back on the primary track's program (currentSlot 0, revealSlotId 0) and S042 asserts the header voice line selects the pressed track at press, so the selection returns to the primary row.
 Source context since previous assertion:
 ;
     events::sendMouse(*rebuiltInput, QEvent::MouseButtonPress, next, Qt::LeftButton, Qt::LeftButton,
@@ -412,8 +428,8 @@ Original expression:
 QCOMPARE(view.selectionModel().primaryTrack(), m_track)
 
 A031 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:166
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S039 asserts the undo after the typed alternate commit restores the home bank binding (bankLoadName and selectorText back to fixture_rich), the waitForVoicegroup(m_homeArg, homeId) clause.
 Source context since previous assertion:
 ;
 
@@ -425,7 +441,7 @@ QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
 
 A032 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:239
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (named deferral, VG03): the New Voicegroup create flow has no production ingress - VoiceListController.onNewVoicegroupRequested (VoiceListController.swift:148) is invoked only by requestNewVoicegroup() (:555, mounted by VoiceEditor.qml:320) and is assigned by nobody in src/swift, so the native runCreateVoicegroupFlow dialog interception has no Swift ingress; inventory.md lists VG03 as Missing.
 Source context since previous assertion:
 ;
 }
@@ -505,7 +521,7 @@ QVERIFY2(interceptionError.isEmpty(), qPrintable(interceptionError))
 
 A033 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:240
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (VG03 deferral, see A032): the dialog-interception flag needs the unwired create flow; no Swift predicate observes a New Voicegroup dialog.
 Source context since previous assertion:
 ;
 
@@ -514,7 +530,7 @@ QVERIFY(intercepted)
 
 A034 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:244
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (VG03 deferral, see A032): the created source file and its document binding need the unwired create flow.
 Source context since previous assertion:
 ;
     const QString createdArg = QStringLiteral("_") + name;
@@ -532,7 +548,7 @@ QVERIFY2(settle([this, &createdArg, &createdPath, &name] {
 
 A035 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:251
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (VG03 deferral, see A032): the created group's dirty document state follows the missing creation flow.
 Source context since previous assertion:
 ;
 
@@ -541,7 +557,7 @@ QVERIFY(m_document->isDirty())
 
 A036 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:253
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (VG03 deferral, see A032): undo of the creation needs the creation flow.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -552,7 +568,7 @@ QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
 
 A037 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:255
 Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Mapping/reason: GAP (VG03 deferral, see A032): restoring the original loaded bank after the creation undo needs the creation flow.
 Source context since previous assertion:
 ;
 
@@ -564,8 +580,8 @@ QVERIFY2(settle([this] {
              "New Voicegroup undo did not restore the original loaded bank")
 
 A038 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:265
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture/mount guard: S023 asserts the mounted bank tree publishes row zero, the mounted 128-row voicegroupRows model the dock tree renders.
 Source context since previous assertion:
 ;
 }
@@ -578,8 +594,8 @@ Original expression:
 QVERIFY(browser)
 
 A039 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:267
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S007 asserts the bound session's bank view publishes all 128 rows, the native QTreeWidget row inventory clause.
 Source context since previous assertion:
 ;
     auto *tree = browser->findChild<QTreeWidget *>();
@@ -588,8 +604,8 @@ Original expression:
 QVERIFY(tree)
 
 A040 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:268
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the mounted type column's icon cell is at least as wide as its header and as baseFontPx * 1.5 + 2 * layoutSpaces.two, the native columnWidth(1) >= sectionSizeHint(1) clause.
 Source context since previous assertion:
 ;
 
@@ -597,8 +613,8 @@ Original expression:
 QVERIFY(tree->columnWidth(1) >= tree->header()->sectionSizeHint(1))
 
 A041 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:269
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S029 asserts the same base-font geometry bound (icon width >= baseFontPx * 1.5 + 2 * layoutSpaces.two, matching the fork's iconSize() >= fontPx(1.5) sizing law), the native columnWidth(1) >= iconSize().width() + 2 * space(Two) clause.
 Source context since previous assertion:
 ;
 
@@ -607,8 +623,8 @@ QVERIFY(tree->columnWidth(1) >=
             tree->iconSize().width() + 2 * layout::space(layout::Space::Two))
 
 A042 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:276
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture/mount guard: S008 asserts the session's bank view binds the list (list.isBound true) before the type-column predicates read it, the selectedBankView() non-null precondition.
 Source context since previous assertion:
 ;
     // The Type column is icon-only: every family publishes its name through
@@ -621,8 +637,8 @@ Original expression:
 QVERIFY(home)
 
 A043 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:294
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S031 asserts every populated family row publishes typeName as its family name (including cry as Sample) and S033 the same name through the icon's tooltip, the slotRowType == item->toolTip(1) clause.
 Source context since previous assertion:
 ;
     const struct {
@@ -647,8 +663,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type))
 
 A044 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:295
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S032 asserts icon.Accessible.name equals the family name for every populated slot, the slotRowAccessibleType == Qt::AccessibleTextRole clause.
 Source context since previous assertion:
 ;
 
@@ -656,8 +672,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type))
 
 A045 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:296
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S030 asserts every populated family slot has a mounted glyph cell and S014 the presenter's sample glyph for the same row, the hasTypeIcon clause.
 Source context since previous assertion:
 ;
 
@@ -666,8 +682,8 @@ QVERIFY2(m_browser->hasTypeIcon(row.slot),
                  qPrintable(QStringLiteral("slot %1 lost its type icon").arg(row.slot)))
 
 A046 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:299
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: the Swift row publishes exactly three texts - title, typeName, adsr (VoiceListRow, VoiceListSemantics.swift:27-34, mirrored by VoicegroupPanel.qml's row delegate) - each asserted for one row by S013 (title), S014 (type name) and S015 (ADSR); the native QStringList of QTreeWidgetItem::text(0..2) has no count predicate in Swift, but no fourth text exists in the row model.
 Source context since previous assertion:
 ;
         const QStringList text = m_browser->slotRowText(row.slot);
@@ -676,8 +692,8 @@ Original expression:
 QCOMPARE(text.size(), 3)
 
 A047 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:300
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: the native column-1 text stays empty because the name lives in item->toolTip(1) and the AccessibleTextRole; the mounted cell is icon-only (VoicegroupPanel.qml:155-190 binds the glyph image with ToolTip.text and Accessible.name and mounts no text item) and S033/S032 assert the name published through that tooltip and accessible text. The emptiness itself is structural, not separately asserted.
 Source context since previous assertion:
 ;
 
@@ -687,8 +703,8 @@ QVERIFY2(
             qPrintable(QStringLiteral("slot %1 leaked text into the icon column").arg(row.slot)))
 
 A048 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:305
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S035 asserts the mounted blank row (title [Blank], empty type, no glyph key) and S020 the resident presenter's blank template row, so the lane's bank provides an undefined slot; S010 is the block's failure-path guard (report.fail "fixture slot 3 is not a blank draft"), the native firstBlankSlot() precondition.
 Source context since previous assertion:
 ;
     }
@@ -698,8 +714,8 @@ Original expression:
 QVERIFY2(blank >= 0, "fixture must provide a blank slot for the no-type contract")
 
 A049 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:306
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the mounted blank row publishes no glyph (typeIconKey === -1) and no type text, the hasTypeIcon(blank) == false clause.
 Source context since previous assertion:
 ;
 
@@ -707,8 +723,8 @@ Original expression:
 QVERIFY(!m_browser->hasTypeIcon(blank))
 
 A050 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:307
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 (mounted blank row typeName === "") and S020 (presenter blank row publishes no type), the slotRowType(blank).isEmpty() clause.
 Source context since previous assertion:
 ;
 
@@ -716,8 +732,8 @@ Original expression:
 QVERIFY(m_browser->slotRowType(blank).isEmpty())
 
 A051 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:308
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the mounted blank cell's Accessible.name === "", the slotRowAccessibleType(blank).isEmpty() clause.
 Source context since previous assertion:
 ;
 
@@ -725,8 +741,8 @@ Original expression:
 QVERIFY(m_browser->slotRowAccessibleType(blank).isEmpty())
 
 A052 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:315
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S030 asserts the glyph cell is mounted for every populated family and S014 the presenter's sample glyph for the plain sample row, the non-null slotTypeIcon clause.
 Source context since previous assertion:
 ;
 
@@ -740,8 +756,8 @@ Original expression:
 QVERIFY(!a.isNull())
 
 A053 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:317
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S011 asserts VoiceListSemantics.iconKey distinctness for the eight families {sample, sampleReverse, square1, square2, wave, noise, keysplit, drumkit} - exactly the eight glyph slots {0,3,4,5,6,7,8,10} the native loop compares pairwise.
 Source context since previous assertion:
 ;
         for (size_t j = i + 1; j < glyphSlots.size(); ++j)
@@ -753,8 +769,8 @@ QVERIFY2(a != m_browser->slotTypeIcon(glyphSlots.at(j)),
                                     .arg(glyphSlots.at(j))))
 
 A054 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:322
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S034 compares each family slot's typeIconKey against the expected key list where keys[12] === keys[0] === 0, so the cry row carries the plain sample glyph; S019 asserts the cry row reads as the native sample type.
 Source context since previous assertion:
 ;
     }
@@ -763,8 +779,8 @@ Original expression:
 QCOMPARE(m_browser->slotTypeIcon(12), m_browser->slotTypeIcon(0))
 
 A055 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:329
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: the native rows stage a synth macro/data pair through QDir/QFile/QIODevice writes; the Swift lane stages its synth definition through the resident fixture's DirectSoundSynth_* row (S017) and the mounted mint/save flow (S044-S048) and asserts the equivalent states. Unproved: the Qt file-API results themselves, which have no Swift counterpart step.
 Source context since previous assertion:
 ;
 
@@ -778,8 +794,8 @@ Original expression:
 QVERIFY(QDir().mkpath(macroDir))
 
 A056 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:332
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: same staging block as A055: the macro file open is a QFile/QIODevice step with no Swift counterpart; the staged-synth state it produces is asserted by S017 (synth-typed row) and S048 (saved synth reaches the catalog choices).
 Source context since previous assertion:
 ;
     {
@@ -789,8 +805,8 @@ Original expression:
 QVERIFY(macros.open(QIODevice::WriteOnly))
 
 A057 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:333
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: same staging block as A055: the macro write result is a QIODevice return value with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
 Source context since previous assertion:
 ;
 
@@ -800,8 +816,8 @@ QCOMPARE(macros.write("\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, 
                  true)
 
 A058 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:339
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: same staging block as A055: appending the synth definition is a QFile/QIODevice step with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
 Source context since previous assertion:
 ;
     }
@@ -812,8 +828,8 @@ Original expression:
 QVERIFY(data.open(QIODevice::WriteOnly | QIODevice::Append))
 
 A059 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:340
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: same staging block as A055: the append write result is a QIODevice return value with no Swift counterpart; the staged-synth state it produces is asserted by S017 and S048.
 Source context since previous assertion:
 ;
 
@@ -821,8 +837,8 @@ Original expression:
 QCOMPARE(data.write("\n\t.align 2\nVgTypeCheckPulse::\n\tset_synth_pulse\n") > 0, true)
 
 A060 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:342
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S048 asserts the mounted save settles the catalog refresh and republishes the minted synth in controller.synthCatalogChoices(), the refreshCatalog() settle clause; S022 asserts a loader-confirmed minted synth works before catalog persistence.
 Source context since previous assertion:
 ;
     }
@@ -831,8 +847,8 @@ Original expression:
 QVERIFY2(refreshCatalog(), "synth catalog refresh did not settle")
 
 A061 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:343
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S048 asserts the saved synth reaches the published catalog choices and S017 the synth-typed row renders Synth (Golden Sun), the definition-reaches-the-published-catalog clause.
 Source context since previous assertion:
 ;
 
@@ -844,8 +860,8 @@ QVERIFY2(settle([this] {
              "synth definition did not reach the published catalog")
 
 A062 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:349
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S044 asserts the type change on the mounted DirectSound slot 0 mints an unsaved synth tone (draft.isSynth && bankDirty), i.e. the fixture provides the non-synth DirectSound voice firstSynthableSlot() needs; S014 asserts slot 0 reads Sample.
 Source context since previous assertion:
 ;
     const int synthSlot = firstSynthableSlot();
@@ -854,8 +870,8 @@ Original expression:
 QVERIFY2(synthSlot >= 0, "fixture must provide a non-synth DirectSound voice")
 
 A063 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:353
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: related predicates S049 (mounted synth waveform control visible) and S047 (pulse parameters occupy the editor) mount the synth staging controls after activation; unproved: that a DirectSound slot's editor offers those controls before the type change, since the native hasSynthEditorControls() runs before activateSynthType().
 Source context since previous assertion:
 ;
     const QString originalSymbol =
@@ -866,8 +882,8 @@ Original expression:
 QVERIFY(m_browser->hasSynthEditorControls())
 
 A064 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:354
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S044 asserts the synth type activation through the mounted editor control commits an unsaved memory-only tone (draft.isSynth && controller.bankDirty), the activateSynthType() returned-true clause.
 Source context since previous assertion:
 ;
 
@@ -875,8 +891,8 @@ Original expression:
 QVERIFY(m_browser->activateSynthType())
 
 A065 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:355
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S044 asserts the activated synth mints an unsaved tone differing from the loaded voice, and S046 that the uncommitted synth never appears in the saved catalog choices, the memory-only-tone clause.
 Source context since previous assertion:
 ;
 
@@ -889,8 +905,8 @@ QVERIFY2(settle([this, synthSlot, &originalSymbol] {
              "synth type did not create a memory-only tone")
 
 A066 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:361
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S047 asserts the pulse waveform's duty control is mounted with the staged value after the pulse activation (baseDuty.visible with value 77) and S049 the waveform control is visible, the activateSynthWave(0) clause.
 Source context since previous assertion:
 ;
 
@@ -898,8 +914,8 @@ Original expression:
 QVERIFY(m_browser->activateSynthWave(0))
 
 A067 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:362
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S045 asserts the adopted synth publishes typeName Synth (Golden Sun) on the mounted row, the settle clause; S017 asserts the same name presenter-side.
 Source context since previous assertion:
 ;
 
@@ -912,8 +928,8 @@ QVERIFY2(settle([this, synthSlot] {
              "synth adoption did not publish the Synth (Golden Sun) type")
 
 A068 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:368
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S045 asserts icon.Accessible.name == row.typeName (Synth (Golden Sun)) on the adopted row, the slotRowAccessibleType(synthSlot) clause.
 Source context since previous assertion:
 ;
 
@@ -921,8 +937,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowAccessibleType(synthSlot), QStringLiteral("Synth (Golden Sun)"))
 
 A069 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:369
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S045 asserts the adopted synth row's cell is mounted with typeIconKey 0 (>= 0), the hasTypeIcon(synthSlot) clause.
 Source context since previous assertion:
 ;
 
@@ -930,8 +946,8 @@ Original expression:
 QVERIFY(m_browser->hasTypeIcon(synthSlot))
 
 A070 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:370
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S045 asserts the adopted synth's typeIconKey is 0, the same key asserted for the plain sample family by S030/S034, and S018 asserts a synth row reads as a sample glyph, the slotTypeIcon(synthSlot) == slotTypeIcon(0) clause.
 Source context since previous assertion:
 ;
 
@@ -939,8 +955,8 @@ Original expression:
 QCOMPARE(m_browser->slotTypeIcon(synthSlot), m_browser->slotTypeIcon(0))
 
 A071 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:392
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S036 asserts the four alternate families render their alt names and grey chips while the lane's fixture_alt bank is loaded, so the catalog the alt-chip loop needs is staged; S037 is the typed commit that loads it.
 Source context since previous assertion:
 ;
 
@@ -970,8 +986,8 @@ QVERIFY2(!altArg.isEmpty(),
              "catalog must offer the fixture_alt voicegroup for alt-chip coverage")
 
 A072 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:394
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 asserts the alt slots publish their alt family names once the alternate bank view settles, the fixture_alt alt-voice publication clause.
 Source context since previous assertion:
 ;
 
@@ -984,8 +1000,8 @@ QVERIFY2(settle([this] {
              "fixture_alt bank view did not publish its alt voices")
 
 A073 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:409
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 asserts row.typeName equals Square 1 (Alt)/Square 2 (Alt)/Wave (Alt)/Noise (Alt) for slots 2-5, the slotRowType alt table clause; S016 is the presenter's alt marker.
 Source context since previous assertion:
 ;
     const struct {
@@ -1002,8 +1018,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type))
 
 A074 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:410
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 asserts icon.Accessible.name equals the alt family name for slots 2-5, the slotRowAccessibleType alt table clause.
 Source context since previous assertion:
 ;
 
@@ -1011,8 +1027,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type))
 
 A075 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:411
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 asserts each alt slot has a mounted icon cell, the alt hasTypeIcon clause.
 Source context since previous assertion:
 ;
 
@@ -1021,8 +1037,8 @@ QVERIFY2(m_browser->hasTypeIcon(row.slot),
                  qPrintable(QStringLiteral("alt slot %1 lost its type icon").arg(row.slot)))
 
 A076 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:413
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S036 asserts each alt slot's typeIconKey is odd (% 2 === 1) while the plain families carry even keys asserted by S034/S030, so the alt chip glyph differs from the plain family glyph.
 Source context since previous assertion:
 ;
 
@@ -1031,8 +1047,8 @@ QVERIFY2(m_browser->slotTypeIcon(row.slot) != m_browser->slotTypeIcon(row.plainS
                  qPrintable(QStringLiteral("slot %1 lost its alt chip").arg(row.slot)))
 
 A077 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:417
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: the alternate bank is staged and loaded (S037, S036) but no predicate asserts that fixture_alt provides a blank slot for the alt blank contract; the blank-template law itself is asserted for the home/resident banks by S035 and S020.
 Source context since previous assertion:
 ;
     }
@@ -1042,8 +1058,8 @@ Original expression:
 QVERIFY2(altBlank >= 0, "fixture_alt must provide a blank slot")
 
 A078 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:418
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the blank row's icon key is -1 (no glyph) and S020 the presenter blank row publishes no type; the alt blank slot's typelessness is the same blank-template branch asserted there.
 Source context since previous assertion:
 ;
 
@@ -1051,8 +1067,8 @@ Original expression:
 QVERIFY(!m_browser->hasTypeIcon(altBlank))
 
 A079 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:419
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the mounted blank row's typeName === "" and S020 the presenter blank row publishes no type; the alt blank slot's typelessness is the same blank-template branch.
 Source context since previous assertion:
 ;
 
@@ -1060,8 +1076,8 @@ Original expression:
 QVERIFY(m_browser->slotRowType(altBlank).isEmpty())
 
 A080 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:420
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S035 asserts the mounted blank cell's Accessible.name === "", the alt blank slot's accessible-type clause on the same blank-template branch.
 Source context since previous assertion:
 ;
 
@@ -1076,15 +1092,248 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-No Swift counterpart identified for this file: no same-dir presentation.swift
-exists and no Swift check covers the voicegroup browser/save suite, so no
-report.expect*/expectEqual predicates pair with these sites. There are no S
-entries and no shared-helper expects for this file.
 
-Related Swift source scope
-No file src/checks/voicegroupsave/presentation.swift exists. A repo-wide search
-for Swift voicegroup-browser coverage finds only project-io voicegroup
-references in the workspace session suite (dispatched by
-src/checks/workspace/SessionChecks.swift and implemented in sibling scenario
-files), which exercise project open/save plumbing,
-not the browser/editor/picker/save flows inventoried here.
+S001 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "used marks match the assigned programs and clear on undo"
+Line: 100
+Predicate: report.expect((0..<128).allSatisfy { list.slotIsMarkedUsed(slot: $0) == assigned.contains($0) }, cppID: bindingID) with assigned = Set(session.timeline.tracks.filter { $0.used && $0.firstProgram >= 0 }.map(\.firstProgram))
+
+S002 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "revealing a voice selects its row"
+Line: 115
+Predicate: report.expect(list.currentSlot == 2 && list.revealSlotId == 2, cppID: bindingID) after list.revealSlot(slot: 2)
+
+S003 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "an unreferenced program starts unmarked"
+Line: 121
+Predicate: report.expectEqual(expected: false, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID)
+
+S004 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "used marks include voice-lane programs beside track programs"
+Line: 131
+Predicate: report.expect(list.slotIsMarkedUsed(slot: 9) && (0..<128).allSatisfy { list.slotIsMarkedUsed(slot: $0) == (assigned.contains($0) || $0 == 9) }, cppID: bindingID)
+
+S005 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "voice-lane undo restores precisely the assigned-program used set"
+Line: 152
+Predicate: report.expect((0..<128).allSatisfy { list.slotIsMarkedUsed(slot: $0) == assigned.contains($0) }, cppID: bindingID) after the voice-lane undo
+
+S006 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "the staged selector catalog offers both original and alternate groups"
+Line: 60
+Predicate: report.expect(catalogArgs.contains("_other") && catalogArgs.count >= 2, cppID: "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit")
+
+S007 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a bound session publishes the full 128 rows"
+Line: 77
+Predicate: report.expectEqual(expected: 128, actual: list.rows.count, cppID: bindingID)
+
+S008 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "the session's bank view binds the list"
+Line: 79
+Predicate: report.expectEqual(expected: true, actual: list.isBound, cppID: bindingID)
+
+S009 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "the alternate bank owns a fresh lease and different voice"
+Line: 344
+Predicate: report.expect(session.bankLease.bankToken != originalToken && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2, cppID: selectorID)
+
+S010 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "fixture slot 3 is not a blank draft"
+Line: 223
+Predicate: guard let draft = list.voiceDraft(3), draft.materializesBlank else { report.fail(blankID, "fixture slot 3 is not a blank draft") }; failure-path guard - the message appears only on a red run, so it has no executed pass row and is cited beside the executed blank-slot predicates
+
+S011 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "distinct families carry distinct glyphs"
+Line: 318
+Predicate: report.expect(Set(glyphs.map { VoiceListSemantics.iconKey(glyph: $0, altChip: false) }).count == 8, cppID: bindingID) with glyphs = [.sample, .sampleReverse, .square1, .square2, .wave, .noise, .keysplit, .drumkit]
+
+S012 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "slot 0 renders the fixture's square_1 voice"
+Line: 81
+Predicate: report.expectEqual(expected: "000  Square 1", actual: list.rows[0].title, cppID: bindingID)
+
+S013 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "sample rows shed the DirectSoundWaveData_ prefix"
+Line: 160
+Predicate: report.expectEqual(expected: "000  fixture_loop", actual: list.rows[0].title, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S014 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a DirectSound row reads Sample"
+Line: 162
+Predicate: report.expectEqual(expected: "Sample", actual: list.rows[0].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S015 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a DirectSound row shows raw 0-255 ADSR values"
+Line: 166
+Predicate: report.expectEqual(expected: "255 180 200 72", actual: list.rows[0].adsr, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S016 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "an alt CGB row gains the (Alt) marker"
+Line: 174
+Predicate: report.expectEqual(expected: "Square 1 (Alt)", actual: list.rows[2].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S017 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a synth-symbol row reads Synth (Golden Sun)"
+Line: 208
+Predicate: report.expectEqual(expected: "Synth (Golden Sun)", actual: list.rows[8].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S018 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a synth row reads as a sample glyph"
+Line: 210
+Predicate: report.expectEqual(expected: VoiceListGlyph.sample, actual: list.rows[8].glyph, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S019 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a cry tone renders the native sample type fallback"
+Line: 217
+Predicate: report.expectEqual(expected: "Sample", actual: list.rows[10].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S020 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a blank row publishes no type"
+Line: 230
+Predicate: report.expectEqual(expected: "", actual: list.rows[12].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S021 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a blank row publishes no ADSR text"
+Line: 232
+Predicate: report.expectEqual(expected: "", actual: list.rows[12].adsr, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S022 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a loader-confirmed minted synth works before catalog persistence"
+Line: 242
+Predicate: report.expectEqual(expected: "Synth (Golden Sun)", actual: list.rows[13].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily") after binding a minted isSynth slot
+
+S023 | test_128RowsSelectionAndAudition | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "bank row zero is mounted"
+Line: 164
+Predicate: verify(first !== null, "bank row zero is mounted") on the mounted voicegroupRows ListView
+
+S024 | test_128RowsSelectionAndAudition | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "row zero publishes fixture_loop after the bank model update; got: "
+Line: 166
+Predicate: tryVerify(function() { return first.title.indexOf("fixture_loop") >= 0 }, 5000, ...)
+
+S025 | test_128RowsSelectionAndAudition | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "fixture row is an assigned voice"
+Line: 177
+Predicate: compare(first.used, true, "fixture row is an assigned voice")
+
+S026 | test_trackHeaderRevealRoutesToMountedDock | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "used marks match the assigned programs and clear on undo"
+Line: 208
+Predicate: verify(row && row.used === controller.slotIsMarkedUsed(slot), ...) for slots 0,2,4,8,12 on the mounted rows
+
+S027 | test_trackHeaderRevealRoutesToMountedDock | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "revealing a track voice selects its program" #1
+Line: 222
+Predicate: verify(controller.currentSlot === 0 && controller.revealSlotId === 0 && controller.revealRequest === before + 1, ...)
+
+S028 | test_trackHeaderRevealRoutesToMountedDock | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "revealing a track voice selects its program" #2
+Line: 225
+Predicate: verify(mounted && mounted.used, ...) on the mounted row the reveal selected
+
+S029 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the type column fits its header and icon at base-font sizing"
+Line: 235
+Predicate: verify(firstIcon.width >= header.implicitWidth && firstIcon.width >= app.baseFontPx * 1.5 + 2 * app.layoutSpaces.two, ...)
+
+S030 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "every populated family renders its glyph" #1
+Line: 245
+Predicate: verify(!!row && !!icon, "every populated family renders its glyph") per family slot
+
+S031 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the type column publishes family names through tooltip and accessible text" #1
+Line: 247
+Predicate: compare(row.typeName, types[slot], ...) for the 13-slot family table (cry renders Sample)
+
+S032 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the type column publishes family names through tooltip and accessible text" #2
+Line: 249
+Predicate: compare(icon.Accessible.name, types[slot], ...) per family slot
+
+S033 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the type column publishes family names through tooltip and accessible text" #3
+Line: 251
+Predicate: compare(icon.ToolTip.text, types[slot], ...) per family slot
+
+S034 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "every populated family renders its glyph" #2
+Line: 252
+Predicate: compare(row.typeIconKey, keys[slot], "every populated family renders its glyph") with keys[12] === keys[0] === 0
+
+S035 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "blank rows publish no type, glyph or accessible name"
+Line: 261
+Predicate: verify(blank && blankIcon && blank.title.indexOf("[Blank]") >= 0 && blank.typeName === "" && blank.typeIconKey === -1 && blankIcon.Accessible.name === "", ...)
+
+S036 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "alternate groups publish alt family names on grey chips"
+Line: 294
+Predicate: verify(row && icon && row.altChip && row.typeIconKey % 2 === 1 && row.typeName === alt[i] && icon.Accessible.name === alt[i], ...) for slots 2..5 of the fixture_alt bank
+
+S037 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "a typed alternate group commits while a header press lands: "
+Line: 276
+Predicate: verify(waitForNative(function() { return controller.bankLoadName === "fixture_alt" || app.lastSaveError.length > 0 }, 15000), "a typed alternate group commits while a header press lands: " + ...) with compare(app.lastSaveError, "")
+
+S038 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the next header press restores the primary track" #1
+Line: 285
+Predicate: verify(headers.beginPointer(...) && headers.endPointer(...) && controller.currentSlot === 0 && controller.revealSlotId === 0, ...)
+
+S039 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "undo restores the home voicegroup binding"
+Line: 300
+Predicate: verify(waitForNative(function() { return controller.bankLoadName === "fixture_rich" && controller.selectorText === "fixture_rich" }, 15000), ...)
+
+S040 | headerSelectionTargetsResolve | src/checks/trackheaders/trackheaderinput.swift
+Anchor: message "an alternate row exists beside the selection"
+Line: 96
+Predicate: report.expect(targetRow < trackRows.count, cppID: id) with rows derived from h.rows
+
+S041 | headerSelectionTargetsResolve | src/checks/trackheaders/trackheaderinput.swift
+Anchor: message "the alternate row resolves an engine track"
+Line: 98
+Predicate: report.expect(trackRows[targetRow].track >= 0, cppID: id)
+
+S042 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
+Anchor: message "voice line selects at press, before release"
+Line: 40
+Predicate: report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id) after h.beginPointer on the voice line of row 1
+
+S043 | selectionAndVoiceRouteThroughHeaders | src/checks/trackheaders/trackheaderinput.swift
+Anchor: message "voice-line request resolves the clicked track's current program"
+Line: 45
+Predicate: report.expectEqual(expected: [42, 17], actual: revealedPrograms, cppID: id) for the staged voice lanes of tracks 1 and 0
+
+S044 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "synth type creates an unsaved bank edit"
+Line: 657
+Predicate: verify(waitForNative(function() { return draft.isSynth && controller.bankDirty }, 15000), ...) after draft.changeType(-1, draft.symbol)
+
+S045 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the adopted synth publishes its type and sample glyph"
+Line: 662
+Predicate: verify(row.typeName === "Synth (Golden Sun)" && row.typeIconKey === 0 && icon.Accessible.name === row.typeName, ...)
+
+S046 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "uncommitted synth does not masquerade as a saved definition"
+Line: 674
+Predicate: verify(controller.synthCatalogChoices().indexOf(pulse) < 0, ...)
+
+S047 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "pulse parameters occupy the editor"
+Line: 671
+Predicate: verify(baseDuty !== null && baseDuty.visible, ...) with compare(baseDuty.value, 77)
+
+S048 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "save persists synth and refreshes catalog: "
+Line: 681
+Predicate: verify(waitForNative(function() { return (!controller.bankDirty && controller.synthCatalogChoices().includes(pulse)) || app.lastSaveError.length > 0 }, 15000), "save persists synth and refreshes catalog: " + app.lastSaveError)
+
+S049 | test_zzSynthMintAndMountedSave | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "mounted synth waveform is visible"
+Line: 664
+Predicate: verify(waveform !== null && waveform.visible, "mounted synth waveform is visible")

@@ -155,6 +155,8 @@ ColumnLayout {
                         objectName: "voicegroupTypeIcon_" + row.slot
                         Layout.preferredWidth: panel.typeWidth
                         Layout.fillHeight: true
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: row.typeName
                         HoverHandler { id: iconHover }
                         Rectangle {
                             anchors.centerIn: parent

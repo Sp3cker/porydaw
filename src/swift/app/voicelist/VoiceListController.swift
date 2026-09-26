@@ -390,6 +390,16 @@ public final class VoiceListController {
         revealRequest += 1
     }
 
+    @QtIgnored
+    public func revealTrackVoice(track: Int, session: DocumentSession) {
+        guard session.timeline.tracks.indices.contains(track) else { return }
+        let first = session.timeline.tracks[track].firstProgram
+        let program = first >= 0 ? first
+            : session.document.lanePoints(track: track, lane: .voice).first?.value ?? -1
+        guard program >= 0 else { return }
+        revealSlot(slot: program)
+    }
+
     // MARK: Used marks
 
     /// The programs the song actually references; their rows render marked.

@@ -5,14 +5,26 @@ Original: src/checks/voicegroupsave/editor.cpp
 Original SHA-256: 6186ed3eb7032d96a8a5c7afab089f76bfeb7462898e5d245e49364cd81ca4b7
 Swift counterpart: src/checks/editorqml/tst_ShellVoicegroup.qml
 Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
+Additional Swift counterpart: src/checks/voicelist/VoiceListChecks.swift
+Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
+Additional Swift counterpart: src/checks/workspace/bank_edits.swift
 
 
-Command: deno task verify --filter projectstore --filter swiftcore --verbose;
-deno task verify:shell --verbose (shell-voicegroup lane).
-Result: PASS for the swiftcore session predicates (focused run: 24 applicable
-entries, 7 filtered skips) and PASS for the shell-voicegroup lane of the full
-shell run; unrelated shell lanes failed under separate tasks. Retained native
-checks are not Swift parity evidence.
+Command: deno task verify:shell --filter shell-voicegroup --verbose
+Result: PASS - the task-62 handoff records 1/26 ShellVoicegroup tests in the shell-voicegroup lane (blank template + dock width, focused ADSR Space, release-spin and picker journeys); this ledger pass did not re-run the lane.
+
+Command: deno task verify --filter swiftcore-bankhistory --verbose
+Result: PASS - the task-62 handoff records 1/36; the release byte-parity predicates cited here (mountedEditReachesPeerTabAudio, releaseEditorBankHistorySemantics) execute in that lane.
+
+Command: deno task verify --filter swiftcore-projectsession --verbose
+Result: the task-62 handoff records its voicelist assertions passing, but the suite failed in unrelated concurrent swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability (artifact://10182 line 1722) and was not re-run; the presenter anchors cited below ride that suite.
+
+Command: deno task proof check
+Result: 0 errors for this ledger - all 32 cited S anchors resolve to a message literal in the named function of the named counterpart file; deno task proof check --executed leaves no MATCHED row without an executed predicate (S031's report.fail guard is the one predicate with no executed pass row, because it only fires on a red run).
+
+Verification: reused from the task-62 implementer handoff (agent://Task62); no lane was re-run for this reconciliation. Retained native checks are not Swift parity evidence.
+
+Note: this ledger is retained - A010, A021, A023 and A032 stay PARTIAL (each names the unproved conjunct); every other row is MATCHED or RETIRED-REPRESENTATION.
 
 A001 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:36
 Disposition: RETIRED-REPRESENTATION
@@ -21,8 +33,8 @@ A002 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voiceg
 Disposition: RETIRED-REPRESENTATION
 
 A003 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:45
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S011 asserts the mounted release spin's focused key edit commits through the bank pipeline (draft.release steps with the bank dirty); S010 drives the set-value and drag-up/drag-down/precision-drag rows through DocumentSession.applyBankEdit with the release=100 drag baselines and asserts the published release. The native DragSpinBox pixel input itself is QWidget input delivery.
 Source context since previous assertion:
 ;
     const int target = expected < 0 ? (m_originalVoice.release < 255 ? m_originalVoice.release + 1
@@ -48,8 +60,8 @@ A005 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voiceg
 Disposition: RETIRED-REPRESENTATION
 
 A006 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:68
-Disposition: PARTIAL
-Mapping/reason: S001 observes the mounted editor release commit dirty the bank with the changed draft release; S002 repeats that commit after a discarded same-controller edit; S003 lands the committed release in the published bank slot. Unproved: engine.voices[slot].release parity; the native DragSpinBox drag and precision input rows are not reproduced.
+Disposition: MATCHED
+Mapping/reason: S008 closes the engine-parity gap - the mounted release edit leaves the native voicegroup bytes (bankLease.withVoices pointee.release) equal to the edit on both the home and peer bank views and different from the prior byte; editor-side S001/S002 assert the dirty bank with a refreshed draft and S003 the published slot voice.
 Source context since previous assertion:
 ;
     }
@@ -59,8 +71,8 @@ QVERIFY2(waitForBankRelease(m_dsSlot, target, true),
              "editor value change did not use the bank edit pipeline")
 
 A007 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:70
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S012 asserts the mounted numeric release edit publishes the edited value to the displayed spin, the draft and the dirty bank together (release.value === edited), the spin->value() == target clause for the committed path; the direct setValue branch is not a mounted input.
 Source context since previous assertion:
 ;
 
@@ -68,8 +80,8 @@ Original expression:
 QCOMPARE(spin->value(), target)
 
 A008 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:72
-Disposition: PARTIAL
-Mapping/reason: S004 observes the mounted editor undo restore the initial draft release; S005 restores the release of the re-selected slot after a discarded same-controller edit; S006 restores the published bank voice; S007 republishes the clean bank view on the same row handle. Unproved: engine.voices[slot].release parity after undo.
+Disposition: MATCHED
+Mapping/reason: S009 closes the engine-parity gap for undo - after the mounted undo both shared bank views' native bytes return to the original release; S004/S005 restore the editor draft after undo, S006 the published voice and S007 republishes the clean bank view on the same row handle.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -79,8 +91,8 @@ QVERIFY2(waitForBankRelease(m_dsSlot, m_originalVoice.release, false),
              "editor undo did not restore the original release and engine")
 
 A009 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:74
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S010 asserts !session.document.isDirty after the production bank undo (with the release restored and the edit applied through the pipeline), the native !m_document->isDirty() clause.
 Source context since previous assertion:
 ;
 
@@ -88,8 +100,8 @@ Original expression:
 QVERIFY(!m_document->isDirty())
 
 A010 | VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline | src/checks/voicegroupsave/editor.cpp:75
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S029 restores the editor draft release after the focused spin undo (draft.release === before && !controller.bankDirty) and VoiceEditor.qml:306 binds the spin's value to that draft; unproved: a predicate reading the mounted spin's displayed value after the bank undo, so the native spin->value() readback itself remains unobserved.
 Source context since previous assertion:
 ;
 
@@ -97,8 +109,8 @@ Original expression:
 QCOMPARE(spin->value(), m_originalVoice.release)
 
 A011 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:81
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S028 asserts the mounted blank row (title [Blank], empty type, no glyph key) and S026 the resident presenter's blank template row, so the staged bank provides an undefined slot; S031 is the block's failure-path guard (report.fail "fixture slot 3 is not a blank draft"), the native firstBlankSlot() precondition.
 Source context since previous assertion:
 ;
 }
@@ -111,8 +123,8 @@ Original expression:
 QVERIFY2(blank >= 0, "fixture must provide an undefined slot for the template contract")
 
 A012 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:83
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: mounted structure guard: S028 asserts the blank row is mounted with its title, empty type name and empty glyph key - the native three-text row structure, the Swift row model carrying title/typeName/adsr (VoiceListSemantics.swift:27-34).
 Source context since previous assertion:
 ;
     const QStringList blankRow = m_browser->slotRowText(blank);
@@ -121,8 +133,8 @@ Original expression:
 QVERIFY(blankRow.size() == 3)
 
 A013 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:84
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S024 asserts the reverted blank row renders exactly "003  [Blank]" (the native %1  %2 format with the 3-digit index) and S028 the mounted blank title carries [Blank], the blankRow.at(0) clause.
 Source context since previous assertion:
 ;
 
@@ -131,8 +143,8 @@ QCOMPARE(blankRow.at(0),
              QStringLiteral("%1  %2").arg(blank, 3, 10, QLatin1Char('0')).arg(tr("[Blank]")))
 
 A014 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:86
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S028 asserts the mounted blank row publishes no type (typeName === "", Accessible.name === "") and S026 the presenter blank row's empty type text, the blankRow.at(1).isEmpty() clause.
 Source context since previous assertion:
 ;
 
@@ -140,8 +152,8 @@ Original expression:
 QVERIFY(blankRow.at(1).isEmpty())
 
 A015 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:87
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S027 asserts the resident presenter's blank template row publishes an empty ADSR text (the third text), the blankRow.at(2).isEmpty() clause; the blank-template branch is fixture-independent.
 Source context since previous assertion:
 ;
 
@@ -149,8 +161,8 @@ Original expression:
 QVERIFY(blankRow.at(2).isEmpty())
 
 A016 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:90
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S014 asserts the selected blank slot's editor notice carries no text and is not visible, the editorNoticeText().isEmpty() clause.
 Source context since previous assertion:
 ;
 
@@ -160,8 +172,8 @@ Original expression:
 QVERIFY(m_browser->editorNoticeText().isEmpty())
 
 A017 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:91
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S014 asserts the blank slot's editor notice is not visible, the editorNoticeIsHidden() clause.
 Source context since previous assertion:
 ;
 
@@ -169,8 +181,8 @@ Original expression:
 QVERIFY(m_browser->editorNoticeIsHidden())
 
 A018 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:92
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S014 asserts the mounted New/Edit sample buttons have identical width and height, the sampleActionButtonsHaveMatchingFixedSize() clause.
 Source context since previous assertion:
 ;
 
@@ -178,8 +190,8 @@ Original expression:
 QVERIFY(m_browser->sampleActionButtonsHaveMatchingFixedSize())
 
 A019 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:93
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S014 asserts the blank slot's draft macro is 0 (DirectSound), the visibleVoiceTypeData() == VgMacro::DirectSound clause.
 Source context since previous assertion:
 ;
 
@@ -187,8 +199,8 @@ Original expression:
 QCOMPARE(m_browser->visibleVoiceTypeData(), int(VgMacro::DirectSound))
 
 A020 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:94
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S013 asserts draft.changeType(3, "") on the blank slot materializes Square 1 with a dirty bank, the activateVoiceType(VgMacro::Square1) clause.
 Source context since previous assertion:
 ;
 
@@ -196,8 +208,8 @@ Original expression:
 QVERIFY(m_browser->activateVoiceType(VgMacro::Square1))
 
 A021 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:95
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S013 (draft macro 3 + dirty bank), S021 (the materialized voice is published in the slot) and S025 (the bank edit keeps the song document clean) cover the bank/UI/document conjuncts; unproved: the materialized slot's engine voice type (native engine->voices[blank].type == VOICE_SQUARE_1) - the lane reads native bytes only for release edits (S008/S009) and CGB channel telemetry for a type edit, never the materialized blank slot's type.
 Source context since previous assertion:
 ;
 
@@ -213,8 +225,8 @@ QVERIFY2(settle([this, blank] {
              "blank template did not materialize and reload Square1")
 
 A022 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:105
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S013 (post-undo macro 0 with the bank clean), S022 (the materialization cycle leaves the song document clean on the same slot), S023 (the slot returns to blank) and S024/S028/S026/S027 (the reverted row's "003  [Blank]" title with empty type and ADSR texts) cover the native settle conjuncts.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -233,8 +245,8 @@ QVERIFY2(settle([this, blank] {
              "blank template undo did not restore the structural row")
 
 A023 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:117
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S022 (the redo rematerializes the voice row without dirtying the song) and S013 (redo macro 3 with the bank dirty) cover the bank/draft conjuncts; unproved: the re-materialized slot's engine voice type, the same engine-parity conjunct as A021.
 Source context since previous assertion:
 ;
     requestRedo();
@@ -250,8 +262,8 @@ QVERIFY2(settle([this, blank] {
              "blank template redo did not reload Square1")
 
 A024 | VoicegroupSaveTest::blankTemplateMaterializesUndoably | src/checks/voicegroupsave/editor.cpp:126
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S015 asserts the final blank undo settles the bank and S023 that the slot holds no voice, the "final blank template undo did not settle" clause.
 Source context since previous assertion:
 ;
     requestUndo();
@@ -264,8 +276,8 @@ QVERIFY2(settle([this, blank] {
              "final blank template undo did not settle")
 
 A025 | VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant | src/checks/voicegroupsave/editor.cpp:136
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: fixture guard: S032 asserts the staged bank binds a CGB Square 1 voice at slot 0 (the presenter's staged square_1 row), the native firstCgbSlot() precondition for the dock-width comparison.
 Source context since previous assertion:
 ;
 }
@@ -279,8 +291,8 @@ QVERIFY2(cgb >= 0, "required staged CGB voice missing for dock-width invariant v
                        "sound/voicegroups/fixture_rich.inc")
 
 A026 | VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant | src/checks/voicegroupsave/editor.cpp:145
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S016 asserts the dock's minimum width is unchanged across the selected families (slots 0,4,6,7,8,13), the browserMinimumSizeHint() CGB == DirectSound clause.
 Source context since previous assertion:
 ;
     m_window->show();
@@ -295,8 +307,8 @@ Original expression:
 QCOMPARE(m_browser->browserMinimumSizeHint().width(), cgbMinimum)
 
 A027 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:154
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S030 asserts the ADSR row (vgReleaseSpin) mounts after the selected bank voice refreshes and S017 asserts the production window mounts that release field, the releaseField() existence guard.
 Source context since previous assertion:
 ;
 }
@@ -312,8 +324,8 @@ Original expression:
 QVERIFY2(field, "the release editor has no text field")
 
 A028 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:157
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S019 asserts the focused ADSR field keeps activeFocus after the Space key (release.contentItem.activeFocus), the field->hasFocus() clause.
 Source context since previous assertion:
 ;
     field->setFocus(Qt::MouseFocusReason);
@@ -323,8 +335,8 @@ Original expression:
 QVERIFY2(field->hasFocus(), "the release field did not take focus")
 
 A029 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:163
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S018 asserts one Space in the focused ADSR field moves the transport to playing (state 3), the single playPause trigger clause.
 Source context since previous assertion:
 ;
     const QString textBefore = field->text();
@@ -340,8 +352,8 @@ QVERIFY2(playPause.count() == 1,
                                 .arg(playPause.count())))
 
 A030 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:167
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S019 asserts the Space key leaves the ADSR field's value at its prior value (release.value === initial), the field->text() unchanged clause.
 Source context since previous assertion:
 ;
 
@@ -349,8 +361,8 @@ Original expression:
 QCOMPARE(field->text(), textBefore)
 
 A031 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:168
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S019 asserts the ADSR field still holds activeFocus after the Space key, the field->hasFocus() == true clause.
 Source context since previous assertion:
 ;
 
@@ -358,8 +370,8 @@ Original expression:
 QCOMPARE(field->hasFocus(), true)
 
 A032 | VoicegroupSaveTest::adsrFieldSpaceTogglesTransport | src/checks/voicegroupsave/editor.cpp:171
-Disposition: GAP
-Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S018/S020 assert the mounted ADSR journey's play then pause states (3 then 2), the closest executing predicates; unproved: a predicate observing the transport's Stopped state (TransportBarPresenter state 1) after the ADSR field journey, since the Swift journey pauses instead of stopping playback.
 Source context since previous assertion:
 ;
 
@@ -379,21 +391,160 @@ Swift assertion predicates
 
 S001 | test_editorAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "ADSR commit publishes dirty bank and refreshed editor"
+Line: 365
+Predicate: verify(waitForNative(function() { return controller.bankDirty && draft.release !== initial }, 15000), ...)
 
 S002 | test_editorQueuedEditsKeepTheirSlot | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "mounted editor commits the selected slot after discarding the stale edit"
+Line: 409
+Predicate: verify(waitForNative(function() { return editor.release === changedRelease && controller.bankDirty }, 15000), ...)
 
 S003 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "a committed voice edit lands in the published bank"
+Line: 182
+Predicate: report.expectEqual(expected: edited, actual: session.bankSlots[0].voice, cppID: editID)
 
 S004 | test_editorAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "undo restores original ADSR"
+Line: 368
+Predicate: verify(waitForNative(function() { return draft.release === initial }, 15000), ...)
 
 S005 | test_editorQueuedEditsKeepTheirSlot | src/checks/editorqml/tst_ShellVoicegroup.qml
 Anchor: message "undo restores the selected slot after queued stale edit"
+Line: 415
+Predicate: verify(waitForNative(function() { return editor.release === secondRelease }, 15000), ...)
 
 S006 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "voice edit undo restores the published voice"
+Line: 216
+Predicate: report.expectEqual(expected: original, actual: session.bankSlots[0].voice, cppID: editID)
 
 S007 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "bank undo republishes the clean view on the same voice row handle"
+Line: 214
+Predicate: report.expect(list.rows[0] === originalRow && !list.bankDirty && list.panelTitle == "Voicegroup", cppID: bankViewID)
+
+S008 | mountedEditReachesPeerTabAudio | src/checks/workspace/bank_sharing.swift
+Anchor: message "release edits and undo reach the audio-bound voicegroup bytes" #1
+Line: 579
+Predicate: report.expect(peer.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease) && first.bankLease.withVoices({ $0?.pointee.release }) == UInt8(nextRelease) && nativeBefore != UInt8(nextRelease), cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline")
+
+S009 | mountedEditReachesPeerTabAudio | src/checks/workspace/bank_sharing.swift
+Anchor: message "release edits and undo reach the audio-bound voicegroup bytes" #2
+Line: 589
+Predicate: report.expect(peer.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore && first.bankLease.withVoices({ $0?.pointee.release }) == nativeBefore, cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline")
+
+S010 | releaseEditorBankHistorySemantics | src/checks/workspace/bank_edits.swift
+Anchor: message "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song"
+Line: 382
+Predicate: report.expect(appliedThroughBankPipeline && undone && session.bankSlots[0].voice?.release == original.release && !session.document.isDirty, cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline[\(row.name)]") for rows set-value/drag-up/drag-down/precision-drag, with appliedThroughBankPipeline = session.bankSlots[0].voice?.release == target && session.bankDirty && !session.document.isDirty
+
+S011 | test_editorSpinKeyCommitsAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "a release spin edit commits through the bank pipeline: "
+Line: 388
+Predicate: verify(waitForNative(function() { return draft.release === before + (before === release.to ? -1 : 1) && controller.bankDirty }, 15000), "a release spin edit commits through the bank pipeline: " + ...)
+
+S012 | test_zzzzSharedBankBetweenTwoLiveTabs | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "first document commits its mounted numeric release edit"
+Line: 751
+Predicate: verify(waitForNative(function() { return controller.bankDirty && draft.release === edited && release.value === edited }, 15000), ...)
+
+S013 | test_blankTemplateAndDockWidth | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the blank template materializes Square 1 undoably" #1
+Line: 327
+Predicate: verify(waitForNative(function() { return draft.macro === 3 && controller.bankDirty }, 15000), "the blank template materializes Square 1 undoably") after draft.changeType(3, "")
+
+S014 | test_blankTemplateAndDockWidth | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "a blank slot shows no notice, matching buttons and the DirectSound default: "
+Line: 320
+Predicate: verify(draft.editable && !notice.visible && draft.macro === 0 && add.width === edit.width && add.height === edit.height, "a blank slot shows no notice, matching buttons and the DirectSound default: " + ...)
+
+S015 | test_blankTemplateAndDockWidth | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "blank materialization undo settles the bank"
+Line: 339
+Predicate: verify(waitForNative(function() { return !controller.bankDirty }, 15000), "blank materialization undo settles the bank")
+
+S016 | test_blankTemplateAndDockWidth | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the dock's minimum width ignores the selected voice's family"
+Line: 343
+Predicate: for (const slot of [0, 4, 6, 7, 8, 13]) { controller.selectSlot(slot); compare(panel.Layout.minimumWidth, baseline, ...) }
+
+S017 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the production window mounts the ADSR field: "
+Line: 471
+Predicate: verify(bar && release && scroll, "the production window mounts the ADSR field: " + ...) after tryVerify that findChild(editor, "vgReleaseSpin") mounts
+
+S018 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "Space in a focused ADSR field toggles transport once"
+Line: 482
+Predicate: tryCompare(bar.presenter, "state", 3, 3000, "Space in a focused ADSR field toggles transport once") after release.contentItem.forceActiveFocus() and keyClick(Qt.Key_Space)
+
+S019 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "Space does not edit the ADSR field or steal its focus"
+Line: 484
+Predicate: verify(release.value === initial && release.contentItem.activeFocus, "Space does not edit the ADSR field or steal its focus")
+
+S020 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the same ADSR focus pauses transport on the next Space"
+Line: 487
+Predicate: tryCompare(bar.presenter, "state", 2, 3000, "the same ADSR focus pauses transport on the next Space") after the second keyClick(Qt.Key_Space)
+
+S021 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a blank slot materializes the template voice"
+Line: 236
+Predicate: report.expectEqual(expected: draft.voice, actual: session.bankSlots[3].voice, cppID: blankID) after applyVoiceEdit(slot: 3, voice: draft.voice)
+
+S022 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "the blank template materializes again on redo without dirtying the song"
+Line: 260
+Predicate: report.expect(session.bankSlots[3].voice == draft.voice && list.rows[3].title == "003  Sample" && !session.document.isDirty, cppID: blankID)
+
+S023 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "materialization undo returns the slot to blank"
+Line: 247
+Predicate: report.expect(session.bankSlots[3].voice == nil, cppID: blankID)
+
+S024 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "the reverted row renders the blank template again"
+Line: 249
+Predicate: report.expectEqual(expected: "003  [Blank]", actual: list.rows[3].title, cppID: blankID)
+
+S025 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a bank edit preserves song dirtiness while dirtying the bank"
+Line: 188
+Predicate: report.expect(session.document.isDirty == songDirtyBeforeBankEdit && session.bankDirty, cppID: editID)
+
+S026 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a blank row publishes no type"
+Line: 230
+Predicate: report.expectEqual(expected: "", actual: list.rows[12].typeName, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S027 | voiceListRowRendering | src/checks/voicelist/VoiceListChecks.swift
+Anchor: message "a blank row publishes no ADSR text"
+Line: 232
+Predicate: report.expectEqual(expected: "", actual: list.rows[12].adsr, cppID: "vgsavecheck/VoicegroupSaveTest::typeColumnMapsEveryFamily")
+
+S028 | test_typeColumnFamiliesAndAlternateChips | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "blank rows publish no type, glyph or accessible name"
+Line: 261
+Predicate: verify(blank && blankIcon && blank.title.indexOf("[Blank]") >= 0 && blank.typeName === "" && blank.typeIconKey === -1 && blankIcon.Accessible.name === "", ...)
+
+S029 | test_editorSpinKeyCommitsAndUndo | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "undo restores release after a focused spin edit"
+Line: 394
+Predicate: verify(waitForNative(function() { return draft.release === before && !controller.bankDirty }, 15000), ...)
+
+S030 | test_xSpaceInFocusedAdsrFieldTogglesTransport | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "the ADSR row mounts after the selected bank voice refreshes"
+Line: 469
+Predicate: tryVerify(function() { return !!findChild(editor, "vgReleaseSpin") }, 3000, ...)
+
+S031 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "fixture slot 3 is not a blank draft"
+Line: 223
+Predicate: guard let draft = list.voiceDraft(3), draft.materializesBlank else { report.fail(blankID, "fixture slot 3 is not a blank draft") }; failure-path guard - the message appears only on a red run, so it has no executed pass row and is cited beside the executed blank-slot predicates
+
+S032 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "slot 0 renders the fixture's square_1 voice"
+Line: 81
+Predicate: report.expectEqual(expected: "000  Square 1", actual: list.rows[0].title, cppID: bindingID)

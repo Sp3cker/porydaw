@@ -98,7 +98,8 @@ enum ShellQmlLane {
               fixtureFiles: songs("mus_route101")),
         Entry(name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
               fixtureFiles: songs("mus_route101", "mus_route102") + [
-                  "asm/macros/synth_test.inc", "data/sound_data.s"
+                  "asm/macros/synth_test.inc", "data/sound_data.s",
+                  "sound/voicegroups/fixture_alt.inc"
               ]),
         Entry(name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
               fixtureFiles: songs("mus_route101")),

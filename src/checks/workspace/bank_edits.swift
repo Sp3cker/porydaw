@@ -52,8 +52,9 @@ internal func bankPreviewFailure(report: CheckReport, session: DocumentSession, 
 }
 
 @MainActor
-internal func bankBlankMaterialization(report: CheckReport, session: DocumentSession) {
-    // 2. Blank-slot materialization & revert via token
+internal func bankBlankMaterialization(report: CheckReport, session: DocumentSession,
+                                       service: ProjectService) {
+    let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions"
     let newVoice = BankVoice(macro: BankVoiceMacro.square1, key: 65, pan: 5, sweep: 0, duty: 2)
     let beforeMaterializationSlots = session.bankSlots
     var materializedSlots = beforeMaterializationSlots
@@ -63,6 +64,10 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         let materialized = try runBlocking {
             try await session.applyBankEdit(slot: 3, value: newVoice, expected: nil)
         }
+        let originalToken = materialized.materializationToken
+        report.expect(originalToken != nil && session.document.history.canUndo,
+                      cppID: id,
+                      message: "blank-slot materialization records a reversible bank command")
         report.expect(materialized.materializationToken != nil,
                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                       message: "blank slot materialization issues a single-shot token")
@@ -77,6 +82,9 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expectEqual(expected: beforeMaterializationSlots, actual: session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                            what: "undo restores the complete pre-materialization bank view")
+        report.expect(session.document.history.canRedo && !session.document.isDirty,
+                      cppID: id,
+                      message: "blank-slot undo reverts and redo rematerializes with a fresh token")
 
         // Redo materialization re-creates the voice
         _ = try runBlocking {
@@ -85,6 +93,28 @@ internal func bankBlankMaterialization(report: CheckReport, session: DocumentSes
         report.expectEqual(expected: materializedSlots, actual: session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "redo rematerializes the voice without changing other slots")
+        if let originalToken {
+            do {
+                _ = try runBlocking {
+                    try await service.bankRevert(lease: session.bankLease,
+                                                         token: originalToken)
+                }
+                report.fail(id, "redo reused a spent blank materialization token")
+            } catch let error as ProjectServiceError {
+                report.expect(error == .bankConflict
+                              && session.bankSlots == materializedSlots
+                              && session.document.history.canUndo,
+                              cppID: id,
+                              message: "blank-slot undo reverts and redo rematerializes with a fresh token")
+            } catch {
+                report.fail(id, "spent token yielded unexpected error: \(error)")
+            }
+        }
+        _ = try runBlocking { try await session.undo() }
+        report.expect(session.bankSlots == beforeMaterializationSlots,
+                      cppID: id,
+                      message: "fresh redo token permits a second undo without disturbing other slots")
+        _ = try runBlocking { try await session.redo() }
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                     "blank materialization cycle threw: \(error)")
@@ -174,6 +204,7 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
     panVoice1.pan = 20
     var panVoice2 = panVoice1
     panVoice2.pan = 25
+    let beforeMergeIndex = session.document.history.undoIndex
 
     do {
         // Consecutive edits on slot 0 changing pan merge into one history entry
@@ -183,6 +214,9 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panVoice2, expected: panVoice1)
         }
+        report.expect(session.document.history.undoIndex == beforeMergeIndex + 1,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                      message: "adjacent same-slot edits merge and self-canceling pairs vanish")
         report.expectEqual(expected: Int32(25), actual: session.bankSlots[0].voice?.pan,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                            what: "second pan edit applied")
@@ -203,12 +237,16 @@ internal func bankMergeSealing(report: CheckReport, session: DocumentSession) {
         var panOut = session.bankSlots[0].voice!
         panOut.pan = 20
         let panOrigin = session.bankSlots[0].voice!
+        let beforeCancellationIndex = session.document.history.undoIndex
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panOut, expected: panOrigin)
         }
         _ = try runBlocking {
             try await session.applyBankEdit(slot: 0, value: panOrigin, expected: panOut)
         }
+        report.expect(session.document.history.undoIndex == beforeCancellationIndex,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                      message: "adjacent same-slot edits merge and self-canceling pairs vanish")
         let reachedPreceding = try runBlocking { try await session.undo() }
         report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
                       cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",

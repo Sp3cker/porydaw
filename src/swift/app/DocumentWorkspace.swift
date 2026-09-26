@@ -10,18 +10,21 @@ import PorydawAppCommands
 public final class DocumentWorkspace {
     public struct Callbacks {
         public var changeTrackVoiceRequested: (Int) -> Void
+        public var revealTrackVoiceRequested: (Int) -> Void
         public var gridCommandAvailabilityChanged: () -> Void
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
 
         public init(changeTrackVoiceRequested: @escaping (Int) -> Void,
+                    revealTrackVoiceRequested: @escaping (Int) -> Void,
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
                     publicationFailed: @escaping (String) -> Void,
                     timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
+            self.revealTrackVoiceRequested = revealTrackVoiceRequested
             self.gridCommandAvailabilityChanged = gridCommandAvailabilityChanged
             self.sessionStateChanged = sessionStateChanged
             self.publicationFailed = publicationFailed
@@ -118,6 +121,7 @@ public final class DocumentWorkspace {
             grid?.setTrack(index: track)
         }
         headers.onChangeTrackVoiceRequested = callbacks.changeTrackVoiceRequested
+        headers.onRevealTrackVoiceRequested = callbacks.revealTrackVoiceRequested
         grid.onAudition = { [weak audio] track, key, velocity in
             guard let audio, (0...15).contains(track), (0...127).contains(key),
                   (0...127).contains(velocity) else { return }

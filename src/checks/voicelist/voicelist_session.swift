@@ -93,6 +93,26 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                        what: "a bound selector is enabled")
     report.expectEqual(expected: false, actual: list.bankDirty, cppID: bindingID,
                        what: "a freshly opened bank is clean")
+    let assigned = Set(session.timeline.tracks.filter { $0.used && $0.firstProgram >= 0 }
+        .map(\.firstProgram))
+    report.expect((0..<128).allSatisfy { list.slotIsMarkedUsed(slot: $0) == assigned.contains($0) },
+                  cppID: bindingID,
+                  message: "used marks match the assigned programs and clear on undo")
+    if let track = session.timeline.tracks.indices.first(where: {
+        session.timeline.tracks[$0].used && session.timeline.tracks[$0].firstProgram >= 0
+    }) {
+        let program = session.timeline.tracks[track].firstProgram
+        list.selectSlot(slot: 12)
+        let beforeReveal = list.revealRequest
+        list.revealTrackVoice(track: track, session: session)
+        report.expect(list.currentSlot == program && list.revealSlotId == program
+                      && list.revealRequest == beforeReveal + 1,
+                      cppID: bindingID,
+                      message: "revealing a track voice selects its program")
+    }
+    list.revealSlot(slot: 2)
+    report.expect(list.currentSlot == 2 && list.revealSlotId == 2,
+                  cppID: bindingID, message: "revealing a voice selects its row")
 
     // Used marks derive from the document: the fixture song references no
     // programs, then a voice lane point marks its program, and undo clears
@@ -104,6 +124,19 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refreshUsedVoices(from: session)
     report.expectEqual(expected: true, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
                        what: "a voice lane point marks its program used")
+    report.expect(list.slotIsMarkedUsed(slot: 9)
+                  && (0..<128).allSatisfy {
+                      list.slotIsMarkedUsed(slot: $0) == (assigned.contains($0) || $0 == 9)
+                  }, cppID: bindingID,
+                  message: "used marks include voice-lane programs beside track programs")
+    if session.timeline.tracks[0].firstProgram < 0 {
+        let prior = list.revealRequest
+        list.revealTrackVoice(track: 0, session: session)
+        report.expect(list.currentSlot == 9 && list.revealSlotId == 9
+                      && list.revealRequest == prior + 1,
+                      cppID: bindingID,
+                      message: "a track without an initial program reveals its first voice-lane point")
+    }
     do {
         _ = try runBlocking { try await session.undo() }
     } catch {
@@ -113,7 +146,19 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refreshUsedVoices(from: session)
     report.expectEqual(expected: false, actual: list.slotIsMarkedUsed(slot: 9), cppID: bindingID,
                        what: "voice-lane undo clears the used mark")
+    report.expect((0..<128).allSatisfy {
+        list.slotIsMarkedUsed(slot: $0) == assigned.contains($0)
+    }, cppID: bindingID,
+    message: "voice-lane undo restores precisely the assigned-program used set")
+    let revealBeforeInvalid = list.revealRequest
+    list.revealTrackVoice(track: -1, session: session)
+    list.revealTrackVoice(track: 16, session: session)
+    report.expect(list.revealRequest == revealBeforeInvalid, cppID: bindingID,
+                  message: "unmapped track reveal leaves the dock selection untouched")
 
+    let songFileBeforeBankEdit = session.document.state.file
+    let songDirtyBeforeBankEdit = session.document.isDirty
+    let historyIndexBeforeBankEdit = session.document.history.undoIndex
     // applyVoiceEdit routes through DocumentSession.applyBankEdit: the
     // canonical service apply plus undoable history action.
     let editID = "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline"
@@ -135,6 +180,15 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                        what: "a committed voice edit dirties the bank")
     report.expectEqual(expected: edited, actual: session.bankSlots[0].voice, cppID: editID,
                        what: "a committed voice edit lands in the published bank")
+    report.expect(session.document.state.file == songFileBeforeBankEdit,
+                  cppID: editID,
+                  message: "a bank edit leaves song content unchanged")
+    report.expect(session.document.isDirty == songDirtyBeforeBankEdit && session.bankDirty,
+                  cppID: editID,
+                  message: "a bank edit preserves song dirtiness while dirtying the bank")
+    report.expect(session.document.history.undoIndex == historyIndexBeforeBankEdit + 1,
+                  cppID: editID,
+                  message: "the bank edit appends one history entry without mutating song content")
     // Rows are explicit-refresh: the model holds the pre-edit row until the
     // owner's change seam calls refresh (DocumentSession.onChange stays
     // single-subscriber, owned by DocumentWorkspace).
@@ -193,6 +247,76 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                   message: "materialization undo returns the slot to blank")
     report.expectEqual(expected: "003  [Blank]", actual: list.rows[3].title, cppID: blankID,
                        what: "the reverted row renders the blank template again")
+    do {
+        _ = try runBlocking { try await session.redo() }
+    } catch {
+        report.fail(blankID, "blank materialization redo threw: \(error)")
+        return
+    }
+    list.refresh(from: session)
+    report.expect(session.bankSlots[3].voice == draft.voice
+                  && list.rows[3].title == "003  Sample" && !session.document.isDirty,
+                  cppID: blankID,
+                  message: "the blank template materializes again on redo without dirtying the song")
+    do {
+        _ = try runBlocking { try await session.undo() }
+    } catch {
+        report.fail(blankID, "blank redo cleanup threw: \(error)")
+        return
+    }
+    list.refresh(from: session)
+    let pickerID = "vgsavecheck/VoicegroupSaveTest::samplePickerKeysplitAuditions"
+    var auditions: [(String, VoiceListAuditionKind, VoiceListAdsr)] = []
+    var stops = 0
+    list.onSampleAuditionRequested = { symbol, kind, adsr in
+        auditions.append((symbol, kind, adsr))
+    }
+    list.onSampleAuditionStopRequested = { stops += 1 }
+    var sample = draft.voice
+    sample.attack = 240
+    sample.decay = 180
+    sample.sustain = 100
+    sample.release = 165
+    var previewSlots = session.bankSlots
+    previewSlots[3] = BankSlotView(kind: BankSlotKind.editable, voice: sample)
+    list.bindBank(slots: previewSlots, dirty: false, loadName: session.bankLoadName)
+    list.selectSlot(slot: 3)
+    list.requestSampleAudition(symbol: "DirectSoundWaveData_fixture_loop")
+    report.expect(auditions.last?.0 == "DirectSoundWaveData_fixture_loop"
+                  && auditions.last?.1 == .sample
+                  && auditions.last?.2 == VoiceListAdsr(attack: 240, decay: 180,
+                                                        sustain: 100, release: 165),
+                  cppID: pickerID,
+                  message: "sample audition carries the selected DirectSound voice envelope")
+    list.keysplitTables["fixture_bass"] = "fixture_bass_table"
+    list.requestSampleAudition(symbol: "fixture_bass")
+    report.expect(auditions.last?.1 == .keysplit && auditions.last?.2 == VoiceListAdsr(),
+                  cppID: pickerID,
+                  message: "keysplit and wave auditions carry their kind and the voice envelope")
+    var wave = sample
+    wave.macro = BankVoiceMacro.programmableWave
+    wave.attack = 15
+    wave.decay = 10
+    wave.sustain = 31
+    wave.release = 9
+    previewSlots[3] = BankSlotView(kind: BankSlotKind.editable, voice: wave)
+    list.bindBank(slots: previewSlots, dirty: false, loadName: session.bankLoadName)
+    list.requestSampleAudition(symbol: "ProgrammableWaveData_fixture_pulse")
+    report.expect(auditions.last?.1 == .wave
+                  && auditions.last?.2 == VoiceListAdsr(attack: 7, decay: 2,
+                                                        sustain: 15, release: 1),
+                  cppID: pickerID,
+                  message: "wave audition masks the selected CGB envelope to its hardware range")
+    list.stopSampleAudition()
+    report.expect(stops == 1, cppID: pickerID,
+                  message: "closing the picker stops the current sample audition")
+    let glyphs: [VoiceListGlyph] = [.sample, .sampleReverse, .square1, .square2,
+                                    .wave, .noise, .keysplit, .drumkit]
+    report.expect(Set(glyphs.map {
+        VoiceListSemantics.iconKey(glyph: $0, altChip: false)
+    }).count == 8, cppID: bindingID,
+    message: "distinct families carry distinct glyphs")
+    list.refresh(from: session)
 
     // A -G selection changes both document history and the real loaded bank.
     let selectorID = "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit"

@@ -471,6 +471,7 @@ func drawerAutomationSharedPopupArbitration(_ report: CheckReport, suite: Docume
         playheadGuides: guides, eventList: eventList, palette: GridPalette(),
         typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
             changeTrackVoiceRequested: { _ in },
+            revealTrackVoiceRequested: { _ in },
             gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
             publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
     defer {

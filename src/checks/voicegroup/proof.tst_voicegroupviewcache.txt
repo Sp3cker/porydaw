@@ -9,15 +9,24 @@ Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 
 
-Command: deno task verify --filter swiftcore --verbose.
-Result: PASS for Swift predicates; the retained C++ cache suite is not Swift parity evidence.
+Command: deno task verify --filter swiftcore-bankhistory --verbose.
+Result: PASS (1/36 SwiftCoreTest::bankHistory) for the bank-history predicates
+(build/proof-evidence/swiftcore-bankhistory.json).
+
+Command: deno task verify --filter swiftcore-projectsession --verbose.
+Result: the voicelist predicates cited by S005/S006 executed
+(build/proof-evidence/swiftcore-projectsession.json); the lane run itself was
+not clean at this freeze — the unrelated
+swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability test failed the suite.
 
 Command: deno task proof check --executed
-Result: PASS for this ledger pass — 0 errors, no not-executed entry in this file; A069's S009 classifies executed from build/proof-evidence/swiftcore-bankhistory.json (task-37 lane run, not re-run here).
+Result: PASS for this ledger pass — 0 errors, no not-executed entry in this file; the new
+anchors S013–S022 and S024–S026 classify executed from build/proof-evidence/swiftcore-bankhistory.json,
+S023 from the same lane's coordinator identity block, and A069's S009 from the task-37 lane run.
 
 A001 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:126
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 #include <array>
 #include <optional>
@@ -149,8 +158,8 @@ Original expression:
     QVERIFY(identity);
 
 A002 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:131
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     QUndoStack stack;
@@ -162,8 +171,8 @@ Original expression:
     QVERIFY(!history.canUndo() && !history.canRedo());
 
 A003 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:135
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     history.pushDocument(std::make_unique<CountCommand>(&document));
@@ -174,8 +183,8 @@ Original expression:
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(history.requestUndo()));
 
 A004 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:136
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
 
@@ -183,8 +192,8 @@ Original expression:
     QCOMPARE(document, 0);
 
 A005 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:137
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
 
@@ -192,8 +201,8 @@ Original expression:
     QCOMPARE(history.currentDocumentIdentity(), history.savedDocumentIdentity());
 
 A006 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:138
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 
 
@@ -201,8 +210,8 @@ Original expression:
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(history.requestRedo()));
 
 A007 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:139
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 
 
@@ -210,8 +219,8 @@ Original expression:
     QCOMPARE(document, 1);
 
 A008 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:145
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
 
@@ -224,8 +233,8 @@ Original expression:
     QVERIFY(bank.apply(scalar).applied);
 
 A009 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:147
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     history.pushConfirmedBank(scalar, {});
@@ -234,8 +243,8 @@ Original expression:
     QCOMPARE(stack.count(), 2);
 
 A010 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:148
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
 
@@ -243,8 +252,8 @@ Original expression:
     QCOMPARE(history.currentDocumentIdentity(), afterDocument);
 
 A011 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:150
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
@@ -253,8 +262,8 @@ Original expression:
     QVERIFY(undo && isSet(*undo, kScalarSlot, before, after));
 
 A012 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:151
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
 
@@ -262,8 +271,8 @@ Original expression:
     QVERIFY(bank.apply(*undo).applied);
 
 A013 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:153
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     history.crossConfirmedBankUndo({});
@@ -272,8 +281,8 @@ Original expression:
     QCOMPARE(stack.index(), 1);
 
 A014 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:155
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 
     std::optional<VoicegroupEditInput> redo = draft(history.requestRedo());
@@ -282,8 +291,8 @@ Original expression:
     QVERIFY(redo && isSet(*redo, kScalarSlot, after, before));
 
 A015 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:156
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 
 
@@ -291,8 +300,8 @@ Original expression:
     QVERIFY(bank.apply(*redo).applied);
 
 A016 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:158
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 
     history.crossConfirmedBankRedo({});
@@ -301,8 +310,8 @@ Original expression:
     QCOMPARE(stack.index(), 2);
 
 A017 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:163
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 
 
@@ -314,8 +323,8 @@ Original expression:
     QVERIFY(first.applied && first.token);
 
 A018 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:166
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
 
     history.pushConfirmedBank(blankInput, *first.token);
@@ -325,8 +334,8 @@ Original expression:
     QVERIFY(undo && std::holds_alternative<RevertBlankSlot>(undo->operation));
 
 A019 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:167
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 
 
@@ -334,8 +343,8 @@ Original expression:
     QVERIFY(bank.apply(*undo).applied);
 
 A020 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:170
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
 
     history.crossConfirmedBankUndo({});
@@ -345,8 +354,8 @@ Original expression:
     QVERIFY(redo && isSet(*redo, kBlankSlot, blank, std::nullopt));
 
 A021 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:172
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
 
     const FakeBank::Outcome fresh = bank.apply(*redo);
@@ -355,8 +364,8 @@ Original expression:
     QVERIFY(fresh.applied && fresh.token && fresh.token->headerAfter != first.token->headerAfter);
 
 A022 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:178
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
     history.crossConfirmedBankRedo(fresh.token);
@@ -369,8 +378,8 @@ Original expression:
     QVERIFY(staleApplied.applied && staleApplied.token);
 
 A023 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:182
-Disposition: PARTIAL
-Mapping/reason: S011 (src/checks/workspace/bank_sharing.swift bankSharedHistoryAndLifecycle) asserts that the newer same-slot value survives a stale peer undo attempt. Unproved: the original also requires the stale undo request to be present and to return a non-applied result, which no Swift predicate observes.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
     history.pushConfirmedBank(staleUndo, *staleApplied.token);
@@ -381,8 +390,8 @@ Original expression:
     QVERIFY(undo && !bank.apply(*undo).applied);
 
 A024 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:185
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
     const int undoCount = stack.count();
@@ -392,8 +401,8 @@ Original expression:
     QCOMPARE(stack.count(), undoCount - 1);
 
 A025 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:186
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S012, S008
 Source context since previous assertion:
 
 
@@ -401,8 +410,8 @@ Original expression:
     QVERIFY(history.canUndo() && !history.canRedo());
 
 A026 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:187
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
 
@@ -410,8 +419,8 @@ Original expression:
     QCOMPARE(history.currentDocumentIdentity(), afterDocument);
 
 A027 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:188
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
 
@@ -419,8 +428,8 @@ Original expression:
     QCOMPARE(history.savedDocumentIdentity(), savedDocument);
 
 A028 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:193
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 
 
@@ -432,8 +441,8 @@ Original expression:
     QVERIFY(redoApplied.applied && redoApplied.token);
 
 A029 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:196
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     history.pushConfirmedBank(staleRedo, *redoApplied.token);
@@ -443,8 +452,8 @@ Original expression:
     QVERIFY(undo && bank.apply(*undo).applied);
 
 A030 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:200
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 
     history.crossConfirmedBankUndo({});
@@ -455,8 +464,8 @@ Original expression:
     QVERIFY(redo && !bank.apply(*redo).applied);
 
 A031 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:203
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 
     const int redoCount = stack.count();
@@ -470,8 +479,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A033 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:211
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
 
 }
@@ -489,8 +498,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A035 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:221
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 
         const std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
@@ -499,8 +508,8 @@ Original expression:
         QVERIFY(undo && isSet(*undo, kMergeSlot, first, third));
 
 A036 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:228
-Disposition: PARTIAL
-Mapping/reason: S002 asserts that self-cancelling adjacent bank edits disappear so the next undo reaches document history; it does not inspect QUndoStack.count().
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 
     }
@@ -514,8 +523,8 @@ Original expression:
         QCOMPARE(stack.count(), 0);
 
 A037 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:239
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 
     }
@@ -541,8 +550,8 @@ Disposition: MATCHED
 Mapping: S004
 
 A040 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:262
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
 
     }
@@ -600,8 +609,8 @@ Original expression:
     QVERIFY(cache.pendingOrigin());
 
 A048 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:284
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
 
     cache.resolveApplied({*identity, std::nullopt}, history);
@@ -610,8 +619,8 @@ Original expression:
     QCOMPARE(stack.count(), 1);
 
 A049 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:285
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
 
 
@@ -619,8 +628,8 @@ Original expression:
     QVERIFY(cache.bankActionsEnabled() && !cache.pendingOrigin());
 
 A050 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:288
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
 
 
@@ -630,8 +639,8 @@ Original expression:
     QVERIFY(undo);
 
 A051 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:289
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
 
 
@@ -639,8 +648,8 @@ Original expression:
     QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Undo, *undo}));
 
 A052 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:291
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
 
     cache.resolveApplied({*identity, std::nullopt}, history);
@@ -649,8 +658,8 @@ Original expression:
     QCOMPARE(stack.index(), 0);
 
 A053 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:293
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
 
     std::optional<VoicegroupEditInput> redo = draft(history.requestRedo());
@@ -659,8 +668,8 @@ Original expression:
     QVERIFY(redo);
 
 A054 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:294
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
 
 
@@ -668,8 +677,8 @@ Original expression:
     QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Redo, *redo}));
 
 A055 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:296
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
 
     cache.resolveApplied({*identity, std::nullopt}, history);
@@ -678,8 +687,8 @@ Original expression:
     QCOMPARE(stack.index(), 1);
 
 A056 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:297
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
 
 
@@ -687,8 +696,8 @@ Original expression:
     QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Initial, input}));
 
 A057 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:299
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S020
 Source context since previous assertion:
 
     cache.resolveConflict({*identity}, history);
@@ -697,8 +706,8 @@ Original expression:
     QCOMPARE(stack.index(), 1);
 
 A058 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:301
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
 
     const std::optional<VoicegroupEditInput> staleUndo = draft(history.requestUndo());
@@ -707,8 +716,8 @@ Original expression:
     QVERIFY(staleUndo);
 
 A059 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:302
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
 
 
@@ -716,8 +725,8 @@ Original expression:
     QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Undo, *staleUndo}));
 
 A060 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:304
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
 
     cache.resolveConflict({*identity}, history);
@@ -726,8 +735,8 @@ Original expression:
     QCOMPARE(stack.count(), 0);
 
 A061 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:305
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
 
 
@@ -735,8 +744,8 @@ Original expression:
     QVERIFY(!history.canUndo());
 
 A062 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:308
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 
     history.pushConfirmedBank(input, {});
@@ -746,8 +755,8 @@ Original expression:
     QVERIFY(revert);
 
 A063 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:311
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 
     history.crossConfirmedBankUndo({});
@@ -757,8 +766,8 @@ Original expression:
     QVERIFY(staleRedo);
 
 A064 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:312
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 
 
@@ -766,8 +775,8 @@ Original expression:
     QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Redo, *staleRedo}));
 
 A065 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:314
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
 
     cache.resolveConflict({*identity}, history);
@@ -780,8 +789,8 @@ Disposition: MATCHED
 Mapping: S008
 
 A067 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:316
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
 
 
@@ -864,3 +873,45 @@ Anchor: message "same-slot stale peer undo cannot replace the newer edit"
 
 S012 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
 Anchor: message "stale bank command prunes without dropping document history"
+
+S013 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
+Anchor: message "document and bank undo/redo cross the shared history in order" #1
+
+S014 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
+Anchor: message "document and bank undo/redo cross the shared history in order" #2
+
+S015 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "blank-slot materialization records a reversible bank command"
+
+S016 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "blank-slot undo reverts and redo rematerializes with a fresh token" #1
+
+S017 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "undo restores the complete pre-materialization bank view"
+
+S018 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "redo rematerializes the voice without changing other slots"
+
+S019 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift
+Anchor: message "blank-slot undo reverts and redo rematerializes with a fresh token" #2
+
+S020 | bankSharedHistoryAndLifecycle | src/checks/workspace/bank_sharing.swift
+Anchor: message "stale conflicts prune exactly one command preserving identities"
+
+S021 | bankMergeSealing | src/checks/workspace/bank_edits.swift
+Anchor: message "adjacent same-slot edits merge and self-canceling pairs vanish" #1
+
+S022 | bankMergeSealing | src/checks/workspace/bank_edits.swift
+Anchor: message "adjacent same-slot edits merge and self-canceling pairs vanish" #2
+
+S023 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
+Anchor: message "fixture sections share a source but not binding identity"
+
+S024 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+Anchor: message "the session gate routes transitions and prunes stale conflicts" #1
+
+S025 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+Anchor: message "the session gate routes transitions and prunes stale conflicts" #2
+
+S026 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift
+Anchor: message "the session gate routes transitions and prunes stale conflicts" #3

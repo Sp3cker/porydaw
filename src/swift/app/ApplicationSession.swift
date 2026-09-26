@@ -1099,6 +1099,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
             changeTrackVoiceRequested: { [weak self] track in
                 self?.changeTrackVoiceRequested(track: track)
             },
+            revealTrackVoiceRequested: { [weak self, weak session] track in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.voiceList.revealTrackVoice(track: track, session: session)
+            },
             gridCommandAvailabilityChanged: { [weak self, weak session] in
                 guard let self, let session, self.selectedDocument === session else { return }
                 self.gridCommandAvailabilityChanged()
