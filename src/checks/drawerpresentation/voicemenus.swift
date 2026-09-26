@@ -2,9 +2,6 @@ import Foundation
 import PorydawApp
 import PorydawCore
 
-// Existing scenarios paired with voicemenus.cpp.
-// Entry order remains in VoiceChangesPageChecks.swift.
-
 @MainActor
 func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSession,
                                      service: ProjectService, programs: [Int]) {
@@ -78,8 +75,9 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
     // nothing, and its rows never fire.
     _ = page.pointerPress(x: fixture.markerX(120), y: 10, surface: 1, button: 2, modifiers: 0)
     report.expect(page.hasMenu, cppID: drawerVoiceMenuID, message: "the menu reopened on the third marker")
-    fixture.document.writeLane(track: 0, lane: .voice, from: 0, through: 0,
-                               points: [LaneWrite(tick: 0, value: programs[2])])
+    let beforeRewrite = fixture.lanePoints()
+    fixture.document.writeLane(track: 0, lane: .voice, from: 144, through: 144,
+                               points: [LaneWrite(tick: 144, value: 5)])
     page.refreshFromDocument()
     report.expect(!page.hasMenu, cppID: drawerVoiceMenuID,
                   message: "a document change cancels the open menu")
@@ -88,6 +86,49 @@ func drawerVoiceContextMenuTransactions(_ report: CheckReport, suite: DocumentSe
                   cppID: drawerVoiceMenuID, message: "an activation after the cancellation writes nothing")
     report.expectEqual(expected: rewritten, actual: fixture.snapshot, cppID: drawerVoiceMenuID,
                        what: "the stale activation leaves the rewrite as the only change")
+    let afterRewrite = fixture.lanePoints()
+    report.expect(page.menuTargetIdentity == nil
+                  && afterRewrite.contains { $0.tick == 120 && $0.value == programs[2] },
+                  cppID: drawerVoiceMenuID, message: "a rewrite between press and release voids the activation")
+    report.expect(fixture.snapshot == rewritten && afterRewrite.count == beforeRewrite.count + 1
+                  && beforeRewrite.contains { $0.tick == 0 && $0.value == programs[0] }
+                  && !beforeRewrite.contains { $0.tick == 144 }
+                  && afterRewrite.contains { $0.tick == 0 && $0.value == programs[0] }
+                  && afterRewrite.contains { $0.tick == 144 && $0.value == 5 },
+                  cppID: drawerVoiceMenuID,
+                  message: "the rewrite stands as the only change")
+}
+
+@MainActor
+func drawerVoiceScrolledMenuPick(_ report: CheckReport, suite: DocumentSession,
+                                 service: ProjectService, programs: [Int]) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let before = fixture.lanePoints()
+    let revision = fixture.snapshot.revision
+    let undoIndex = fixture.document.history.undoIndex
+    _ = page.pointerPress(x: fixture.markerX(48), y: 10, surface: 1, button: 2, modifiers: 0)
+    let captured = page.menuTargetIdentity
+    fixture.session.mutateCamera { $0.setHScroll($0.snapshot.scrollX + 80) }
+    guard page.hasMenu && page.activateMenuAction(actionId: VoiceChangesPagePolicy.changeVoiceAction) else {
+        report.fail(drawerVoiceMenuID, "the scrolled change row did not open the picker")
+        return
+    }
+    page.setPickerFilter(text: String(format: "%03d", programs[2]))
+    page.selectPickerRow(index: 0)
+    let accepted = page.acceptPicker()
+    let after = fixture.lanePoints()
+    report.expect(accepted && captured != nil && after.count == before.count
+                  && after[1].tick == before[1].tick && after[1].value == programs[2],
+                  cppID: drawerVoiceMenuID,
+                  message: "the post-scroll change pick moves exactly the captured marker")
+    report.expect(before.indices.filter { $0 != 1 }.allSatisfy { after.indices.contains($0) && before[$0] == after[$0] },
+                  cppID: drawerVoiceMenuID,
+                  message: "every pre-existing point stands untouched across the pick")
+    report.expect(fixture.snapshot.revision == revision + 1
+                  && fixture.document.history.undoIndex == undoIndex + 1,
+                  cppID: drawerVoiceMenuID,
+                  message: "the pick lands as one revision and one history entry")
 }
 
 @MainActor

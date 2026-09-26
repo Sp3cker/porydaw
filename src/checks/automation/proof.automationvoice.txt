@@ -13,6 +13,13 @@ Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the drawerpresentation voice predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Converted-window command: deno task verify:qml --verbose
+Note: task 60 re-anchored S046 and S270 to `Anchor: function` alone. Both name a
+staging guard the run now reports through `report.fail` (voice_projection.swift:263,
+voice_picker.swift:382), so their message never appears in a passing run's evidence
+rows and only the enclosing function remains observable. S194/S195 still anchor the
+name-filter messages verbatim and DO execute: the supplied swiftcore-projectsession
+evidence (build/proof-evidence/swiftcore-projectsession.json) carries both rows. No
+A-row of this ledger cites S046/S270, S194 or S195; no disposition changed here.
 
 A001 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:73
 Disposition: GAP
@@ -967,7 +974,7 @@ S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.sw
 Anchor: message "an out-of-range slot publishes no label"
 
 S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
-Anchor: message "the staged bank publishes no blank slot to drive"
+Anchor: function
 
 S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice_projection.swift
 Anchor: function
@@ -1639,7 +1646,7 @@ S269 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice_int
 Anchor: message "the displaced occurrence is back too"
 
 S270 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice_picker.swift
-Anchor: message "the staged bank publishes no blank slot to commit"
+Anchor: function
 
 S271 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice_picker.swift
 Anchor: function

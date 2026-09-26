@@ -148,13 +148,44 @@ struct drawerVoiceVoiceChangesFixture {
 // MARK: - Suite entry
 
 @MainActor
-internal func runVoiceChangesPageChecks(_ report: CheckReport, session: DocumentSession,
-                                        service: ProjectService) {
+internal func runVoiceChangesPageChecks(_ report: CheckReport, session _: DocumentSession,
+                                        service _: ProjectService) {
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVoiceProjectionID, "the staged rich bank fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-voice-rich-\(UUID().uuidString)", isDirectory: true)
+    let service = ProjectService()
+    defer {
+        do {
+            try runBlocking { await service.close() }
+        } catch {
+            report.fail(drawerVoiceProjectionID, "could not close the rich bank fixture: \(error)")
+        }
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let session: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await service.open(root: scratch.path) }
+        let loaded = try runBlocking { try await service.openSong(label: "mus_gym") }
+        let document = SongDocument(file: drawerVoiceVoiceChangesPageFixture(programs: [0, 1, 2]),
+                                    config: loaded.config, source: loaded.source,
+                                    trackBudget: loaded.trackBudget)
+        session = DocumentSession(document: document, service: service,
+                                  lease: loaded.bank, slots: loaded.bankSlots,
+                                  dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVoiceProjectionID, "could not load the rich bank fixture: \(error)")
+        return
+    }
     let editable = session.bankSlots.indices.filter { session.bankSlots[$0].voice != nil }
-    guard editable.count >= 3 else {
+    let namedCount = editable.filter { !(session.bankSlots[$0].voice?.symbol.isEmpty ?? true) }.count
+    guard editable.count >= 3 && namedCount > 0 else {
         report.fail(drawerVoiceProjectionID,
-                    "the staged bank exposes \(editable.count) parsed slots; the Voice "
-                    + "Changes cases need three")
+                    "the staged bank exposes \(editable.count) parsed slots and \(namedCount) named "
+                    + "editable slots; the Voice Changes cases need three parsed and one named")
         return
     }
     let programs = [editable[0], editable[1], editable[2]]
@@ -163,15 +194,18 @@ internal func runVoiceChangesPageChecks(_ report: CheckReport, session: Document
     drawerVoiceCurrentVoiceContext(report, suite: session, service: service, programs: programs)
     drawerVoiceOccurrenceIdentity(report, suite: session, service: service, programs: programs)
     drawerVoicePickerInsertion(report, suite: session, service: service, programs: programs)
+    drawerVoicePickerReattachment(report, suite: session, service: service, programs: programs)
     drawerVoiceOriginalPickerRows(report, suite: session, service: service)
     drawerVoicePickerValueReplacement(report, suite: session, service: service, programs: programs)
     drawerVoiceMarkerDragTransactions(report, suite: session, service: service, programs: programs)
     drawerVoiceContextMenuTransactions(report, suite: session, service: service, programs: programs)
+    drawerVoiceScrolledMenuPick(report, suite: session, service: service, programs: programs)
     drawerVoiceOriginalMenuTransactions(report, suite: session, service: service)
     drawerVoicePickerKeyboardPolicy(report, suite: session, service: service, programs: programs)
     drawerVoiceCancellationPaths(report, suite: session, service: service, programs: programs)
     drawerVoiceUndoRedoRefresh(report, suite: session, service: service, programs: programs)
     drawerVoicePlayheadDiagnostics(report, suite: session, service: service, programs: programs)
+    drawerVoiceHoverAndBankRefresh(report, suite: session, service: service, programs: programs)
     drawerVoiceAltFineClockLattice(report, suite: session, service: service, programs: programs)
     drawerVoiceCollisionDragOutcome(report, suite: session, service: service, programs: programs)
     drawerVoiceBlankSlotCommit(report, suite: session, service: service, programs: programs)

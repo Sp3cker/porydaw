@@ -82,6 +82,9 @@ func drawerVoiceMarkerProjection(_ report: CheckReport, suite: DocumentSession,
                        what: "the marker hover publishes its own tick")
     report.expectEqual(expected: 21, actual: page.hoverHintProfile, cppID: drawerVoiceProjectionID,
                        what: "a marker hover advertises fine marker movement")
+    report.expectEqual(expected: before, actual: page.publishedMarkers.map(\.label),
+                       cppID: drawerVoiceProjectionID,
+                       what: "hovering a marker leaves the marker labels unchanged")
     _ = page.pointerMove(x: fixture.markerX(96), y: 10, buttons: 0)
     report.expectEqual(expected: 12, actual: page.hoverHintProfile, cppID: drawerVoiceProjectionID,
                        what: "leaving the marker restores horizontal-scroll instructions")
@@ -258,10 +261,9 @@ func drawerVoiceSlotLabels(_ report: CheckReport, session: DocumentSession,
     // The page's own blank-slot truth, driven through a real lane: a change into
     // a slot with no parsed voice stays explicit.
     guard let blankIndex = session.bankSlots.indices.first(where: {
-        session.bankSlots[$0].voice == nil
+        session.bankSlots[$0].kind == BankSlotKind.none
     }) else {
-        report.expect(true, cppID: drawerVoiceLabelID,
-                      message: "the staged bank publishes no blank slot to drive")
+        report.fail(drawerVoiceLabelID, "the staged bank publishes no blank slot to drive")
         return
     }
     let fixture = drawerVoiceVoiceChangesFixture(suite: session, service: service,

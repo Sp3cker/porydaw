@@ -4698,6 +4698,183 @@ TestCase {
         compare(model.interactionActive, false, "the case left no interaction behind")
     }
 
+    function test_productionVoiceChangesInsertAndChangeRowPicks() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVoice("voice-row-picks")
+        var model = testCase.voiceModel()
+        var input = testCase.voicePlotInput()
+        var column = testCase.freeVoiceColumn(96)
+        verify(column >= 0, "a free lane column is drawn for the Insert row")
+        var count = testCase.voiceMarkerLines().length
+        var revision = bootstrap.automationDocumentRevision()
+        mouseClick(input, column, input.height / 2, Qt.RightButton)
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var panel = findChild(testCase.surface, "voiceMenuPanel")
+        var insertRow = testCase.menuRowByAction(panel, 2)
+        verify(insertRow && insertRow.visible && insertRow.width > 0,
+               "the empty target draws the Insert row")
+        mouseClick(insertRow, insertRow.width / 2, insertRow.height / 2, Qt.LeftButton)
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        compare(model.menuOpen, false, "the rendered Insert row consumed its menu")
+        testCase.typeProgram(7)
+        tryVerify(function() { return model.pickerFilter === "007" }, 1000,
+                  "the Insert picker filters to program 007")
+        var rows = testCase.voicePickerRowItems()
+        verify(rows.length > 0 && rows[0].objectName === "voicePickerRow_7",
+               "the filtered 007 delegate is drawn")
+        mouseClick(rows[0], rows[0].width / 2, rows[0].height / 2, Qt.LeftButton)
+        var targetTick = bootstrap.voicePickerTargetTick()
+        var accept = findChild(testCase.surface, "voicePickerAccept")
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        tryVerify(function() { return !model.pickerOpen && testCase.voiceMarkerLines().length === count + 1 },
+                  1000, "the rendered picker row inserts one voice marker")
+        testCase.awaitVoiceModal("voicePicker", false)
+        compare(bootstrap.automationDocumentRevision(), revision + 1,
+                "the Insert row and picker commit exactly one revision")
+
+        var marker = null
+        var lines = testCase.voiceMarkerLines()
+        for (var i = 0; i < lines.length; ++i) {
+            if (Math.abs(lines[i].x - column) < 14) marker = lines[i]
+        }
+        verify(marker, "the inserted marker remains drawn for Change Voice")
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var changeRow = testCase.menuRowByAction(panel, 1)
+        verify(changeRow && changeRow.visible, "the captured marker draws Change Voice")
+        mouseClick(changeRow, changeRow.width / 2, changeRow.height / 2, Qt.LeftButton)
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        compare(model.pickerIndex, 7, "Change Voice preselects the captured program")
+        testCase.typeProgram(3)
+        tryVerify(function() { return model.pickerFilter === "003" }, 1000,
+                  "the Change picker filters to program 003")
+        rows = testCase.voicePickerRowItems()
+        verify(rows.length > 0 && rows[0].objectName === "voicePickerRow_3",
+               "the filtered 003 delegate is drawn")
+        mouseClick(rows[0], rows[0].width / 2, rows[0].height / 2, Qt.LeftButton)
+        accept = findChild(testCase.surface, "voicePickerAccept")
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        tryVerify(function() { return !model.pickerOpen }, 1000,
+                  "the rendered Change row accepted its picker")
+        compare(bootstrap.automationDocumentRevision(), revision + 2,
+                "the Change row commits exactly one more revision")
+        compare(bootstrap.voiceMarkerTicks().split(",").indexOf(String(targetTick)) >= 0, true,
+                "Change Voice preserves the captured marker tick")
+    }
+
+    function test_productionVoiceChangesMenuHoldAcrossCameraScroll() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVoice("voice-menu-scroll")
+        var marker = testCase.insertVoiceChange(96)
+        verify(marker, "the menu has a rendered marker to capture")
+        var input = testCase.voicePlotInput()
+        var model = testCase.voiceModel()
+        var grid = testCase.surface.gridModel
+        var revision = bootstrap.automationDocumentRevision()
+        var count = testCase.voiceMarkerLines().length
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var scroll = grid.cameraScrollX
+        mouseWheel(input, point.x, point.y, 0, -120, Qt.NoButton, Qt.ShiftModifier)
+        tryVerify(function() { return grid.cameraScrollX > scroll }, 1000,
+                  "the plot wheel scrolls the camera while the menu is open")
+        compare(model.menuOpen, true, "the menu keeps its captured target across camera scroll")
+        var panel = findChild(testCase.surface, "voiceMenuPanel")
+        var row = testCase.menuRowByAction(panel, 1)
+        verify(row && row.visible && row.width > 0, "the scrolled Change row remains drawn")
+        mouseClick(row, row.width / 2, row.height / 2, Qt.LeftButton)
+        testCase.awaitVoiceModal("voicePicker", true)
+        testCase.awaitVoicePickerFocus()
+        testCase.typeProgram(3)
+        var pickerRows = testCase.voicePickerRowItems()
+        verify(pickerRows.length > 0 && pickerRows[0].objectName === "voicePickerRow_3",
+               "the scrolled target still offers the requested voice")
+        mouseClick(pickerRows[0], pickerRows[0].width / 2, pickerRows[0].height / 2, Qt.LeftButton)
+        var accept = findChild(testCase.surface, "voicePickerAccept")
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        tryVerify(function() { return !model.pickerOpen }, 1000, "the scrolled row accepts")
+        compare(bootstrap.automationDocumentRevision(), revision + 1,
+                "the post-scroll change is one revision")
+        compare(testCase.voiceMarkerLines().length, count,
+                "the post-scroll pick changes the captured marker without adding another")
+    }
+
+    function test_productionVoiceChangesDismissalAndEscape() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionVoice("voice-dismiss-escape")
+        var marker = testCase.insertVoiceChange(96)
+        verify(marker, "the cancel path has a rendered marker")
+        var input = testCase.voicePlotInput()
+        var model = testCase.voiceModel()
+        var count = testCase.voiceMarkerLines().length
+        var revision = bootstrap.automationDocumentRevision()
+        var point = input.mapFromItem(marker.parent, marker.x + 1,
+                                      marker.y + marker.height / 2)
+        mouseClick(input, point.x, point.y, Qt.RightButton)
+        testCase.awaitVoiceModal("voiceChangeMenu", true)
+        var underlay = findChild(testCase.surface, "voiceMenuUnderlay")
+        mousePress(underlay, 4, 4, Qt.RightButton)
+        tryVerify(function() { return !model.menuOpen }, 1000,
+                  "the outside right press dismisses the voice menu")
+        mouseRelease(underlay, 4, 4, Qt.RightButton)
+        compare(model.pickerOpen, false, "the paired release reopens no picker")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the outside right click writes nothing")
+        tryVerify(function() { return testCase.voicePlot().activeFocus }, 1000,
+                  "focus returns to the voice plot after dismissal")
+        mousePress(input, point.x, point.y, Qt.LeftButton)
+        mouseMove(input, point.x + 40, point.y, -1, Qt.LeftButton)
+        tryVerify(function() { return model.interactionActive }, 1000,
+                  "the marker drag owns an in-flight interaction")
+        keyClick(Qt.Key_Escape)
+        mouseRelease(input, point.x + 40, point.y, Qt.LeftButton)
+        compare(model.interactionActive, false, "Escape ends the in-flight drag")
+        compare(bootstrap.automationDocumentRevision(), revision, "Escape commits no drag")
+        compare(testCase.voiceMarkerLines().length, count, "the original marker survives Escape")
+    }
+
+    function test_productionVoiceChangesCameraTransactions() {
+        if (testCase.containerPhase) skip("production composition only")
+        var page = testCase.mountProductionVoice("voice-camera")
+        var input = testCase.voicePlotInput()
+        var plot = testCase.voicePlot()
+        var gutter = findChild(page, "voiceGutter")
+        var grid = testCase.surface.gridModel
+        fuzzyCompare(plot.x, testCase.surface.timelineSplitX, 0.01,
+                     "the plot begins at the shared gutter split")
+        fuzzyCompare(input.width, plot.width, 0.01, "the input spans the plot width")
+        fuzzyCompare(input.height, plot.height, 0.01, "the input spans the plot height")
+        fuzzyCompare(gutter.width, grid.keyboardWidth + (grid.trackHeaderWidth || 0), 0.01,
+                     "the gutter occupies the shared fixed-width column")
+        fuzzyCompare(gutter.height, page.height, 0.01,
+                     "the gutter spans the body height")
+        var x = input.width / 2
+        var y = input.height / 2
+        var beforeWidth = grid.beatWidth
+        var anchorTick = (x + grid.cameraScrollX) * grid.ticksPerBeat / beforeWidth
+        mouseWheel(input, x, y, 0, 120, Qt.NoButton, Qt.NoModifier)
+        tryVerify(function() { return grid.beatWidth > beforeWidth }, 1000,
+                  "the real plot wheel zooms the shared camera")
+        verify(Math.abs(anchorTick * grid.beatWidth / grid.ticksPerBeat
+                        - grid.cameraScrollX - x) <= 1,
+               "the anchor tick remains within one display pixel")
+        grid.setCameraHScroll(-1e6)
+        var floor = grid.cameraScrollX
+        grid.setCameraHScroll(floor + 120)
+        var start = grid.cameraScrollX
+        verify(start > floor, "the camera has room to pan toward pre-roll")
+        mousePress(input, x, y, Qt.MiddleButton)
+        mouseMove(input, x + start - floor + 120, y, -1, Qt.MiddleButton)
+        mouseRelease(input, x + start - floor + 120, y, Qt.MiddleButton)
+        compare(grid.cameraScrollX, floor, "the middle-drag clamps at the pre-roll floor")
+    }
+
     // The production Automation page mounts through the real presenter and
     // renders its own composition: the shared gutter splits the selector from the
     // plot, every catalog parameter publishes a tab, the lane's written events

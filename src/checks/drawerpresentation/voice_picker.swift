@@ -11,6 +11,7 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let baseline = fixture.snapshot
+    let undoBefore = fixture.document.history.undoIndex
     report.expect(!baseline.canUndo, cppID: drawerVoiceInsertionID,
                   message: "the fixture starts with no undoable edit")
 
@@ -55,6 +56,9 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
                        what: "the insertion is one revision")
     report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceInsertionID,
                   message: "the insertion records one history entry")
+    report.expectEqual(expected: undoBefore + 1, actual: fixture.document.history.undoIndex,
+                       cppID: drawerVoiceInsertionID,
+                       what: "the committed insertion advances the undo index by one")
     report.expectEqual(expected: [0, 48, 96, 120], actual: page.markerTicks, cppID: drawerVoiceInsertionID,
                        what: "the projection rebuilds around the new occurrence")
     report.expect(!page.hasPicker, cppID: drawerVoiceInsertionID,
@@ -349,16 +353,22 @@ func drawerVoicePickerKeyboardPolicy(_ report: CheckReport, suite: DocumentSessi
     report.expectEqual(expected: 1, actual: page.pickerRowValues.filter(\.selected).count, cppID: drawerVoiceKeyboardID,
                        what: "exactly one row is selected")
 
-    // Filtering by name text follows the labels the bank publishes.
-    let name = suite.bankSlots[programs[0]].voice?.symbol ?? ""
-    if !name.isEmpty {
-        page.setPickerFilter(text: name)
-        report.expect(page.pickerRowPrograms.contains(programs[0]), cppID: drawerVoiceKeyboardID,
-                      message: "a name filter keeps the slot that carries it")
-        report.expect(page.pickerRowValues.allSatisfy {
-            $0.label.lowercased().contains(name.lowercased())
-        }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
+    guard let namedSlot = suite.bankSlots.indices.first(where: {
+        suite.bankSlots[$0].kind == BankSlotKind.editable
+            && !(suite.bankSlots[$0].voice?.symbol.isEmpty ?? true)
+    }) else {
+        report.fail(drawerVoiceKeyboardID, "the staged bank has no named editable slot")
+        page.cancelPicker()
+        return
     }
+    let name = String(VoiceLanePolicy.label(
+        slot: namedSlot, view: suite.bankSlots[namedSlot]).split(separator: " ", maxSplits: 1).last ?? "")
+    page.setPickerFilter(text: name)
+    report.expect(page.pickerRowPrograms.contains(namedSlot), cppID: drawerVoiceKeyboardID,
+                  message: "a name filter keeps the slot that carries it")
+    report.expect(page.pickerRowValues.allSatisfy {
+        $0.label.lowercased().contains(name.lowercased())
+    }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
     page.cancelPicker()
     report.expect(!page.hasPicker, cppID: drawerVoiceKeyboardID, message: "the picker closes")
 }
@@ -367,10 +377,9 @@ func drawerVoicePickerKeyboardPolicy(_ report: CheckReport, suite: DocumentSessi
 func drawerVoiceBlankSlotCommit(_ report: CheckReport, suite: DocumentSession,
                              service: ProjectService, programs: [Int]) {
     guard let blankIndex = suite.bankSlots.indices.first(where: {
-        suite.bankSlots[$0].voice == nil
+        suite.bankSlots[$0].kind == BankSlotKind.none
     }) else {
-        report.expect(true, cppID: drawerVoiceCollisionID,
-                      message: "the staged bank publishes no blank slot to commit")
+        report.fail(drawerVoiceCollisionID, "the staged bank publishes no blank slot to commit")
         return
     }
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
@@ -411,4 +420,30 @@ func drawerVoiceBlankSlotCommit(_ report: CheckReport, suite: DocumentSession,
     report.expectEqual(expected: String(format: "%03d", blankIndex), actual: fixture.page.readoutText,
                        cppID: drawerVoiceCollisionID,
                        what: "the readout of a blank context is the program number alone")
+}
+
+@MainActor
+func drawerVoicePickerReattachment(_ report: CheckReport, suite: DocumentSession,
+                                   service: ProjectService, programs: [Int]) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let before = fixture.snapshot
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    guard page.hasPicker else {
+        report.fail(drawerVoiceCancellationID, "the picker did not open before detaching")
+        return
+    }
+    page.detach()
+    report.expect(!page.hasPicker && !page.pickerOpen && fixture.snapshot == before,
+                  cppID: drawerVoiceCancellationID,
+                  message: "a detached page cancels its open picker without writing")
+    page.attach(session: fixture.session, palette: GridPalette())
+    _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
+    page.setPickerFilter(text: String(format: "%03d", programs[2]))
+    page.selectPickerRow(index: 0)
+    let accepted = page.acceptPicker()
+    report.expect(accepted && fixture.lanePoints().contains {
+        $0.tick == 96 && $0.value == programs[2]
+    } && fixture.snapshot.revision == before.revision + 1, cppID: drawerVoiceInsertionID,
+    message: "a re-attached page drives a fresh insertion")
 }

@@ -129,6 +129,163 @@ func drawerVoicePlayheadDiagnostics(_ report: CheckReport, suite: DocumentSessio
 }
 
 @MainActor
+func drawerVoiceHoverAndBankRefresh(_ report: CheckReport, suite: DocumentSession,
+                                    service: ProjectService, programs: [Int]) {
+    let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
+    let page = fixture.page
+    let hoverX = fixture.markerX(24)
+    page.refreshPlayhead(tick: 8, playing: true)
+    _ = page.pointerMove(x: hoverX, y: 10, buttons: 0)
+    let hovered = page.hoverText
+    _ = page.pointerMove(x: hoverX, y: 10, buttons: 0)
+    report.expect(page.hoverVisible && !hovered.isEmpty && page.hoverText == hovered,
+                  cppID: drawerVoiceDiagnosticsID,
+                  message: "a repeated hover move keeps the hover text")
+    page.refreshPlayhead(tick: 32, playing: true)
+    report.expect(page.hoverVisible && page.hoverText == hovered, cppID: drawerVoiceDiagnosticsID,
+                  message: "hover survives a playhead move inside one voice span")
+    page.refreshPlayhead(tick: 60, playing: true)
+    report.expect(!page.hoverVisible && page.hoverText.isEmpty, cppID: drawerVoiceDiagnosticsID,
+                  message: "a playhead crossing the change boundary clears the hover context")
+    _ = page.pointerMove(x: hoverX, y: 10, buttons: 0)
+    let hoverBeforeStopping = page.hoverVisible
+    page.refreshPlayhead(tick: 0, playing: false)
+    report.expect(hoverBeforeStopping && !page.hoverVisible && page.hoverText.isEmpty,
+                  cppID: drawerVoiceDiagnosticsID,
+                  message: "a stopped playhead returning to an earlier span clears the hover")
+    _ = page.pointerMove(x: hoverX, y: 10, buttons: 0)
+    page.pointerLeave()
+    report.expect(!page.hoverVisible, cppID: drawerVoiceDiagnosticsID,
+                  message: "a pointer leave clears the hover")
+    _ = page.pointerMove(x: hoverX, y: 10, buttons: 0)
+    report.expect(page.handleEscape() && !page.hoverVisible, cppID: drawerVoiceDiagnosticsID,
+                  message: "an escape clears the hover")
+
+    let original = programs.map { fixture.session.bankSlots[$0].voice }
+    guard original.allSatisfy({ $0 != nil }) else {
+        report.fail(drawerVoiceLabelID, "the named bank slots have no parsed voices to edit")
+        return
+    }
+    guard page.publishedMarkers.count == programs.count else {
+        report.fail(drawerVoiceLabelID, "the named bank did not publish every fixture marker")
+        return
+    }
+    let namedLabels = page.publishedMarkers.map(\.label)
+    for (index, slot) in programs.enumerated() {
+        guard var edited = original[index] else {
+            report.fail(drawerVoiceLabelID, "the staged bank slot \(slot) has no parsed voice to edit")
+            return
+        }
+        edited.symbol = ""
+        let cleared = edited
+        do {
+            _ = try runBlocking {
+                try await fixture.session.applyBankEdit(slot: slot, value: cleared, expected: original[index])
+            }
+        } catch {
+            report.fail(drawerVoiceLabelID, "could not clear voice symbol through the bank: \(error)")
+            return
+        }
+    }
+    page.detach()
+    page.attach(session: fixture.session, palette: GridPalette())
+    report.expect(page.publishedMarkers.count == programs.count
+                  && zip(page.publishedMarkers, programs).enumerated().allSatisfy { index, pair in
+        pair.0.symbol.isEmpty && pair.0.label.hasPrefix(String(format: "%03d ", pair.1))
+            && pair.0.label != namedLabels[index]
+    }, cppID: drawerVoiceLabelID,
+        message: "a bank without symbol names falls back to program-number labels")
+
+    do {
+        for _ in programs {
+            _ = try runBlocking { try await fixture.session.undo() }
+        }
+    } catch {
+        report.fail(drawerVoiceLabelID, "could not restore the bank symbols: \(error)")
+        return
+    }
+    page.detach()
+    page.attach(session: fixture.session, palette: GridPalette())
+    report.expect(page.publishedMarkers.map(\.label) == namedLabels, cppID: drawerVoiceLabelID,
+                  message: "restoring the bank restores the named labels")
+
+    guard var renamed = fixture.session.bankSlots[programs[1]].voice else {
+        report.fail(drawerVoiceLabelID, "the restored bank has no voice to rename")
+        return
+    }
+    let beforeRename = renamed
+    renamed.symbol = "renamed_voice_symbol"
+    do {
+        _ = try runBlocking {
+            try await fixture.session.applyBankEdit(slot: programs[1], value: renamed,
+                                                    expected: beforeRename)
+        }
+    } catch {
+        report.fail(drawerVoiceLabelID, "could not rename the bank symbol: \(error)")
+        return
+    }
+    page.detach()
+    page.attach(session: fixture.session, palette: GridPalette())
+    let renamedLabel = page.publishedMarkers.count > 1 ? page.publishedMarkers[1].label : nil
+    report.expect(renamedLabel?.contains("renamed_voice_symbol") == true
+                  && renamedLabel != namedLabels[1], cppID: drawerVoiceLabelID,
+                  message: "a renamed voice symbol relabels the lane")
+    drawerVoiceWorkspaceHideShow(report, fixture: fixture)
+}
+
+@MainActor
+private func drawerVoiceWorkspaceHideShow(_ report: CheckReport,
+                                          fixture: drawerVoiceVoiceChangesFixture) {
+    let audio: NativeAudio
+    do {
+        audio = try NativeAudio()
+    } catch {
+        report.fail(drawerVoiceCancellationID, "section visibility cannot create audio: \(error)")
+        return
+    }
+    let playhead = SharedPlayheadPresenter()
+    let guides = PlayheadGuidesPresenter()
+    let eventList = EventListPresenter()
+    let workspace = DocumentWorkspace(
+        session: fixture.session, audio: audio, playhead: playhead,
+        playheadGuides: guides, eventList: eventList, palette: GridPalette(),
+        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
+            changeTrackVoiceRequested: { _ in },
+            revealTrackVoiceRequested: { _ in },
+            gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
+            publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    defer {
+        workspace.teardown()
+        withExtendedLifetime((audio, playhead, guides, eventList)) {}
+    }
+    workspace.activate()
+    let page = workspace.voiceChangesPage
+    page.configureBody(width: 400, height: 46, gutter: 56, devicePixelRatio: 1,
+                       baseFontPx: 13, dragDistance: 10)
+    let drawer = workspace.drawer
+    let section = DrawerSectionKind.voiceChanges.rawValue
+    drawer.setSectionVisible(kind: section, visible: true, drawerOwnsFocus: false)
+    _ = playhead.observe(sample: fixture.session.timeline.sample(for: 60),
+                         transport: SharedPlayheadPolicy.playingTransport)
+    _ = page.pointerMove(x: fixture.markerX(24), y: 10, buttons: 0)
+    guard page.hoverVisible && page.presentedContextSlot == fixture.lanePoints()[1].value else {
+        report.fail(drawerVoiceCancellationID, "the visible workspace did not arm its voice hover")
+        return
+    }
+    drawer.setSectionVisible(kind: section, visible: false, drawerOwnsFocus: false)
+    report.expect(!drawer.voiceChangesSection.visible && !page.hoverVisible && !page.interactionActive,
+                  cppID: drawerVoiceCancellationID,
+                  message: "hiding the section cancels the interaction and clears the hover")
+    let hiddenBuilds = page.contentBuildCount
+    _ = playhead.observe(sample: fixture.session.timeline.sample(for: 8),
+                         transport: SharedPlayheadPolicy.playingTransport)
+    drawer.setSectionVisible(kind: section, visible: true, drawerOwnsFocus: false)
+    report.expect(drawer.voiceChangesSection.visible && page.contentBuildCount > hiddenBuilds
+                  && page.markerTicks == [0, 48, 120], cppID: drawerVoiceCancellationID,
+                  message: "re-showing the section re-derives the markers")
+}
+
+@MainActor
 func drawerVoiceAuditionCapability(_ report: CheckReport, suite: DocumentSession,
                                 service: ProjectService, programs: [Int]) {
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)

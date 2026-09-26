@@ -432,6 +432,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
         presentedContextEndTick = VoiceLanePolicy.endTick(after: effectiveTick, points: points)
             ?? TimeDefaults.noTick
+        if contextChanged { clearHover() }
         if contextChanged || playingChanged {
             contextChangeCount &+= 1
             rebuildContent()

@@ -476,7 +476,7 @@ extension VoiceChangesPage {
         publishMarkerHover()
     }
 
-    private func clearHover() {
+    func clearHover() {
         publishHoverHintProfile(marker: false)
         guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
         else { return }

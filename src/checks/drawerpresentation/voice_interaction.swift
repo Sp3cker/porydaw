@@ -11,6 +11,14 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     let fixture = drawerVoiceVoiceChangesFixture(suite: suite, service: service, programs: programs)
     let page = fixture.page
     let baseline = fixture.snapshot
+    let originalBytes: [UInt8]
+    do {
+        originalBytes = try fixture.document.captureSave().bytes
+    } catch {
+        report.fail(drawerVoiceMoveID, "cannot capture drag baseline: \(error)")
+        return
+    }
+    let undoBefore = fixture.document.history.undoIndex
 
     // Crossing/tied markers can propagate stair placement beyond the moved
     // label. A camera redraw must agree with the incremental drag projection.
@@ -78,8 +86,18 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
                        what: "the move is one revision")
     report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceMoveID,
                   message: "the move records one history entry")
+    report.expectEqual(expected: undoBefore + 1, actual: fixture.document.history.undoIndex,
+                       cppID: drawerVoiceMoveID, what: "the committed drag advances the undo index by one")
     report.expect(VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints()) == nil,
                   cppID: drawerVoiceMoveID, message: "the source tick no longer holds the occurrence")
+    let committedBytes: [UInt8]
+    do {
+        committedBytes = try fixture.document.captureSave().bytes
+    } catch {
+        report.fail(drawerVoiceMoveID, "cannot capture committed drag: \(error)")
+        return
+    }
+    let committedRevision = fixture.snapshot.revision
 
     do {
         _ = try runBlocking { try await fixture.session.undo() }
@@ -92,6 +110,19 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(expected: [0, 48, 120], actual: page.markerTicks, cppID: drawerVoiceMoveID,
                        what: "undo rebuilds the projection at the restored tick")
     do {
+        let undoneBytes = try fixture.document.captureSave().bytes
+        report.expect(undoneBytes == originalBytes
+                      && fixture.document.history.undoIndex == undoBefore, cppID: drawerVoiceMoveID,
+                      message: "undo restores the drag's bytes and index")
+    } catch {
+        report.fail(drawerVoiceMoveID, "cannot capture undone drag: \(error)")
+        return
+    }
+    let undoneRevision = fixture.snapshot.revision
+    report.expectEqual(expected: committedRevision + 1, actual: undoneRevision,
+                       cppID: drawerVoiceMoveID,
+                       what: "undo advances the document revision after the drag")
+    do {
         _ = try runBlocking { try await fixture.session.redo() }
     } catch {
         report.fail(drawerVoiceMoveID, "redo failed: \(error)")
@@ -99,6 +130,18 @@ func drawerVoiceMarkerDragTransactions(_ report: CheckReport, suite: DocumentSes
     }
     report.expectEqual(expected: preview, actual: fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
                        what: "redo reapplies the move")
+    do {
+        let redoneBytes = try fixture.document.captureSave().bytes
+        report.expect(fixture.document.history.undoIndex == undoBefore + 1
+                      && redoneBytes == committedBytes,
+                      cppID: drawerVoiceMoveID, message: "redo restores the committed drag")
+    } catch {
+        report.fail(drawerVoiceMoveID, "cannot capture redone drag: \(error)")
+        return
+    }
+    report.expectEqual(expected: undoneRevision + 1, actual: fixture.snapshot.revision,
+                       cppID: drawerVoiceMoveID,
+                       what: "redo advances the document revision after the drag")
 
     // A release back on the frozen tick is a no-op.
     let settled = fixture.snapshot
