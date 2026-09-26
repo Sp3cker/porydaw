@@ -12,11 +12,13 @@ FocusScope {
     required property QtObject controller
     property var shellRouter: null
     readonly property bool showEvents: session.showsEvents
+    readonly property var surface: pageLoader.item
     signal contextMenuAt(real x, real y)
 
     Component.onDestruction: controller.pageReleased(session.tabId)
 
     Loader {
+        id: pageLoader
         anchors.fill: parent
         sourceComponent: Component {
             EditorSurface {

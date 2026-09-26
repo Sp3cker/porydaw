@@ -633,6 +633,278 @@ TestCase {
         }).sort())
     }
 
+    function noteTargets() {
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        return JSON.parse(grid.noteSummary).filter(function(note) {
+            return !note.ghost && note.track === grid.trackIndex
+        }).map(function(note) {
+            var item = findChild(surface(), "gridNote_" + note.id)
+            if (!item || !item.visible || item.width < grid.drawThreshold * 2)
+                return null
+            var point = item.mapToItem(roll, item.width / 2, item.height / 2)
+            return point.x > item.width && point.y > item.height
+                && point.x < roll.width - item.width
+                && point.y < roll.height - item.height
+                ? { note: note, point: point } : null
+        }).filter(function(target) { return target !== null })
+    }
+
+    function noteMenu() {
+        var menu = findChild(shell, "shellGridContextMenu")
+        verify(menu !== null, "the shell owns the note context menu")
+        return menu
+    }
+
+    function noteMenuMiss(menu) {
+        var roll = control("swiftRollInput")
+        var targets = JSON.parse(surface().gridModel.noteSummary)
+        for (var y = roll.height - surface().gridModel.rowHeight; y > 0;
+             y -= surface().gridModel.rowHeight) {
+            for (var x = roll.width - roll.height / 8; x > 0; x -= roll.width / 8) {
+                var point = roll.mapToItem(null, x, y)
+                if (point.x >= menu.x && point.x <= menu.x + menu.width
+                    && point.y >= menu.y && point.y <= menu.y + menu.height)
+                    continue
+                var occupied = targets.some(function(note) {
+                    var item = findChild(surface(), "gridNote_" + note.id)
+                    if (!item || !item.visible)
+                        return false
+                    var top = item.mapToItem(roll, 0, 0)
+                    return x >= top.x && x <= top.x + item.width
+                        && y >= top.y && y <= top.y + item.height
+                })
+                if (!occupied)
+                    return roll.mapToItem(shell.contentItem, x, y)
+            }
+        }
+        return null
+    }
+
+    function test_noteMenuRetargetAndDismiss() {
+        openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var targets = noteTargets()
+        verify(targets.length > 1, "two drawn primary notes accept note menus")
+        var first = targets[0]
+        mouseClick(roll, first.point.x, first.point.y, Qt.RightButton)
+        var menu = noteMenu()
+        tryCompare(menu, "visible", true)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.id === first.note.id && note.selected
+        }), "a right release over an unselected note selects it and opens the note menu")
+        verify(menu.itemAt(0).objectName === "shellContextAction_edit.set_velocity"
+               && findChild(menu, "shellContextAction_roll.paste") === null,
+               "the rendered note menu leads with Set Velocity and omits Paste")
+        var second = null
+        for (var index = 1; index < targets.length; ++index) {
+            var point = roll.mapToItem(null, targets[index].point.x, targets[index].point.y)
+            if (point.x < menu.x || point.x > menu.x + menu.width
+                || point.y < menu.y || point.y > menu.y + menu.height) {
+                second = targets[index]
+                break
+            }
+        }
+        verify(second !== null, "a second drawn note lies outside the open menu")
+        var before = noteLayout()
+        var revision = grid.appliedRevisionText
+        var cursor = grid.editCursorTick
+        var position = roll.mapToItem(shell.contentItem, second.point.x, second.point.y)
+        mousePress(shell.contentItem, position.x, position.y, Qt.RightButton)
+        tryCompare(menu, "visible", true, 3000)
+        verify(menu.visible && JSON.parse(grid.noteSummary).some(function(note) {
+            return note.id === second.note.id && note.selected
+        }), "an outside right press retargets the open note menu to the note under the cursor")
+        mouseRelease(shell.contentItem, position.x, position.y, Qt.RightButton)
+        compare(noteLayout(), before, "the retarget release leaves the timeline untouched")
+        compare(grid.appliedRevisionText, revision)
+        compare(grid.editCursorTick, cursor)
+        var miss = noteMenuMiss(menu)
+        verify(miss !== null, "an empty plot point lies outside the retargeted menu")
+        mousePress(shell.contentItem, miss.x, miss.y, Qt.RightButton)
+        compare(menu.visible, false,
+                "an outside right press on an empty row dismisses the note menu without editing")
+        mouseRelease(shell.contentItem, miss.x, miss.y, Qt.RightButton)
+        compare(noteLayout(), before)
+        compare(grid.appliedRevisionText, revision)
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.id === second.note.id && note.selected
+        }), "the empty-space release preserves the retargeted note selection")
+    }
+
+    function test_noteMenuPromptRoundTripWithHiddenDrawer() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var drawer = surface().drawerPresenter
+        var drawerItem = control("editorDrawer")
+        for (var kind = 0; kind < 3; ++kind)
+            drawer.setSectionVisible(kind, false, false)
+        drawerItem.visible = false
+        compare(drawerItem.visible, false, "the drawer is hidden before the prompt opens")
+        var target = noteTargets()[0]
+        verify(target !== undefined, "a visible fixture note can be seeded at velocity 73")
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        var menu = noteMenu()
+        tryCompare(menu, "visible", true)
+        var row = menu.itemAt(0)
+        mouseClick(row, row.width / 2, row.height / 2)
+        var model = surface().velocityModel
+        tryCompare(model, "promptOpen", true)
+        tryVerify(function() { return findChild(surface(), "noteVelocityInput") !== null }, 3000)
+        var field = findChild(surface(), "noteVelocityInput")
+        tryCompare(field, "activeFocus", true)
+        field.selectAll()
+        keyClick(Qt.Key_7)
+        keyClick(Qt.Key_3)
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "promptOpen", false)
+        verify(waitForNative(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === target.note.id && note.velocity === 73
+            })
+        }, 5000), "the mounted fixture note is seeded at velocity 73")
+        var before = noteLayout()
+        var baselineRevision = grid.appliedRevisionText
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        tryCompare(menu, "visible", true)
+        row = menu.itemAt(0)
+        mouseClick(row, row.width / 2, row.height / 2)
+        tryCompare(model, "promptOpen", true)
+        tryVerify(function() { return findChild(surface(), "noteVelocityInput") !== null }, 3000)
+        var card = findChild(surface(), "velocityPromptCard")
+        field = findChild(surface(), "noteVelocityInput")
+        verify(card !== null && field !== null && card.visible && card.width > 0
+               && card.height > 0 && !drawerItem.visible && !menu.visible,
+               "the prompt renders over the roll while the drawer is hidden")
+        tryCompare(field, "activeFocus", true)
+        verify(field.text === "73" && field.selectedText === "73",
+               "the Set Velocity row opens the prompt over the roll with the note's velocity selected")
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_5)
+        compare(noteLayout(), before, "typing the velocity draft does not edit the timeline")
+        compare(grid.appliedRevisionText, baselineRevision)
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "promptOpen", false)
+        verify(roll.activeFocus, "accepting the prompt restores roll focus; active item "
+               + (shell.activeFocusItem ? shell.activeFocusItem.objectName : "<none>"))
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.id === target.note.id && note.velocity === 95
+        }), "accepting the mounted prompt changes the captured note")
+        var accepted = noteLayout()
+        verify(accepted !== before && grid.appliedRevisionText !== baselineRevision
+               && session.canUndo, "the mounted acceptance commits one undoable edit")
+        shell.shellPresenter.activate("edit.undo")
+        verify(waitForNative(function() {
+            return noteLayout() === before && session.canRedo
+        }, 5000), "one undo restores the exact pre-prompt note layout")
+        compare(session.canUndo, true, "the earlier fixture edit remains after undoing acceptance")
+        compare(grid.lastVelocity, 95, "undo leaves the pencil latch at the accepted value")
+
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        tryCompare(menu, "visible", true)
+        row = menu.itemAt(0)
+        mouseClick(row, row.width / 2, row.height / 2)
+        tryCompare(model, "promptOpen", true)
+        tryVerify(function() { return findChild(surface(), "noteVelocityInput") !== null }, 3000)
+        field = findChild(surface(), "noteVelocityInput")
+        tryCompare(field, "activeFocus", true)
+        compare(field.selectedText, "73")
+        var unchangedRevision = grid.appliedRevisionText
+        var unchangedLayout = noteLayout()
+        keyClick(Qt.Key_Return)
+        tryCompare(model, "promptOpen", false)
+        verify(noteLayout() === unchangedLayout
+               && grid.appliedRevisionText === unchangedRevision && session.canRedo
+               && grid.lastVelocity === 73,
+               "accepting an unchanged velocity over the roll writes nothing and relatches the pencil")
+        var snap = grid.snapTicks
+        var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
+        var duration = Math.max(snap, Math.ceil(grid.drawThreshold / pixelsPerTick / snap) * snap)
+        var start = Math.ceil((grid.cameraScrollX + roll.width / 3) / pixelsPerTick / snap) * snap
+        var draw = null
+        var occupied = JSON.parse(grid.noteSummary)
+        for (var rowIndex = Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2;
+             rowIndex < Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight) - 2;
+             ++rowIndex) {
+            var pitch = 127 - rowIndex
+            if (!occupied.some(function(note) {
+                return note.pitch === pitch && note.tick < start + duration
+                    && note.tick + note.duration > start
+            })) {
+                draw = { x: start * pixelsPerTick - grid.cameraScrollX
+                             + grid.drawThreshold / 2,
+                         y: (rowIndex + 0.5) * grid.rowHeight - grid.cameraScrollY }
+                break
+            }
+        }
+        verify(draw !== null && draw.x + duration * pixelsPerTick < roll.width,
+               "a free displayed cell accepts the relatched pencil")
+        var drawEnd = draw.x + duration * pixelsPerTick - grid.drawThreshold / 2
+        mousePress(roll, draw.x, draw.y, Qt.LeftButton)
+        mouseMove(roll, drawEnd, draw.y, -1, Qt.LeftButton)
+        mouseRelease(roll, drawEnd, draw.y, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return occupied.every(function(previous) { return previous.id !== note.id })
+                    && note.velocity === 73
+            })
+        }, 5000), "the unchanged prompt acceptance supplies the next drawn note's velocity")
+
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        tryCompare(menu, "visible", true)
+        row = menu.itemAt(0)
+        mouseClick(row, row.width / 2, row.height / 2)
+        tryCompare(model, "promptOpen", true)
+        tryVerify(function() { return findChild(surface(), "noteVelocityInput") !== null }, 3000)
+        field = findChild(surface(), "noteVelocityInput")
+        tryCompare(field, "activeFocus", true)
+        var beforeEscape = noteLayout()
+        var revision = grid.appliedRevisionText
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false)
+        verify(noteLayout() === beforeEscape && grid.appliedRevisionText === revision
+               && roll.activeFocus, "Escape closes the prompt over the roll without writing")
+    }
+
+    function test_noteMenuRetiresOnDocumentEditAndPreservesOtherFocus() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var target = noteTargets()[0]
+        verify(target !== undefined, "a mounted note accepts a context menu")
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        var menu = noteMenu()
+        tryCompare(menu, "visible", true)
+        var before = noteLayout()
+        var revision = grid.appliedRevisionText
+        grid.performCommand(5)
+        tryCompare(menu, "visible", false)
+        verify(grid.appliedRevisionText !== revision
+               && noteLayout() !== before && session.canUndo,
+               "a document edit retires the open note menu synchronously")
+        shell.shellPresenter.activate("edit.undo")
+        verify(waitForNative(function() { return noteLayout() === before }, 5000),
+               "undo restores the note edited while its menu was open")
+        mouseClick(roll, target.point.x, target.point.y, Qt.RightButton)
+        tryCompare(menu, "visible", true)
+        var row = menu.itemAt(0)
+        mouseClick(row, row.width / 2, row.height / 2)
+        var model = surface().velocityModel
+        tryCompare(model, "promptOpen", true)
+        tryVerify(function() { return findChild(surface(), "noteVelocityInput") !== null }, 3000)
+        var field = findChild(surface(), "noteVelocityInput")
+        tryCompare(field, "activeFocus", true)
+        var ruler = control("timelineRulerInput")
+        ruler.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(ruler, "activeFocus", true)
+        model.cancelPrompt()
+        tryCompare(model, "promptOpen", false)
+        compare(ruler.activeFocus, true,
+                "closing the prompt does not steal focus from another control")
+    }
+
     function sweepNoteRange() {
         var ruler = control("timelineRulerInput")
         var grid = surface().gridModel

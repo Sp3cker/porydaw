@@ -19,6 +19,8 @@ Item {
     readonly property var gridModel: applicationSession.gridPresenter()
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
     readonly property var drawerPresenter: applicationSession.drawerPresenter()
+    readonly property var velocityModel: applicationSession.velocityPage()
+    property bool velocityPromptRetainingRelease: false
     readonly property var otherEventsPresenter: applicationSession.otherEventsBand()
     readonly property var pitchBendPresenter: applicationSession.pitchBendPresenter()
     readonly property var eventListPresenter: applicationSession.eventListPresenter()
@@ -54,6 +56,12 @@ Item {
     readonly property int menuHorizontalPadding: applicationSession.timeSigHost.layoutSpaces.two
     readonly property int menuVerticalPadding: applicationSession.timeSigHost.layoutSpaces.half
     readonly property int menuGap: applicationSession.timeSigHost.layoutSpaces.one
+    function retargetNoteMenu(x, y) {
+        const point = rollInput.mapFromItem(null, x, y)
+        return rollPlot.visible && point.x >= 0 && point.y >= 0
+            && point.x < rollInput.width && point.y < rollInput.height
+            && gridModel.retargetNoteMenu(point.x, point.y)
+    }
 
     component MenuMeasure: Item {
         required property var items
@@ -996,6 +1004,26 @@ Item {
             }
         }
     }
+    Loader {
+        id: velocityPromptLoader
+        anchors.fill: parent
+        z: 13
+        active: root.velocityModel && (root.velocityModel.promptOpen
+                                       || root.velocityPromptRetainingRelease)
+        sourceComponent: Component {
+            VelocityPrompt {
+                anchors.fill: parent
+                model: root.velocityModel
+                promptPalette: root.gridModel.palette
+                focusOrigin: rollInput
+                hintService: root.hintService
+                onConsumingOutsidePressChanged: {
+                    root.velocityPromptRetainingRelease = consumingOutsidePress
+                }
+            }
+        }
+    }
+
     Loader {
         id: pitchBendPopupLoader
         anchors.fill: parent

@@ -12,10 +12,9 @@ func drawerVelocityPromptTransaction(_ report: CheckReport, session: DocumentSes
     let page = fixture.page
     let document = fixture.document
     let notes = fixture.notes
-    guard notes.count >= 3 else {
-        report.fail(drawerVelocityPromptID, "the synthetic fixture published fewer than three notes")
-        return
-    }
+    report.expect(notes.count >= 3, cppID: drawerVelocityPromptID,
+                  message: "the synthetic fixture published fewer than three notes")
+    guard notes.count >= 3 else { return }
     var acceptedValues: [UInt8] = []
     page.onVelocityAccepted = { acceptedValues.append($0) }
     report.expectEqual(expected: 1, actual: VelocityPromptPolicy.minimum, cppID: drawerVelocityPromptID,
@@ -190,8 +189,12 @@ private func checkVelocityPromptAcceptUndoLatch(_ report: CheckReport, session: 
                                        expectedRevision: fixture.document.revision)
     fixture.session.setSelectedNotes([noteID])
     fixture.page.refreshFromDocument()
+    let grid = makeCameraGrid(session: fixture.session)
     var acceptedValues: [UInt8] = []
-    fixture.page.onVelocityAccepted = { acceptedValues.append($0) }
+    fixture.page.onVelocityAccepted = {
+        acceptedValues.append($0)
+        grid.lastVelocity = Int($0)
+    }
     let before = coreTimeBytes(fixture.document)
     let revision = fixture.document.revision
     let identity = fixture.document.history.currentIdentity
@@ -224,14 +227,39 @@ private func checkVelocityPromptAcceptUndoLatch(_ report: CheckReport, session: 
                   fixture.document.history.undoCount == undoCount + 1,
                   cppID: id, message: "A012: one undo restores the original 73-velocity song bytes")
     fixture.page.refreshFromDocument()
-    let afterUndo = DocumentSnapshot(fixture.document)
+    guard let acceptedCell = pencilFreeCell(session: fixture.session, grid: grid) else {
+        report.fail(id, "no free grid cell for the accepted-velocity draw")
+        return
+    }
+    pencilDraw(acceptedCell, grid: grid)
+    report.expect(fixture.document.notes(in: grid.trackIndex).contains {
+        Int($0.tick) == acceptedCell.tick && Int($0.pitch) == acceptedCell.pitch
+            && $0.velocity == 95
+    }, cppID: id, message: "an accepted prompt velocity latches into the next drawn note")
+    grid.refreshFromSession()
+    let afterDraw = DocumentSnapshot(fixture.document)
+    let afterDrawBytes = coreTimeBytes(fixture.document)
+    let afterDrawIndex = fixture.document.history.undoIndex
+    let afterDrawCount = fixture.document.history.undoCount
+    fixture.session.setSelectedNotes([noteID])
+    fixture.page.refreshFromDocument()
     report.expect(fixture.page.openSelectedVelocityPrompt() && fixture.page.acceptPrompt() &&
-                  DocumentSnapshot(fixture.document) == afterUndo &&
-                  coreTimeBytes(fixture.document) == before &&
-                  fixture.document.history.undoIndex == undoIndex &&
-                  fixture.document.history.undoCount == undoCount + 1 &&
+                  DocumentSnapshot(fixture.document) == afterDraw &&
+                  coreTimeBytes(fixture.document) == afterDrawBytes &&
+                  fixture.document.history.undoIndex == afterDrawIndex &&
+                  fixture.document.history.undoCount == afterDrawCount &&
                   acceptedValues == [95, 73],
                   cppID: id, message: "A018: accepting unchanged 73 relatches without a document edit")
+    grid.refreshFromSession()
+    guard let relatchedCell = pencilFreeCell(session: fixture.session, grid: grid) else {
+        report.fail(id, "no free grid cell for the unchanged-acceptance draw")
+        return
+    }
+    pencilDraw(relatchedCell, grid: grid)
+    report.expect(fixture.document.notes(in: grid.trackIndex).contains {
+        Int($0.tick) == relatchedCell.tick && Int($0.pitch) == relatchedCell.pitch
+            && $0.velocity == 73
+    }, cppID: id, message: "an unchanged acceptance relatches the note's velocity for the next draw")
 }
 
 @MainActor

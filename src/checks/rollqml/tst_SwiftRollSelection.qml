@@ -314,6 +314,49 @@ TestCase {
         }
         verify(probed, "a fully visible wide note takes the cursor probe")
     }
+    function test_clickLatchesVelocityForNextPencilNote() {
+        var g = grid()
+        var roll = rollInput()
+        var surf = surface()
+        publishedNoteCount(g)
+        var source = firstBandedNote(g, surf, roll, false)
+        verify(source !== null, "a rendered note can provide a pencil velocity")
+        var item = noteItem(surf, source.id)
+        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        var initialVelocity = g.lastVelocity
+        g.lastVelocity = source.velocity === 1 ? 127 : 1
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        compare(g.lastVelocity, source.velocity,
+                "clicking a rendered note latches its velocity into the pencil")
+        var span = Math.max(2 * g.drawThreshold,
+                            2 * g.snapTicks * g.beatWidth / g.ticksPerBeat)
+        var point = null
+        for (var y = g.rowHeight * 2; y < roll.height - g.rowHeight * 2 && !point;
+             y += g.rowHeight) {
+            for (var x = Math.round(roll.width * 0.45); x + span < roll.width - span;
+                 x += span) {
+                if (!pointCovered(roll, surf, g, x, y)
+                    && !pointCovered(roll, surf, g, x + span, y)) {
+                    point = { x: x, y: y }
+                    break
+                }
+            }
+        }
+        verify(point !== null, "a free visible cell accepts a new pencil note")
+        var ids = gridNotes(g).map(function(note) { return note.id })
+        mousePress(roll, point.x, point.y, Qt.LeftButton)
+        mouseMove(roll, point.x + span, point.y, -1, Qt.LeftButton)
+        mouseRelease(roll, point.x + span, point.y, Qt.LeftButton)
+        var drawn = null
+        tryVerify(function() {
+            drawn = gridNotes(g).find(function(note) { return ids.indexOf(note.id) < 0 })
+            return drawn !== undefined
+        }, 3000)
+        compare(drawn.velocity, source.velocity,
+                "clicking a note latches its velocity for the next draw")
+        g.lastVelocity = initialVelocity
+    }
+
     function test_foldDragExceptionCommitsAfterRelease() {
         var g = grid()
         var roll = rollInput()

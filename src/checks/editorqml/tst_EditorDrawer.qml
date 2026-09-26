@@ -124,9 +124,9 @@ TestCase {
             testCase.mountProductionVelocity(location)
             testCase.clickNode(testCase.velocityNodes()[0])
             tryCompare(testCase.velocityModel(), "selectedCount", 1)
-            testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+            session.performGridCommand(bootstrap.setVelocityCommand())
             tryCompare(testCase.velocityModel(), "promptOpen", true)
-            field = findChild(testCase.velocityPageItem(), "noteVelocityInput")
+            field = testCase.velocityPromptChild("noteVelocityInput")
         } else {
             testCase.mountProductionAutomation(location)
             verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
@@ -390,7 +390,7 @@ TestCase {
         var item = surfaceComponent.createObject(testCase, {
             "width": testCase.width,
             "height": testCase.height,
-            "applicationSession": session
+            "applicationSession": session.songTabs.selectedPage
         })
         verify(item, "the production surface came up")
         testCase.surface = item
@@ -2014,6 +2014,14 @@ TestCase {
     function velocityPlotInput() { return findChild(testCase.velocityPageItem(), "velocityPlotInput") }
     function velocityRuler() { return findChild(testCase.velocityPageItem(), "velocityRuler") }
     function velocityModel() { return testCase.surface.applicationSession.velocityPage() }
+    function velocityPromptChild(name) {
+        var item = null
+        tryVerify(function() {
+            item = findChild(testCase.surface, name)
+            return item !== null
+        }, 3000, "the mounted velocity prompt contains " + name)
+        return item
+    }
 
     /// The drawn node fills of the hosted page, in tree order.
     function velocityNodes() {
@@ -2385,8 +2393,7 @@ TestCase {
         var page = testCase.velocityPageItem()
         var voicePage = testCase.voicePageItem()
         var target = pane === "editor-drawer" ? testCase.drawer()
-                   : pane === "velocity-prompt"
-                     ? findChild(page, "velocityPromptCard")
+                   : pane === "velocity-prompt" ? null
                    : pane === "voice-picker"
                      ? voicePage.modalHost
                    : pane === "automation-tabs"
@@ -2394,16 +2401,17 @@ TestCase {
                    : pane === "track-headers"
                      ? findChild(testCase.surface, "timelineQuickTrackHeaders")
                    : page
-        verify(target, pane + " exposes its actual drawn capture root")
         if (pane === "velocity-prompt") {
             var model = testCase.velocityModel()
             if (!model.promptOpen) {
-                testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+                session.performGridCommand(bootstrap.setVelocityCommand())
                 wait(0)
             }
             if (!model.promptOpen)
                 return false
+            target = testCase.velocityPromptChild("velocityPromptCard")
         }
+        verify(target, pane + " exposes its actual drawn capture root")
         if (pane === "automation-tabs") {
             // The reference pane is the production automation band: the selector,
             // a parameter lane with written events, its nodes and the readout. The
@@ -2908,14 +2916,14 @@ TestCase {
         verify(noteId >= 0, "the prompt case acts on the grid's selected note")
         var before = testCase.noteVelocity(noteId)
 
-        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        session.performGridCommand(bootstrap.setVelocityCommand())
         tryVerify(function() { return model.promptOpen }, 1000,
                   "the Set Velocity command opened the page's prompt")
-        var field = findChild(testCase.velocityPageItem(), "noteVelocityInput")
+        var field = testCase.velocityPromptChild("noteVelocityInput")
         verify(field, "the prompt composed its text field")
         tryVerify(function() { return field.activeFocus }, 1000,
                   "the prompt took active focus in its field")
-        var velocityCard = findChild(testCase.surface, "velocityPromptCard")
+        var velocityCard = testCase.velocityPromptChild("velocityPromptCard")
         verify(velocityCard, "the prompt composed its card")
         var base = model.baseFontPx
         compare(velocityCard.appearance.font.pixelSize, session.typographyFonts.body.pixelSize,
@@ -2924,8 +2932,8 @@ TestCase {
         compare(velocityCard.appearance.verticalPadding, session.layoutSpaces.half)
         compare(velocityCard.appearance.radius, session.layoutSpaces.half)
         compare(velocityCard.appearance.dragThreshold, base)
-        compare(velocityCard.appearance.background, testCase.velocityPageItem().gridPalette.windowBackground,
-                "the original prompt binds the live window theme role")
+        compare(velocityCard.appearance.background, testCase.surface.gridModel.palette.windowBackground,
+                "the prompt binds the grid's body surface role")
         compare(String(findChild(velocityCard, "velocityPromptTitle").text).length > 0, true,
                 "the prompt draws its title")
         var velocityCardLabels = testCase.collectVisibleTexts(velocityCard, []).map(function(t) { return t.text })
@@ -2944,8 +2952,9 @@ TestCase {
 
         // Escape cancels with no write.
         var accepted = testCase.noteVelocity(noteId)
-        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        session.performGridCommand(bootstrap.setVelocityCommand())
         tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true, 1000,
                    "Escape targets the mounted prompt field")
         keyClick(Qt.Key_Escape)
@@ -2955,11 +2964,12 @@ TestCase {
         // An outside press dismisses without a write. The probe lands in an
         // empty plot column, so a leak past the underlay would be visible as a
         // paint rather than hidden by the ruler's click-to-set.
-        testCase.surface.applicationSession.performGridCommand(bootstrap.setVelocityCommand())
+        session.performGridCommand(bootstrap.setVelocityCommand())
         tryVerify(function() { return model.promptOpen }, 1000, "the prompt reopened")
+        field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true, 1000,
                    "the outside press targets the mounted prompt")
-        var underlay = findChild(testCase.velocityPageItem(), "velocityPromptUnderlay")
+        var underlay = testCase.velocityPromptChild("velocityPromptUnderlay")
         verify(underlay, "the prompt composed its dismissing underlay")
         var empty = underlay.mapFromItem(testCase.velocityPlot(),
                                          testCase.velocityPlot().width - 4,
@@ -2975,8 +2985,8 @@ TestCase {
                 "the paired outside release does not retarget the selection")
         compare(bootstrap.automationDocumentRevision(), revisionBeforeOutside,
                 "the paired outside release commits no document edit")
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
-                   1000, "outside cancellation returns focus to the velocity plot")
+        tryCompare(testCase.rollInput(), "activeFocus", true,
+                   1000, "outside cancellation returns focus to the roll")
     }
 
     function test_productionVelocityPromptButtonsAndFocus() {
@@ -2989,9 +2999,9 @@ TestCase {
         var model = testCase.velocityModel()
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
-        var field = findChild(testCase.surface, "noteVelocityInput")
-        var accept = findChild(testCase.surface, "noteVelocityAccept")
-        var cancel = findChild(testCase.surface, "noteVelocityCancel")
+        var field = testCase.velocityPromptChild("noteVelocityInput")
+        var accept = testCase.velocityPromptChild("noteVelocityAccept")
+        var cancel = testCase.velocityPromptChild("noteVelocityCancel")
         verify(field && accept && cancel, "the mounted prompt draws the field and both buttons")
         tryCompare(field, "activeFocus", true)
         compare(field.text, String(before))
@@ -3018,15 +3028,23 @@ TestCase {
                 "focus traversal has not committed the numeric draft")
         mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
         tryCompare(model, "promptOpen", false)
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "the roll regains focus after the OK button")
         tryVerify(function() { return testCase.noteVelocity(noteId) === 95 }, 1000,
                   "the button commits the captured note")
         var acceptedRevision = bootstrap.automationDocumentRevision()
+        tryVerify(function() {
+            return findChild(testCase.surface, "velocityPromptCard") === null
+        }, 3000, "the accepted prompt unmounts before the next command")
 
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
-        tryCompare(field, "activeFocus", true)
+        tryVerify(function() {
+            var current = findChild(testCase.surface, "noteVelocityInput")
+            return current !== null && current.activeFocus
+        }, 3000)
+        field = testCase.velocityPromptChild("noteVelocityInput")
+        cancel = testCase.velocityPromptChild("noteVelocityCancel")
         compare(field.text, "95", "reopening selects the committed value")
         compare(field.selectedText, "95")
         keyClick(Qt.Key_2)
@@ -3034,7 +3052,7 @@ TestCase {
         compare(field.text, "20")
         mouseClick(cancel, cancel.width / 2, cancel.height / 2, Qt.LeftButton)
         tryCompare(model, "promptOpen", false)
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "the roll regains focus after Cancel")
         compare(testCase.noteVelocity(noteId), 95, "Cancel discards the draft")
         compare(bootstrap.automationDocumentRevision(), acceptedRevision,
@@ -3051,8 +3069,8 @@ TestCase {
         var model = testCase.velocityModel()
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
-        var field = findChild(testCase.surface, "noteVelocityInput")
-        var accept = findChild(testCase.surface, "noteVelocityAccept")
+        var field = testCase.velocityPromptChild("noteVelocityInput")
+        var accept = testCase.velocityPromptChild("noteVelocityAccept")
         tryCompare(field, "activeFocus", true)
         keyClick(Qt.Key_9)
         keyClick(Qt.Key_9)
@@ -3078,20 +3096,21 @@ TestCase {
         compare(field.text, "20", "Escape discards a valid uncommitted draft")
         keyClick(Qt.Key_Escape)
         tryCompare(model, "promptOpen", false)
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "Escape returns focus to the roll")
         compare(bootstrap.automationDocumentRevision(), revision)
 
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
+        field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true,
                    1000, "the reopened prompt has mounted before an outside press")
         var selectionBefore = bootstrap.velocitySelectedNoteIds()
-        var underlay = findChild(testCase.surface, "velocityPromptUnderlay")
+        var underlay = testCase.velocityPromptChild("velocityPromptUnderlay")
         verify(underlay)
         var plot = testCase.velocityPlot()
         var outside = underlay.mapFromItem(plot, plot.width - 4, plot.height - 4)
-        var card = findChild(testCase.surface, "velocityPromptCard")
+        var card = testCase.velocityPromptChild("velocityPromptCard")
         verify(card && outside.x >= 0 && outside.x < underlay.width
                && outside.y >= 0 && outside.y < underlay.height,
                "the outside point lands inside the mounted underlay")
@@ -3102,17 +3121,17 @@ TestCase {
         tryCompare(model, "promptOpen", false)
         compare(bootstrap.velocitySelectedNoteIds(), selectionBefore,
                 "the outside right press does not retarget the selection")
-        var outsideRoot = findChild(testCase.surface, "velocityPrompt")
         mouseRelease(underlay, outside.x, outside.y, Qt.RightButton)
-        tryCompare(plot, "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "outside right click dismisses and restores focus")
         compare(testCase.noteVelocity(noteId), before)
         compare(bootstrap.velocitySelectedNoteIds(), selectionBefore,
                 "the outside right release does not retarget the selection")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "outside right click writes nothing")
-        tryCompare(outsideRoot, "visible", false,
-                   1000, "the underlay retires after swallowing the paired right release")
+        tryVerify(function() {
+            return findChild(testCase.surface, "velocityPrompt") === null
+        }, 1000, "the underlay retires after swallowing the paired right release")
     }
 
     function test_productionVelocityPromptBoundedKeys() {
@@ -3123,7 +3142,7 @@ TestCase {
         var model = testCase.velocityModel()
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
-        var field = findChild(testCase.surface, "noteVelocityInput")
+        var field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true)
         for (var down = 0; down < 13; ++down)
             keyClick(Qt.Key_PageDown)
@@ -3131,11 +3150,12 @@ TestCase {
         keyClick(Qt.Key_Return)
         tryCompare(model, "promptOpen", false)
         tryVerify(function() { return testCase.noteVelocity(noteId) === 1 }, 1000)
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "lower-bound acceptance restores roll focus before reopening")
 
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
+        field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true)
         for (var up = 0; up < 13; ++up)
             keyClick(Qt.Key_PageUp)
@@ -3143,11 +3163,12 @@ TestCase {
         keyClick(Qt.Key_Return)
         tryCompare(model, "promptOpen", false)
         tryVerify(function() { return testCase.noteVelocity(noteId) === 127 }, 1000)
-        tryCompare(testCase.velocityPlot(), "activeFocus", true,
+        tryCompare(testCase.rollInput(), "activeFocus", true,
                    1000, "upper-bound acceptance restores roll focus before reopening")
 
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(model, "promptOpen", true)
+        field = testCase.velocityPromptChild("noteVelocityInput")
         tryCompare(field, "activeFocus", true)
         var revision = bootstrap.automationDocumentRevision()
         keyClick(Qt.Key_Up)
@@ -3168,9 +3189,9 @@ TestCase {
         session.performGridCommand(bootstrap.setVelocityCommand())
         var model = testCase.velocityModel()
         tryVerify(function() { return model.promptOpen }, 1000)
-        var field = findChild(testCase.surface, "noteVelocityInput")
-        var accept = findChild(testCase.surface, "noteVelocityAccept")
-        var cancel = findChild(testCase.surface, "noteVelocityCancel")
+        var field = testCase.velocityPromptChild("noteVelocityInput")
+        var accept = testCase.velocityPromptChild("noteVelocityAccept")
+        var cancel = testCase.velocityPromptChild("noteVelocityCancel")
         verify(field && accept && cancel, "the original numeric form is drawn")
         tryVerify(function() { return field.activeFocus }, 1000)
         keyClick(Qt.Key_5)

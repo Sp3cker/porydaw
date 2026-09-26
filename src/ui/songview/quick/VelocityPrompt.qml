@@ -8,9 +8,9 @@ Item {
     objectName: "velocityPrompt"
     required property var model
     required property var promptPalette
+    required property var focusOrigin
     property var hintService: null
     property bool hintScopeAllowed: true
-    signal closed(bool restoreFocus)
     readonly property bool opened: model.promptOpen
     property bool consumingOutsidePress: false
     visible: opened || consumingOutsidePress
@@ -18,22 +18,29 @@ Item {
     function finishOutsidePress() {
         consumingOutsidePress = false
     }
+    function restoreFocusIfOwned() {
+        const active = promptRoot.Window.window
+            ? promptRoot.Window.window.activeFocusItem : null
+        let focus = active
+        while (focus && focus !== promptRoot)
+            focus = focus.parent
+        if (!active || focus === promptRoot)
+            focusOrigin.forceActiveFocus(Qt.OtherFocusReason)
+    }
     z: 100
     onOpenedChanged: {
-        if (opened)
+        if (opened) {
             Qt.callLater(prompt.activateInitialFocus)
-        else
-            closed(true)
+        } else {
+            restoreFocusIfOwned()
+        }
     }
     MouseArea {
         objectName: "velocityPromptUnderlay"
         anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         preventStealing: true
         onPressed: mouse => {
-            // Keep the modal underlay alive through the matching release.
-            // Otherwise closing on press exposes the roll to a right release
-            // that can clear selection or start another interaction.
             mouse.accepted = true
             if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
                     || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height) {
@@ -53,9 +60,6 @@ Item {
         anchors.centerIn: parent
         width: implicitWidth
         height: implicitHeight
-        // Every palette read is null-safe: a transiently missing palette must
-        // still yield an object (transparent = draw nothing), never throw the
-        // whole map away.
         appearance: Object.assign({}, promptRoot.model.promptAppearance, {
             font: Qt.font(promptRoot.model.promptFont),
             background: promptRoot.promptPalette?.windowBackground ?? "transparent",
@@ -81,12 +85,14 @@ Item {
             if (!promptRoot.opened)
                 return
             promptRoot.model.updatePromptDraft(String(committed))
+            promptRoot.restoreFocusIfOwned()
             promptRoot.model.acceptPrompt()
         }
 
         function cancelDisplayed() {
             if (!promptRoot.opened)
                 return
+            promptRoot.restoreFocusIfOwned()
             promptRoot.model.cancelPrompt()
         }
         function activateInitialFocus() {
@@ -96,9 +102,6 @@ Item {
         Component.onCompleted: if (promptRoot.opened) Qt.callLater(activateInitialFocus)
         Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
 
-        // The focused DragInput receives accepted text-edit keys first. This
-        // terminal sink claims only declined keys so timeline commands never leak
-        // out of the shared popup session.
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape)
                 cancelDisplayed()

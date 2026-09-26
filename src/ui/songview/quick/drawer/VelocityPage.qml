@@ -1,5 +1,5 @@
 // The Velocity drawer page: the ruler column, the plot's grid and PSG level
-// bands, the note handles, the gesture transient and the Set-Velocity prompt.
+// bands, the note handles and the gesture transient.
 //
 // Swift owns every value (VelocityPage.swift): the shared camera projection, the
 // axis ladder, the note handles, the hover/selection/preview state, the frozen
@@ -55,8 +55,7 @@ FocusScope {
         id: fallbackPalette
 
         /// Neutral colors for the window between scene removal and the session's
-        /// release; nothing drawn then reaches a frame. Covers every role this
-        /// page reads plus the roles VelocityPrompt reads through promptPalette.
+        /// release; nothing drawn then reaches a frame.
         readonly property color chromeBackground: "transparent"
         readonly property color rollBackground: "transparent"
         readonly property color primaryText: "transparent"
@@ -481,27 +480,6 @@ FocusScope {
         Accessible.focusable: true
     }
 
-    // ---- local prompt -------------------------------------------------------
-
-    property var modalHost: null
-
-    VelocityPrompt {
-        id: prompt
-        parent: page.modalHost
-        anchors.fill: parent
-        model: page.model
-        promptPalette: page.gridPalette
-        hintService: page.hintService
-        hintScopeAllowed: true
-
-        onClosed: page.focusOrigin()
-    }
-
-    /// Where focus returns after the prompt closes: this page's plot, so window
-    /// commands resume exactly where the interaction began.
-    function focusOrigin() {
-        plot.forceActiveFocus(Qt.OtherFocusReason)
-    }
 
     readonly property int rulerSurface: 0
     readonly property int plotSurface: 1

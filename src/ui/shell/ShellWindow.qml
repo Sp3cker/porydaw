@@ -16,6 +16,7 @@ ThemedWindow {
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
+    property bool noteMenuSwallowingRelease: false
     property bool dockSettingsReady: false
     property var normalFrame: null
     property bool sessionStatePersisted: false
@@ -121,6 +122,7 @@ ThemedWindow {
         }
         function onProjectRootChanged() { shell.refreshWindowChrome() }
         function onSongOpenChanged() {
+            gridContextMenu.close()
             shell.songOpenChanged()
             ++root.actionRevision
         }
@@ -144,11 +146,19 @@ ThemedWindow {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
         function onSelectedPageChanged() {
+            gridContextMenu.close()
             shell.refreshWindowChrome()
             ++root.actionRevision
         }
-        function onSelectedIdChanged() { ++root.actionRevision }
+        function onSelectedIdChanged() {
+            gridContextMenu.close()
+            ++root.actionRevision
+        }
         function onTabCountChanged() { ++root.actionRevision }
+    }
+    Connections {
+        target: shell.session.songOpen ? shell.session.gridPresenter() : null
+        function onAppliedRevisionTextChanged() { gridContextMenu.close() }
     }
     Connections {
         target: root.drawerSectionSource
@@ -880,12 +890,41 @@ ThemedWindow {
             onTriggered: shell.activate(modelData)
         }
     }
+    Item {
+        parent: Overlay.overlay
+        anchors.fill: parent
+        z: 1
+        visible: gridContextMenu.visible || root.noteMenuSwallowingRelease
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            preventStealing: true
+            onPressed: (mouse) => {
+                root.noteMenuSwallowingRelease = true
+                if (mouse.button === Qt.RightButton) {
+                    const surface = editorScene.item
+                        ? editorScene.item.selectedEditorSurface() : null
+                    const point = mapToItem(null, mouse.x, mouse.y)
+                    gridContextMenu.close()
+                    if (surface)
+                        surface.retargetNoteMenu(point.x, point.y)
+                } else {
+                    gridContextMenu.close()
+                }
+                mouse.accepted = true
+            }
+            onReleased: Qt.callLater(() => root.noteMenuSwallowingRelease = false)
+            onCanceled: Qt.callLater(() => root.noteMenuSwallowingRelease = false)
+        }
+    }
     Basic.Menu {
         id: gridContextMenu
         objectName: "shellGridContextMenu"
         parent: Overlay.overlay
         popupType: Popup.Item
+        z: 2
         font: Qt.font(root.chromeTypography.body)
+        closePolicy: Basic.Popup.CloseOnEscape
         palette.window: root.colors.menuBackground
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision

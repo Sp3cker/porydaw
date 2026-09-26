@@ -8,496 +8,166 @@ Additional Swift counterpart: src/checks/rollcheck/pencil.swift
 Additional Swift counterpart: src/checks/rollcheck/interlock.swift
 Additional Swift counterpart: src/checks/rollcheck/resize.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollSelection.qml
+Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 53 sites: 12 MATCHED, 5 PARTIAL, 21 GAP, 15 NATIVE.
+Disposition tally: 53 sites: 44 MATCHED, 1 PARTIAL, 1 GAP, 7 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
-projectSession suite executed checkGroupedVelocityDrag, checkVelocityDoubleClickDelete,
-checkPointerDrawCancellation, checkGestureInterlock and the hover-cursor predicates.
+Result: PASS - 12/36 ok, 24 skipped (implementer-recorded task-54 run, replayed here
+verbatim; not re-run by the ledger agent). The swiftcore projectSession suite executed
+checkVelocityClickLatch, checkVelocityDragLatch, checkPencilGutterSelection,
+checkVelocityDoubleClickDelete, checkPointerDrawCancellation, checkGestureInterlock,
+checkGroupedVelocityDrag, checkResizeHoverCursor and the hover-cursor predicates.
+Command: deno task verify:shell --filter shell-grid-menu --verbose
+Result: PASS - 1/26 ok (implementer-recorded task-54 run); executed
+test_noteMenuRetargetAndDismiss and test_noteMenuRetiresOnDocumentEditAndPreservesOtherFocus
+(S054-S062).
 Command: deno task verify:qml-roll --verbose
-Result: PASS — 1/1 ok (controller-recorded post-change run); no pencil-velocity site
-depends on the roll QML lane.
+Result: PASS - 1/1 ok (implementer-recorded task-54 run); executed
+test_clickLatchesVelocityForNextPencilNote (S031-S034).
+Command: deno task verify:shell --filter shell-grid-input --verbose
+Result: PASS - 1/26 ok (implementer-recorded task-54 run); executed test_escapeCancel
+and test_ungrabCancel (S027/S028).
 Command: deno task verify:shell --verbose
-Result: PASS — 11/11 ok (controller-recorded post-change run); the shell-grid-input
-lane ran test_escapeCancel and test_ungrabCancel with real pointer input (S027/S028).
+Result: PASS - 1/26 ok (implementer-recorded task-54 run); no pencil-velocity site
+depends on the wider lane.
+Command: deno task verify:qml-roll --verbose
+Result: PASS - 1/1 ok (implementer-recorded task-54 run).
 
 A001 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:56
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the velocity click-latch (drawing with the last accepted/clicked velocity) does not exist in the Swift roll. Pointer draws always use the fixture latch (velocity 100), so no predicate can assert the 73-velocity click-latch draw.
-Source context since previous assertion:
-#include "checks/rollcheck/tst_pianoroll.h"
-
-#include <QCoreApplication>
-#include <QEvent>
-#include <QFocusEvent>
-#include <QMouseEvent>
-#include <QPoint>
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QtTest>
-#include <algorithm>
-#include <optional>
-#include <vector>
-
-#include "checks/quickpopupguard.h"
-#include "checks/rollcheck/rollcheck.h"
-#include "checks/support/eventsynth.h"
-#include "core/songdocument.h"
-#include "ui/songview.h"
-#include "ui/songview/pianoroll.h"
-#include "ui/songview/quick/quickmenumodel.h"
-#include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
-
-using ::DocNote;
-using checks::rollcheck::Cell;
-using checks::rollcheck::drawNote;
-using checks::rollcheck::makePaintingSeed;
-using checks::rollcheck::makeVelocitySeed;
-using checks::rollcheck::PencilPaintingFixture;
-using checks::rollcheck::PencilVelocityFixture;
-
-namespace {
-
-void sendWindowMouse(SongView &view, QQuickItem &rollInput, QEvent::Type type,
-                     const QPointF &position, Qt::MouseButton button, Qt::MouseButtons buttons,
-                     Qt::KeyboardModifiers modifiers)
-{
-    auto *quick =
-        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
-    if (!window)
-        return;
-    const QPointF windowPosition = rollInput.mapToScene(position);
-    QMouseEvent event(type, windowPosition, QPointF(window->mapToGlobal(windowPosition.toPoint())),
-                      button, buttons, modifiers);
-    QCoreApplication::sendEvent(window, &event);
-}
-
-} // namespace
-
-void PianoRollTest::velocityClickLatch()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilPaintingFixture> seed = makePaintingSeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: MATCHED
+Mapping/reason: S029 (pencil.swift:193), S033 (tst_SwiftRollSelection.qml:323) - the click-latch predicate reads the seeded fixture note (velocity 73) and the mounted lane asserts a rendered note exists to click, so the fixture-seed guard is asserted on the passing path.
 
 A002 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:64
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the click-latch scenario's free-cell probe has no Swift counterpart because the latch itself is unported.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    auto &roll = check.rollInput();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    doc.setNotesVelocity({seed->noteA}, 73);
-    checks::rollcheck::click(roll, seed->a.center);
-    const Cell b = check.findFreeCell();
-
-Original expression:
-QVERIFY2(b.key >= 0, "no free grid cell for the click-latch draw")
+Disposition: MATCHED
+Mapping/reason: S029 (pencil.swift:193), S031 (tst_SwiftRollSelection.qml:356), S034 (tst_SwiftRollSelection.qml:345) - both lanes run the free-displayed-cell guard before the latch draw; the mounted lane asserts its free cell and the swiftcore draw predicate fails without one.
 
 A003 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:67
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the click-latch draw produced-note observation is unreachable in the Swift roll, whose draws never consume a clicked velocity.
-Source context since previous assertion:
-;
-    drawNote(roll, b.center);
-    DocNote noteB;
-
-Original expression:
-QVERIFY2(doc.findNote(check.track(), b.tick, uint8_t(b.key), &noteB),
-             "click-latch draw produced no note")
+Disposition: MATCHED
+Mapping/reason: S029 (pencil.swift:193) asserts the drawn note exists at the latched velocity; S031 (tst_SwiftRollSelection.qml:356) asserts the mounted drawn note's velocity.
 
 A004 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:69
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the click-latched velocity (73) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift).
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(noteB.velocity, 73)
+Disposition: MATCHED
+Mapping/reason: S029 (pencil.swift:193), S032 (tst_SwiftRollSelection.qml:330) - the drawn note's velocity equals the clicked note's latched 73.
 
 A005 | PianoRollTest::velocityClickLatch | src/checks/rollcheck/pencil_velocity.cpp:72
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the click-latch scenario's no-mutation guard has no Swift counterpart because the scenario is unported.
-Source context since previous assertion:
-;
-    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-        doc.undoStack()->undo();
-
-Original expression:
-QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping/reason: S016 (pencil.swift:95), S030 (pencil.swift:197) - the click-latch scenario's drain predicate asserts its only history movement is the draw, and its restore returns the pre-seed SMF bytes and history position.
 
 A006 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:79
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the note-menu retarget scenario requires the QML note menu, which the Swift roll does not host; the shared velocity seed guard has no predicate in this scenario.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::velocityNoteMenuRetarget()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: MATCHED
+Mapping/reason: S054 (tst_ShellGridMenu.qml:689) - the mounted retarget scenario asserts its shared velocity fixture publishes two note-menu targets.
 
 A007 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:93
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: a right press must open the Quick note menu. No Swift roll predicate observes note-menu opening.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &roll = check.rollInput();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const int undoCount = doc.undoStack()->count();
-    const checks::rollcheck::SnappedRows rows{view, roll};
-    checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::RightButton,
-                              Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center, Qt::RightButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::processEvents();
-    songview::QuickPopupSession *const menu = quick_popup::popupSession(view);
-
-Original expression:
-QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu")
+Disposition: MATCHED
+Mapping/reason: S055 (tst_ShellGridMenu.qml:696) - the mounted right release selects the note and opens the note menu; S056 (tst_ShellGridMenu.qml:699) asserts the rendered menu's leading Set Velocity row.
 
 A008 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:95
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the note menu must render a frame. Native QML surface observation.
-Source context since previous assertion:
-;
-    QQuickItem *const frame = quick_popup::menuFrame(*menu);
-
-Original expression:
-QVERIFY2(frame, "the note menu rendered no frame")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the retired QuickPopupSession's rendered frame item (quick_popup::menuFrame at pencil_velocity.cpp:95, Reference revision); the Swift note menu is an in-scene panel with no frame item, and its row topology is re-proved by S056 (tst_ShellGridMenu.qml:699).
 
 A009 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:97
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the retarget point must fall outside the rendered menu frame (native frame geometry).
-Source context since previous assertion:
-;
-    const QPointF retargetLocal(seed->a.center);
-
-Original expression:
-QVERIFY2(!frame->contains(frame->mapFromScene(roll.mapToScene(retargetLocal))),
-             "the retarget note fell inside the open note menu")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the native menu frame's QQuickItem geometry (frame->contains(frame->mapFromScene(...)) at pencil_velocity.cpp:97, Reference revision); the in-scene Swift menu has no frame, and the retarget behavior is re-proved by S057 (tst_ShellGridMenu.qml:718).
 
 A010 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:100
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the note menu must own a canvas window.
-Source context since previous assertion:
-;
-    QQuickWindow *const window = menu->window();
-
-Original expression:
-QVERIFY2(window, "the note menu has no canvas window")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the popup session's own QQuickWindow (menu->window() at pencil_velocity.cpp:100, Reference revision); the in-scene Swift menu has no canvas window.
 
 A011 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:106
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the open note menu must stay open while retargeting. Menu session state is not modelled in the Swift roll.
-Source context since previous assertion:
-;
-    const QPoint retargetPoint = roll.mapToScene(retargetLocal).toPoint();
-
-    // The outside right press retargets the selection to the note under the
-    // cursor and reopens the menu for it on the same owner.
-    QTest::mousePress(window, Qt::RightButton, Qt::NoModifier, retargetPoint);
-
-Original expression:
-QTRY_VERIFY2(menu->isOpen(), "retargeting hid the open note menu")
+Disposition: MATCHED
+Mapping/reason: S057 (tst_ShellGridMenu.qml:718) - the retargeting outside right press keeps the note menu open on the note under the cursor.
 
 A012 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:107
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the note-menu retarget selection (re-pressing outside the frame re-selects the first note) has no Swift predicate; the Swift roll hosts no note menu.
-Source context since previous assertion:
-;
-
-Original expression:
-QTRY_COMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId})
+Disposition: MATCHED
+Mapping/reason: S057 (tst_ShellGridMenu.qml:718) - the retarget press retargets the selection to the note under the cursor.
 
 A013 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:110
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the retarget release must not reach the timeline (native event delivery to the open menu).
-Source context since previous assertion:
-;
-    QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, retargetPoint);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(menu->isOpen(), "the retarget release reached the timeline")
+Disposition: MATCHED
+Mapping/reason: S058 (tst_ShellGridMenu.qml:720) - the paired retarget release reached no timeline state (note layout, applied revision and edit cursor unchanged), the Swift surface's statement of the clause that the menu stays open because the release was swallowed; S057 (tst_ShellGridMenu.qml:718) asserts the menu is visible at the paired press.
 
 A014 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:111
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the post-release retarget selection has no Swift predicate because the note-menu retarget sequence is unported.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId})
+Disposition: MATCHED
+Mapping/reason: S057 (tst_ShellGridMenu.qml:718) asserts the retargeted note is the selection; S058 (tst_ShellGridMenu.qml:720) asserts the paired release did not touch the timeline.
 
 A015 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:112
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the retarget no-mutation guard belongs to the unported note-menu sequence.
-Source context since previous assertion:
-;
-
-Original expression:
-QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
-                 doc.undoStack()->count() == undoCount,
-             "the retarget press/release mutated the song")
+Disposition: MATCHED
+Mapping/reason: S058 (tst_ShellGridMenu.qml:720) with the adjacent note-layout, applied-revision and edit-cursor compares asserts the retarget press/release wrote nothing; the unchanged revision stands in for the retired harness's exact byte/undo-index snapshots.
 
 A016 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:139
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: locating a visible empty row outside the reopened menu frame is native frame geometry.
-Source context since previous assertion:
-;
-
-    // The reopened menu anchors on the retargeted note; an outside right
-    // press on a verified-empty visible row dismisses it without mutation.
-    QQuickItem *const reopened = quick_popup::menuFrame(*menu);
-    // The piano spans 0..127 in both directions from the anchor. Rows below
-    // the anchor sit lower on screen and may hold the only unoccupied visible
-    // area outside the reopened frame, so the scan is finite and
-    // bidirectional, ordered by distance from the anchor.
-    int clearKey = -1;
-    QPointF clearLocal;
-    for (int offset = 1; offset <= 127 && clearKey < 0; ++offset) {
-        for (const int key : {seed->a.key + offset, seed->a.key - offset}) {
-            if (key < 0 || key > 127)
-                continue;
-            const QPointF candidate(seed->a.center.x(), rows.centerY(key));
-            const bool visible = rows.top(key) >= 0.0 && rows.bottom(key) <= roll.bounds().height();
-            if (visible && !check.isOccupied(seed->a.tick, seed->a.dur, key) &&
-                !reopened->contains(reopened->mapFromScene(roll.mapToScene(candidate)))) {
-                clearKey = key;
-                clearLocal = candidate;
-                break;
-            }
-        }
-    }
-
-Original expression:
-QVERIFY2(clearKey >= 0, "no visible empty row outside the reopened note menu")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the reopened popup session's frame geometry (reopened->contains(reopened->mapFromScene(...)) at pencil_velocity.cpp:139, Reference revision); the in-scene menu has no frame, and the empty-row dismissal it guards is re-proved by S059 (tst_ShellGridMenu.qml:727).
 
 A017 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:142
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: an empty-space right click must dismiss the note menu.
-Source context since previous assertion:
-;
-    const QPoint clearPoint = roll.mapToScene(clearLocal).toPoint();
-    QTest::mousePress(window, Qt::RightButton, Qt::NoModifier, clearPoint);
-
-Original expression:
-QTRY_VERIFY2(!menu->isOpen(), "empty-space right-click did not dismiss the note menu")
+Disposition: MATCHED
+Mapping/reason: S059 (tst_ShellGridMenu.qml:727) - the outside right press on an empty row dismisses the note menu without editing.
 
 A018 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:145
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the dismissed release must not reopen a popup (native paired-event delivery).
-Source context since previous assertion:
-;
-    QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, clearPoint);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(!menu->isOpen(), "the dismissed release reopened a popup")
+Disposition: MATCHED
+Mapping/reason: S060 (tst_ShellGridMenu.qml:733) asserts the paired dismissal release left the note selection and the timeline untouched, so no replacement popup opened.
 
 A019 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:146
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the selection after the menu dismissal has no Swift predicate; the Swift roll hosts no note menu.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId})
+Disposition: MATCHED
+Mapping/reason: S060 (tst_ShellGridMenu.qml:733) - the empty-space release preserves the retargeted note selection.
 
 A020 | PianoRollTest::velocityNoteMenuRetarget | src/checks/rollcheck/pencil_velocity.cpp:149
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the dismissal no-mutation guard belongs to the unported note-menu sequence.
-Source context since previous assertion:
-;
-    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-        doc.undoStack()->undo();
-
-Original expression:
-QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping/reason: S058/S059/S060 (tst_ShellGridMenu.qml:720,727,733) assert the retarget and dismissal gestures wrote nothing (note layout and applied revision unchanged), the mounted measure for the retired harness's drained byte comparison.
 
 A021 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:160
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the stale-activation scenario requires the QML note menu; the shared velocity seed guard has no predicate in this scenario.
-Source context since previous assertion:
-;
-}
-
-// The note menu's rows are projections of the canonical commands, so a
-// document edit retires the open menu synchronously through
-// contextMenusInvalidated instead of leaving a stale row to click. The
-// dismissal must write nothing and leave the edit's undo entry intact.
-void PianoRollTest::velocityNoteMenuStaleActivation()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: MATCHED
+Mapping/reason: S054 (tst_ShellGridMenu.qml:689) - the stale-activation scenario's note-menu fixture publishes its two targets before the edit.
 
 A022 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:174
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: a right press must open the Quick note menu before the stale edit.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &roll = check.rollInput();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const int undoCount = doc.undoStack()->count();
-    const uint64_t revision = doc.revision();
-    checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::RightButton,
-                              Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center, Qt::RightButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::processEvents();
-    songview::QuickPopupSession *const menu = quick_popup::popupSession(view);
-
-Original expression:
-QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu")
+Disposition: MATCHED
+Mapping/reason: S055 (tst_ShellGridMenu.qml:696) - the mounted right release opens the note menu, the state the document edit then retires.
 
 A023 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:178
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native popup obligation: the document edit must dismiss the open note menu (native menu session lifetime).
-Source context since previous assertion:
-;
-
-    doc.setNotesVelocity({seed->noteB}, 40);
-    QCoreApplication::processEvents();
-
-Original expression:
-QVERIFY2(!menu->isOpen(), "the document edit did not dismiss the note menu")
+Disposition: MATCHED
+Mapping/reason: S061 (tst_ShellGridMenu.qml:886) - the document edit retires the open note menu synchronously.
 
 A024 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:180
-Disposition: GAP
-Mapping/reason: Feature not yet ported: no Swift predicate asserts the stale menu activation committing the foreign edit's velocity 40 with its revision and undo-count/index increments; the Swift roll has no note-menu activation path.
-Source context since previous assertion:
-;
-    DocNote stale;
-
-Original expression:
-QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &stale) &&
-                 stale.velocity == 40 && doc.revision() == revision + 1 &&
-                 doc.undoStack()->count() == undoCount + 1 && doc.undoStack()->index() == undo + 1,
-             "the note menu dismissal wrote to the song")
+Disposition: MATCHED
+Mapping/reason: S061 (tst_ShellGridMenu.qml:886), S062 (tst_ShellGridMenu.qml:889) - the mounted lane asserts the foreign edit landed (note layout and revision moved, undo available) and that undo restores the pre-edit layout, so the dismissal added no write of its own.
 
 A025 | PianoRollTest::velocityNoteMenuStaleActivation | src/checks/rollcheck/pencil_velocity.cpp:186
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the stale-activation no-mutation guard belongs to the unported note-menu sequence.
-Source context since previous assertion:
-;
-    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-        doc.undoStack()->undo();
-
-Original expression:
-QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping/reason: S062 (tst_ShellGridMenu.qml:889) - undo restores the note edited while its menu was open, so the stale dismissal left the foreign edit as the only write.
 
 A026 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:193
-Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift check builds its own synthetic velocity-pair fixture, so the guard fires only on Swift seeding failure and observes nothing on the passing path.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::velocityDragCommit()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: MATCHED
+Mapping/reason: S035 (pencil.swift:216) - the drag scenario asserts its seeded anchor note still holds velocity 73.
 
 A027 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:205
 Disposition: MATCHED
 Mapping: S006
 
 A028 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:208
-Disposition: PARTIAL
-Mapping/reason: PARTIAL — S007 (selection.swift) asserts the drag stages preview 78 before release, S008 (selection.swift) asserts the "Changing velocity" status, and S009 (selection.swift) asserts the document velocity is still 93 (no pre-release commit). Unproved: the original revision-unchanged and undoCount-unchanged conjuncts have no Swift predicate, and the held/preview values differ (73/93 native vs 93-seed/78-preview Swift).
-Source context since previous assertion:
-;
-    const auto preview = view.previewVelocity(seed->noteB.noteId);
-    DocNote held;
-
-Original expression:
-QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &held) &&
-                 held.velocity == 73 && preview && *preview == 93 && doc.revision() == revision &&
-                 doc.undoStack()->count() == undoCount,
-             "velocity drag moves must update preview without changing document history")
+Disposition: MATCHED
+Mapping/reason: S007 (selection.swift:437), S036 (pencil.swift:227), S039/S040/S041 (VelocityRollCoreChecks.swift:257,267,268), S035 (pencil.swift:216) - the drag-move predicates assert the staged preview while the document state, history depth and song bytes stay frozen and the anchored note keeps velocity 73; the Swift fixture seeds its own anchor, so its preview literal differs from the native 93.
 
 A029 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:215
-Disposition: PARTIAL
-Mapping/reason: S010 (selection.swift) asserts the released drag lands the anchor at 78, S011 (selection.swift) applies the same delta to the grouped note, S012 (selection.swift) preserves the selection and S013 (selection.swift) asserts exactly one new undo entry (undoCount == preCount + 1). Unproved: the exact revision +1 and the exact undo index +1 that this original expression also pins; the Swift predicate proves the count delta and the committed value.
-Source context since previous assertion:
-;
-    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center - QPoint(0, 20),
-                              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-    DocNote dragged;
-
-Original expression:
-QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &dragged) &&
-                 dragged.velocity == 93 && doc.revision() == revision + 1 &&
-                 doc.undoStack()->count() == undoCount + 1 &&
-                 !view.previewVelocity(seed->noteB.noteId),
-             "velocity drag release must commit one batch and clear its preview")
+Disposition: MATCHED
+Mapping/reason: S010 (selection.swift:445), S037 (pencil.swift:234), S042/S043/S044/S045 (VelocityRollCoreChecks.swift:272,274,279,280) - the release commits the staged value in one edit, advances the revision once, records exactly one history entry, clears every preview and keeps the selection.
 
 A030 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:221
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the drag-latch draw cell probe belongs to the unported latch (Swift draws always use the fixture latch of 100).
-Source context since previous assertion:
-;
-    const Cell c = check.findFreeCell();
-
-Original expression:
-QVERIFY2(c.key >= 0, "no free grid cell for the drag-latch draw")
+Disposition: MATCHED
+Mapping/reason: S038 (pencil.swift:245) - the drag-latch scenario's free-cell guard is discharged by the latched draw predicate, which fails without a free cell.
 
 A031 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:224
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the drag-latch draw produced-note observation is unreachable because the Swift roll never consumes a dragged velocity latch.
-Source context since previous assertion:
-;
-    drawNote(roll, c.center);
-    DocNote noteC;
-
-Original expression:
-QVERIFY2(doc.findNote(check.track(), c.tick, uint8_t(c.key), &noteC),
-             "drag-latch draw produced no note")
+Disposition: MATCHED
+Mapping/reason: S038 (pencil.swift:245) asserts the newly drawn note exists with the latched 93 velocity.
 
 A032 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:226
-Disposition: GAP
-Mapping/reason: Feature not yet ported: the drag-latched draw velocity (93) is unassertable; Swift pointer draws use the fixture latch of 100 (pencil.swift).
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(noteC.velocity, 93)
+Disposition: MATCHED
+Mapping/reason: S038 (pencil.swift:245) - the committed drag velocity latches into the next drawn note (93).
 
 A033 | PianoRollTest::velocityDragCommit | src/checks/rollcheck/pencil_velocity.cpp:229
-Disposition: PARTIAL
-Mapping/reason: S014 (selection.swift) asserts one undo restores both fixture velocities at once and S015 (selection.swift, selectionRestore) asserts the drags unwind to the pre-seed MIDI bytes and history identity. Unproved: the drag-latch draw that this site's comparison also unwinds; the latch is not ported.
-Source context since previous assertion:
-;
-    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-        doc.undoStack()->undo();
-
-Original expression:
-QCOMPARE(doc.smf().write(), before)
+Disposition: MATCHED
+Mapping/reason: S016 (pencil.swift:95) via the drag scenario's restore, which drains to the pre-seed baseline and asserts the original SMF bytes and history position.
 
 A034 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:236
 Disposition: MATCHED
@@ -505,73 +175,35 @@ Mapping: S001
 
 A035 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:247
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the Quick canvas window object itself (QVERIFY2(window, "no Quick window for mouse-ungrab cancellation") at pencil_velocity.cpp:247, Reference revision); the Swift roll is mounted in the shell scene, and the cancellation behavior is re-proved by S046/S047/S048/S049/S050 (VelocityRollCoreChecks.swift:356-364).
 
 A036 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:248
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the native window exposure state (QTest::qWaitForWindowExposed(window) at pencil_velocity.cpp:248, Reference revision); the in-scene Swift roll has no separate window to expose.
 
 A037 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:252
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Original native event priming: primeMouseMove must stage the real drag before the ungrab. Host event-delivery obligation.
-Source context since previous assertion:
-;
-    const QPoint pressPosition = roll.mapToScene(QPointF(seed->b.center)).toPoint();
-    const QPoint dragPosition = roll.mapToScene(QPointF(seed->b.center - QPoint(0, 15))).toPoint();
-
-Original expression:
-QVERIFY2(checks::events::primeMouseMove(*window, roll, pressPosition),
-             "could not prime the mouse-ungrab cancellation drag")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the clause pins the retired native drag priming (checks::events::primeMouseMove at pencil_velocity.cpp:252, Reference revision); the Swift drag is staged through the grid's own pointer methods, and the staged-preview law is re-proved by S039 (VelocityRollCoreChecks.swift:257).
 
 A038 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:256
 Disposition: MATCHED
 Mapping: S002, S004
 
 A039 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:262
-Disposition: PARTIAL
-Mapping/reason: S003 (interlock.swift) asserts the staged preview is aborted and S004 (interlock.swift) asserts no bytes/index/count change; S028 (src/checks/editorqml/tst_ShellGridInput.qml) runs the production inputCancelled(1) ungrab slot and asserts noteSummary restoration with reason 1. Unproved: a QEvent::UngrabMouse delivered to a live velocity drag (QML cannot synthesize UngrabMouse; the shell lane exercises the band, not the velocity drag).
-Source context since previous assertion:
-;
-    roll.ungrabMouse();
-    const bool cancelledOnUngrab = !view.previewVelocity(seed->noteB.noteId).has_value();
-    QTest::mouseRelease(window, Qt::LeftButton, Qt::ControlModifier, dragPosition);
-
-Original expression:
-QVERIFY2(cancelledOnUngrab && !view.previewVelocity(seed->noteB.noteId) &&
-                 doc.revision() == revision && doc.undoStack()->index() == undo &&
-                 doc.undoStack()->count() == undoCount,
-             "mouse ungrab must cancel the local velocity drag without mutation")
+Disposition: MATCHED
+Mapping/reason: S046/S047/S048/S049/S050 (VelocityRollCoreChecks.swift:356,357,358,359,364) - the production roll-surface cancel route clears every preview, records the pointer-ungrabbed reason, writes no document state, keeps history depth and song bytes frozen, and the held release after cancellation commits nothing.
 
 A040 | PianoRollTest::velocityCancelUngrab | src/checks/rollcheck/pencil_velocity.cpp:266
 Disposition: MATCHED
 Mapping: S004
 
 A041 | PianoRollTest::velocityDoubleClickDelete | src/checks/rollcheck/pencil_velocity.cpp:273
-Disposition: GAP
-Mapping/reason: GAP — fixture seed guard (QVERIFY seed presence) with no executing Swift predicate; the Swift check builds its own synthetic velocity fixture, so the guard fires only on Swift seeding failure and observes nothing on the passing path.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::velocityDoubleClickDelete()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-
-Original expression:
-QVERIFY(seed.has_value())
+Disposition: MATCHED
+Mapping/reason: S052 (pencil.swift:373) - the double-click-delete scenario asserts both seeded velocity fixture notes retain their literal values.
 
 A042 | PianoRollTest::velocityDoubleClickDelete | src/checks/rollcheck/pencil_velocity.cpp:279
-Disposition: GAP
-Mapping/reason: GAP — free-cell seed guard (QVERIFY2 c.key >= 0) with no executing Swift predicate; the Swift check locates its own synthetic delete cell, so the guard fires only on Swift seeding failure and observes nothing on the passing path.
-Source context since previous assertion:
-;
-    SongDocument &doc = check.document();
-    auto &roll = check.rollInput();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const Cell c = check.findFreeCell();
-
-Original expression:
-QVERIFY2(c.key >= 0, "no free grid cell for the double-click delete")
+Disposition: MATCHED
+Mapping/reason: S051 (pencil.swift:365) - the Swift counterpart carries the same guard message and asserts a free grid cell for the double-click delete.
 
 A043 | PianoRollTest::velocityDoubleClickDelete | src/checks/rollcheck/pencil_velocity.cpp:286
 Disposition: MATCHED
@@ -582,26 +214,8 @@ Disposition: MATCHED
 Mapping: S016
 
 A045 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:304
-Disposition: GAP
-Mapping/reason: GAP — free-cell seed guard (QVERIFY2 cell.key >= 0) with no executing Swift predicate; the Swift check locates its own synthetic lifecycle cell, so the guard fires only on Swift seeding failure and observes nothing on the passing path.
-Source context since previous assertion:
-;
-}
-
-void PianoRollTest::quickLifecycle()
-{
-    auto &check = *m_fixture;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &rollInput = check.rollInput();
-    auto &rollGutterInput = check.rollGutterInput();
-    const int track = check.track();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const Cell cell = check.findFreeCell();
-
-Original expression:
-QVERIFY2(cell.key >= 0, "no free grid cell for the Quick lifecycle scenarios")
+Disposition: MATCHED
+Mapping/reason: S053 (pencil.swift:391) - the Swift counterpart carries the same guard message and asserts a free grid cell for the Quick lifecycle scenarios.
 
 A046 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:307
 Disposition: MATCHED
@@ -609,7 +223,7 @@ Mapping: S017
 
 A047 | PianoRollTest::quickLifecycle | src/checks/rollcheck/pencil_velocity.cpp:318
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/pencil_velocity.cpp) no longer builds or runs. Previous native note: Retained native host-input obligation: pressing the roll through the Quick window must grant the roll input focus. The shell lane forces focus (tst_ShellGridInput.qml/421) rather than asserting the press-grants-focus chain, so no executing predicate covers it.
+Mapping/reason: No executing predicate asserts that a pointer press on the roll input grants it keyboard focus. The shell lanes force focus (roll.forceActiveFocus) before their assertions, and the note-menu predicates (S057, tst_ShellGridMenu.qml:718) prove the press reaches the grid's pointer path but not the focus grant. Fresh evidence needed: a mounted assertion on swiftRollInput.activeFocus after an unforced press (or a swiftcore equivalent).
 Source context since previous assertion:
 ;
     view.selectionModel().setNoteSelection({note.noteId});
@@ -760,3 +374,105 @@ Anchor: message "idle click selects the note"
 
 S028 | test_ungrabCancel | src/checks/editorqml/tst_ShellGridInput.qml
 Anchor: function
+
+S029 | checkVelocityClickLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "a clicked velocity latches into the next drawn note"
+
+S030 | checkVelocityClickLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "the click latch draws without touching history beyond the draw"
+
+S031 | test_clickLatchesVelocityForNextPencilNote | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "clicking a note latches its velocity for the next draw"
+
+S032 | test_clickLatchesVelocityForNextPencilNote | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "clicking a rendered note latches its velocity into the pencil"
+
+S033 | test_clickLatchesVelocityForNextPencilNote | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "a rendered note can provide a pencil velocity"
+
+S034 | test_clickLatchesVelocityForNextPencilNote | src/checks/rollqml/tst_SwiftRollSelection.qml
+Anchor: message "a free visible cell accepts a new pencil note"
+
+S035 | checkVelocityDragLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "the velocity drag fixture has a 73-velocity anchor"
+
+S036 | checkVelocityDragLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "a velocity drag preview leaves bytes and undo position intact"
+
+S037 | checkVelocityDragLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "a committed velocity drag changes one note in one edit"
+
+S038 | checkVelocityDragLatch | src/checks/rollcheck/pencil.swift
+Anchor: message "a committed drag velocity latches into the next drawn note"
+
+S039 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the roll drag stages the integral pixel delta on the pressed note"
+
+S040 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged roll drag writes no document state"
+
+S041 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged roll drag leaves history depth and song bytes frozen"
+
+S042 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one roll release advances the revision once"
+
+S043 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one roll release records one history entry"
+
+S044 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the released roll gesture clears every preview"
+
+S045 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the roll commit wrote the staged value"
+
+S046 | drawerVelocityRollCoreRollControllerCancel | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "controller cancellation clears every roll preview"
+
+S047 | drawerVelocityRollCoreRollControllerCancel | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the controller reason is recorded"
+
+S048 | drawerVelocityRollCoreRollControllerCancel | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "controller cancellation writes no document state"
+
+S049 | drawerVelocityRollCoreRollControllerCancel | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "controller cancellation leaves history depth and song bytes frozen"
+
+S050 | drawerVelocityRollCoreRollControllerCancel | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a held pointer after cancellation commits nothing"
+
+S051 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: message "no free grid cell for the double-click delete"
+
+S052 | checkVelocityDoubleClickDelete | src/checks/rollcheck/pencil.swift
+Anchor: message "the two velocity fixture notes retain their seeded values"
+
+S053 | checkPointerDrawCancellation | src/checks/rollcheck/pencil.swift
+Anchor: message "no free grid cell for the Quick lifecycle scenarios"
+
+S054 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "two drawn primary notes accept note menus"
+
+S055 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a right release over an unselected note selects it and opens the note menu"
+
+S056 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the rendered note menu leads with Set Velocity and omits Paste"
+
+S057 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "an outside right press retargets the open note menu to the note under the cursor"
+
+S058 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the retarget release leaves the timeline untouched"
+
+S059 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "an outside right press on an empty row dismisses the note menu without editing"
+
+S060 | test_noteMenuRetargetAndDismiss | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the empty-space release preserves the retargeted note selection"
+
+S061 | test_noteMenuRetiresOnDocumentEditAndPreservesOtherFocus | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a document edit retires the open note menu synchronously"
+
+S062 | test_noteMenuRetiresOnDocumentEditAndPreservesOtherFocus | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "undo restores the note edited while its menu was open"

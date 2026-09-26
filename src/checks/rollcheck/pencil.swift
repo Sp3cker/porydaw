@@ -6,13 +6,16 @@ import PorydawCore
 func runPencilChecks(_ report: CheckReport, session: DocumentSession) {
     checkPencilFractionalPlacement(report, session: session)
     checkPencilPlacement(report, session: session)
+    checkVelocityClickLatch(report, session: session)
+    checkVelocityDragLatch(report, session: session)
+    checkPencilGutterSelection(report, session: session)
     checkPencilAbuttingNotes(report, session: session)
     checkVelocityDoubleClickDelete(report, session: session)
     checkPointerDrawCancellation(report, session: session)
     checkDrawLatchAndCancel(report, session: session)
 }
 
-private struct PencilCell {
+struct PencilCell {
     let tick: Int
     let duration: Int
     let pitch: Int
@@ -21,7 +24,7 @@ private struct PencilCell {
 }
 
 @MainActor
-private func pencilFreeCell(
+func pencilFreeCell(
     session: DocumentSession, grid: PianoGrid, firstProbe: Int = 40,
     fractional: Bool = false
 ) -> PencilCell? {
@@ -68,7 +71,7 @@ private func pencilFreeCell(
 }
 
 @MainActor
-private func pencilDraw(_ cell: PencilCell, grid: PianoGrid) {
+func pencilDraw(_ cell: PencilCell, grid: PianoGrid) {
     grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
     grid.endPointer(x: cell.x, y: cell.y)
     grid.doublePointer(x: cell.x, y: cell.y)
@@ -107,10 +110,10 @@ private func checkPencilFractionalPlacement(_ report: CheckReport, session: Docu
     report.expect(abs(snapshot.pixelsPerBeat - 31.375) <= 1e-12
                       && abs(snapshot.scrollX - 0.625) <= 1e-12,
                   cppID: id, message: "fractional edit camera applies exactly")
-    guard let cell = pencilFreeCell(session: session, grid: grid, fractional: true) else {
-        report.fail(id, "no empty fractional displayed cell for edit regression")
-        return
-    }
+    let fractionalCell = pencilFreeCell(session: session, grid: grid, fractional: true)
+    report.expect(fractionalCell != nil, cppID: id,
+                  message: "no empty fractional displayed cell for edit regression")
+    guard let cell = fractionalCell else { return }
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-draw SMF bytes")
         return
@@ -140,9 +143,11 @@ private func checkPencilFractionalPlacement(_ report: CheckReport, session: Docu
 private func checkPencilPlacement(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::pencilPlacement"
     let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
-          let baseline = try? session.document.captureSave() else {
-        report.fail(id, "no free grid cell or pre-draw SMF snapshot")
+    let freeCell = pencilFreeCell(session: session, grid: grid)
+    report.expect(freeCell != nil, cppID: id, message: "no free grid cell to draw in")
+    guard let cell = freeCell else { return }
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-draw SMF bytes")
         return
     }
     grid.setEditCursorTick(tick: cell.tick + 3 * cell.duration)
@@ -157,12 +162,144 @@ private func checkPencilPlacement(_ report: CheckReport, session: DocumentSessio
 }
 
 @MainActor
+private func checkVelocityClickLatch(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::velocityClickLatch"
+    let grid = makeCameraGrid(session: session)
+    guard let cell = pencilFreeCell(session: session, grid: grid),
+          let baseline = try? session.document.captureSave(),
+          let ids = try? session.document.addNotes([
+              NewNote(track: grid.trackIndex, tick: Tick(cell.tick),
+                      pitch: UInt8(cell.pitch), duration: Tick(cell.duration), velocity: 73)
+          ]), let source = ids.first else {
+        report.fail(id, "no free grid cell to seed the click latch")
+        return
+    }
+    grid.refreshFromSession()
+    grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
+    grid.endPointer(x: cell.x, y: cell.y)
+    guard let destination = pencilFreeCell(session: session, grid: grid) else {
+        report.fail(id, "no free grid cell to draw in")
+        pencilRestore(report, id: id, session: session, baseline: baseline)
+        return
+    }
+    let beforeDraw = (index: session.document.history.undoIndex,
+                      count: session.document.history.undoCount,
+                      bytes: coreTimeBytes(session.document))
+    pencilDraw(destination, grid: grid)
+    let created = session.document.notes(in: grid.trackIndex).first {
+        Int($0.tick) == destination.tick && Int($0.pitch) == destination.pitch
+    }
+    report.expect(session.document.note(source)?.velocity == 73 && created?.velocity == 73,
+                  cppID: id, message: "a clicked velocity latches into the next drawn note")
+    report.expect(session.document.history.undoIndex == beforeDraw.index + 1
+                      && session.document.history.undoCount == beforeDraw.count + 1
+                      && coreTimeBytes(session.document) != beforeDraw.bytes,
+                  cppID: id, message: "the click latch draws without touching history beyond the draw")
+    pencilRestore(report, id: id, session: session, baseline: baseline)
+}
+
+@MainActor
+private func checkVelocityDragLatch(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::velocityDragCommit"
+    let grid = makeCameraGrid(session: session)
+    guard let cell = pencilFreeCell(session: session, grid: grid),
+          let baseline = try? session.document.captureSave(),
+          let ids = try? session.document.addNotes([
+              NewNote(track: grid.trackIndex, tick: Tick(cell.tick),
+                      pitch: UInt8(cell.pitch), duration: Tick(cell.duration), velocity: 73)
+          ]), let source = ids.first else {
+        report.fail(id, "no free grid cell to seed the velocity drag")
+        return
+    }
+    grid.refreshFromSession()
+    report.expect(session.document.note(source)?.velocity == 73, cppID: id,
+                  message: "the velocity drag fixture has a 73-velocity anchor")
+    let beforeDrag = (snapshot: DocumentSnapshot(session.document),
+                      index: session.document.history.undoIndex,
+                      count: session.document.history.undoCount,
+                      bytes: coreTimeBytes(session.document))
+    grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0x0400_0000)
+    grid.updatePointer(x: cell.x, y: cell.y - 20, modifiers: 0x0400_0000)
+    report.expect(DocumentSnapshot(session.document) == beforeDrag.snapshot
+                      && session.document.history.undoIndex == beforeDrag.index
+                      && session.document.history.undoCount == beforeDrag.count
+                      && coreTimeBytes(session.document) == beforeDrag.bytes,
+                  cppID: id, message: "a velocity drag preview leaves bytes and undo position intact")
+    grid.endPointer(x: cell.x, y: cell.y - 20)
+    report.expect(session.document.note(source)?.velocity == 93
+                      && grid.lastVelocity == 93
+                      && session.document.history.undoIndex == beforeDrag.index + 1
+                      && session.document.history.undoCount == beforeDrag.count + 1
+                      && coreTimeBytes(session.document) != beforeDrag.bytes,
+                  cppID: id, message: "a committed velocity drag changes one note in one edit")
+    guard let destination = pencilFreeCell(session: session, grid: grid) else {
+        report.fail(id, "no free grid cell to draw with the committed velocity")
+        pencilRestore(report, id: id, session: session, baseline: baseline)
+        return
+    }
+    pencilDraw(destination, grid: grid)
+    let created = session.document.notes(in: grid.trackIndex).first {
+        Int($0.tick) == destination.tick && Int($0.pitch) == destination.pitch
+    }
+    report.expect(created?.velocity == 93, cppID: id,
+                  message: "a committed drag velocity latches into the next drawn note")
+    pencilRestore(report, id: id, session: session, baseline: baseline)
+}
+
+@MainActor
+private func checkPencilGutterSelection(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::pencilGutterSelection"
+    let grid = makeCameraGrid(session: session)
+    guard let cell = pencilFreeCell(session: session, grid: grid),
+          let baseline = try? session.document.captureSave(),
+          let ids = try? session.document.addNotes([
+              NewNote(track: grid.trackIndex, tick: Tick(cell.tick),
+                      pitch: UInt8(cell.pitch), duration: Tick(cell.duration), velocity: 73),
+              NewNote(track: grid.trackIndex, tick: Tick(cell.tick + 2 * cell.duration),
+                      pitch: UInt8(cell.pitch), duration: Tick(cell.duration), velocity: 95)
+          ]), ids.count == 2 else {
+        report.fail(id, "the gutter fixture could not seed matching notes")
+        return
+    }
+    grid.refreshFromSession()
+    grid.lastVelocity = 61
+    var audition: (Int, Int, Int)?
+    grid.onAudition = { audition = ($0, $1, $2) }
+    let beforePress = (snapshot: DocumentSnapshot(session.document),
+                       index: session.document.history.undoIndex,
+                       count: session.document.history.undoCount,
+                       bytes: coreTimeBytes(session.document))
+    grid.beginKeyboardPointer(y: cell.y)
+    report.expect(Set(session.selectedNotes) == Set(ids), cppID: id,
+                  message: "a keyboard key press selects every matching note")
+    report.expect(audition?.0 == grid.trackIndex && audition?.1 == cell.pitch
+                      && audition?.2 == 100 && grid.lastVelocity == 61,
+                  cppID: id, message: "the gutter auditions at the fixed velocity 100")
+    report.expect(DocumentSnapshot(session.document) == beforePress.snapshot
+                      && session.document.history.undoIndex == beforePress.index
+                      && session.document.history.undoCount == beforePress.count
+                      && coreTimeBytes(session.document) == beforePress.bytes, cppID: id,
+                  message: "gutter selection records no history")
+    grid.updateKeyboardPointer(y: cell.y + grid.rowHeight)
+    report.expect(audition?.0 == grid.trackIndex && audition?.1 == cell.pitch - 1
+                      && audition?.2 == 100 && grid.lastVelocity == 61
+                      && Set(session.selectedNotes) == Set(ids)
+                      && session.document.history.undoIndex == beforePress.index
+                      && coreTimeBytes(session.document) == beforePress.bytes,
+                  cppID: id, message: "glissando re-auditions at 100 without reselecting")
+    grid.endKeyboardPointer()
+    pencilRestore(report, id: id, session: session, baseline: baseline)
+}
+
+@MainActor
 private func checkPencilAbuttingNotes(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::pencilAbuttingRaster"
     let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
-          let baseline = try? session.document.captureSave() else {
-        report.fail(id, "no free grid cell or pre-draw SMF snapshot")
+    let freeCell = pencilFreeCell(session: session, grid: grid)
+    report.expect(freeCell != nil, cppID: id, message: "no free grid cell to draw in")
+    guard let cell = freeCell else { return }
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-draw SMF bytes")
         return
     }
     grid.setEditCursorTick(tick: cell.tick + 3 * cell.duration)
@@ -218,9 +355,15 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
           let second = try? session.document.addNotes([
               NewNote(track: grid.trackIndex, tick: Tick(b.tick), pitch: UInt8(b.pitch),
                       duration: Tick(b.duration), velocity: 73)
-          ]), second.count == 1,
-          let c = pencilFreeCell(session: session, grid: grid) else {
-        report.fail(id, "could not seed the second velocity note or locate a free delete cell")
+          ]), second.count == 1 else {
+        report.fail(id, "could not seed the second velocity note")
+        pencilRestore(report, id: id, session: session, baseline: baseline)
+        return
+    }
+    let freeCell = pencilFreeCell(session: session, grid: grid)
+    report.expect(freeCell != nil, cppID: id,
+                  message: "no free grid cell for the double-click delete")
+    guard let c = freeCell else {
         pencilRestore(report, id: id, session: session, baseline: baseline)
         return
     }
@@ -243,9 +386,12 @@ private func checkVelocityDoubleClickDelete(_ report: CheckReport, session: Docu
 private func checkPointerDrawCancellation(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::quickLifecycle"
     let grid = makeCameraGrid(session: session)
-    guard let cell = pencilFreeCell(session: session, grid: grid),
-          let baseline = try? session.document.captureSave() else {
-        report.fail(id, "no free grid cell for the pointer lifecycle")
+    let freeCell = pencilFreeCell(session: session, grid: grid)
+    report.expect(freeCell != nil, cppID: id,
+                  message: "no free grid cell for the Quick lifecycle scenarios")
+    guard let cell = freeCell else { return }
+    guard let baseline = try? session.document.captureSave() else {
+        report.fail(id, "could not capture the pre-draw SMF bytes")
         return
     }
     for reason in [GridCancelReason.pointerUngrabbed, .windowDeactivated, .focusLost] {

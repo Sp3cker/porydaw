@@ -266,6 +266,130 @@ TestCase {
             "disabling velocity-color mode restores the identity fill pixels")
     }
 
+    function test_drawnNoteFillBorderAndAbuttingSeam() {
+        var context = openNotes()
+        verify(context.plot !== null, "the fixture mounts a timeline")
+        var grid = context.grid
+        var roll = findChild(context.surface, "swiftRollInput")
+        verify(roll !== null, "the mounted pencil input is available")
+        var notes = publishedNotes(grid)
+        var ticksPerPixel = grid.ticksPerBeat / grid.beatWidth
+        var snap = grid.snapTicks
+        var start = Math.ceil((grid.cameraScrollX + roll.width / 3)
+                              * ticksPerPixel / snap) * snap
+        var span = Math.max(2 * snap, Math.ceil(2 * grid.drawThreshold * ticksPerPixel
+                                               / snap) * snap)
+        var x = start / ticksPerPixel - grid.cameraScrollX
+        var end = (start + 2 * span) / ticksPerPixel - grid.cameraScrollX
+        var pitch = -1
+        for (var row = Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2;
+             row < Math.floor((grid.cameraScrollY + roll.height) / grid.rowHeight) - 2;
+             ++row) {
+            var candidate = 127 - row
+            if (!notes.some(function(note) {
+                return note.pitch === candidate && note.tick < start + 2 * span
+                    && note.tick + note.duration > start
+            })) {
+                pitch = candidate
+                break
+            }
+        }
+        verify(pitch >= 0 && x > grid.rowHeight && end < roll.width - grid.rowHeight,
+               "two adjacent displayed cells have an empty pitch row")
+        var y = (127 - pitch + 0.5) * grid.rowHeight - grid.cameraScrollY
+        var baseline = grabShell()
+        verify(baseline !== null, "the empty row renders before painting")
+        var originalIds = notes.map(function(note) { return note.id })
+        var inset = Math.min(grid.drawThreshold / 2, snap / ticksPerPixel / 4)
+        var firstEnd = (start + span) / ticksPerPixel - grid.cameraScrollX - inset
+        mousePress(roll, x + inset, y, Qt.LeftButton)
+        mouseMove(roll, firstEnd, y, -1, Qt.LeftButton)
+        mouseRelease(roll, firstEnd, y, Qt.LeftButton)
+        var first = null
+        verify(waitForNative(function() {
+            first = publishedNotes(grid).find(function(note) {
+                return originalIds.indexOf(note.id) < 0
+            })
+            return first !== undefined
+        }, 5000), "the first cell commits a drawn note")
+        var firstImage = grabShell()
+        verify(firstImage !== null, "the first pencil note renders a frame")
+        var firstItem = noteItem(context.fills, first.id)
+        verify(firstItem !== null, "the first drawn note box is mounted")
+        var firstDpr = shellDpr(firstImage)
+        var firstBox = deviceRect(firstItem, context.plot, firstImage, firstDpr)
+        var firstRight = firstBox.x + firstBox.w
+        var firstBottom = firstBox.y + firstBox.h
+        var escaped = false
+        for (var borderY = firstBox.y; borderY <= firstBottom; ++borderY) {
+            if (!Helpers.colorsNear(rgb(firstImage, firstRight, borderY),
+                                    rgb(baseline, firstRight, borderY), 0)) {
+                escaped = true
+                break
+            }
+        }
+        for (var borderX = firstBox.x; borderX <= firstRight && !escaped; ++borderX) {
+            if (!Helpers.colorsNear(rgb(firstImage, borderX, firstBottom),
+                                    rgb(baseline, borderX, firstBottom), 0))
+                escaped = true
+        }
+        verify(!escaped, "note color does not escape its border box")
+        var adjacentX = (first.tick + first.duration) / ticksPerPixel - grid.cameraScrollX
+        var secondStart = adjacentX + span / ticksPerPixel / 2
+        var secondEnd = adjacentX + span / ticksPerPixel
+        mousePress(roll, secondStart, y, Qt.LeftButton)
+        mouseMove(roll, secondEnd, y, -1, Qt.LeftButton)
+        mouseRelease(roll, secondEnd, y, Qt.LeftButton)
+        var second = null
+        verify(waitForNative(function() {
+            second = publishedNotes(grid).find(function(note) {
+                return originalIds.indexOf(note.id) < 0 && note.id !== first.id
+                    && note.pitch === pitch
+            })
+            return second !== undefined
+        }, 5000), "the next displayed cell commits the second note")
+        var secondItem = null
+        tryVerify(function() {
+            secondItem = noteItem(context.fills, second.id)
+            return secondItem !== null
+        }, 3000)
+        var center = secondItem.mapToItem(roll, secondItem.width / 2, secondItem.height / 2)
+        var shift = (second.tick - first.tick - first.duration) / ticksPerPixel
+        verify(shift > grid.drawThreshold, "the drawn notes leave a movable snapped gap")
+        mousePress(roll, center.x, center.y, Qt.LeftButton)
+        mouseMove(roll, center.x - shift, center.y, -1, Qt.LeftButton)
+        mouseRelease(roll, center.x - shift, center.y, Qt.LeftButton)
+        var secondId = second.id
+        verify(waitForNative(function() {
+            second = publishedNotes(grid).find(function(note) { return note.id === secondId })
+            return second !== undefined && second.tick === first.tick + first.duration
+        }, 5000), "the next drawn note abuts the first on the same row")
+        var image = grabShell()
+        verify(image !== null, "the adjacent pencil notes render a frame")
+        verify(secondItem !== null, "the second drawn note box is mounted")
+        var dpr = shellDpr(image)
+        var box = deviceRect(firstItem, context.plot, image, dpr)
+        var nextBox = deviceRect(secondItem, context.plot, image, dpr)
+        var cy = box.y + Math.floor(box.h / 2)
+        var cx = box.x + Math.floor(box.w / 2)
+        var expected = Helpers.channels(probe.noteFace(
+            first.track, first.velocity, grid.palette.noteVelocityZero))
+        verify(Helpers.colorsNear(rgb(image, cx, cy), expected),
+               "a drawn note paints its interior in the velocity fill")
+        var seamStart = box.x
+        var seamEnd = nextBox.x + nextBox.w - 1
+        var seamPainted = true
+        for (var seamX = seamStart; seamX <= seamEnd; ++seamX) {
+            if (Helpers.colorsNear(rgb(image, seamX, cy),
+                                   rgb(baseline, seamX, cy), 0)) {
+                seamPainted = false
+                break
+            }
+        }
+        verify(nextBox.x <= box.x + box.w && nextBox.x + nextBox.w > seamStart
+               && seamPainted, "abutting notes leave no unpainted gap column")
+    }
+
     function test_noteNameRaster() {
         var context = openNotes()
         context.grid.handleWheel(0, 1600, 0, 0, Qt.ControlModifier, 0,

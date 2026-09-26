@@ -425,7 +425,11 @@ TestCase {
 
         session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(session.velocityPage(), "promptOpen", true, 3000)
-        var field = findChild(surface, "noteVelocityInput")
+        var field = null
+        tryVerify(function() {
+            field = findChild(surface, "noteVelocityInput")
+            return field !== null
+        }, 3000)
         verify(field, "the original numeric prompt has a text field")
         tryCompare(field, "activeFocus", true, 3000)
         field.selectAll()
@@ -719,7 +723,11 @@ TestCase {
         selectDrawnVelocityNote(surface)
         shell.shellPresenter.session.performGridCommand(bootstrap.setVelocityCommand())
         tryCompare(shell.shellPresenter.session.velocityPage(), "promptOpen", true, 3000)
-        var field = findChild(surface, "noteVelocityInput")
+        var field = null
+        tryVerify(function() {
+            field = findChild(surface, "noteVelocityInput")
+            return field !== null
+        }, 3000)
         verify(field, "the numeric prompt exposes its real input")
         tryCompare(field, "activeFocus", true, 3000)
         var numericText = field.text

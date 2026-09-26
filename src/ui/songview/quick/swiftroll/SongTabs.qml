@@ -10,6 +10,14 @@ Item {
     property var layoutSpaces: null
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
+    function selectedEditorSurface() {
+        for (let index = 0; index < pages.count; ++index) {
+            const page = pages.itemAt(index)
+            if (page && page.session === root.controller.selectedPage)
+                return page.surface
+        }
+        return null
+    }
     function focusOwnsLocalKeys() {
         if (closeDialog.visible)
             return true

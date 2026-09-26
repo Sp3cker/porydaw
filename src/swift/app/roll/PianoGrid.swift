@@ -593,6 +593,12 @@ public final class PianoGrid {
         return true
     }
 
+    public func retargetNoteMenu(x: Double, y: Double) -> Bool {
+        guard focusNoteUnderCursor(x: x, y: y) else { return false }
+        contextMenuRequested(x: x, y: y)
+        return true
+    }
+
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
         suppressedLeftRelease = false
@@ -834,6 +840,10 @@ public final class PianoGrid {
             applyBandSelection()
         } else if case .pendingMenu(let state) = updated {
             if state.hitNoteId.isAssigned {
+                if !session.selectedNotes.contains(state.hitNoteId) {
+                    session.setSelectedNotes([state.hitNoteId])
+                    refreshNotes()
+                }
                 contextMenuRequested(x: x, y: y)
             } else {
                 session.clearSelectedNotes()
@@ -899,6 +909,10 @@ public final class PianoGrid {
     }
 
     public func beginKeyboardPointer(y: Double) {
+        let key = pitch(atY: y)
+        guard (0...127).contains(key) else { return }
+        session.setSelectedNotes(notes.filter { !$0.ghost && $0.pitch == key }.map(\.noteId))
+        refreshNotes()
         updateKeyboardPointer(y: y)
     }
 
@@ -909,7 +923,7 @@ public final class PianoGrid {
         let track = trackIndex
         keyboardAuditionKey = key
         keyboardAuditionTrack = track
-        onAudition?(track, key, min(127, max(1, lastVelocity)))
+        onAudition?(track, key, 100)
         hoverKey = key
         scene.rebuildHover(sceneInput())
     }
