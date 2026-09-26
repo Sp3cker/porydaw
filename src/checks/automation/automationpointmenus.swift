@@ -11,6 +11,7 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64), (120, 40)])
     fixture.activate(fixture.panLane)
     let before = fixture.snapshot
+    let fileBytes = try? fixture.document.state.file.encoded()
     report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: drawerAutomationPromptID,
                   message: "a prompt opens on a written node")
     report.expect(fixture.page.hasPrompt && fixture.page.interactionActive, cppID: drawerAutomationPromptID,
@@ -53,6 +54,12 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
                   message: "re-inserting an existing point changes nothing")
     report.expectEqual(expected: revisionAfterInsert, actual: fixture.document.revision, cppID: drawerAutomationPromptID,
                        what: "a duplicate insertion writes no revision")
+    report.expect(fixture.undo(), cppID: drawerAutomationPromptID,
+                  message: "the insertion is undoable")
+    report.expectEqual(expected: fileBytes, actual: try? fixture.document.state.file.encoded(), cppID: drawerAutomationPromptID,
+                       what: "the insertion's undo restores the document's exact bytes")
+    report.expect(!fixture.document.history.canUndo, cppID: drawerAutomationPromptID,
+                  message: "the insertion's undo consumes the committed edit's single history entry")
 
     // Cancellation writes nothing and ends the interaction.
     let beforeCancel = fixture.snapshot
@@ -131,6 +138,10 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
     report.expect(!stale.page.consumeMenuAction(
         actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
                   message: "a stale point menu cannot delete its target")
+    report.expect(!stale.page.menuOpen, cppID: staleID,
+                  message: "the rejected row activation dismisses the stale point menu")
+    report.expect(!stale.page.hasPrompt, cppID: staleID,
+                  message: "the rejected row activation opens no prompt")
     report.expectEqual(expected: rewritten, actual: stale.snapshot, cppID: staleID,
                        what: "the rejected Delete leaves the rewritten lane intact")
     report.expectEqual(expected: ["24:64", "120:40", "168:5"], actual: stale.values(stale.panLane), cppID: staleID,

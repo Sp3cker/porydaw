@@ -5144,6 +5144,408 @@ TestCase {
         verify(remaining.indexOf(String(firstTick)) >= 0, "the original menu target survives")
     }
 
+    // Delete through the point menu's rendered row, the outside right-press
+    // retarget ending in a real row click, and the miss dismissal that neither
+    // retargets nor leaves a release to open a second popup: each modal close
+    // routes focus back to the plot through the page's own `focusOrigin`.
+    function test_productionAutomationPointMenuDeleteAndDismiss() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-point-delete")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var input = testCase.automationPlotInput()
+        var plot = testCase.automationPlot()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active")
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case created a written Volume lane with a real sweep")
+        var nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 0, "the Volume lane projects written nodes")
+
+        // The focus band a node right-press runs in: the plot is the focused
+        // item of the automation band before the modal opens.
+        testCase.focusControl(plot)
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the automation band's focused item is the plot before the point menu opens")
+
+        // a) The written node's own menu opens on a real right press, and the
+        // rendered Delete row's click commits the edit the original popup chose.
+        var written = testCase.automationWrittenNodeIndex()
+        verify(written >= 0, "the lane projects a written node")
+        var deletedTick = nodes[written].model.tick
+        var valuesBefore = bootstrap.automationLaneValues()
+        verify(testCase.openAutomationNodeMenu(written))
+        compare(bootstrap.automationMenuActions(), "1,2",
+                "the written node's right-press opens the point menu with its typed rows")
+
+        verify(testCase.clickAutomationMenuRow(2),
+               "the point menu's rendered Delete row accepts a real click")
+        tryCompare(model, "menuOpen", false, 2000,
+                   "the point menu closes on the Delete pick")
+        tryVerify(function() {
+            return bootstrap.automationLaneTicks().split(",").indexOf(String(deletedTick)) < 0
+        }, 2000, "the Delete row's click commits the node removal")
+        compare(bootstrap.automationLaneValues() !== valuesBefore, true,
+                "the committed delete changed the lane")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the point menu's close returns focus to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus")
+
+        // b) The retargeted right press lands on another written node through
+        // the open menu's own underlay; the rendered Delete row click consumes
+        // the new target and closes the menu, and focus comes back to the plot.
+        nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 1, "a second written node remains for the retarget")
+        var firstIndex = testCase.automationWrittenNodeIndex()
+        verify(firstIndex >= 0, "the lane still projects a written node")
+        var firstTick = nodes[firstIndex].model.tick
+        verify(testCase.openAutomationNodeMenu(firstIndex))
+        var panel = findChild(testCase.surface, "automationMenuPanel")
+        panel = findChild(panel, "quickMenuFrame")
+        verify(panel, "the point menu has a drawn frame")
+        var targetIndex = -1
+        for (var i = 0; i < nodes.length; ++i) {
+            if (i === firstIndex || nodes[i].model.projected) continue
+            var p = testCase.automationNodePoint(nodes[i])
+            var local = panel.mapFromItem(testCase.automationPlotInput(), p.x, p.y)
+            if (local.x < 0 || local.x > panel.width || local.y < 0 || local.y > panel.height) {
+                targetIndex = i
+                break
+            }
+        }
+        verify(targetIndex >= 0, "another written node lies outside the open menu")
+        var targetTick = nodes[targetIndex].model.tick
+        verify(testCase.openAutomationNodeMenu(targetIndex))
+        compare(bootstrap.automationMenuOpen(), true,
+                "the outside right press retargets the open menu rather than dismissing it")
+        verify(testCase.clickAutomationMenuRow(2),
+               "the retargeted menu's rendered Delete row receives a real click")
+        tryCompare(model, "menuOpen", false, 2000,
+                   "the retargeted point menu closes on the Delete pick")
+        tryVerify(function() {
+            var remaining = bootstrap.automationLaneTicks().split(",")
+            return remaining.indexOf(String(targetTick)) < 0
+                && remaining.indexOf(String(firstTick)) >= 0
+        }, 2000, "the retargeted Delete acts on the newly hit node and leaves the first target")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the retargeted Delete's menu close returns focus to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus after the retarget")
+
+        // c) The miss dismissal: a left press on the open menu's own underlay
+        // dismisses the session, and the paired release it swallows opens
+        // neither a menu nor a prompt at the miss point.
+        nodes = testCase.automationLaneNodes()
+        written = testCase.automationWrittenNodeIndex()
+        verify(written >= 0, "the lane still projects a written node for the miss case")
+        verify(testCase.openAutomationNodeMenu(written))
+        var miss = testCase.automationFreePoint()
+        mouseClick(input, miss.x, miss.y, Qt.LeftButton)
+        tryCompare(model, "menuOpen", false, 2000,
+                   "the miss press dismisses the open point menu")
+        compare(bootstrap.automationMenuOpen(), false,
+                "the miss dismissal's paired release opens no new menu")
+        compare(bootstrap.automationPromptOpen(), false,
+                "the miss dismissal's paired release opens no prompt")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the miss dismissal returns focus to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus after the miss")
+    }
+
+    // The Set Value row's rendered click opens the lane's own value prompt with
+    // focus on the draft field: Escape cancels focus-clean, a typed draft's
+    // Return commits and unwinds through the document's own undo, and a
+    // parameter switch while the prompt holds focus closes it without a write.
+    function test_productionAutomationSetValuePromptFocusRoute() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-value-focus")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var plot = testCase.automationPlot()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active")
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the case created a written Volume lane with a real sweep")
+        var nodes = testCase.automationLaneNodes()
+        verify(nodes.length > 0, "the Volume lane projects a written node")
+        var written = testCase.automationWrittenNodeIndex()
+        verify(written >= 0, "the lane projects a written node")
+
+        testCase.focusControl(plot)
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the automation band's focused item is the plot before the point menu opens")
+        verify(testCase.openAutomationNodeMenu(written))
+        compare(bootstrap.automationMenuActions(), "1,2",
+                "the written node's right-press opens the point menu with its typed rows")
+        verify(testCase.clickAutomationMenuRow(1),
+               "the point menu's rendered Set Value row accepts a real click")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(model.menuOpen, false,
+                "the Set Value pick consumes the point menu as the prompt opens")
+
+        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the value prompt rendered its draft input")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the value prompt's draft field holds focus on open")
+        tryCompare(model, "plotFocused", false, 1000,
+                   "the page stops publishing the plot as focused while the value prompt owns focus")
+        compare(field.selectedText.length > 0, true,
+                "the value prompt's stored draft opens selected")
+        tryCompare(plot, "activeFocus", false, 1000,
+                   "the plot yields focus while the value prompt holds the band")
+
+        // a) Escape cancels the open prompt: nothing is written, the modal
+        // closes, and the band's focus comes back to the plot.
+        var revisionBefore = bootstrap.automationDocumentRevision()
+        var valuesBefore = bootstrap.automationLaneValues()
+        keyClick(Qt.Key_Escape)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        compare(bootstrap.automationLaneValues(), valuesBefore,
+                "the cancelled value prompt leaves the lane byte-identical")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "the cancelled value prompt writes no document revision")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the value prompt's Escape close returns focus to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus after Escape")
+
+        // b) A typed draft's Return commits through the prompt's own acceptance:
+        // the edit lands in the lane, the modal closes, focus returns, and the
+        // document's own undo restores the lane without touching focus again.
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+        verify(testCase.clickAutomationMenuRow(1),
+               "the reopened point menu's rendered Set Value row accepts a real click")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the reopened value prompt rendered its draft input")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the reopened value prompt's draft field holds focus on open")
+        tryCompare(model, "plotFocused", false, 1000,
+                   "the page stops publishing the plot as focused while the reopened value prompt owns focus")
+        var storedBefore = bootstrap.automationLaneValues()
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        tryCompare(model, "promptOpen", false, 1000,
+                   "the value route's acceptance closes the value prompt")
+        compare(bootstrap.automationLaneValues() !== storedBefore, true,
+                "the accepted value draft wrote the lane")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the value prompt's acceptance close returns focus to the automation band's plot")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed")
+        compare(bootstrap.automationLaneValues(), storedBefore,
+                "undo restores the lane values the accepted draft replaced")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "focus stays on the automation band's plot after the value edit's undo")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page still publishes the plot as the automation band's focus after undo")
+
+        // c) A parameter switch while the value prompt holds focus is the
+        // modal's own invalidation: the prompt closes without a write and the
+        // band's focus comes back to the plot.
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+        verify(testCase.clickAutomationMenuRow(1),
+               "the reopened point menu's rendered Set Value row accepts a real click")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the reopened value prompt rendered its draft input")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the reopened value prompt's draft field holds focus on open")
+        tryCompare(model, "plotFocused", false, 1000,
+                   "the page stops publishing the plot as focused while the pre-switch value prompt owns focus")
+        var tempoTab = model.tabCount - 1
+        verify(tempoTab > volumeTab, "the published tab list ends on Tempo")
+        revisionBefore = bootstrap.automationDocumentRevision()
+        verify(model.activateParameter(tempoTab),
+               "the production parameter switch lands on the Tempo lane")
+        tryCompare(model, "promptOpen", false, 2000,
+                   "the parameter switch closes the focused value prompt without a write")
+        compare(bootstrap.automationPromptOpen(), false,
+                "no value prompt survives the parameter switch")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore,
+                "the parameter switch writes no document revision")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the closed value prompt's focus returns to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus after the switch")
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab }, 2000,
+                  "the Tempo lane is active after the switch")
+    }
+
+    // The Tempo lane's own node menu and value prompt run the same focus route
+    // as a track lane: the right press opens the point menu, the rendered Set
+    // Value row opens the focused draft, and Return commits through the
+    // document's own history.
+    function test_productionAutomationTempoPromptFocusRoute() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-tempo-focus")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var plot = testCase.automationPlot()
+        var tempoTab = model.tabCount - 1
+        verify(tempoTab >= 0, "the published tab list ends on Tempo")
+        testCase.clickAutomationTab(tempoTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab }, 2000,
+                  "the Tempo lane is active")
+
+        var nodes = testCase.automationLaneNodes()
+        var tempoIndex = -1
+        for (var i = 0; i < nodes.length; ++i) {
+            if (!nodes[i].model.projected) {
+                tempoIndex = i
+                break
+            }
+        }
+        verify(tempoIndex >= 0, "the staged tempo lane projects a written node")
+
+        testCase.focusControl(plot)
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the automation band's focused item is the plot before the tempo node menu opens")
+        verify(testCase.openAutomationNodeMenu(tempoIndex))
+        compare(bootstrap.automationMenuActions(), "1,2",
+                "the tempo node's right-press opens the point menu with its typed rows")
+        verify(testCase.clickAutomationMenuRow(1),
+               "the tempo point menu's rendered Set Value row accepts a real click")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(model.menuOpen, false,
+                "the tempo Set Value pick consumes the point menu as the prompt opens")
+
+        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the tempo value prompt rendered its draft input")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the tempo value prompt's draft field holds focus on open")
+        tryCompare(plot, "activeFocus", false, 1000,
+                   "the plot yields focus while the tempo prompt holds the band")
+        tryCompare(model, "plotFocused", false, 1000,
+                   "the page stops publishing the plot as focused while the tempo prompt owns focus")
+        var bpmBefore = bootstrap.automationTempoBpm()
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_3)
+        keyClick(Qt.Key_2)
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        tryCompare(model, "promptOpen", false, 1000,
+                   "the tempo route's acceptance closes the value prompt")
+        tryVerify(function() { return bootstrap.automationTempoBpm() === 132 }, 2000,
+                  "the accepted tempo draft commits the new bpm")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the tempo prompt's acceptance close returns focus to the automation band's plot")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page republishes the plot as the automation band's focus after the tempo commit")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed")
+        compare(bootstrap.automationTempoBpm(), bpmBefore,
+                "undo restores the tempo the accepted draft replaced")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "focus stays on the automation band's plot after the tempo edit's undo")
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the page still publishes the plot as the automation band's focus after the tempo undo")
+    }
+
+    // The unwritten lane's projected engine-default node still opens the point
+    // menu: the rendered rows carry the model's enabled flags (Set Value
+    // enabled, Delete disabled), a real click on the disabled row neither
+    // closes the menu nor writes, and Set Value opens the focused prompt whose
+    // acceptance inserts the real event the undo unwinds.
+    function test_productionAutomationSyntheticDefaultMenuRoute() {
+        // This phase's own process: the container child released the production page's slot before it mounted.
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+
+        var location = bootstrap.preferencesUrl("production-automation-synthetic-menu")
+        testCase.mountProductionAutomation(location)
+        var model = testCase.automationModel()
+        var input = testCase.automationPlotInput()
+        var plot = testCase.automationPlot()
+        var volumeTab = bootstrap.automationVolumeIndex()
+        testCase.clickAutomationTab(volumeTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === volumeTab }, 2000,
+                  "the Volume lane is active")
+        if (bootstrap.automationLaneEventCount() > 0) {
+            verify(testCase.clearAutomationLane(volumeTab),
+                   "the Volume lane's own Delete automation events clears it for the synthetic case")
+        }
+
+        var nodes = testCase.automationLaneNodes()
+        var projectedIndex = -1
+        for (var i = 0; i < nodes.length; ++i) {
+            if (nodes[i].model.projected) {
+                projectedIndex = i
+                break
+            }
+        }
+        verify(projectedIndex >= 0, "the unwritten lane projects its engine-default node")
+
+        testCase.focusControl(plot)
+        tryCompare(model, "plotFocused", true, 1000,
+                   "the automation band's focused item is the plot before the synthetic menu opens")
+        verify(testCase.openAutomationNodeMenu(projectedIndex))
+        compare(bootstrap.automationMenuActions(), "1,2",
+                "the projected node's right-press opens the point menu with its typed rows")
+        var syntheticPanel = findChild(testCase.surface, "automationMenuPanel")
+        verify(syntheticPanel && syntheticPanel.visible,
+               "the synthetic node's right-press draws a visible point menu panel")
+        var rows = testCase.automationMenuRowItems()
+        compare(rows.length, 2, "the point menu renders its two typed rows")
+        compare(rows[0].model.text, "Set Value",
+                "the rendered first row is the published Set Value row")
+        compare(rows[0].model.enabled, true, "the rendered Set Value row is enabled")
+        compare(rows[0].enabled, true, "the drawn Set Value row exposes enabled state")
+        compare(rows[1].model.text, "Delete",
+                "the rendered second row is the published Delete row")
+        compare(rows[1].model.enabled, false, "the rendered Delete row is disabled")
+        compare(rows[1].enabled, false, "the drawn Delete row exposes disabled state")
+        compare(rows[1].Accessible.role, Accessible.MenuItem,
+                "the drawn disabled Delete row is a menu item to accessibility")
+
+        var revisionBefore = bootstrap.automationDocumentRevision()
+        mouseClick(rows[1], rows[1].width / 2, rows[1].height / 2, Qt.LeftButton)
+        tryVerify(function() { return bootstrap.automationMenuOpen() }, 2000,
+                  "the disabled Delete row's real click leaves the point menu open")
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "the disabled Delete row's real click opens no prompt")
+        tryVerify(function() { return bootstrap.automationDocumentRevision() === revisionBefore }, 2000,
+                  "the disabled Delete row's real click writes nothing")
+
+        verify(testCase.clickAutomationMenuRow(1),
+               "the synthetic node's rendered Set Value row accepts a real click")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(model.menuOpen, false,
+                "the Set Value pick consumes the synthetic node's menu as the prompt opens")
+        var field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        verify(field, "the synthetic node's value prompt rendered its draft input")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the synthetic node's value prompt draft field holds focus on open")
+        tryCompare(model, "plotFocused", false, 1000,
+                   "the page stops publishing the plot as focused while the synthetic node's prompt owns focus")
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        tryCompare(model, "promptOpen", false, 1000,
+                   "the synthetic route's acceptance closes the value prompt")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 1 }, 2000,
+                  "the accepted synthetic draft inserts the lane's first real event")
+        compare(bootstrap.automationLaneTicks(), "0",
+                "the inserted event lands at the projected node's tick")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the synthetic prompt's acceptance close returns focus to the automation band's plot")
+        verify(bootstrap.requestAutomationUndo(), "the production undo completed")
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "undo removes the inserted event and restores the unwritten lane")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "focus stays on the automation band's plot after the synthetic insert's undo")
+    }
+
     function test_productionAutomationMenusAndLaneCommands() {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")

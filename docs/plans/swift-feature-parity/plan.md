@@ -75,7 +75,7 @@ Details and pinned oracles remain in [inventory.md](inventory.md). “Pending”
 | SH02 | pending | Note names/velocity colors across tabs, themes, persistence, fit, ghosts and drag readouts. |
 | SH03 | blocked | Appearance/font/grid controls require scope authorization. |
 | SH04 | pending | Existing dock sizing/visibility/constrained layout and workspace restoration. |
-| SH05 | blocked | New title/dirty/polyphony chrome requires scope authorization. |
+| SH05 | pending | Active song/project window title with dirty indicator and the PCM/CGB/lost-note status meter shipped in fork-main `fceecd88`; unblocked 2026-09-25 by the user's visual-parity direction ([task 24](task-24-brief.md)). Opening the Polyphony Debugger from the meter only if fork-main did. |
 | SH06 | pending | Existing window/filter/follow/suppression/volume/debugger preference persistence. |
 | PJ01 | pending | Project open/change/startup arguments and dirty-safe failure paths. |
 | PJ02 | pending | Existing song search/filter/badges/reuse/deletion and available registration retry. |
