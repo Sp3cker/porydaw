@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -38,14 +37,11 @@ TestCase {
     }
 
     function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
+        Qt.application.name = "porydaw"
         Qt.application.organization = "sp3cker"
         Qt.application.domain = ""
     }
 
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function cleanup() {
         if (!shell)

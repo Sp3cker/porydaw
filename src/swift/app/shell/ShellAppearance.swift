@@ -1,5 +1,4 @@
 import Foundation
-import CoreFoundation
 
 @MainActor
 public enum ShellAppearance {
@@ -90,25 +89,10 @@ public enum ShellAppearance {
         return min(100, max(0, value))
     }
 
-    /// QSettings maps the prescribed sp3cker organization and active application
-    /// name to com.sp3cker.<application>, and theme/primary to theme.primary
-    /// (qsettings_mac.cpp). QtCore.Settings cannot remove a key:
-    /// setValue(undefined) persists "@Invalid()" instead. CFPreferences also
-    /// supports the app's own bundle, which UserDefaults(suiteName:) rejects.
-    static func removeLegacyCustomKeys(applicationName: String) {
-        func cfString(_ text: String) -> CFString {
-            guard let result = text.withCString({
-                CFStringCreateWithCString(kCFAllocatorDefault, $0,
-                                          CFStringBuiltInEncodings.UTF8.rawValue)
-            }) else {
-                preconditionFailure("Native Qt settings identifier could not be encoded")
-            }
-            return result
-        }
-        let applicationID = cfString("com.sp3cker." + applicationName)
-        CFPreferencesSetAppValue(cfString("theme.primary"), nil, applicationID)
-        CFPreferencesSetAppValue(cfString("theme.accent"), nil, applicationID)
-        _ = CFPreferencesAppSynchronize(applicationID)
+    static func removeLegacyCustomKeys(store: PreferencesStore) {
+        store.remove(key: "theme.primary")
+        store.remove(key: "theme.accent")
+        store.synchronize()
     }
 
     public static func apply(to palette: GridPalette, mode: String, contrast: Int) {

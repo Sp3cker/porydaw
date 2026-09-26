@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Basic as Basic
 import QtQuick.Dialogs
-import QtCore
 import QtQml.Models
 import PorydawApp
 import Porydaw.Ui
@@ -17,6 +16,7 @@ ThemedWindow {
     colors: shell.session.palette
     property bool establishApplicationIdentity: false
     property int actionRevision: 0
+    property bool dockSettingsReady: false
     readonly property int bodyFontPx: shell.session.bodyFontPx
     property int chromeBaseFontPx: shell.session.baseFontPx
     property var chromeTypography: shell.session.typographyFonts
@@ -57,61 +57,6 @@ ThemedWindow {
         font: Qt.font(root.chromeTypography.caption)
     }
 
-    // Executable startup establishes QGuiApplication's native settings identity.
-    // Restore appearance only after the complete shell has been constructed.
-    Loader {
-        id: appearanceStore
-        active: false
-        sourceComponent: Settings {
-            category: "theme"
-        }
-        onLoaded: {
-            const settings = appearanceStore.item
-            shell.restoreAppearance(String(settings.value("mode")),
-                                    String(settings.value("grid-line-contrast")),
-                                    Qt.application.name)
-            settings.setValue("mode", shell.themeMode)
-            settings.setValue("grid-line-contrast", shell.gridLineContrast)
-            shell.openStartup(Qt.application.name)
-        }
-    }
-
-    Settings {
-        id: dockSettings
-        category: "swiftDock"
-        property int columnWidth: 280
-        property real songsRatio: 0.5
-    }
-    // Velocity colours and note names persist as QSettings root keys, exactly
-    // as the old app stored them. No category: the keys live beside the other
-    // application-level settings, not in a group.
-    Settings {
-        id: displayModeSettings
-    }
-    Loader {
-        id: engineSettingsStore
-        active: false
-        sourceComponent: Settings { category: "engine" }
-        onLoaded: {
-            const settings = engineSettingsStore.item
-            shell.settingsStore.restore(String(settings.value("pcmMixer", "ipatix")),
-                                        String(settings.value("maxPcmChannels", 5)),
-                                        String(settings.value("pcmMixRate", 13379)),
-                                        String(settings.value("analogFilter", false)))
-        }
-    }
-    Connections {
-        target: shell.settingsStore
-        function onRevisionChanged() {
-            if (engineSettingsStore.status !== Loader.Ready)
-                return
-            const settings = engineSettingsStore.item
-            settings.setValue("pcmMixer", shell.settingsStore.mixer)
-            settings.setValue("maxPcmChannels", shell.settingsStore.maxPcmChannels)
-            settings.setValue("pcmMixRate", shell.settingsStore.mixRate)
-            settings.setValue("analogFilter", shell.settingsStore.analogFilter)
-        }
-    }
     Component.onCompleted: {
         const naturalWidth = root.width === root.chromeBaseFontPx * 92
         const naturalHeight = root.height === root.chromeBaseFontPx * 57
@@ -128,17 +73,13 @@ ThemedWindow {
             Qt.application.organization = "sp3cker"
             Qt.application.domain = ""
         }
-        // The session fans restored modes out to every tab, including tabs
-        // opened later, so this runs before the startup recipe opens anything.
-        if (shell.actionChecked("view.velocity_colors") !==
-                Boolean(displayModeSettings.value("velocityNoteColors", false)))
-            shell.activate("view.velocity_colors")
-        if (shell.actionChecked("view.note_names") !==
-                Boolean(displayModeSettings.value("noteNames", false)))
-            shell.activate("view.note_names")
-        transportBar.restoreOutputVolume()
-        engineSettingsStore.active = true
-        appearanceStore.active = true
+        shell.configureSettings(Qt.application.name)
+        root.dockSettingsReady = true
+        shell.session.restoreDisplayModes()
+        transportBar.presenter.restoreOutputVolume()
+        shell.settingsStore.restoreFromPreferences()
+        shell.restoreAppearance()
+        shell.openStartup()
     }
 
     // Cocoa uses the primary NativeText suffix as the same key equivalent the
@@ -173,16 +114,8 @@ ThemedWindow {
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
         function onTransportAvailabilityChanged() { ++root.actionRevision }
-        function onVelocityColorModeChanged() {
-            displayModeSettings.setValue("velocityNoteColors", shell.session.velocityColorMode)
-            displayModeSettings.sync()
-            ++root.actionRevision
-        }
-        function onNoteNameModeChanged() {
-            displayModeSettings.setValue("noteNames", shell.session.noteNameMode)
-            displayModeSettings.sync()
-            ++root.actionRevision
-        }
+        function onVelocityColorModeChanged() { ++root.actionRevision }
+        function onNoteNameModeChanged() { ++root.actionRevision }
         function onOpenFailed(message) { shell.openFailed(message) }
         function onOperationFailed(message) { shell.operationFailed(message) }
         function onAllTabsClosed() { shell.allTabsClosed() }
@@ -533,18 +466,18 @@ ThemedWindow {
             SplitView.fillHeight: true
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 480
-            SplitView.preferredWidth: Math.max(200, Math.min(480, dockSettings.columnWidth))
+            SplitView.preferredWidth: Math.max(200, Math.min(480, shell.dockColumnWidth))
             controller: shell.session.songDockController()
             applicationSession: shell.session
-            songsRatio: dockSettings.songsRatio
+            songsRatio: shell.dockSongsRatio
             colors: shell.session.palette
             onSongsRatioChanged: {
-                if (songsRatio !== dockSettings.songsRatio)
-                    dockSettings.songsRatio = songsRatio
+                if (root.dockSettingsReady && songsRatio !== shell.dockSongsRatio)
+                    shell.setDockSongsRatio(songsRatio)
             }
             onWidthChanged: {
-                if (width >= 200 && width <= 480 && width !== dockSettings.columnWidth)
-                    dockSettings.columnWidth = Math.round(width)
+                if (root.dockSettingsReady && width >= 200 && width <= 480 && width !== shell.dockColumnWidth)
+                    shell.setDockColumnWidth(Math.round(width))
             }
         }
 

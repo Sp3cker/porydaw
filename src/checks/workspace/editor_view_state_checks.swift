@@ -1,10 +1,9 @@
 import Foundation
-import CoreFoundation
 import PorydawApp
 import PorydawCoreCheckNative
 
 @MainActor
-func runEditorViewStateChecks(_ report: CheckReport) {
+func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     let codec = "workspace/EditorViewStateCodec::laneBlob"
     let defaults = EditorViewStateCodec.decodeLanes(Data())
     report.expectEqual(expected: EditorLaneState(), actual: defaults, cppID: codec,
@@ -63,26 +62,13 @@ func runEditorViewStateChecks(_ report: CheckReport) {
     report.expectEqual(expected: "A", actual: recipe.normalized(available: ["A", "B"]).selectedSong,
                        cppID: order, what: "missing selection chooses first restored song")
 
-    func cfString(_ text: String) -> CFString {
-        guard let value = text.withCString({
-            CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-        }) else { preconditionFailure("Settings test key could not be encoded") }
-        return value
-    }
-    let domainName = "workspace-codec-check-\(UUID().uuidString)"
-    let domainID = cfString("com.sp3cker." + domainName)
-    defer {
-        for key in ["lastProjectDir", "lastOpenSongs", "lastSongLabel",
-                    "editorDrawer.automationLanes"] {
-            CFPreferencesSetAppValue(cfString(key), nil, domainID)
-        }
-        _ = CFPreferencesAppSynchronize(domainID)
-    }
     let restored = recipe.normalized(available: ["A", "B"])
-    EditorViewStateCodec.saveTabs(restored, applicationName: domainName)
-    report.expectEqual(expected: restored, actual: EditorViewStateCodec.loadTabs(applicationName: domainName),
+    EditorViewStateCodec.saveTabs(restored, store: store)
+    report.expectEqual(expected: restored, actual: EditorViewStateCodec.loadTabs(store: store),
                        cppID: order, what: "application preferences retain tab order and selection")
-    EditorViewStateCodec.saveLanes(decoded, applicationName: domainName)
-    report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(applicationName: domainName),
+    EditorViewStateCodec.saveLanes(decoded, store: store)
+    report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
                        cppID: codec, what: "application preferences retain one lane blob")
+    report.expect(FileManager.default.fileExists(atPath: CheckEnvironment.fixturePath("settings.plist") ?? ""),
+                  cppID: codec, message: "preferences land in the staged scratch plist")
 }

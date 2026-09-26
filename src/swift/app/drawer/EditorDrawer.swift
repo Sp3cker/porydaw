@@ -89,8 +89,7 @@ public final class EditorDrawerSectionState {
 }
 
 /// The container as QML sees it: one `EditorDrawerLayout` value mirrored into
-/// published primitives, one bridged section state per kind, and the container's
-/// two preference signals. It holds no policy; every rule lives in the layout.
+/// published primitives, one bridged section state per kind and the section preference signal.
 @MainActor
 @QtBridgeable
 public final class EditorDrawerPresenter {
@@ -144,19 +143,27 @@ public final class EditorDrawerPresenter {
                                      gutterWidth: gutterWidth))
     }
 
-    /// The store's one read, with `-1` for an absent visibility or page and `0` for
-    /// an absent height. Applying restored values never writes back.
-    public func restoreStoredPreferences(velocityVisible: Int, velocityHeight: Int,
-                                         automationVisible: Int, automationHeight: Int,
-                                         voiceChangesVisible: Int, voiceChangesHeight: Int,
-                                         activePage: Int) {
-        publish(layout.restorePreferences(velocityVisible: velocityVisible,
-                                          velocityHeight: velocityHeight,
-                                          automationVisible: automationVisible,
-                                          automationHeight: automationHeight,
-                                          voiceChangesVisible: voiceChangesVisible,
-                                          voiceChangesHeight: voiceChangesHeight,
-                                          activePage: activePage))
+    public func restoreStoredPreferences() {
+        let store = PreferencesStore()
+        func visibility(_ key: String) -> Int {
+            guard store.hasValue(key: key) else { return -1 }
+            return store.bool(key: key, fallback: false) ? 1 : 0
+        }
+        let page: Int
+        switch store.string(key: "editorDrawer.activePage", fallback: "") {
+        case "velocity": page = DrawerSectionKind.velocity.rawValue
+        case "voiceChanges": page = DrawerSectionKind.voiceChanges.rawValue
+        case "automations": page = DrawerSectionKind.automation.rawValue
+        default: page = -1
+        }
+        publish(layout.restorePreferences(
+            velocityVisible: visibility("editorDrawer.velocityVisible"),
+            velocityHeight: store.int(key: "editorDrawer.velocityHeight", fallback: 0),
+            automationVisible: visibility("editorDrawer.automationVisible"),
+            automationHeight: store.int(key: "editorDrawer.automationHeight", fallback: 0),
+            voiceChangesVisible: visibility("editorDrawer.voiceChangesVisible"),
+            voiceChangesHeight: store.int(key: "editorDrawer.voiceChangesHeight", fallback: 0),
+            activePage: page))
     }
 
     public func toggleSection(kind: Int, drawerOwnsFocus: Bool) {
@@ -216,9 +223,6 @@ public final class EditorDrawerPresenter {
     /// `height == 0` is the unset marker.
     @QtSignal public func drawerSectionPreferenceChanged(kind: Int, visible: Bool, height: Int)
 
-    /// Emitted when an interactive call moved the active page to an available kind.
-    @QtSignal public func drawerActivePagePreferenceChanged(page: Int)
-
     /// Swift-only page attachment; the session owns every attach and detach call.
     @QtIgnored
     public func attachSection(_ page: EditorDrawerPage) {
@@ -239,7 +243,18 @@ public final class EditorDrawerPresenter {
             return current == preference.visible ? nil : (preference.kind, preference.visible)
         }
         if change.published { apply(change.snapshot) }
+        let store = PreferencesStore()
         for preference in change.sectionPreferences {
+            let name: String
+            switch preference.kind {
+            case .velocity: name = "velocity"
+            case .automation: name = "automation"
+            case .voiceChanges: name = "voiceChanges"
+            }
+            store.setBool(key: "editorDrawer.\(name)Visible", value: preference.visible)
+            store.setInt(key: "editorDrawer.\(name)Height",
+                         value: preference.storedBodyHeight ?? 0)
+            store.synchronize()
             drawerSectionPreferenceChanged(kind: preference.kind.rawValue,
                                            visible: preference.visible,
                                            height: preference.storedBodyHeight ?? 0)
@@ -248,7 +263,14 @@ public final class EditorDrawerPresenter {
             onSectionVisibilityChanged?(kind, visible)
         }
         if let page = change.activePagePreference {
-            drawerActivePagePreferenceChanged(page: page.rawValue)
+            let name: String
+            switch page {
+            case .velocity: name = "velocity"
+            case .automation: name = "automations"
+            case .voiceChanges: name = "voiceChanges"
+            }
+            store.setString(key: "editorDrawer.activePage", value: name)
+            store.synchronize()
         }
         // The target is published before the revision so a handler that runs on the
         // revision change reads the matching target.

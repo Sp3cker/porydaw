@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -16,25 +15,14 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
-    Component { id: settingsComponent; Settings { category: "engine" } }
     property var shell: null
-    property var nativeSettings: null
+    readonly property var nativeSettings: bootstrap.preferences
 
     function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        nativeSettings = settingsComponent.createObject(testCase)
-        nativeSettings.setValue("pcmMixer", "sappy")
-        nativeSettings.setValue("maxPcmChannels", 8)
-        nativeSettings.setValue("pcmMixRate", 21024)
-        nativeSettings.setValue("analogFilter", true)
-        nativeSettings.sync()
-    }
-    function cleanupTestCase() {
-        nativeSettings.destroy()
-        wait(0)
-        verify(bootstrap.clearSettings(), "settings fixture remains isolated")
+        nativeSettings.setString("engine.pcmMixer", "sappy")
+        nativeSettings.setInt("engine.maxPcmChannels", 8)
+        nativeSettings.setInt("engine.pcmMixRate", 21024)
+        nativeSettings.setBool("engine.analogFilter", true)
     }
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
@@ -123,21 +111,19 @@ TestCase {
         model.changeMixRate(13379)
         model.changeAnalogFilter(false)
         findChild(dialog(), "settingsApply").clicked()
-        nativeSettings.sync()
-        tryVerify(function() { return String(nativeSettings.value("pcmMixer")) === "ipatix" }, 5000,
-                  "Apply persisted the actual mixer value")
-        compare(Number(nativeSettings.value("maxPcmChannels")), 7)
-        compare(Number(nativeSettings.value("pcmMixRate")), 13379)
-        compare(String(nativeSettings.value("analogFilter")), "false")
-        nativeSettings.setValue("pcmMixer", "invalid")
-        nativeSettings.sync()
+        tryVerify(function() {
+            return nativeSettings.string("engine.pcmMixer", "") === "ipatix"
+        }, 5000, "Apply persisted the actual mixer value")
+        compare(nativeSettings.int("engine.maxPcmChannels", -1), 7)
+        compare(nativeSettings.int("engine.pcmMixRate", -1), 13379)
+        compare(nativeSettings.bool("engine.analogFilter", true), false)
+        nativeSettings.setString("engine.pcmMixer", "invalid")
         dialog().close()
         const second = shellComponent.createObject(null)
         verify(second !== null)
         tryCompare(second.shellPresenter.settingsStore, "mixer", "ipatix")
         second.destroy()
-        nativeSettings.setValue("pcmMixer", "sappy")
-        nativeSettings.sync()
+        nativeSettings.setString("engine.pcmMixer", "sappy")
     }
     function test_reopeningDiscardsCancelledDraft() {
         const presenter = createShell()

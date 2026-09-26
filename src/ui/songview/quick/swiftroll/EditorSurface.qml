@@ -14,7 +14,6 @@ Item {
     readonly property font captionFont: Qt.font(applicationSession.timeSigHost.typographyFonts.caption)
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
-    property url drawerPreferenceLocation: ""
     readonly property int cancelReasonPointerUngrabbed: 1
     readonly property int cancelReasonHidden: 2
     readonly property var gridModel: applicationSession.gridPresenter()
@@ -1013,7 +1012,6 @@ Item {
         hintService: root.hintService
         presenter: root.drawerPresenter
         drawerPalette: root.gridModel.palette
-        preferenceLocation: root.drawerPreferenceLocation
     }
     OtherEventsBand {
         id: otherEventsBand

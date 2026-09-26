@@ -35,9 +35,6 @@ TestCase {
     }
 
     function createShell() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
         shell = (probe.profileName.length > 0 ? profileShellComponent : shellComponent).createObject(null)
         verify(shell, "the production shell mounts")
         shell.requestActivate()
@@ -68,9 +65,6 @@ TestCase {
         wait(0)
     }
 
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "the private polyphony settings domain is removed")
-    }
 
     function panel() { return findChild(shell, "polyphonyPanel") }
     function dock() { return findChild(shell, "shellPolyphonyDock") }
@@ -234,8 +228,10 @@ TestCase {
             verify(typeof json === "string" && json.length > 0,
                    state + " fixture is missing for " + profile
                    + " under src/checks/fixtures/visual/macos-" + profile + "/polyphony/")
-            presenter.restoreAppearance(state.indexOf("darkneutralhigh") >= 0
-                ? "dark-neutral-high" : "vanilla", "50", Qt.application.name)
+            bootstrap.preferences.setString("theme.mode", state.indexOf("darkneutralhigh") >= 0
+                                            ? "dark-neutral-high" : "vanilla")
+            bootstrap.preferences.setString("theme.grid-line-contrast", "50")
+            presenter.restoreAppearance()
             var baseline = JSON.parse(json)
             testCase.width = Math.max(testCase.width, baseline.image.width + 16)
             testCase.height = Math.max(testCase.height, baseline.image.height + 16)

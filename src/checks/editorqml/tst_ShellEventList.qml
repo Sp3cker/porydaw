@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -16,30 +15,13 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
     property var typographyPage: null
     FontMetrics { id: eventTableMetrics; font: typographyPage ? typographyPage.tableFont : Qt.application.font }
     ShellQmlBootstrap { id: bootstrap }
     SignalSpy { id: copySpy; signalName: "activated" }
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null)
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings())
-    }
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
@@ -68,8 +50,7 @@ TestCase {
     }
 
     function test_keyboardSelectionStaysOnMountedEventRows() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()
@@ -282,8 +263,7 @@ TestCase {
 
 
     function test_filterAndEditOnMountedPage() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()
@@ -553,8 +533,7 @@ TestCase {
     }
 
     function test_tickBoundariesThroughMountedEditor() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()
@@ -678,10 +657,9 @@ TestCase {
     }
 
     function test_eventListRowsFollowAppliedTheme() {
-        settings.setValue("theme/mode", "dark-neutral-high")
-        settings.setValue("theme/grid-line-contrast", 50)
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("theme.mode", "dark-neutral-high")
+        settings.setInt("theme.grid-line-contrast", 50)
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()
@@ -714,7 +692,8 @@ TestCase {
         verify(Qt.colorEqual(page.headerBackground, palette.chromeBackground),
                "the header band uses chrome")
 
-        shell.shellPresenter.restoreAppearance("vanilla", "50", Qt.application.name)
+        settings.setString("theme.mode", "vanilla")
+        shell.shellPresenter.restoreAppearance()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla", 3000)
         tryVerify(function() {
             return Qt.colorEqual(page.tableBackground, session.palette.menuBackground)
@@ -722,7 +701,8 @@ TestCase {
         verify(Qt.colorEqual(page.tableAlternateBackground, session.palette.alternateBackground),
                "alternate stripes follow the theme swap")
 
-        shell.shellPresenter.restoreAppearance("dark-neutral-high", "50", Qt.application.name)
+        settings.setString("theme.mode", "dark-neutral-high")
+        shell.shellPresenter.restoreAppearance()
         tryCompare(shell.shellPresenter, "themeMode", "dark-neutral-high", 3000)
         tryVerify(function() {
             return Qt.colorEqual(page.tableBackground, session.palette.menuBackground)

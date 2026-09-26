@@ -15,10 +15,17 @@ public struct EngineSettings: Equatable {
 
     public init(mixer: String, maxPcmChannels: String, mixRate: String, analogFilter: String) {
         self.mixer = mixer == "sappy" ? "sappy" : "ipatix"
-        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, Int(maxPcmChannels) ?? 1))
+        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, Int(maxPcmChannels) ?? 5))
         let rate = Float(mixRate) ?? 13_379
         self.mixRate = rate >= 0 && rate.isFinite ? Int(rate.rounded()) : 13_379
         self.analogFilter = analogFilter.lowercased() == "true"
+    }
+
+    init(mixer: String, maxPcmChannels: Int, mixRate: Int, analogFilter: Bool) {
+        self.mixer = mixer == "sappy" ? "sappy" : "ipatix"
+        self.maxPcmChannels = min(Int(MAX_PCM_CHANNELS), max(1, maxPcmChannels))
+        self.mixRate = mixRate >= 0 ? mixRate : 13_379
+        self.analogFilter = analogFilter
     }
 
     func apply(to settings: inout AudioSettings) {
@@ -64,10 +71,13 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
         self.session = session
     }
 
-    public func restore(mixer: String, maxPcmChannels: String, mixRate: String,
-                        analogFilter: String) {
-        committed = EngineSettings(mixer: mixer, maxPcmChannels: maxPcmChannels,
-                                   mixRate: mixRate, analogFilter: analogFilter)
+    public func restoreFromPreferences() {
+        let store = PreferencesStore()
+        committed = EngineSettings(
+            mixer: store.string(key: "engine.pcmMixer", fallback: "ipatix"),
+            maxPcmChannels: store.int(key: "engine.maxPcmChannels", fallback: 5),
+            mixRate: store.int(key: "engine.pcmMixRate", fallback: 13_379),
+            analogFilter: store.bool(key: "engine.analogFilter", fallback: false))
         session?.setEngineSettings(committed)
         resetEngine()
     }
@@ -117,6 +127,12 @@ public final class EngineSettingsStore: QmlInstantiableStatus {
             committed = engine
             session?.setEngineSettings(engine)
             revision &+= 1
+            let store = PreferencesStore()
+            store.setString(key: "engine.pcmMixer", value: mixer)
+            store.setInt(key: "engine.maxPcmChannels", value: maxPcmChannels)
+            store.setInt(key: "engine.pcmMixRate", value: mixRate)
+            store.setBool(key: "engine.analogFilter", value: analogFilter)
+            store.synchronize()
         }
         guard let target, session?.selectedDocument === target else { return }
         let arg = VoiceListSemantics.voicegroupArg(

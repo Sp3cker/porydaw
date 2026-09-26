@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -16,13 +15,12 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
     SignalSpy { id: copyActivatedSpy; signalName: "activated" }
     SignalSpy { id: soloActivatedSpy; signalName: "activated" }
 
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
     Component { id: intrinsicShellComponent; ShellWindow { visible: true } }
     FontMetrics {
@@ -58,24 +56,6 @@ TestCase {
         }
     }
 
-    function initTestCase() {
-        // Preserve the original fixture's private store while exercising the
-        // real native QtCore.Settings backend, never the caller's preferences.
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function cleanup() {
         if (!shell)
@@ -107,20 +87,12 @@ TestCase {
     }
 
     function openTwoSongShell(beforeOpen) {
-        // MainWindowRoutingFixture::openSession: the original velocity/173
-        // drawer seed, with absent nullopt heights in this fresh native domain.
-        settings.setValue("editorDrawer/velocityVisible", true)
-        settings.setValue("editorDrawer/velocityHeight", 173)
-        settings.setValue("editorDrawer/automationVisible", false)
-        settings.setValue("editorDrawer/voiceChangesVisible", false)
-        settings.setValue("editorDrawer/activePage", "velocity")
-        const lanes = '{"emptyLanes":[],"hiddenLanes":[],"laneHeight":0,"laneHeights":{},"laneRanges":{}}'
-        const laneBytes = new Uint8Array(lanes.length)
-        for (var byteIndex = 0; byteIndex < lanes.length; ++byteIndex)
-            laneBytes[byteIndex] = lanes.charCodeAt(byteIndex)
-        settings.setValue("editorDrawer/automationLanes", laneBytes.buffer)
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setInt("editorDrawer.velocityHeight", 173)
+        settings.setBool("editorDrawer.automationVisible", false)
+        settings.setBool("editorDrawer.voiceChangesVisible", false)
+        settings.setString("editorDrawer.activePage", "velocity")
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
@@ -237,17 +209,15 @@ TestCase {
     }
 
     function test_aKeymapNativeSettingsSeeds() {
-        // KeymapCheckTest::keymapSettingsSeedsAreIgnored writes these four values
-        // through QSettings. This test writes the same values through QtCore.Settings.
-        settings.setValue("keymap/roll.transpose_up", "Ctrl+Alt+U")
-        settings.setValue("keymap/transport.play_pause", "")
-        settings.setValue("keymap/roll.velocity_drag", "Shift")
-        settings.setValue("keymap/velocity.detent_unlock", "")
-        settings.sync()
-        compare(settings.value("keymap/roll.transpose_up", null), "Ctrl+Alt+U")
-        compare(settings.value("keymap/transport.play_pause", null), "")
-        compare(settings.value("keymap/roll.velocity_drag", null), "Shift")
-        compare(settings.value("keymap/velocity.detent_unlock", null), "")
+        settings.setString("keymap.roll·transpose_up", "Ctrl+Alt+U")
+        settings.setString("keymap.transport·play_pause", "")
+        settings.setString("keymap.roll·velocity_drag", "Shift")
+        settings.setString("keymap.velocity·detent_unlock", "")
+        settings.synchronize()
+        compare(settings.string("keymap.roll·transpose_up", "?"), "Ctrl+Alt+U")
+        compare(settings.string("keymap.transport·play_pause", "?"), "")
+        compare(settings.string("keymap.roll·velocity_drag", "?"), "Shift")
+        compare(settings.string("keymap.velocity·detent_unlock", "?"), "")
         var failures = bootstrap.registryFailures()
         compare(failures.length, 0, "the complete native keymap assertions: " + failures.join("; "))
     }
@@ -255,12 +225,12 @@ TestCase {
     function test_bThemeRepairThroughProductionShell() {
         // ThemeLayoutTest::settingsRepair: custom mode is obsolete, 80 survives,
         // and neither obsolete colour key survives restoration.
-        settings.setValue("theme/mode", "custom")
-        settings.setValue("theme/primary", "#000000")
-        settings.setValue("theme/accent", "#FFFFFF")
-        settings.setValue("theme/grid-line-contrast", "80")
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("theme.mode", "custom")
+        settings.setString("theme.primary", "#000000")
+        settings.setString("theme.accent", "#FFFFFF")
+        settings.setString("theme.grid-line-contrast", "80")
+        settings.setString("lastProjectDir", "")
+        settings.synchronize()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "production shell restores the seeded native theme")
         shell.requestActivate()
@@ -268,16 +238,15 @@ TestCase {
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         compare(shell.shellPresenter.gridLineContrast, 80)
         tryVerify(function() {
-            settings.sync()
-            return settings.value("theme/mode", null) === "vanilla"
-                && Number(settings.value("theme/grid-line-contrast", null)) === 80
-                && settings.value("theme/primary", null) === null
-                && settings.value("theme/accent", null) === null
+            return settings.string("theme.mode", "") === "vanilla"
+                && settings.int("theme.grid-line-contrast", -1) === 80
+                && !settings.hasValue("theme.primary")
+                && !settings.hasValue("theme.accent")
         }, 3000, "another native Settings reader observes repaired persisted keys")
-        compare(settings.value("theme/mode", null), "vanilla")
-        compare(Number(settings.value("theme/grid-line-contrast", null)), 80)
-        compare(settings.value("theme/primary", null), null)
-        compare(settings.value("theme/accent", null), null)
+        compare(settings.string("theme.mode", ""), "vanilla")
+        compare(settings.int("theme.grid-line-contrast", -1), 80)
+        compare(settings.hasValue("theme.primary"), false)
+        compare(settings.hasValue("theme.accent"), false)
     }
 
     function test_cWindowShortcutsAndNumericOwnership() {

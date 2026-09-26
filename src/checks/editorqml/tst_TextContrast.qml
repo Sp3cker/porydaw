@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -24,13 +23,12 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
     property var failures: []
     property var seenFailures: []
     property int measured: 0
 
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1280; height: 800; visible: true } }
 
     readonly property var themes: [
@@ -40,22 +38,7 @@ TestCase {
     ]
 
     function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null)
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings())
+        settings.setString("lastProjectDir", "")
     }
 
     function waitForNative(predicate, timeoutMs) {
@@ -90,7 +73,9 @@ TestCase {
     }
 
     function applyTheme(theme) {
-        shell.shellPresenter.restoreAppearance(theme.mode, "50", Qt.application.name)
+        settings.setString("theme.mode", theme.mode)
+        settings.setInt("theme.grid-line-contrast", 50)
+        shell.shellPresenter.restoreAppearance()
         const palette = shell.shellPresenter.session.palette
         verify(waitForNative(function() {
             return palette.windowBackground === theme.window

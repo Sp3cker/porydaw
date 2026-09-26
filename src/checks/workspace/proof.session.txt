@@ -59,7 +59,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A002 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:145
 Disposition: PARTIAL
-Mapping/reason: S186 covers the title formula: src/checks/editorqml/tst_ShellWindow.qml:1226-1227 (test_zWindowTitleAndStatusMeter, shellwindow lane) mounts the fixture project with no song open and compares shell.title with projectName + " — porydaw", the same "<projectDirName> — porydaw" formula with U+2014 separators and the same last-path-component project name derived from bootstrap.projectRoot; unproved: the QSettings lastProjectDir restore ingress this row drives (the predicate calls session.openProject explicitly and never re-creates the session from settings), so the restore-specific title clauses also stay GAP at A031/A043. [S186]
+Mapping/reason: S186 covers the title formula: src/checks/editorqml/tst_ShellWindow.qml:1240-1241 (test_zWindowTitleAndStatusMeter, shellwindow lane) mounts the fixture project with no song open and compares shell.title with projectName + " — porydaw", the same "<projectDirName> — porydaw" formula with U+2014 separators and the same last-path-component project name derived from bootstrap.projectRoot; unproved: the lastProjectDir restore ingress this row drives — the entry now reads it through the shared PreferencesStore, but the predicate calls session.openProject explicitly and never re-creates the session from the store, so the restore-specific title clauses also stay GAP at A031/A043. [S186]
 Source context since previous assertion:
   ;
   }
@@ -116,7 +116,7 @@ Original expression:
 
 A005 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:149
 Disposition: PARTIAL
-Mapping/reason: S187 covers the title literal: src/checks/editorqml/tst_ShellWindow.qml:1220 (test_zWindowTitleAndStatusMeter, shellwindow lane) compares shell.title with "porydaw" for the mounted shell with no project open, the same literal this compare asserts for a session that restores no project; unproved: the QSettings restore ingress — neither the nothing recipe (cleared settings) nor the vanished-project recipe (lastProjectDir naming a missing project) is driven by any predicate, and the tab-count sibling A006 stays GAP. [S187]
+Mapping/reason: S187 covers the title literal: src/checks/editorqml/tst_ShellWindow.qml:1234 (test_zWindowTitleAndStatusMeter, shellwindow lane) compares shell.title with "porydaw" for the mounted shell with no project open, the same literal this compare asserts for a session that restores no project; unproved: the preference restore ingress — neither the nothing recipe (cleared preferences) nor the vanished-project recipe (lastProjectDir naming a missing project) is driven by any predicate, and the tab-count sibling A006 stays GAP. [S187]
 Source context since previous assertion:
   ;
       } else {

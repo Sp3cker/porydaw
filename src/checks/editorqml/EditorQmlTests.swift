@@ -178,6 +178,8 @@ enum EditorQmlLane {
         // The bootstrap serves these staged paths to QML, so they must be
         // known before Qt Quick Test builds any QML object.
         EditorQmlBootstrap.stage(projectRoot: scratch)
+        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("settings.plist").path)
 
         if let profileName = ProcessInfo.processInfo.environment[childEnvironmentKey] {
             // Profile child: one DPR, one font, the named profile case only. The
@@ -250,6 +252,7 @@ enum EditorQmlLane {
         qTestApp.setPluginsPath(EditorQmlPaths.pluginPath)
         ApplicationSession.registerQmlElement()
         EditorQmlBootstrap.registerQmlElement()
+        PreferencesStore.registerQmlElement()
 
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(inputFileName)
@@ -582,6 +585,11 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// because the bridged property table carries stored properties, and the
     /// phase is fixed before this object exists.
     public var lanePhase: String = EditorQmlBootstrap.stagedPhase
+    @QtTracked public var preferences = PreferencesStore()
+
+    public func resetPreferences() -> Bool {
+        preferences.resetPreferences()
+    }
 
     /// The artifact path stem for one profile pane, shared by the child that
     /// writes it and the parent that verifies it.
@@ -1137,14 +1145,6 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         return failure.isEmpty || failure == initialError
     }
 
-    /// A `file://` URL for a private store under the scratch directory, so no
-    /// lane case can read or write the production settings store.
-    public func preferencesUrl(name: String) -> String {
-        guard !name.isEmpty, !projectRoot.isEmpty else { return "" }
-        return URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent(name)
-            .absoluteString
-    }
 
     /// Attaches a real `DrawerTestPage` in the kind's slot. Rejects an unknown
     /// kind, a URL the container would not resolve (blank, or no URL at all),

@@ -1,5 +1,4 @@
 import QtQuick
-import QtCore
 import QtTest
 import "GatedVisualsHelpers.js" as Helpers
 import "NativeWait.js" as NativeWait
@@ -16,33 +15,16 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
     ShellQmlBootstrap { id: bootstrap }
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "transport settings stay isolated from user preferences")
-    }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 700; visible: true } }
-    Component { id: settingsComponent; Settings {} }
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function openShell(profileFontPx) {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null, profileFontPx === undefined ? {}
             : { typographyCaptureFont: Qt.font({ pixelSize: profileFontPx }) })
         verify(shell !== null, "production ShellWindow instantiates")
@@ -413,10 +395,7 @@ TestCase {
     }
 
     function test_explicitOpenSupersedesStartupRestoreDuringPlayback() {
-        settings.setValue("lastProjectDir", bootstrap.projectRoot)
-        settings.setValue("lastOpenSongs", ["mus_littleroot_test"])
-        settings.setValue("lastSongLabel", "mus_littleroot_test")
-        settings.sync()
+        verify(bootstrap.seedStartupSong(bootstrap.projectRoot, "mus_littleroot_test"))
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production shell starts with a saved tab recipe")
         const session = shell.shellPresenter.session

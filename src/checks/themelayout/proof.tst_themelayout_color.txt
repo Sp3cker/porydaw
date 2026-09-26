@@ -6,6 +6,18 @@ Original SHA-256: a594fe67298004f6cbb8bc76f8dce1a2173b91b408a0b5b9b3414c78ec72fb
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
 
+Task 36 note (Swift-owned settings): the cited predicates now seed and read back
+through the shared PreferencesStore staged in the lane's scratch directory
+(dotted keys theme.mode and theme.grid-line-contrast, same values and defaults;
+bootstrap.settingsApplicationName and its teardown are deleted) instead of a
+private native QtCore.Settings domain, and the production restore they observe
+runs through ShellPresenter.restoreAppearance over that store. Rows A042-A046
+(settingsRepair) and A048-A050 (themePersistence) were re-reconciled
+individually against the final predicates: test_bThemeRepairThroughProductionShell
+still observes the repaired mode, the surviving 80 and the removal of
+theme.primary/theme.accent, and test_themePersistence still observes the seeded
+mode and contrast, the applied surfaces and the canonical write-back.
+Dispositions, cited message literals and the pinned original hash are unchanged.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
@@ -15,6 +27,7 @@ Command: deno task verify:shell --filter shell-theme --verbose
 Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS shellwindow (1/2 ok, 1 skipped); Finished testing of ShellWindow.
+Task 36 execution evidence: the task-36 lane runs refreshed build/proof-evidence/swiftcore-themecolor.json, shell-theme.json and shellwindow.json, which list the cited predicates executing; the task-36 implementer reported swiftcore 12/12 and the full shell lane 26/26 green. The PASS results above are the earlier recorded runs and were not re-observed by this bookkeeping pass.
 
 Native ownership: runThemeLayoutThemeCheck (defined in
 src/checks/themelayout/themelayoutcheck.cpp) launches the themecheck lane;

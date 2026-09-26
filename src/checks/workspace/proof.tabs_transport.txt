@@ -316,7 +316,7 @@ Original expression:
 
 A045 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:163
 Disposition: MATCHED
-Mapping/reason: Related predicate S189 (mounted shell-transport test_outputVolumeSurvivesShellRelaunch commits a distinctive non-default level (87) through the dial valueCommitted path into Settings and restores bar.presenter.outputVolume == 87 in a fresh shell; message "application output preference survives a fresh shell session").
+Mapping/reason: Related predicate S189 (mounted shell-transport test_outputVolumeSurvivesShellRelaunch commits a distinctive non-default level (87) through the dial valueCommitted path into the shared PreferencesStore and restores bar.presenter.outputVolume == 87 in a fresh shell; message "application output preference survives a fresh shell session").
 Source context since previous assertion:
   ;
 Original expression:
@@ -388,8 +388,8 @@ Original expression:
   QCOMPARE(window.m_audio.outputVolume(), 42)
 
 A055 | WorkspaceTabsTest::transportVolumesAndRaster | src/checks/workspace/tabs_transport.cpp:194
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: no Swift/QML owner exists for the outputVolume preference key (src/ui/transportbar.cpp writes it and is compiled into no target; no Swift/QML preference reader exists for it); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: MATCHED
+Mapping/reason: S189 covers the stored key: the Swift owners are TransportBarPresenter.commitOutputVolume (writes outputVolume through the shared PreferencesStore, the same dotted key) and restoreOutputVolume (reads it with today's 100 fallback); the mounted shell-transport predicate commits a distinctive non-default 87 through the dial's valueCommitted path and observes a fresh shell restore bar.presenter.outputVolume == 87, which the 100 absent-key fallback would fail (message "application output preference survives a fresh shell session"). The original's programmatic dial->setValue projection reaches the same committed-value path: the Swift dial writes the key only from its commit signal, which is the only production write path it has.
 Source context since previous assertion:
   ;
 Original expression:

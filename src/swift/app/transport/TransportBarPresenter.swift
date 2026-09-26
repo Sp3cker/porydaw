@@ -40,6 +40,7 @@ public final class TransportBarPresenter {
 
     @QtIgnored public func attach(session: ApplicationSession) {
         self.session = session
+        session.transportAudio?.setOutputVolume(outputVolume)
         refresh()
     }
 
@@ -70,7 +71,6 @@ public final class TransportBarPresenter {
             // Scale remains available on a document even when audio failed to bind.
             masterVolume = 127
             if let audio = self.session?.transportAudio {
-                outputVolume = audio.outputVolume
                 loopEnabled = audio.loopEnabled
                 resonanceSuppression = audio.resonanceSuppression
             }
@@ -94,7 +94,6 @@ public final class TransportBarPresenter {
                 + Self.measure(at: timeline.loopEndTick, timeline: timeline)
             : ""
         masterVolume = document.document.state.config.masterVolume
-        outputVolume = audio.outputVolume
         loopEnabled = audio.loopEnabled
         resonanceSuppression = audio.resonanceSuppression
         let tempoPoint = document.document.state.tempo.last { $0.tick <= tick }
@@ -184,10 +183,20 @@ public final class TransportBarPresenter {
         refresh()
     }
 
+    public func restoreOutputVolume() {
+        setOutputVolume(percent: PreferencesStore().int(key: "outputVolume", fallback: 100))
+    }
+
+    public func commitOutputVolume(percent: Int) {
+        setOutputVolume(percent: percent)
+        let store = PreferencesStore()
+        store.setInt(key: "outputVolume", value: outputVolume)
+        store.synchronize()
+    }
+
     public func setOutputVolume(percent: Int) {
-        guard (0...100).contains(percent), let audio = session?.transportAudio else { return }
-        audio.setOutputVolume(percent)
-        refresh()
+        outputVolume = min(100, max(0, percent))
+        session?.transportAudio?.setOutputVolume(outputVolume)
     }
 
     public func setMasterVolume(value: Int) {

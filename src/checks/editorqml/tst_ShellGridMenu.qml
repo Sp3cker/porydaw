@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtTest
 import PorydawApp
@@ -15,14 +14,13 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
     property var timeSigHost: null
     property int promptOpenCount: 0
     property bool menuClosedBeforePrompt: false
     FontMetrics { id: baseMetrics; font: Qt.application.font }
 
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: settingsComponent; Settings {} }
     Component {
         id: shellComponent
         ShellWindow {
@@ -41,22 +39,6 @@ TestCase {
         }
     }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null)
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings())
-    }
 
     function cleanup() {
         if (!shell)
@@ -84,8 +66,7 @@ TestCase {
     }
 
     function openSong() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()
@@ -221,6 +202,7 @@ TestCase {
         divisionMenu = openGrid("timelineRulerDivisionControl", 1)
         pickedId = alternateGridMenuId(grid.gridSelectionMenuId)
         pickedRow = ids.indexOf(pickedId)
+        tryVerify(function() { return divisionMenu.rowItem(pickedRow) !== null }, 3000)
         pickedText = divisionMenu.rowItem(pickedRow).itemData.text
         compare(pickedText, "1/16")
         clickRow(divisionMenu, pickedRow)

@@ -52,10 +52,7 @@ TestCase {
     function closeTo(actual, expected) { return Math.abs(actual - expected) < 0.05 }
 
     function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "private preferences are available")
+        bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"), "the staged song starts opening")
         verify(waitForNative(function() {
             return session.songOpen || openFailure.length > 0
@@ -66,9 +63,7 @@ TestCase {
         verify(overlay, "production composition loaded")
         verify(waitForNative(function() { return surface() !== null }, 5000),
                "the mounted editor loaded")
-        surface().drawerPreferenceLocation = bootstrap.preferencesUrl("scrollbar-drawer.ini")
-        findChild(surface(), "editorDrawer").presenter
-            .restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        findChild(surface(), "editorDrawer").presenter.restoreStoredPreferences()
         verify(waitForNative(function() {
             return bar(false) && bar(true) && bar(false).visible && bar(true).visible
                 && bar(false).thumbTravel > 0 && bar(true).thumbTravel > 0
@@ -86,7 +81,6 @@ TestCase {
             wait(0)
             verify(bootstrap.acknowledgeSceneRemoval(), "scene removal acknowledged")
         }
-        verify(bootstrap.restoreSettings(), "private preferences restored")
     }
 
     function init() {

@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtTest
 import PorydawApp
@@ -15,29 +14,12 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
 
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function closeShell() {
         if (!shell)
@@ -84,16 +66,14 @@ TestCase {
 
     function openShell() {
         // Every explicit-open test starts without a stale startup recipe.
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
-        settings.setValue("editorDrawer/velocityVisible", true)
-        settings.setValue("editorDrawer/velocityHeight", 173)
-        settings.setValue("editorDrawer/automationVisible", true)
-        settings.setValue("editorDrawer/automationHeight", 200)
-        settings.setValue("editorDrawer/voiceChangesVisible", true)
-        settings.setValue("editorDrawer/voiceChangesHeight", 200)
-        settings.setValue("editorDrawer/activePage", "velocity")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setInt("editorDrawer.velocityHeight", 173)
+        settings.setBool("editorDrawer.automationVisible", true)
+        settings.setInt("editorDrawer.automationHeight", 200)
+        settings.setBool("editorDrawer.voiceChangesVisible", true)
+        settings.setInt("editorDrawer.voiceChangesHeight", 200)
+        settings.setString("editorDrawer.activePage", "velocity")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
@@ -573,12 +553,10 @@ TestCase {
         presenter.activate("view.velocity_colors")
         presenter.activate("view.note_names")
         tryVerify(function() {
-            settings.sync()
-            return settings.value("velocityNoteColors", false) === true
+            return settings.bool("velocityNoteColors", false)
         }, 3000, "toggling colours writes the original root key")
         tryVerify(function() {
-            settings.sync()
-            return settings.value("noteNames", false) === true
+            return settings.bool("noteNames", false)
         }, 3000, "toggling names writes the original root key")
         closeShell()
         openShell()
@@ -591,8 +569,7 @@ TestCase {
         presenter.activate("view.velocity_colors")
         presenter.activate("view.note_names")
         tryVerify(function() {
-            settings.sync()
-            return settings.value("velocityNoteColors", true) === false
+            return !settings.bool("velocityNoteColors", true)
         }, 3000, "toggling back clears the stored colours")
     }
 }

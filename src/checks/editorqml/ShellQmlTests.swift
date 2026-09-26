@@ -147,12 +147,15 @@ enum ShellQmlLane {
             return fail("\(entry.name) owns its -input file: \(entry.inputFileName)")
         }
         ShellQmlBootstrap.stage(projectRoot: scratch)
+        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("settings.plist").path)
         var app = QTestAppCpp()
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
         app.setPluginsPath(EditorQmlPaths.pluginPath)
         ApplicationSession.registerQmlElement()
         ShellPresenter.registerQmlElement()
+        PreferencesStore.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
         GridInputClipProbe.registerQmlElement()
         GatedVisualsProbe.registerQmlElement()
@@ -209,15 +212,13 @@ enum ShellQmlLane {
     }
 }
 
-/// QtCore.Settings owns the original fixture's writes and reads in a private
-/// native application domain. Foundation removes only that domain at teardown.
 @MainActor
 @QtBridgeable
 public final class ShellQmlBootstrap: QmlInstantiableStatus {
     private static var stagedProjectRoot = ""
 
     public var projectRoot: String = ShellQmlBootstrap.stagedProjectRoot
-    public var settingsApplicationName: String = "porydaw-shell-checks-\(UUID().uuidString.lowercased())"
+    @QtTracked public var preferences = PreferencesStore()
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
@@ -228,13 +229,15 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     public func componentComplete() {}
 
 
-    /// Like the original temporary INI fixture, this store never touches user settings.
-    public func clearSettings() -> Bool {
-        let domain = "com.sp3cker." + settingsApplicationName
-        guard let store = UserDefaults(suiteName: domain) else { return false }
-        store.removePersistentDomain(forName: domain)
-        return store.synchronize()
+    public func resetPreferences() -> Bool {
+        preferences.resetPreferences()
     }
+    public func seedStartupSong(projectPath: String, song: String) -> Bool {
+        let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)
+        EditorViewStateCodec.saveTabs(recipe, store: preferences)
+        return EditorViewStateCodec.loadTabs(store: preferences).orderedSongs == [song]
+    }
+
 
     /// Widget oracle geometry for the standalone production voicegroup panel.
     public func voicegroupReferenceJson(variant: String) -> String {
@@ -341,8 +344,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return text.components(separatedBy: .newlines)
             .first(where: { $0.hasPrefix("mus_route101.mid:") }) ?? ""
     }
-    /// The full native keymap assertions run only after QML has written the
-    /// four original values to the genuine QtCore.Settings user store.
     public func registryFailures() -> [String] {
         var failures: [String] = []
         runKeybindingRegistryChecks(onAssertion: { passed, id, message in

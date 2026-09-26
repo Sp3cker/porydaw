@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -16,29 +15,12 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
 
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 760; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function cleanup() {
         if (!shell)
@@ -85,15 +67,14 @@ TestCase {
     }
 
     function openDrawerShell(activePage) {
-        settings.setValue("editorDrawer/velocityVisible", true)
-        settings.setValue("editorDrawer/velocityHeight", 173)
-        settings.setValue("editorDrawer/automationVisible", true)
-        settings.setValue("editorDrawer/automationHeight", 220)
-        settings.setValue("editorDrawer/voiceChangesVisible", true)
-        settings.setValue("editorDrawer/voiceChangesHeight", 220)
-        settings.setValue("editorDrawer/activePage", activePage)
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setInt("editorDrawer.velocityHeight", 173)
+        settings.setBool("editorDrawer.automationVisible", true)
+        settings.setInt("editorDrawer.automationHeight", 220)
+        settings.setBool("editorDrawer.voiceChangesVisible", true)
+        settings.setInt("editorDrawer.voiceChangesHeight", 220)
+        settings.setString("editorDrawer.activePage", activePage)
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
@@ -153,15 +134,14 @@ TestCase {
 
     function regionOf(image, anchor, control) {
         var origin = control.mapToItem(anchor, 0, 0)
-        var anchorWin = anchor.mapToItem(null, 0, 0)
         var scaleX = anchor.width > 0 ? image.width / anchor.width : 1
         var scaleY = anchor.height > 0 ? image.height / anchor.height : 1
-        return { x0: Math.max(0, Math.round((origin.x + anchorWin.x) * scaleX)),
-                 y0: Math.max(0, Math.round((origin.y + anchorWin.y) * scaleY)),
+        return { x0: Math.max(0, Math.round(origin.x * scaleX)),
+                 y0: Math.max(0, Math.round(origin.y * scaleY)),
                  x1: Math.min(image.width - 1,
-                              Math.round((origin.x + anchorWin.x + control.width) * scaleX) - 1),
+                              Math.round((origin.x + control.width) * scaleX) - 1),
                  y1: Math.min(image.height - 1,
-                              Math.round((origin.y + anchorWin.y + control.height) * scaleY) - 1) }
+                              Math.round((origin.y + control.height) * scaleY) - 1) }
     }
 
 
@@ -271,21 +251,22 @@ TestCase {
                "no hover is published away from the plot")
         var before = revision()
         verify(before.length > 0, "the document publishes its revision")
-        var idleRegion = regionOf(grabImage(tabsRoot()), tabsRoot(), input)
-        var idle = grabRegionStable(tabsRoot(), idleRegion)
+        var capture = shell.contentItem
+        var idleRegion = regionOf(grabImage(capture), capture, input)
+        var idle = grabRegionStable(capture, idleRegion)
         verify(idle.width > 0, "the idle plot composited into an image")
 
         var insertion = { x: input.width * 0.55, y: input.height * 0.5 }
         mouseMove(input, insertion.x, insertion.y)
         verify(waitForNative(function() { return model.hoverVisible }, 3000),
                parameter + " publishes its insertion hover")
-        var hovered = grabRegionStable(tabsRoot(), idleRegion)
-        var inputRegion = regionOf(hovered, tabsRoot(), input)
+        var hovered = grabUntilDifferent(capture, idle, idleRegion)
+        var inputRegion = regionOf(hovered, capture, input)
         verify(changedPixels(idle, hovered, inputRegion, 0) > 0,
                parameter + ": the insertion hover paints")
         compare(revision(), before, parameter + ": hovering writes nothing")
         mouseMove(input, insertion.x, insertion.y)
-        var repeated = grabRegionStable(tabsRoot(), inputRegion)
+        var repeated = grabRegionStable(capture, inputRegion)
         compare(changedPixels(hovered, repeated, inputRegion, 0), 0,
                 parameter + ": the repeated hover is pixel-stable")
 
@@ -293,7 +274,7 @@ TestCase {
         verify(waitForNative(function() { return !model.hoverVisible }, 3000),
                parameter + ": leaving the plot clears the hover")
         waitForRendering(tabsRoot())
-        var cleared = grabRegionStable(tabsRoot(), inputRegion)
+        var cleared = grabRegionStable(capture, inputRegion)
         compare(changedPixels(idle, cleared, inputRegion, 0), 0,
                 parameter + ": the cleared plot matches idle")
         compare(revision(), before, parameter + ": the hover round trip writes nothing")
@@ -313,14 +294,14 @@ TestCase {
         verify(node, "the fixture exposes a written node away from plot edges")
         var ring = findChild(node.item.parent, "automationNodeHover")
         verify(ring, "the node carries its hover ring")
-        var ringRegion = regionOf(idle, tabsRoot(), ring)
+        var ringRegion = regionOf(idle, capture, ring)
         mouseMove(input, node.at.x, node.at.y)
         verify(waitForNative(function() {
             var rings = collectByName(automationPageItem(), "automationNodeHover", [])
             return rings.some(function(item) { return item.visible })
         }, 3000), parameter + ": the node hover ring draws")
         waitForRendering(tabsRoot())
-        var ringFrame = grabUntilDifferent(tabsRoot(), idle, ringRegion)
+        var ringFrame = grabUntilDifferent(capture, idle, ringRegion)
         verify(changedPixels(idle, ringFrame, ringRegion, 0) > 0,
                parameter + ": the ring paints")
         compare(revision(), before, parameter + ": node hovering writes nothing")
@@ -330,7 +311,7 @@ TestCase {
             return !rings.some(function(item) { return item.visible })
         }, 3000), parameter + ": leaving the node clears the ring")
         waitForRendering(tabsRoot())
-        var ringCleared = grabRegionStable(tabsRoot(), inputRegion)
+        var ringCleared = grabRegionStable(capture, inputRegion)
         compare(changedPixels(idle, ringCleared, inputRegion, 0), 0,
                 parameter + ": the plot returns to idle")
         compare(revision(), before, parameter + ": the ring round trip writes nothing")
@@ -371,17 +352,18 @@ TestCase {
                    "the marker hover resolves its hint profile")
         var before = revision()
         verify(before.length > 0, "the document publishes its revision")
-        var idleRegion = regionOf(grabImage(tabsRoot()), tabsRoot(), input)
-        var idle = grabRegionStable(tabsRoot(), idleRegion)
+        var capture = shell.contentItem
+        var idleRegion = regionOf(grabImage(capture), capture, input)
+        var idle = grabRegionStable(capture, idleRegion)
         verify(idle.width > 0, "the idle plot composited into an image")
-        var inputRegion = regionOf(idle, tabsRoot(), input)
+        var inputRegion = regionOf(idle, capture, input)
 
         mousePress(input, marker.x, marker.y, Qt.LeftButton)
         wait(50)
         compare(revision(), before, "pressing the marker writes nothing")
         verify(!preview.visible, "pressing shows no preview yet")
         waitForRendering(tabsRoot())
-        var pressed = grabRegionStable(tabsRoot(), inputRegion)
+        var pressed = grabRegionStable(capture, inputRegion)
         compare(pressed.width, idle.width, "press keeps the frame size")
         compare(changedPixels(idle, pressed, inputRegion, 0), 0,
                 "pressing paints nothing")
@@ -399,7 +381,7 @@ TestCase {
                    "the drag carries the horizontal cursor")
         compare(input.cursorShape, Qt.SizeHorCursor, "the plot draws the drag cursor")
         waitForRendering(tabsRoot())
-        var draft = grabUntilDifferent(tabsRoot(), idle, inputRegion)
+        var draft = grabUntilDifferent(capture, idle, inputRegion)
         verify(changedPixels(idle, draft, inputRegion, 0) > 0, "the draft paints")
         compare(draft.width, idle.width, "the draft keeps the frame size")
         compare(revision(), before, "dragging writes nothing yet")
@@ -434,7 +416,7 @@ TestCase {
                "the transaction releases the interaction")
         mouseMove(input, marker.x, marker.y)
         waitForRendering(tabsRoot())
-        var settled = grabRegionStable(tabsRoot(), inputRegion)
+        var settled = grabRegionStable(capture, inputRegion)
         compare(changedPixels(idle, settled, inputRegion, 0), 0,
                 "the plot settles back to idle")
     }

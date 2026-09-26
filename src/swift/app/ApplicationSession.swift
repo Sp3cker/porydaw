@@ -92,7 +92,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var activeReplacementTask: Task<Void, Never>?
     private var startupRestoreTask: Task<Void, Never>?
     private var pendingProjectSwitch: ProjectSwitchCandidate?
-    private var settingsApplicationName = ""
+    private let preferences = PreferencesStore()
+    private var persistenceConfigured = false
     private var editorLanes = EditorLaneState()
     private var isRestoringTabs = false
     private var isHostCloseWalk = false
@@ -646,15 +647,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     // MARK: - Project and song opens
     @QtIgnored
-    func configurePersistence(applicationName: String) {
-        settingsApplicationName = applicationName
-        editorLanes = EditorViewStateCodec.loadLanes(applicationName: applicationName)
+    func configurePersistence() {
+        persistenceConfigured = true
+        editorLanes = EditorViewStateCodec.loadLanes(store: preferences)
+    }
+
+    public func restoreDisplayModes() {
+        velocityColorMode = preferences.bool(key: "velocityNoteColors", fallback: false)
+        noteNameMode = preferences.bool(key: "noteNames", fallback: false)
     }
 
     @QtIgnored
     func restoreStartup() {
-        guard !settingsApplicationName.isEmpty else { return }
-        let recipe = EditorViewStateCodec.loadTabs(applicationName: settingsApplicationName)
+        guard persistenceConfigured else { return }
+        let recipe = EditorViewStateCodec.loadTabs(store: preferences)
         guard !recipe.projectPath.isEmpty else { return }
         startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
     }
@@ -958,10 +964,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 loaded = try await read.value
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                if restore != nil, !self.settingsApplicationName.isEmpty {
+                if restore != nil, self.persistenceConfigured {
                     EditorViewStateCodec.saveTabs(
                         WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
-                        applicationName: self.settingsApplicationName)
+                        store: self.preferences)
                 }
                 self.failOpen(String(describing: error))
                 return
@@ -1271,11 +1277,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func persistTabRecipe() {
-        guard projectOpen, !settingsApplicationName.isEmpty,
+        guard projectOpen, persistenceConfigured,
               !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
               pendingProjectSwitch == nil else { return }
         EditorViewStateCodec.saveTabs(songTabs.recipe(projectPath: projectRoot),
-                                      applicationName: settingsApplicationName)
+                                      store: preferences)
     }
 
     private func updateEditorLaneRange(parameter: AutomationParameter, range: Int) {
@@ -1289,8 +1295,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 page.refreshCamera()
             }
         }
-        if !settingsApplicationName.isEmpty {
-            EditorViewStateCodec.saveLanes(editorLanes, applicationName: settingsApplicationName)
+        if persistenceConfigured {
+            EditorViewStateCodec.saveLanes(editorLanes, store: preferences)
         }
     }
 
@@ -1303,6 +1309,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         for tab in songTabs.allTabs {
             tab.workspace.grid.setVelocityColorMode(enabled: enabled)
         }
+        preferences.setBool(key: "velocityNoteColors", value: enabled)
+        preferences.synchronize()
     }
 
     /// Applies the note-name display mode app-wide, with the same
@@ -1314,6 +1322,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         for tab in songTabs.allTabs {
             tab.workspace.grid.setNoteNameMode(enabled: enabled)
         }
+        preferences.setBool(key: "noteNames", value: enabled)
+        preferences.synchronize()
     }
 
     /// Republishes the flags the window and the strip read: the song is open

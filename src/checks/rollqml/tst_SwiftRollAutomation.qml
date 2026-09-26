@@ -57,10 +57,7 @@ TestCase {
     }
 
     function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings(), "saved the caller's native preferences")
+        bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"),
                "the staged route101 project starts opening")
         verify(waitForNative(function() {
@@ -93,10 +90,9 @@ TestCase {
             surface = testCase.selectedSurface()
             return surface !== null
         }, 5000), "the selected tab's production EditorSurface mounted")
-        surface.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
-        drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        drawer.presenter.restoreStoredPreferences()
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")
@@ -130,7 +126,6 @@ TestCase {
                    "the session released its document presentation after the"
                    + " acknowledged scene removal")
         }
-        verify(bootstrap.restoreSettings(), "restored the caller's native settings")
     }
 
     // ---- shared lookups ------------------------------------------------------

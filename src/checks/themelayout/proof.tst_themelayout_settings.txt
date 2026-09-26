@@ -6,11 +6,24 @@ Original SHA-256: 9e92739e88f01754265f606f62b2d5a3b8bbb4bc41053c902576bac95d23cd
 Swift counterpart: src/checks/themecolor/ThemeColorChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_Theme.qml
 
+Task 36 note (Swift-owned settings): the cited predicates now seed and read back
+through the shared PreferencesStore staged in the lane's scratch directory
+(dotted keys theme.mode and theme.grid-line-contrast, same values and defaults;
+bootstrap.settingsApplicationName and its teardown are deleted) instead of a
+native QtCore.Settings domain. Rows A011-A012 (dialogCommitAndRevert commit
+direction) and A039-A040 (gridRefreshTargets grid-strength rules) were
+re-reconciled individually against the final predicates:
+themeCommitPreviewRevertChecks still observes the committed dark surface and the
+committed contrast-80 grid, and test_themePersistence / test_gridContrastDirection
+still observe the seeded mode and contrast and the applied grid contrast
+movement. Dispositions, cited message literals and the pinned original hash are
+unchanged.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS swiftcore (1/24 ok); SwiftCoreTest::themeColor PASS, 0 failed.
 Command: deno task verify:shell --filter shell-theme --verbose
 Result: PASS shell-theme (1/2 ok, 1 skipped); Finished testing of Theme.
+Task 36 execution evidence: the task-36 lane runs refreshed build/proof-evidence/swiftcore-themecolor.json and shell-theme.json, which list the cited predicates executing; the task-36 implementer reported swiftcore 12/12 and the full shell lane 26/26 green. The PASS results above are the earlier recorded runs and were not re-observed by this bookkeeping pass.
 Original lane: none; no registered lane executes this file (see file header:
 intentionally absent from the rewrite check target until the corresponding
 widgets return; no checkcatalog entry references DeferredThemeLayoutTest).

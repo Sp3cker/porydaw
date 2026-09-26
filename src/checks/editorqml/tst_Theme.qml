@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtTest
 import PorydawApp
@@ -23,31 +22,12 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
 
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-    function initTestCase() {
-        // Private native store like tst_ShellWindow.qml, never the caller's
-        // preferences.
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function cleanup() {
         // No songs open in this lane, so no close-all walk is needed.
@@ -115,9 +95,8 @@ TestCase {
     function test_themePersistence(data) {
         // ThemeController.commit + fresh-controller restore: the seeded mode
         // round-trips through the production shell with canonical writeback.
-        settings.setValue("theme/mode", data.mode)
-        settings.setValue("theme/grid-line-contrast", data.contrast)
-        settings.sync()
+        settings.setString("theme.mode", data.mode)
+        settings.setInt("theme.grid-line-contrast", data.contrast)
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", data.mode)
         compare(shell.shellPresenter.gridLineContrast, data.contrast)
@@ -129,38 +108,35 @@ TestCase {
                data.mode + ": applied pressed pair keeps the 4.5 floor")
         verify(contrastRatio(palette.disabledText, palette.windowText) >= 1.3,
                data.mode + ": applied disabled pair keeps the 1.3 floor")
-        settings.sync()
-        compare(settings.value("theme/mode", null), data.mode)
-        compare(Number(settings.value("theme/grid-line-contrast", null)), data.contrast)
+        compare(settings.string("theme.mode", ""), data.mode)
+        compare(settings.int("theme.grid-line-contrast", -1), data.contrast)
         closeThemedShell()
     }
 
     function test_themeRepair() {
         // Empty mode and unparseable contrast repair to vanilla/50 with
         // canonical writeback, without the test_b legacy-key fixture.
-        settings.setValue("theme/mode", "")
-        settings.setValue("theme/grid-line-contrast", "banana")
-        settings.sync()
+        settings.setString("theme.mode", "")
+        settings.setString("theme.grid-line-contrast", "banana")
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         compare(shell.shellPresenter.gridLineContrast, 50)
-        settings.sync()
-        compare(settings.value("theme/mode", null), "vanilla")
-        compare(Number(settings.value("theme/grid-line-contrast", null)), 50)
+        compare(settings.string("theme.mode", ""), "vanilla")
+        compare(settings.int("theme.grid-line-contrast", -1), 50)
         closeThemedShell()
     }
 
     function test_gridContrastDirection() {
-        settings.setValue("theme/mode", "vanilla")
-        settings.setValue("theme/grid-line-contrast", 50)
-        settings.sync()
+        settings.setString("theme.mode", "vanilla")
+        settings.setInt("theme.grid-line-contrast", 50)
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         var palette = shell.shellPresenter.session.palette
         var baseline = palette.gridLine
         var roll = palette.rollBackground
 
-        shell.shellPresenter.restoreAppearance("vanilla", "0", Qt.application.name)
+        settings.setInt("theme.grid-line-contrast", 0)
+        shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
             return palette.gridLine !== baseline
         }, 3000), "contrast 0 moves the applied grid")
@@ -170,7 +146,8 @@ TestCase {
         verify(contrastRatio(softened, roll) < contrastRatio(baseline, roll),
                "contrast 0 loses grid contrast against the roll")
 
-        shell.shellPresenter.restoreAppearance("vanilla", "100", Qt.application.name)
+        settings.setInt("theme.grid-line-contrast", 100)
+        shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
             return palette.gridLine !== softened
         }, 3000), "contrast 100 moves the applied grid again")
@@ -180,7 +157,8 @@ TestCase {
         verify(contrastRatio(strengthened, roll) > contrastRatio(baseline, roll),
                "contrast 100 gains grid contrast against the roll")
 
-        shell.shellPresenter.restoreAppearance("vanilla", "50", Qt.application.name)
+        settings.setInt("theme.grid-line-contrast", 50)
+        shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
             return palette.gridLine === baseline
         }, 3000), "default contrast restores the pinned grid value")
@@ -192,9 +170,8 @@ TestCase {
         // with no QWidget layer in the Swift app. The user-observable half —
         // menu chrome follows the applied theme — lives in ShellWindow's
         // Basic context-menu delegate bindings, asserted here.
-        settings.setValue("theme/mode", "vanilla")
-        settings.setValue("theme/grid-line-contrast", 50)
-        settings.sync()
+        settings.setString("theme.mode", "vanilla")
+        settings.setInt("theme.grid-line-contrast", 50)
         openThemedShell()
         tryCompare(shell.shellPresenter, "themeMode", "vanilla")
         var palette = shell.shellPresenter.session.palette
@@ -218,8 +195,8 @@ TestCase {
             return copyItem.background.color.toString().toUpperCase() === "#E7E2DC"
         }, 3000), "highlighted menu item shows the item hover surface")
         copyItem.highlighted = false
-        shell.shellPresenter.restoreAppearance("dark-neutral-high", "50",
-                                               Qt.application.name)
+        settings.setString("theme.mode", "dark-neutral-high")
+        shell.shellPresenter.restoreAppearance()
         verify(waitForNative(function() {
             return copyItem.background.color.toString().toUpperCase() === "#424242"
         }, 3000), "menu chrome follows the theme switch")

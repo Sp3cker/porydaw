@@ -25,8 +25,6 @@ public struct WorkspaceTabRecipe: Equatable, Sendable {
 }
 
 /// The `editorDrawer/automationLanes` compact JSON grammar from editorviewstate.cpp.
-/// Chrome visibility, section heights and active page remain in the existing
-/// QtCore.Settings-backed EditorDrawer; only the lane blob is owned here.
 public struct EditorLaneState: Equatable, Sendable {
     public struct Lane: Hashable, Sendable {
         public let track: Int
@@ -50,48 +48,37 @@ public struct EditorLaneState: Equatable, Sendable {
 public enum EditorViewStateCodec {
     private static let lanesKey = "editorDrawer.automationLanes"
 
-    /// Reads the same application preferences as QtCore.Settings on macOS.
-    /// - Parameter applicationName: The `Qt.application.name` of the running shell.
-    /// - Returns: The last successfully opened project and its saved tab recipe.
-    public static func loadTabs(applicationName: String) -> WorkspaceTabRecipe {
-        let store = SettingsStore(applicationName: applicationName)
-        return WorkspaceTabRecipe(
-            projectPath: store.string("lastProjectDir") ?? "",
+    @MainActor
+    public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
+        WorkspaceTabRecipe(
+            projectPath: store.string(key: "lastProjectDir", fallback: ""),
             orderedSongs: store.strings("lastOpenSongs") ?? [],
-            selectedSong: store.string("lastSongLabel") ?? "")
+            selectedSong: store.string(key: "lastSongLabel", fallback: ""))
     }
 
-    /// Saves the tab order and selection after a real tab transition.
-    /// - Parameters:
-    ///   - recipe: The opened project's live tab order and selection.
-    ///   - applicationName: The running shell's settings identity.
-    public static func saveTabs(_ recipe: WorkspaceTabRecipe, applicationName: String) {
-        let store = SettingsStore(applicationName: applicationName)
-        store.setString("lastProjectDir", recipe.projectPath)
+    @MainActor
+    public static func saveTabs(_ recipe: WorkspaceTabRecipe, store: PreferencesStore) {
+        store.setString(key: "lastProjectDir", value: recipe.projectPath)
         store.setStrings("lastOpenSongs", recipe.orderedSongs.isEmpty ? nil : recipe.orderedSongs)
-        store.setString("lastSongLabel", recipe.orderedSongs.isEmpty ? nil : recipe.selectedSong)
-        store.sync()
+        if recipe.orderedSongs.isEmpty {
+            store.remove(key: "lastSongLabel")
+        } else {
+            store.setString(key: "lastSongLabel", value: recipe.selectedSong)
+        }
+        store.synchronize()
     }
 
-    /// Decodes the lane blob without writing it back during startup. Malformed
-    /// blob data defaults only lane fields; the existing drawer chrome survives.
-    /// - Parameter applicationName: The running shell's settings identity.
-    /// - Returns: The decoded lane preferences.
-    public static func loadLanes(applicationName: String) -> EditorLaneState {
-        let store = SettingsStore(applicationName: applicationName)
+    @MainActor
+    public static func loadLanes(store: PreferencesStore) -> EditorLaneState {
         guard let bytes = store.data(lanesKey) else { return EditorLaneState() }
         return decodeLanes(bytes)
     }
 
-    /// Stores one canonical compact JSON object after a semantic lane change.
-    /// - Parameters:
-    ///   - state: The global editor lane preference.
-    ///   - applicationName: The running shell's settings identity.
-    public static func saveLanes(_ state: EditorLaneState, applicationName: String) {
+    @MainActor
+    public static func saveLanes(_ state: EditorLaneState, store: PreferencesStore) {
         guard let bytes = encodeLanes(state) else { return }
-        let store = SettingsStore(applicationName: applicationName)
         store.setData(lanesKey, bytes)
-        store.sync()
+        store.synchronize()
     }
 
     /// Decodes the native lane-row grammar; an invalid member does not discard
@@ -256,60 +243,5 @@ private indirect enum JSONValue: Codable {
         case let .boolean(value): try scalar.encode(value)
         case .null: try scalar.encodeNil()
         }
-    }
-}
-
-private struct SettingsStore {
-    let applicationID: CFString
-
-    init(applicationName: String) {
-        applicationID = Self.cfString("com.sp3cker." + applicationName)
-    }
-
-    func string(_ key: String) -> String? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? String
-    }
-
-    func strings(_ key: String) -> [String]? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? [String]
-    }
-
-    func data(_ key: String) -> Data? {
-        CFPreferencesCopyAppValue(Self.cfString(key), applicationID) as? Data
-    }
-
-    func setString(_ key: String, _ value: String?) {
-        CFPreferencesSetAppValue(Self.cfString(key), value.map(Self.cfString), applicationID)
-    }
-
-    func setStrings(_ key: String, _ value: [String]?) {
-        let array: CFArray? = value.map { strings in
-            var callbacks = kCFTypeArrayCallBacks
-            guard let result = CFArrayCreateMutable(kCFAllocatorDefault, strings.count, &callbacks)
-            else { preconditionFailure("Settings array could not be allocated") }
-            for string in strings {
-                let element = Self.cfString(string)
-                CFArrayAppendValue(result, Unmanaged.passUnretained(element).toOpaque())
-            }
-            return result as CFArray
-        }
-        CFPreferencesSetAppValue(Self.cfString(key), array, applicationID)
-    }
-
-    func setData(_ key: String, _ value: Data) {
-        let bytes = value.withUnsafeBytes { buffer in
-            CFDataCreate(kCFAllocatorDefault, buffer.bindMemory(to: UInt8.self).baseAddress,
-                         value.count)
-        }
-        CFPreferencesSetAppValue(Self.cfString(key), bytes, applicationID)
-    }
-
-    func sync() { _ = CFPreferencesAppSynchronize(applicationID) }
-
-    private static func cfString(_ text: String) -> CFString {
-        guard let result = text.withCString({
-            CFStringCreateWithCString(kCFAllocatorDefault, $0, CFStringBuiltInEncodings.UTF8.rawValue)
-        }) else { preconditionFailure("Settings key could not be encoded") }
-        return result
     }
 }

@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtTest
 import PorydawApp
@@ -15,27 +14,11 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
     property string noteProbe: ""
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null)
-    }
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings())
-    }
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
@@ -66,8 +49,7 @@ TestCase {
         wait(0)
     }
     function openSong() {
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null)
         shell.requestActivate()

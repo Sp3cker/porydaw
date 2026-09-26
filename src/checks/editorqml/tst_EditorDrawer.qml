@@ -5,11 +5,10 @@
 // The lane hosts the production composition by relative URL -- the same
 // EditorSurface.qml the application's resource engine loads -- and drives the
 // container through its real seam: test-owned pages attached by the lane
-// bootstrap, a private preference file under the runner scratch, and real
+// bootstrap, a scratch preference file, and real
 // pointer and keyboard input. Every expectation is read from the production
 // presenter, from the drawn item or from a rendered pixel; this suite
 // re-implements no container policy, and no production file knows it exists.
-import QtCore
 import QtQuick
 import QtTest
 import PorydawApp
@@ -119,7 +118,7 @@ TestCase {
 
     function test_numericFieldWindowShortcutPriority(data) {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
-        var location = bootstrap.preferencesUrl("numeric-space-" + data.tag)
+        var location = "numeric-space-" + data.tag
         var field
         if (data.kind === testCase.velocityKind) {
             testCase.mountProductionVelocity(location)
@@ -168,15 +167,10 @@ TestCase {
         EditorSurface {}
     }
 
-    Component {
-        id: storeComponent
-
-        Settings { category: "editorDrawer" }
-    }
 
     function test_automationModalsRetireWithPage() {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-modal-lifetime"))
+        testCase.mountProductionAutomation("automation-modal-lifetime")
         var loader = findChild(testCase.surface, "drawerBody_automation")
         var host = findChild(testCase.surface, "drawerModalLayer")
         verify(loader && host, "the production loader and external modal host are present")
@@ -207,7 +201,7 @@ TestCase {
     function test_otherEventsBandMountsBetweenDrawerAndScrollbar() {
         var band = findChild(testCase.surface, "timelineOtherEventsBand")
         verify(band, "the other-events band mounts in the production editor")
-        testCase.resetChrome(bootstrap.preferencesUrl("other-events-collapsed"), {})
+        testCase.resetChrome("other-events-collapsed", {})
         verify(band.visible, "the band remains mounted when every drawer section is collapsed")
         compare(testCase.section(testCase.velocityKind).visible, false,
                 "the Velocity section is collapsed")
@@ -367,6 +361,7 @@ TestCase {
         testCase.returnPropagations = 0
         testCase.leftPropagations = 0
         testCase.pageDestructions = 0
+        verify(bootstrap.resetPreferences(), "each drawer case starts with empty preferences")
     }
 
     // A case ends by settling the one composition: the next case's init()
@@ -395,8 +390,7 @@ TestCase {
         var item = surfaceComponent.createObject(testCase, {
             "width": testCase.width,
             "height": testCase.height,
-            "applicationSession": session,
-            "drawerPreferenceLocation": bootstrap.preferencesUrl("lane")
+            "applicationSession": session
         })
         verify(item, "the production surface came up")
         testCase.surface = item
@@ -415,15 +409,11 @@ TestCase {
         return state
     }
 
-    // Resets the one composition's chrome to this case's private store, the way
-    // a mount does: the store is seeded with the case's full state, the
-    // container is pointed at it, and the container's own restore applies it.
     // Restoring records no preference change, so it writes nothing back.
     function resetChrome(location, values) {
         testCase.seedStore(location, testCase.chromeState(values))
-        testCase.surface.drawerPreferenceLocation = location
         wait(0)
-        testCase.drawer().restoreStoredPreferences()
+        testCase.drawer().presenter.restoreStoredPreferences()
         testCase.awaitRenderedLayout()
     }
 
@@ -512,34 +502,35 @@ TestCase {
 
     // ---- the historical store ---------------------------------------------
 
-    function createStore(location) {
-        var store = storeComponent.createObject(testCase, { "location": location })
-        verify(store, "a private store at " + location)
-        return store
-    }
-
     function seedStore(location, values) {
-        var store = testCase.createStore(location)
-        for (var key in values)
-            store.setValue(key, values[key])
-        store.sync()
-        store.destroy()
+        var store = bootstrap.preferences
+        for (var key in values) {
+            var name = "editorDrawer." + key
+            if (key === "activePage")
+                store.setString(name, values[key])
+            else if (key.indexOf("Visible") >= 0)
+                store.setBool(name, values[key])
+            else
+                store.setInt(name, values[key])
+        }
+        store.synchronize()
     }
 
-    // A snapshot reads through a freshly created Settings instance, so it also
-    // proves the drawer's sync(): every call re-reads what was written. Key
-    // type and value are both recorded, because the historical formats are part
-    // of the contract (bool, integer, 0 for unset, page name).
     function snapshotStore(location) {
-        var store = testCase.createStore(location)
+        var store = bootstrap.preferences
         var snapshot = {}
         for (var i = 0; i < testCase.drawerKeys.length; ++i) {
             var key = testCase.drawerKeys[i]
-            var value = store.value(key, testCase.absentKey)
-            snapshot[key] = value === testCase.absentKey ? "absent"
-                                                         : (typeof value) + ":" + String(value)
+            var name = "editorDrawer." + key
+            if (!store.hasValue(name))
+                snapshot[key] = "absent"
+            else if (key === "activePage")
+                snapshot[key] = "string:" + store.string(name, "")
+            else if (key.indexOf("Visible") >= 0)
+                snapshot[key] = "boolean:" + store.bool(name, false)
+            else
+                snapshot[key] = "number:" + store.int(name, -1)
         }
-        store.destroy()
         return snapshot
     }
 
@@ -550,9 +541,6 @@ TestCase {
         }
     }
 
-    // The drawer writes from a preference signal that arrives on the pass after
-    // the call that caused it, so an interactive write is awaited through fresh
-    // Settings instances before the store is read.
     function awaitStoreKey(location, key, expected) {
         tryVerify(function() { return testCase.snapshotStore(location)[key] === expected }, 2000,
                   "the store records " + key + "=" + expected)
@@ -1044,7 +1032,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("no-page")
+        var location = "no-page"
         testCase.resetChrome(location, { "velocityVisible": true, "velocityHeight": 137,
                                          "activePage": "velocity" })
         var seeded = testCase.snapshotStore(location)
@@ -1091,7 +1079,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("chrome")
+        var location = "chrome"
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
@@ -1222,7 +1210,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("stored-height")
+        var location = "stored-height"
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         testCase.resetChrome(location, { "automationVisible": true, "activePage": "automations" })
 
@@ -1279,7 +1267,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("resize")
+        var location = "resize"
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         testCase.resetChrome(location, { "automationVisible": true, "activePage": "automations" })
 
@@ -1382,7 +1370,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("voice-spill")
+        var location = "voice-spill"
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         bootstrap.setTestSectionMaximumBodyHeight(testCase.voiceChangesKind, 90)
@@ -1481,7 +1469,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("focus")
+        var location = "focus"
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         testCase.resetChrome(location, { "automationVisible": true, "activePage": "automation" })
 
@@ -1556,7 +1544,8 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("round-trip")
+        var location = "round-trip"
+        bootstrap.preferences.setString("lastImportDir", "/fixture/unowned")
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
@@ -1565,7 +1554,6 @@ TestCase {
                                          "voiceChangesVisible": true, "voiceChangesHeight": 150,
                                          "activePage": "velocity" })
         var seeded = testCase.snapshotStore(location)
-        var defaultStore = testCase.snapshotStore("")
 
         var presenter = testCase.presenter()
         var velocityKind = testCase.velocityKind
@@ -1591,7 +1579,7 @@ TestCase {
         // Hiding writes that kind's own two keys, in the historical formats,
         // and no other kind's keys. The drawer writes from a preference signal
         // that arrives on the pass after the call, so the store is polled through
-        // fresh Settings instances until the write lands.
+        // the staged store until the write lands.
         var beforeHide = testCase.snapshotStore(location)
         testCase.clickToggle(velocityKind)
         compare(testCase.section(velocityKind).visible, false, "the click hides velocity")
@@ -1643,9 +1631,8 @@ TestCase {
         compare(testCase.snapshotStore(location).activePage, "string:voiceChanges",
                 "the chosen page is written under its historical name")
 
-        // Only the injected file was written.
-        testCase.compareSnapshots(testCase.snapshotStore(""), defaultStore,
-                                 "the application's default store is untouched")
+        compare(bootstrap.preferences.string("lastImportDir", ""),
+                "/fixture/unowned", "drawer changes preserve unowned preferences")
     }
 
     // ---- the shared playhead ------------------------------------------------
@@ -1659,7 +1646,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("playhead-bodies")
+        var location = "playhead-bodies"
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
@@ -1778,7 +1765,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("playhead-viewport")
+        var location = "playhead-viewport"
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         testCase.resetChrome(location, { "velocityVisible": true, "activePage": "velocity" })
         verify(bootstrap.pausePlayheadPolling(),
@@ -1822,7 +1809,7 @@ TestCase {
         // This phase's own process: the production page keeps its slot in the lane's own run.
         if (testCase.productionPhase) skip("the container cases run in the lane's container child")
 
-        var location = bootstrap.preferencesUrl("playhead-follow")
+        var location = "playhead-follow"
         verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
         testCase.resetChrome(location, { "velocityVisible": true, "activePage": "velocity" })
         verify(bootstrap.pausePlayheadPolling(),
@@ -1891,7 +1878,7 @@ TestCase {
     function test_drawerTypographyFromMountedSession() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
         const fonts = session.typographyFonts
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-typography"))
+        testCase.mountProductionVelocity("velocity-typography")
         const labels = testCase.collectVisibleTexts(testCase.velocityRuler(), []).filter(
             function(text) { return text.text.length > 0 })
         verify(labels.length > 0, "the mounted velocity axis renders a graduation")
@@ -1914,13 +1901,13 @@ TestCase {
                         && text.font.weight === fonts.captionBold.weight
                 })
         }, 1000, "hovered velocity marker paints the bold note-name face")
-        testCase.mountProductionVoice(bootstrap.preferencesUrl("voice-typography"))
+        testCase.mountProductionVoice("voice-typography")
         const voiceHover = findChild(testCase.voicePageItem(), "voiceHoverLabel")
         verify(voiceHover, "the mounted voice hover text exists")
         compare(voiceHover.font.family, fonts.noteName.family, "voice hover face")
         compare(voiceHover.font.pixelSize, fonts.noteName.pixelSize, "voice hover size")
         compare(voiceHover.font.weight, fonts.noteName.weight, "voice hover weight")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-typography"))
+        testCase.mountProductionAutomation("automation-typography")
         const automation = testCase.automationModel()
         const automationPage = testCase.automationPageItem()
         for (const name of ["automationHoverLabel", "automationPreviewLabel"]) {
@@ -2110,7 +2097,7 @@ TestCase {
 
     function test_velocityHintsResumeAfterOutsideRelease() {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-hint-release"))
+        testCase.mountProductionVelocity("velocity-hint-release")
         var input = testCase.velocityPlotInput()
         var ruler = testCase.velocityRuler()
         var status = findChild(testCase.surface, "mouseHintStatus")
@@ -2147,7 +2134,7 @@ TestCase {
 
     function test_automationHintsRetainGrabOrigin() {
         if (testCase.containerPhase) skip("the production owner runs in its own process")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-hint-grab"))
+        testCase.mountProductionAutomation("automation-hint-grab")
         verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
         var node = testCase.automationLaneNodes()[testCase.automationWrittenNodeIndex()]
         var point = testCase.automationNodePoint(node)
@@ -2178,7 +2165,7 @@ TestCase {
     function test_productionAutomationHoverThroughInput() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
         failOnWarning(/ReferenceError|TypeError|Binding loop|Unable to assign|[Rr]equired property/)
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-hover"))
+        testCase.mountProductionAutomation("production-automation-hover")
         verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
         var model = testCase.automationModel()
         var page = testCase.automationPageItem()
@@ -2353,7 +2340,7 @@ TestCase {
 
     function test_productionAutomationGhostCurvesDrawUnderActive() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-ghost"))
+        testCase.mountProductionAutomation("production-automation-ghost")
         verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
         var model = testCase.automationModel()
         var page = testCase.automationPageItem()
@@ -2550,7 +2537,7 @@ TestCase {
 
     function test_quickSurfacePublishesAndRendersHeaders() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.resetChrome(bootstrap.preferencesUrl("track-header-surface"))
+        testCase.resetChrome("track-header-surface")
         var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
         var input = findChild(band, "timelineTrackHeadersInput")
         var rows = findChild(band, "timelineTrackHeaderRows")
@@ -2608,7 +2595,7 @@ TestCase {
 
     function test_trackActivityRenderedMeterParity() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.resetChrome(bootstrap.preferencesUrl("track-header-activity"))
+        testCase.resetChrome("track-header-activity")
         bootstrap.pausePlayheadPolling()
         var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
         var rows = findChild(band, "timelineTrackHeaderRows")
@@ -2685,7 +2672,7 @@ TestCase {
 
     function test_headerVoiceChangeAltersRetainedRaster() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.resetChrome(bootstrap.preferencesUrl("track-header-voice-raster"))
+        testCase.resetChrome("track-header-voice-raster")
         bootstrap.pausePlayheadPolling()
         var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
         var rows = findChild(band, "timelineTrackHeaderRows")
@@ -2729,7 +2716,7 @@ TestCase {
 
     function test_hoveringHeadersDoesNotCreateTooltip() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.resetChrome(bootstrap.preferencesUrl("track-header-hover"))
+        testCase.resetChrome("track-header-hover")
         var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
         var rows = findChild(band, "timelineTrackHeaderRows")
         var input = findChild(band, "timelineTrackHeadersInput")
@@ -2746,7 +2733,7 @@ TestCase {
 
     function test_headerCtrlScopeKeepsPrimaryAndRendersOverlay() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
-        testCase.resetChrome(bootstrap.preferencesUrl("track-header-scope"))
+        testCase.resetChrome("track-header-scope")
         bootstrap.pausePlayheadPolling()
         var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
         var rows = findChild(band, "timelineTrackHeaderRows")
@@ -2802,7 +2789,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity")
+        var location = "production-velocity"
         var page = testCase.mountProductionVelocity(location)
         compare(String(testCase.section(testCase.velocityKind).contentUrl).length > 0, true,
                 "the kind publishes the production page URL")
@@ -2851,7 +2838,7 @@ TestCase {
 
     function test_productionDrawerBlankBarFocus() {
         if (testCase.containerPhase) skip("production composition only")
-        var location = bootstrap.preferencesUrl("drawer-blank-focus")
+        var location = "drawer-blank-focus"
         testCase.mountProductionVelocity(location)
         testCase.focusControl(testCase.rollInput())
         var before = testCase.snapshotStore(location)
@@ -2872,7 +2859,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity-pointer")
+        var location = "production-velocity-pointer"
         testCase.mountProductionVelocity(location)
         var nodes = testCase.velocityNodes()
         verify(nodes.length > 0, "the page drew at least one node")
@@ -2909,7 +2896,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity-prompt")
+        var location = "production-velocity-prompt"
         testCase.mountProductionVelocity(location)
         var nodes = testCase.velocityNodes()
         verify(nodes.length > 0, "the page drew at least one node")
@@ -2994,7 +2981,7 @@ TestCase {
 
     function test_productionVelocityPromptButtonsAndFocus() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-buttons"))
+        testCase.mountProductionVelocity("velocity-prompt-buttons")
         testCase.clickNode(testCase.velocityNodes()[0])
         var noteId = testCase.selectedNoteId()
         var before = testCase.noteVelocity(noteId)
@@ -3056,7 +3043,7 @@ TestCase {
 
     function test_productionVelocityPromptValidationAndDismissal() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-validation"))
+        testCase.mountProductionVelocity("velocity-prompt-validation")
         testCase.clickNode(testCase.velocityNodes()[0])
         var noteId = testCase.selectedNoteId()
         var before = testCase.noteVelocity(noteId)
@@ -3130,7 +3117,7 @@ TestCase {
 
     function test_productionVelocityPromptBoundedKeys() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-prompt-bounds"))
+        testCase.mountProductionVelocity("velocity-prompt-bounds")
         testCase.clickNode(testCase.velocityNodes()[0])
         var noteId = testCase.selectedNoteId()
         var model = testCase.velocityModel()
@@ -3174,7 +3161,7 @@ TestCase {
 
     function test_productionVelocityNumericInput() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-numeric-input"))
+        testCase.mountProductionVelocity("velocity-numeric-input")
         testCase.clickNode(testCase.velocityNodes()[0])
         var noteId = testCase.selectedNoteId()
         var before = testCase.noteVelocity(noteId)
@@ -3240,7 +3227,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity-cancel")
+        var location = "production-velocity-cancel"
         testCase.mountProductionVelocity(location)
         var nodes = testCase.velocityNodes()
         verify(nodes.length > 0, "the page drew at least one node")
@@ -3275,7 +3262,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity-playhead")
+        var location = "production-velocity-playhead"
         testCase.mountProductionVelocity(location)
         verify(bootstrap.pausePlayheadPolling(),
                "the lane holds the production polling task for determinism")
@@ -3316,7 +3303,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-velocity-context")
+        var location = "production-velocity-context"
         testCase.mountProductionVelocity(location)
         compare(bootstrap.velocityContextUnsupported(), false,
                 "the staged fixture resolves an exact top-level map")
@@ -3545,7 +3532,7 @@ TestCase {
         try {
             testCase.surface.gridModel.baseFontPx = data.fontPx
             testCase.surface.configureViewport()
-            testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-labels-" + data.tag),
+            testCase.mountProductionAutomation("automation-labels-" + data.tag,
                                                { "automationVisible": true, "automationHeight": 1 })
             var gutter = testCase.automationGutter()
             verify(gutter.height > 1, "the requested height is clamped to the derived minimum")
@@ -4136,7 +4123,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice")
+        var location = "production-voice"
         var page = testCase.mountProductionVoice(location)
         compare(String(testCase.section(testCase.voiceChangesKind).contentUrl).length > 0, true,
                 "the kind publishes the production page URL")
@@ -4193,7 +4180,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice-pointer")
+        var location = "production-voice-pointer"
         var page = testCase.mountProductionVoice(location)
         var model = testCase.voiceModel()
         var drawnBefore = testCase.voiceMarkerLines().length
@@ -4292,7 +4279,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice-keyboard")
+        var location = "production-voice-keyboard"
         var page = testCase.mountProductionVoice(location)
         var model = testCase.voiceModel()
         var marker = testCase.insertVoiceChange(60)
@@ -4387,7 +4374,7 @@ TestCase {
 
     function test_productionVoicePickerPointerAudition() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionVoice(bootstrap.preferencesUrl("voice-picker-audition"))
+        testCase.mountProductionVoice("voice-picker-audition")
         testCase.doubleClickPlot(testCase.freeVoiceColumn(24))
         testCase.awaitVoiceModal("voicePicker", true)
         testCase.awaitVoicePickerFocus()
@@ -4432,7 +4419,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice-playhead")
+        var location = "production-voice-playhead"
         var page = testCase.mountProductionVoice(location)
         verify(testCase.insertVoiceChange(90),
                "the case created a marker so the presented span has a boundary")
@@ -4505,7 +4492,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice-modal-layer")
+        var location = "production-voice-modal-layer"
         var values = testCase.chromeState({ "velocityVisible": true, "voiceChangesVisible": true })
         testCase.mountProductionVelocity(location, values)
         verify(bootstrap.attachProductionSection(testCase.voiceChangesKind),
@@ -4623,7 +4610,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-voice-space")
+        var location = "production-voice-space"
         var page = testCase.mountProductionVoice(location)
         var model = testCase.voiceModel()
         var marker = testCase.insertVoiceChange(60)
@@ -4699,7 +4686,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation")
+        var location = "production-automation"
         var page = testCase.mountProductionAutomation(location)
         compare(String(testCase.section(testCase.automationKind).contentUrl).length > 0, true,
                 "the kind publishes the production page URL")
@@ -4809,7 +4796,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-tabs")
+        var location = "production-automation-tabs"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var trackTab = testCase.automationTabWithEvents()
@@ -4936,7 +4923,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-rows")
+        var location = "production-automation-rows"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var input = testCase.automationPlotInput()
@@ -5084,7 +5071,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-prompt")
+        var location = "production-automation-prompt"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var volumeTab = bootstrap.automationVolumeIndex()
@@ -5247,7 +5234,7 @@ TestCase {
     // refused rather than silently reported as done.
     function test_productionAutomationRangeSubmenu() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-range-submenu"))
+        testCase.mountProductionAutomation("automation-range-submenu")
         var volume = bootstrap.automationVolumeIndex()
         testCase.clickAutomationTab(volume)
         var revision = bootstrap.automationDocumentRevision()
@@ -5323,7 +5310,7 @@ TestCase {
 
     function test_productionAutomationOutsideRightRetarget() {
         if (testCase.containerPhase) skip("production composition only")
-        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-menu-retarget"))
+        testCase.mountProductionAutomation("automation-menu-retarget")
         verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
         var nodes = testCase.automationLaneNodes()
         var first = testCase.automationWrittenNodeIndex()
@@ -5363,7 +5350,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-point-delete")
+        var location = "production-automation-point-delete"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var input = testCase.automationPlotInput()
@@ -5477,7 +5464,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-value-focus")
+        var location = "production-automation-value-focus"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var plot = testCase.automationPlot()
@@ -5601,7 +5588,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-tempo-focus")
+        var location = "production-automation-tempo-focus"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var plot = testCase.automationPlot()
@@ -5673,7 +5660,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-synthetic-menu")
+        var location = "production-automation-synthetic-menu"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var input = testCase.automationPlotInput()
@@ -5761,7 +5748,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-menus")
+        var location = "production-automation-menus"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var volumeTab = bootstrap.automationVolumeIndex()
@@ -5924,7 +5911,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-tap")
+        var location = "production-automation-tap"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var tempoTab = testCase.revealAutomationTab(model.tabCount - 1)
@@ -6047,7 +6034,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-follow")
+        var location = "production-automation-follow"
         testCase.mountProductionAutomation(location)
         var input = testCase.automationPlotInput()
         var volumeTab = bootstrap.automationVolumeIndex()
@@ -6194,7 +6181,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-automation-space")
+        var location = "production-automation-space"
         testCase.mountProductionAutomation(location)
         var model = testCase.automationModel()
         var propagations = testCase.spacePropagations
@@ -6267,7 +6254,7 @@ TestCase {
         // This phase's own process: the container child released the production page's slot before it mounted.
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
 
-        var location = bootstrap.preferencesUrl("production-all-pages-playhead")
+        var location = "production-all-pages-playhead"
         var values = testCase.chromeState({ "velocityVisible": true, "velocityHeight": 110,
                                             "voiceChangesVisible": true, "voiceChangesHeight": 130,
                                             "automationVisible": true, "automationHeight": 150,
@@ -6416,7 +6403,7 @@ TestCase {
     function test_referenceProfileCapture() {
         if (!bootstrap.profileActive)
             skip("the reference capture runs in a dedicated profile child")
-        var location = bootstrap.preferencesUrl("profile-" + bootstrap.profileName)
+        var location = "profile-" + bootstrap.profileName
         // Both document-bound pages mount in this composition: the drawer capture
         // carries the whole production surface, and the picker pane needs the
         // Voice Changes page in its slot and visible.

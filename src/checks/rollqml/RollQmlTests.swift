@@ -97,6 +97,8 @@ enum RollQmlLane {
         // The bootstrap serves the staged path to QML, so it must be known
         // before Qt Quick Test builds any QML object.
         RollQmlBootstrap.stage(projectRoot: scratch)
+        PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("settings.plist").path)
 
         if let suiteFile = ProcessInfo.processInfo.environment[suiteEnvironmentKey] {
             // Suite child: one file, one Qt Quick Test run, one exit status.
@@ -116,6 +118,7 @@ enum RollQmlLane {
         app.setPluginsPath(EditorQmlPaths.pluginPath)
         ApplicationSession.registerQmlElement()
         RollQmlBootstrap.registerQmlElement()
+        PreferencesStore.registerQmlElement()
         // ApplicationSession itself supplies the Swift ruler form bridge.
         let inputFile = URL(fileURLWithPath: inputDirectory, isDirectory: true)
             .appendingPathComponent(file).path
@@ -190,11 +193,6 @@ enum RollQmlLane {
     }
 }
 
-/// QML-facing bridge for the lane: the staged scratch path, the caller's
-/// preserved native settings, and the deterministic drive seams the
-/// `swiftrollgated` C++ lane reached through `pd_check_*` cdecls — here the
-/// same presenter calls made directly on the suite's real session.
-///
 /// The pinned bridge cannot pass a bridged object *into* a slot, so the suite
 /// declares the lane's one production `ApplicationSession` as a direct QML
 /// child of this object and the bootstrap reaches it through the framework's
@@ -205,21 +203,6 @@ enum RollQmlLane {
 public final class RollQmlBootstrap: QmlInstantiableStatus {
     private static var stagedProjectRoot = ""
 
-    /// The native settings this lane or its mounted drawer may write. QtCore
-    /// Settings owns the writes and reads; Foundation is used only for key
-    /// removal unavailable from QML, and for preserving the caller's settings.
-    private static let settingKeys = [
-        "keymap.roll.transpose_up", "keymap.transport.play_pause",
-        "keymap.roll.velocity_drag", "keymap.velocity.detent_unlock",
-        "theme.mode", "theme.primary", "theme.accent", "theme.grid-line-contrast",
-        "editorDrawer.velocityVisible", "editorDrawer.velocityHeight",
-        "editorDrawer.automationVisible", "editorDrawer.automationHeight",
-        "editorDrawer.voiceChangesVisible", "editorDrawer.voiceChangesHeight",
-        "editorDrawer.activePage",
-    ]
-    private var originalSettings: [String: Data] = [:]
-    private var absentKeys: Set<String> = []
-    private var hasSnapshot = false
     private var timeSigFixtureIdentity: DocumentIdentity?
     private var releasedDocument: DocumentSession?
     private var releasedGrid: PianoGrid?
@@ -228,6 +211,22 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
 
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
+    @QtTracked public var preferences = PreferencesStore()
+
+    public func resetPreferences() -> Bool {
+        preferences.resetPreferences()
+    }
+    public func seedDrawerPreferences(velocityVisible: Bool, automationVisible: Bool,
+                                      voiceChangesVisible: Bool, activePage: Int) {
+        preferences.setBool(key: "editorDrawer.velocityVisible", value: velocityVisible)
+        preferences.setInt(key: "editorDrawer.velocityHeight", value: 160)
+        preferences.setBool(key: "editorDrawer.automationVisible", value: automationVisible)
+        preferences.setInt(key: "editorDrawer.automationHeight", value: 240)
+        preferences.setBool(key: "editorDrawer.voiceChangesVisible", value: voiceChangesVisible)
+        preferences.setInt(key: "editorDrawer.voiceChangesHeight", value: 90)
+        preferences.setString(key: "editorDrawer.activePage", value: activePage == 1 ? "velocity" : "automations")
+    }
+
 
     static func stage(projectRoot: String) {
         stagedProjectRoot = projectRoot
@@ -248,48 +247,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         session?.selectedDocument
     }
 
-    // ---- the caller's native settings --------------------------------------
-
-    /// Snapshots the native settings this lane or its mounted drawer may write.
-    public func captureSettings() -> Bool {
-        guard let store = UserDefaults(suiteName: "com.sp3cker.porydaw") else { return false }
-        originalSettings.removeAll()
-        absentKeys.removeAll()
-        hasSnapshot = false
-        for key in Self.settingKeys {
-            guard let value = store.object(forKey: key) else {
-                absentKeys.insert(key)
-                continue
-            }
-            guard let data = try? PropertyListSerialization.data(
-                fromPropertyList: value, format: .binary, options: 0
-            ) else { return false }
-            originalSettings[key] = data
-        }
-        hasSnapshot = true
-        return true
-    }
-
-    /// Restores existing values and removes only absent fixture keys.
-    public func restoreSettings() -> Bool {
-        guard hasSnapshot, let store = UserDefaults(suiteName: "com.sp3cker.porydaw")
-        else { return false }
-        for key in Self.settingKeys {
-            if absentKeys.contains(key) {
-                store.removeObject(forKey: key)
-            } else if let data = originalSettings[key],
-                      let value = try? PropertyListSerialization.propertyList(
-                          from: data, options: 0, format: nil
-                      ) {
-                store.set(value, forKey: key)
-            } else {
-                return false
-            }
-        }
-        guard store.synchronize() else { return false }
-        hasSnapshot = false
-        return true
-    }
 
     // ---- the run loop and the staged project --------------------------------
 
@@ -340,14 +297,6 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         return failure.isEmpty || failure == initialError
     }
 
-    /// A `file://` URL for a private store under the scratch directory, so no
-    /// lane case can read or write the production settings store.
-    public func preferencesUrl(name: String) -> String {
-        guard !name.isEmpty, !projectRoot.isEmpty else { return "" }
-        return URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent(name)
-            .absoluteString
-    }
 
     // ---- the host's own close path ------------------------------------------
 

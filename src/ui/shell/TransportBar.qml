@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import QtCore
 import QtQuick.Controls.Basic as Basic
 import Porydaw.Ui
 
@@ -54,15 +53,8 @@ Rectangle {
         property real verticalPadding: 0
         property real dragThreshold: bar.inset
     }
-    Loader {
-        id: volumeSettingsLoader
-        active: false
-        sourceComponent: Settings { property int outputVolume: 100 }
-    }
     function restoreOutputVolume() {
-        volumeSettingsLoader.active = true
-        if (volumeSettingsLoader.status === Loader.Ready)
-            presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
+        presenter.restoreOutputVolume()
     }
 
     Timer {
@@ -390,11 +382,7 @@ Rectangle {
             Basic.ToolTip.visible: hovered
             Layout.preferredWidth: implicitWidth
             Layout.preferredHeight: implicitHeight
-            onValueCommitted: percent => {
-                bar.presenter.setOutputVolume(percent)
-                if (volumeSettingsLoader.status === Loader.Ready)
-                    volumeSettingsLoader.item.outputVolume = percent
-            }
+            onValueCommitted: percent => bar.presenter.commitOutputVolume(percent)
         }
         // QToolBar still reserves its clipped output controls at large fonts.
         // Absorb the unavailable trailing space here rather than stretching

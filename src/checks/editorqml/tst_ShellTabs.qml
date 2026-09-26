@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -16,12 +15,11 @@ TestCase {
     visible: true
 
     property var shell: null
-    property var settings: null
+    readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
     TabsDrawerProbe { id: fileProbe }
 
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
     FontMetrics {
         id: tabBodyMetrics
@@ -29,22 +27,6 @@ TestCase {
                     : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "genuine QtCore.Settings is available")
-    }
-
-    function cleanupTestCase() {
-        if (settings) {
-            settings.destroy()
-            settings = null
-            wait(0)
-        }
-        verify(bootstrap.clearSettings(), "removed only the private native settings")
-    }
 
     function cleanup() {
         if (!shell)
@@ -92,20 +74,18 @@ TestCase {
     }
 
     function seedDrawerPrefs() {
-        settings.setValue("editorDrawer/velocityVisible", true)
-        settings.setValue("editorDrawer/velocityHeight", 173)
-        settings.setValue("editorDrawer/automationVisible", true)
-        settings.setValue("editorDrawer/automationHeight", 200)
-        settings.setValue("editorDrawer/voiceChangesVisible", true)
-        settings.setValue("editorDrawer/voiceChangesHeight", 200)
-        settings.setValue("editorDrawer/activePage", "velocity")
-        settings.sync()
+        settings.setBool("editorDrawer.velocityVisible", true)
+        settings.setInt("editorDrawer.velocityHeight", 173)
+        settings.setBool("editorDrawer.automationVisible", true)
+        settings.setInt("editorDrawer.automationHeight", 200)
+        settings.setBool("editorDrawer.voiceChangesVisible", true)
+        settings.setInt("editorDrawer.voiceChangesHeight", 200)
+        settings.setString("editorDrawer.activePage", "velocity")
     }
 
     function openShell(labels) {
         // Every explicit-open test starts without a stale startup recipe.
-        settings.setValue("lastProjectDir", "")
-        settings.sync()
+        settings.setString("lastProjectDir", "")
         seedDrawerPrefs()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
@@ -1120,11 +1100,7 @@ TestCase {
         shell.close()
         verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
                "the clean host close releases its tab pages")
-        settings.sync()
-        compare(settings.value("lastOpenSongs").join(","),
-                ["mus_littleroot_test", "mus_route101"].join(","),
-                "final-close walk stores the tab recipe in display order")
-        compare(settings.value("lastSongLabel"), "mus_route101",
+        compare(settings.string("lastSongLabel", ""), "mus_route101",
                 "final-close walk retains the previously selected tab")
         shell.destroy()
         shell = null

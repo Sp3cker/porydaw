@@ -8,13 +8,20 @@ import PorydawPlayback
 
 @MainActor
 internal func runProjectSessionSuite(_ report: CheckReport) {
+    guard let scratch = CheckEnvironment.fixtureRoot else {
+        report.fail("workspace/WorkspaceTabRecipe::restore", "missing staged settings directory")
+        return
+    }
+    let store = PreferencesStore()
+    PreferencesStore.stageShared(plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
+        .appendingPathComponent("settings.plist").path)
     runKeybindingRegistryChecks { passed, cppID, message in
         report.expect(passed, cppID: cppID, message: message)
     }
     runEditorCameraChecks(report)
     runTimelineScrollbarChecks(report)
     runEditorDrawerChecks(report)
-    runEditorViewStateChecks(report)
+    runEditorViewStateChecks(report, store: store)
     runTypographyLayoutChecks(report)
     mouseHintOwnershipChecks(report)
 

@@ -38,10 +38,7 @@ TestCase {
     }
 
     function initTestCase() {
-        Qt.application.name = "porydaw"
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-        verify(bootstrap.captureSettings())
+        bootstrap.seedDrawerPreferences(false, true, true, 0)
         verify(bootstrap.start("mus_route101"))
         verify(waitForNative(function() {
             return session.songOpen || testCase.openFailure.length > 0
@@ -56,10 +53,9 @@ TestCase {
             mounted = findChild(testCase.overlay, "swiftRollOverlay")
             return mounted !== null && mounted.visible && mounted.width > 0
         }, 5000))
-        mounted.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(mounted, "editorDrawer")
         verify(drawer !== null)
-        drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+        drawer.presenter.restoreStoredPreferences()
     }
 
     function cleanup() {
@@ -83,7 +79,6 @@ TestCase {
             wait(0)
             verify(bootstrap.acknowledgeSceneRemoval())
         }
-        verify(bootstrap.restoreSettings())
     }
 
     function surface() {
@@ -111,7 +106,8 @@ TestCase {
         var s = surface()
         var h = s.headersModel
         var drawer = item("editorDrawer")
-        drawer.presenter.restoreStoredPreferences(1, 160, 0, 240, 0, 90, 1)
+        bootstrap.seedDrawerPreferences(true, false, false, 1)
+        drawer.presenter.restoreStoredPreferences()
         try {
             var ruler = item("timelineQuickRuler")
             var rulerInput = item("timelineRulerInput")
@@ -194,7 +190,8 @@ TestCase {
             compare(thumb.visible, h.maximumScrollY > 0)
             verify(s.Screen.devicePixelRatio > 0)
         } finally {
-            drawer.presenter.restoreStoredPreferences(0, 160, 1, 240, 1, 90, 0)
+            bootstrap.seedDrawerPreferences(false, true, true, 0)
+            drawer.presenter.restoreStoredPreferences()
         }
     }
 

@@ -27,11 +27,54 @@ internal func runTransportBarChecks(_ report: CheckReport) {
                        cppID: id, what: "time-signature change starts the third bar")
     report.expectEqual(expected: "4:1", actual: TransportBarPresenter.measure(at: 264, timeline: timeline),
                        cppID: id, what: "new 3/4 segment advances after three beats")
+    checkRestoredOutputVolumeAfterAttachment(report)
+
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail("swiftcore/DocumentWorkspace::audibleMix", "missing --swiftcore fixture root")
         return
     }
     checkSelectedWorkspaceAudio(report, fixtureRoot: fixtureRoot)
+}
+
+@MainActor
+private func checkRestoredOutputVolumeAfterAttachment(_ report: CheckReport) {
+    let id = "swiftcore/TransportBar::lateOutputVolumeAttachment"
+    let store = PreferencesStore()
+    defer {
+        store.remove(key: "outputVolume")
+        store.synchronize()
+    }
+    store.setInt(key: "outputVolume", value: 37)
+    store.synchronize()
+    let presenter = TransportBarPresenter()
+    presenter.restoreOutputVolume()
+    report.expectEqual(expected: 37, actual: presenter.outputVolume, cppID: id,
+                       what: "stored output volume survives before audio attachment")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    guard let audio = app.transportAudio else {
+        report.fail(id, "native audio failed to initialize: \(app.lastSaveError)")
+        return
+    }
+    presenter.attach(session: app)
+    report.expectEqual(expected: 37, actual: audio.outputVolume, cppID: id,
+                       what: "stored output volume survives late audio attachment")
+
+    store.setInt(key: "outputVolume", value: 145)
+    presenter.restoreOutputVolume()
+    report.expectEqual(expected: 100, actual: presenter.outputVolume, cppID: id,
+                       what: "stored output volume above the maximum clamps to 100")
+    report.expectEqual(expected: 100, actual: audio.outputVolume, cppID: id,
+                       what: "audio receives the clamped upper volume")
+    store.setInt(key: "outputVolume", value: -5)
+    presenter.restoreOutputVolume()
+    report.expectEqual(expected: 0, actual: presenter.outputVolume, cppID: id,
+                       what: "stored output volume below zero clamps to zero")
+    report.expectEqual(expected: 0, actual: audio.outputVolume, cppID: id,
+                       what: "audio receives the clamped lower volume")
 }
 
 @MainActor

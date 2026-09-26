@@ -1,4 +1,3 @@
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtTest
@@ -17,22 +16,12 @@ TestCase {
 
     property var shell: null
     ShellQmlBootstrap { id: bootstrap }
-    Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 550; visible: true } }
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
-    function initTestCase() {
-        Qt.application.name = bootstrap.settingsApplicationName
-        Qt.application.organization = "sp3cker"
-        Qt.application.domain = ""
-    }
-
-    function cleanupTestCase() {
-        verify(bootstrap.clearSettings(), "private settings domain removed")
-    }
 
     function cleanup() {
         if (!shell)
@@ -112,13 +101,10 @@ TestCase {
 
     function test_mountedSongDockAndConfirmationRoundTrips() {
         verify(bootstrap.prepareSongDockFixture(), "staged project has a stray and partial registration")
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.5)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.5)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.requestActivate()
@@ -370,13 +356,10 @@ TestCase {
     }
 
     function test_constrainedVoiceEditorRemainsScrollable() {
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.5)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.5)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.height = 380
@@ -424,13 +407,10 @@ TestCase {
     }
 
     function test_voicegroupPaneStackedAndRatioRestores() {
-        const settings = settingsComponent.createObject(testCase)
-        verify(settings !== null, "QtCore settings is available")
-        settings.setValue("lastProjectDir", "")
-        settings.setValue("swiftDock/columnWidth", 280)
-        settings.setValue("swiftDock/songsRatio", 0.3)
-        settings.sync()
-        settings.destroy()
+        const settings = bootstrap.preferences
+        settings.setString("lastProjectDir", "")
+        settings.setInt("swiftDock.columnWidth", 280)
+        settings.setDouble("swiftDock.songsRatio", 0.3)
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production window loads")
         shell.requestActivate()

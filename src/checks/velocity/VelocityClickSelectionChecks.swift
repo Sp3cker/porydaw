@@ -316,20 +316,26 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
                                          service: ProjectService) {
     let routes = ["page-switch", "drawer-hide", "pointer-ungrabbed", "focus-loss",
                   "window-deactivated", "hidden", "escape"]
+    let preferences = PreferencesStore()
     for route in routes {
         let fixture = drawerVelocityVelocityFixture(session: session, service: service)
         guard let note = fixture.notes.first, let handle = fixture.handle(note) else {
             report.fail(drawerVelocityCancellationID, "\(route): no draggable note handle")
             continue
         }
+        _ = preferences.resetPreferences()
+        preferences.setBool(key: "editorDrawer.velocityVisible", value: true)
+        preferences.setInt(key: "editorDrawer.velocityHeight", value: 0)
+        if route == "page-switch" {
+            preferences.setBool(key: "editorDrawer.automationVisible", value: true)
+        }
+        preferences.setInt(key: "editorDrawer.automationHeight", value: 0)
+        preferences.setInt(key: "editorDrawer.voiceChangesHeight", value: 0)
+        preferences.setString(key: "editorDrawer.activePage", value: "velocity")
         let page = fixture.page
         let drawer = EditorDrawerPresenter()
         drawer.attachSection(page)
-        drawer.restoreStoredPreferences(velocityVisible: 1, velocityHeight: 0,
-                                        automationVisible: route == "page-switch" ? 1 : -1,
-                                        automationHeight: 0,
-                                        voiceChangesVisible: -1, voiceChangesHeight: 0,
-                                        activePage: DrawerSectionKind.velocity.rawValue)
+        drawer.restoreStoredPreferences()
         if route == "page-switch" {
             drawer.attachSection(AutomationPage(baseFontPx: 13))
         }

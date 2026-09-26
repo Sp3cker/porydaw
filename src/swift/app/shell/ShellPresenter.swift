@@ -143,6 +143,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var sceneActive = true
     @QtTracked public var themeMode = "vanilla"
     @QtTracked public var gridLineContrast = 50
+    @QtTracked public var dockColumnWidth = 280
+    @QtTracked public var dockSongsRatio = 0.5
     @QtTracked public var polyphonyVisible = false
     @QtTracked public var statusText = "Ready"
     @QtTracked public var windowTitle = "porydaw"
@@ -402,8 +404,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         closeReady = true
     }
 
-    public func openStartup(applicationName: String) {
-        session.configurePersistence(applicationName: applicationName)
+    public func openStartup() {
         let arguments = CommandLine.arguments
         var project = ""
         var song = ""
@@ -474,15 +475,42 @@ public final class ShellPresenter: QmlInstantiableStatus {
         criticalRequested(title: "Operation Failed", message: message)
     }
 
-    /// QML's QtCore.Settings reads the original ThemeController settings keys;
-    /// Swift owns validation, palette policy and the canonical values to write.
-    public func restoreAppearance(mode: String, gridLineContrast: String, applicationName: String) {
-        ShellAppearance.removeLegacyCustomKeys(applicationName: applicationName)
-        themeMode = ShellAppearance.mode(mode)
-        self.gridLineContrast = ShellAppearance.contrast(gridLineContrast)
-        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: self.gridLineContrast)
+    public func configureSettings(applicationName: String) {
+        PreferencesStore.configureShared(applicationName: applicationName)
+        session.configurePersistence()
+        let store = PreferencesStore()
+        dockColumnWidth = store.int(key: "swiftDock.columnWidth", fallback: 280)
+        dockSongsRatio = store.double(key: "swiftDock.songsRatio", fallback: 0.5)
+    }
+
+    public func setDockColumnWidth(width: Int) {
+        guard dockColumnWidth != width else { return }
+        dockColumnWidth = width
+        let store = PreferencesStore()
+        store.setInt(key: "swiftDock.columnWidth", value: width)
+        store.synchronize()
+    }
+
+    public func setDockSongsRatio(ratio: Double) {
+        guard dockSongsRatio != ratio else { return }
+        dockSongsRatio = ratio
+        let store = PreferencesStore()
+        store.setDouble(key: "swiftDock.songsRatio", value: ratio)
+        store.synchronize()
+    }
+
+    public func restoreAppearance() {
+        let store = PreferencesStore()
+        ShellAppearance.removeLegacyCustomKeys(store: store)
+        themeMode = ShellAppearance.mode(store.string(key: "theme.mode", fallback: ""))
+        gridLineContrast = ShellAppearance.contrast(
+            store.string(key: "theme.grid-line-contrast", fallback: ""))
+        ShellAppearance.apply(to: session.palette, mode: themeMode, contrast: gridLineContrast)
         session.eventListPresenter().refreshAppearance()
         if session.songOpen { session.gridPresenter().reloadVisuals() }
+        store.setString(key: "theme.mode", value: themeMode)
+        store.setInt(key: "theme.grid-line-contrast", value: gridLineContrast)
+        store.synchronize()
     }
 
     @QtSignal public func chooseProjectRequested()

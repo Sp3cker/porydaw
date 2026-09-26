@@ -1,4 +1,4 @@
-// The editor drawer container: chrome, section bodies and preference store.
+// The editor drawer container: chrome and section bodies.
 //
 // Swift owns every layout decision (EditorDrawer.swift: metrics, stacking,
 // visibility, the resize including the voice-change spill, the focus requests
@@ -27,7 +27,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtCore
 import Porydaw.Ui
 
 FocusScope {
@@ -41,9 +40,6 @@ FocusScope {
     // virtual `palette` member of an unrelated type, and shadowing it makes the
     // engine warn on every instantiation and mis-handle the base property.
     required property QtObject drawerPalette
-    // Empty selects the application's default QSettings store; every lane case
-    // points this at a private file under its own scratch directory.
-    property url preferenceLocation: ""
     property var hintService: null
     readonly property bool hintScopeAllowed: {
         for (let child of modalLayer.children) {
@@ -67,27 +63,10 @@ FocusScope {
     height: presenter.height
     clip: true
 
-    // Historical store: category "editorDrawer", one category the two
-    // preference signals write and one read performed at mount.
-    Settings {
-        id: drawerSettings
-
-        category: "editorDrawer"
-        location: drawerScope.preferenceLocation
-    }
 
     function keyNameFor(kind) {
         switch (kind) {
         case drawerScope.automationKind: return "automation"
-        case drawerScope.velocityKind: return "velocity"
-        case drawerScope.voiceChangesKind: return "voiceChanges"
-        }
-        return ""
-    }
-
-    function pageNameFor(kind) {
-        switch (kind) {
-        case drawerScope.automationKind: return "automations"
         case drawerScope.velocityKind: return "velocity"
         case drawerScope.voiceChangesKind: return "voiceChanges"
         }
@@ -103,68 +82,6 @@ FocusScope {
         return ""
     }
 
-    // Read once, at mount: children complete before this item, so the Settings
-    // object has already loaded its values. A key is passed as its raw value,
-    // an absent visibility or page as -1 and an absent height as 0; the
-    // presenter applies state, records no preference change and writes nothing
-    // back. Restoring is the only place this file reads the store.
-    function storedVisibility(key) {
-        var value = drawerSettings.value(key)
-        if (value === undefined || value === null)
-            return -1
-        if (value === true || value === 1 || value === "1" || value === "true")
-            return 1
-        if (value === false || value === 0 || value === "0" || value === "false")
-            return 0
-        return -1
-    }
-
-    function storedHeight(key) {
-        var value = drawerSettings.value(key)
-        if (value === undefined || value === null)
-            return 0
-        var height = Number(value)
-        return isNaN(height) ? 0 : Math.round(height)
-    }
-
-    function storedPage() {
-        var value = drawerSettings.value("activePage")
-        if (value === undefined || value === null)
-            return -1
-        switch (String(value)) {
-        case "velocity": return drawerScope.velocityKind
-        case "voiceChanges": return drawerScope.voiceChangesKind
-        case "automations": return drawerScope.automationKind
-        }
-        return -1
-    }
-
-    function restoreStoredPreferences() {
-        drawerScope.presenter.restoreStoredPreferences(drawerScope.storedVisibility("velocityVisible"),
-                                                       drawerScope.storedHeight("velocityHeight"),
-                                                       drawerScope.storedVisibility("automationVisible"),
-                                                       drawerScope.storedHeight("automationHeight"),
-                                                       drawerScope.storedVisibility("voiceChangesVisible"),
-                                                       drawerScope.storedHeight("voiceChangesHeight"),
-                                                       drawerScope.storedPage())
-    }
-
-    function writeSectionPreference(kind, visible, height) {
-        var key = drawerScope.keyNameFor(kind)
-        if (key.length === 0)
-            return
-        drawerSettings.setValue(key + "Visible", visible)
-        drawerSettings.setValue(key + "Height", height)
-        drawerSettings.sync()
-    }
-
-    function writeActivePagePreference(page) {
-        var name = drawerScope.pageNameFor(page)
-        if (name.length === 0)
-            return
-        drawerSettings.setValue("activePage", name)
-        drawerSettings.sync()
-    }
 
     // A monotonic request names the kind whose loaded page takes focus, or -1
     // for the roll. A request whose loader has no item yet is skipped rather
@@ -590,22 +507,10 @@ FocusScope {
 
     Connections {
         target: drawerScope.presenter
-
-        // Swift decides what changed; QML performs the historical write for the
-        // kind the signal names, then syncs so the bytes are on disk. No other
-        // path in this file writes the store.
-        function onDrawerSectionPreferenceChanged(kind, visible, height) {
-            drawerScope.writeSectionPreference(kind, visible, height)
-        }
-
-        function onDrawerActivePagePreferenceChanged(page) {
-            drawerScope.writeActivePagePreference(page)
-        }
-
         function onFocusRequestChanged() {
             drawerScope.executeFocusRequest()
         }
     }
 
-    Component.onCompleted: drawerScope.restoreStoredPreferences()
+    Component.onCompleted: drawerScope.presenter.restoreStoredPreferences()
 }
