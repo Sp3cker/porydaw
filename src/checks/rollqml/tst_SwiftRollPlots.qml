@@ -2,14 +2,6 @@
 // by the rollqml lane:
 //
 //     roll_qml_tests {scratch} -input tst_SwiftRollPlots.qml
-//
-// Ports the deleted nativegraphics tst_playhead_plots.cpp
-// plotGeometryAndLifecycle sequence to the production Swift surface: the roll
-// band and its plot input track the canonical band layout the mounted drawer
-// presenter publishes, across a shrink/restore and a hide/show exposure cycle.
-// The canonical rectangles are the same ones the shared playhead consumes —
-// the presenter's published height/plotOrigin/plotWidth and the hint strip —
-// so the case re-implements no layout policy of its own.
 import QtQuick
 import QtTest
 import PorydawApp
@@ -243,6 +235,94 @@ TestCase {
                "the restored input rect matches the canonical plot column")
         verify(sameRect(head.rollPlotRect, canonicalPlot()),
                "the shared playhead's published roll plot rect matches the canonical column")
+    }
+
+    function test_hostRulerAndVelocityPlotOrigins() {
+        var s = surface()
+        var drawer = s.drawerPresenter
+        var velocityWasVisible = drawer.velocitySection.visible
+        drawer.setSectionVisible(1, true, false)
+        try {
+            var ruler = findChild(s, "timelineQuickRuler")
+            var rulerInput = findChild(s, "timelineRulerInput")
+            var velocity = findChild(s, "velocityPage")
+            verify(ruler && rulerInput && velocity,
+                   "the ruler and velocity band are mounted with their inputs")
+            tryVerify(function() { return velocity.height > 0 }, 5000,
+                      "the visible velocity body has nonzero height")
+            var velocityRuler = findChild(velocity, "velocityRuler")
+            var velocityPlot = findChild(velocity, "velocityPlot")
+            verify(velocityRuler && velocityPlot, "both velocity columns are mounted")
+            var rulerRect = sceneRect(ruler)
+            var rulerInputRect = sceneRect(rulerInput)
+            verify(rulerRect.width > 0 && rulerRect.height > 0
+                   && rulerRect.x === s.headersModel.trackHeaderWidth
+                   && rulerRect.y === 0,
+                   "the ruler band occupies the canonical top edge")
+            verify(rulerInputRect.x === s.timelineSplitX
+                   && rulerInputRect.x + rulerInputRect.width
+                      === rulerRect.x + rulerRect.width,
+                   "the ruler plot begins at the split and ends at its band edge")
+            verify(velocity.plotOrigin === s.timelineSplitX
+                   && velocity.plotOrigin === drawer.plotOrigin
+                   && velocityRuler.width === velocity.plotOrigin
+                   && velocityPlot.x === velocity.plotOrigin
+                   && velocityPlot.x + velocityPlot.width === velocity.width,
+                   "the velocity gutter and plot tile the canonical band")
+            verify(velocityPlot.width > 0 && velocityPlot.height > 0
+                   && velocityPlot.height === velocity.height,
+                   "the velocity plot retains the body viewport bounds")
+        } finally {
+            drawer.setSectionVisible(1, velocityWasVisible, false)
+        }
+    }
+
+    function test_hostBandVisibilityAndEventListProjection() {
+        var s = surface()
+        var drawer = s.drawerPresenter
+        var head = playhead()
+        var velocityClip = findChild(head, "sharedPlayheadVelocityClip")
+        var automationClip = findChild(head, "sharedPlayheadAutomationClip")
+        var rollGuide = findChild(head, "sharedPlayheadEditRollGuide")
+        verify(velocityClip && automationClip && rollGuide,
+               "the mounted playhead exposes separate section projections")
+        var velocityWasVisible = drawer.velocitySection.visible
+        var automationWasVisible = drawer.automationSection.visible
+        var voiceChangesWasVisible = drawer.voiceChangesSection.visible
+        var eventsWereVisible = session.songTabs.selectedTabShowsEvents
+        try {
+            drawer.setSectionVisible(2, false, false)
+            drawer.setSectionVisible(1, true, false)
+            drawer.setSectionVisible(0, true, false)
+            tryVerify(function() {
+                return velocityClip.available && automationClip.available
+                    && velocityClip.clipRect.height + automationClip.clipRect.height > 0
+            }, 5000, "shown sections publish available clips within the clamped drawer")
+            drawer.setSectionVisible(1, false, false)
+            tryVerify(function() {
+                return !velocityClip.available && velocityClip.clipRect.height === 0
+                    && automationClip.available && automationClip.clipRect.height > 0
+            }, 5000, "hidden bands clear every projection")
+            drawer.setSectionVisible(1, true, false)
+            drawer.setSectionVisible(0, false, false)
+            tryVerify(function() {
+                return !automationClip.available && automationClip.clipRect.height === 0
+                    && velocityClip.available && velocityClip.clipRect.height > 0
+            }, 5000, "hiding automation clears its clip while the velocity projection remains")
+            drawer.setSectionVisible(0, true, false)
+            session.songTabs.setSelectedTabEventsVisible(true)
+            tryCompare(s, "showEvents", true)
+            var eventPage = findChild(s, "eventListPage")
+            verify(eventPage && eventPage.visible && !rollInput().visible
+                   && !head.rollBodyVisible && !rollGuide.available
+                   && velocityClip.available && automationClip.available,
+                   "event-list hides only the roll projection")
+        } finally {
+            session.songTabs.setSelectedTabEventsVisible(eventsWereVisible)
+            drawer.setSectionVisible(1, velocityWasVisible, false)
+            drawer.setSectionVisible(0, automationWasVisible, false)
+            drawer.setSectionVisible(2, voiceChangesWasVisible, false)
+        }
     }
 
     // Published SceneRect coordinates are plot-local; the production

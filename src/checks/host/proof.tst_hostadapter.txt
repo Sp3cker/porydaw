@@ -8,6 +8,7 @@ Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (convert
 Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
+Additional Swift counterpart: src/checks/host/HostBehaviorChecks.swift :: hostNoteDiscovery + hostVelocityMarker + hostCosmeticOnly + hostAutomationTempo
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -17,6 +18,8 @@ Command: deno task verify:qml-roll --filter swiftroll-window
 Result: PASS 1/1 ok (post-merge fc39ba34, quoted verification).
 Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose
 Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/swiftcore-projectsession.json, editorqml-drawer.json and swiftroll-window.json record the predicate messages and test functions anchored as S001-S022 below.
+Command: deno task verify --filter swiftcore-projectsession; PORYDAW_ROLL_QML_SUITE=tst_SwiftRollPlots.qml deno task verify:qml-roll --filter swiftroll-window; PORYDAW_ROLL_QML_SUITE=tst_SwiftRollAutomation.qml deno task verify:qml-roll --filter swiftroll-window
+Result: PASS 1/36 swiftcore-projectsession ok plus 1/1 on each roll lane (task-67 locked runs on the frozen tree, quoted from the implementer handoff; ledger writer ran no lane). Execution evidence: build/proof-evidence/swiftcore-projectsession.json lists the HostBehaviorChecks messages anchored as S023-S026/S035-S036 below, and build/proof-evidence/swiftroll-window.json lists the executed QML functions anchored as S027-S034 below.
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -34,8 +37,8 @@ A005 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:67
 Disposition: RETIRED-REPRESENTATION
 
 A006 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:68
-Disposition: GAP
-Mapping/reason: Swift DocumentSession/SongDocument owns the document note projection for track 0; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
   ;
 
@@ -49,8 +52,8 @@ A008 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostada
 Disposition: RETIRED-REPRESENTATION
 
 A009 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:86
-Disposition: GAP
-Mapping/reason: Swift DocumentSession/SongDocument owns fixture note discovery from the loaded document; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
           SongDocument &document = rig->document();
@@ -66,8 +69,8 @@ Original expression:
   QVERIFY(fixtureNote.has_value())
 
 A010 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:87
-Disposition: GAP
-Mapping/reason: Swift PlaybackTimeline/DocumentSession owns the timeline note-on event published for the fixture note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S024
 Source context since previous assertion:
   ;
 
@@ -85,7 +88,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A013 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:101
 Disposition: GAP
-Mapping/reason: Swift DocumentSession/SongDocument owns the loaded song label identity; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: The route101-label message was removed from hostNoteDiscovery in the frozen sources; only a setup fail guard ("opened fixture did not retain its route101 label") remains, with no passing predicate, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -97,7 +100,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A015 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:103
 Disposition: GAP
-Mapping/reason: Swift DocumentSession selected track owns the primary track selection after selectTrack; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: The primary-track message was removed from hostVelocityMarker in the frozen sources; only a setup fail guard ("fixture note selection could not attach to the primary track") remains, with no passing predicate, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -106,7 +109,7 @@ Original expression:
 
 A016 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:104
 Disposition: GAP
-Mapping/reason: Swift DocumentSession note selection owns the note selection set after setNoteSelection; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Mapping/reason: The note-selection message was removed from hostVelocityMarker in the frozen sources; only a setup fail guard ("fixture note selection could not attach to the primary track") remains, with no passing predicate, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -114,8 +117,8 @@ Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), (std::vector<NoteId>{fixtureNote->noteId}))
 
 A017 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:105
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis marker count for the selected note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S025
 Source context since previous assertion:
   ;
 
@@ -123,8 +126,8 @@ Original expression:
   QCOMPARE(area->axis().markerCount(), 1)
 
 A018 | route101FixtureAttachesHostedVelocityMarker | src/checks/host/tst_hostadapter.cpp:106
-Disposition: GAP
-Mapping/reason: Swift VelocityPage/VelocityAxisModel owns the velocity axis marker value for the selected note; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S026
 Source context since previous assertion:
   ;
 
@@ -170,8 +173,8 @@ Original expression:
   QVERIFY(trackHeaders->plotRect.isEmpty())
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
-Disposition: PARTIAL
-Mapping/reason: S002/S003 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) place the other-events band rect between the drawer bottom and the horizontal scrollbar and S015 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll band to the canonical band layout; unproved: the same layout geometry for the ruler and velocity bands (their mounted asserts carry no message anchor).
+Disposition: MATCHED
+Mapping: S027, S028, S029, S030, S015, S002, S003
 Source context since previous assertion:
   ;
           for (songview::TimelineBand band :
@@ -183,8 +186,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A028 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:137
-Disposition: PARTIAL
-Mapping/reason: S003/S005 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) give the other-events band a top at the drawer bottom, a bottom at the horizontal scrollbar and the presenter's font-derived height, so its rect is non-empty; unproved: the ruler and velocity band rects (their mounted asserts carry no message anchor).
+Disposition: MATCHED
+Mapping: S027, S030, S015, S003, S005
 Source context since previous assertion:
   ;
 
@@ -192,8 +195,8 @@ Original expression:
   QVERIFY(!geometry->rect.isEmpty())
 
 A029 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:138
-Disposition: PARTIAL
-Mapping/reason: S007/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) give the other-events band a timelineSplitX-wide gutter and a marker input spanning the remaining roll plot width, and S016 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll input rect to the canonical plot column; unproved: the ruler and velocity band plot rects.
+Disposition: MATCHED
+Mapping: S028, S029, S030, S016, S008
 Source context since previous assertion:
   ;
 
@@ -202,7 +205,7 @@ Original expression:
 
 A030 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:139
 Disposition: PARTIAL
-Mapping/reason: S016 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll input to the canonical plot column whose origin is the track-header width plus the keyboard width; unproved: the plot origin of the other-events, ruler and velocity bands (the mounted ruler/roll/velocity plot-x asserts carry no message anchor).
+Mapping/reason: S028/S029 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostRulerAndVelocityPlotOrigins, mounted) anchor the ruler and velocity plot origins at the split, and S016 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll input to the canonical plot column; unproved: the other-events band plot origin (no message anchor).
 Source context since previous assertion:
   ;
 
@@ -211,7 +214,7 @@ Original expression:
 
 A031 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:140
 Disposition: PARTIAL
-Mapping/reason: S003/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) bound the other-events band between the drawer bottom and the horizontal scrollbar and span its marker input across the roll plot; unproved: the clause that the plot right edge equals the band rect right edge (the mounted plot/rect edge asserts carry no message anchor).
+Mapping/reason: S028 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostRulerAndVelocityPlotOrigins, mounted) anchors the ruler plot ending at its band edge and S029/S030 anchor the velocity plot ending at the band width; unproved: the roll and other-events plot right edges equaling their band rect right edges (no message anchor).
 Source context since previous assertion:
   ;
 
@@ -220,7 +223,7 @@ Original expression:
 
 A032 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:141
 Disposition: PARTIAL
-Mapping/reason: S007/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) put the other-events gutter input on the shared header and keyboard width and the marker input across the roll plot, so the two surfaces tile the band; unproved: the non-intersection predicate itself for every band (the mounted header/plot adjacency asserts carry no message anchor).
+Mapping/reason: S029/S030 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostRulerAndVelocityPlotOrigins, mounted) anchor the velocity gutter and plot tiling the canonical band, so the velocity header rect cannot intersect its plot; unproved: the non-intersection predicate itself for the ruler, roll and other-events bands (no message anchor).
 Source context since previous assertion:
   ;
 
@@ -229,7 +232,7 @@ Original expression:
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
 Disposition: PARTIAL
-Mapping/reason: S002/S005 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) assert the other-events band rect through the mounted item's layout (drawer bottom to horizontal scrollbar, presenter bandHeight) instead of the seven root properties this row reads; unproved: the root-property projection and the ruler/automation/velocity/voice-changes/track-headers entries.
+Mapping/reason: S002/S005 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) assert the other-events band rect through the mounted item's layout (drawer bottom to horizontal scrollbar, presenter bandHeight), and S027-S030 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostRulerAndVelocityPlotOrigins, mounted) anchor the ruler and velocity band rects through their mounted items; unproved: the root-property projection itself and the automation/voice-changes/track-headers entries.
 Source context since previous assertion:
   ;
           }
@@ -329,8 +332,8 @@ Original expression:
               QStringLiteral("timelineVelocityGutterInput")))
 
 A040 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:189
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity band layout geometry presence; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S029, S030
 Source context since previous assertion:
   ;
           const auto velocity = layout.geometry(songview::TimelineBand::Velocity);
@@ -657,8 +660,8 @@ A100 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:362
 Disposition: RETIRED-REPRESENTATION
 
 A101 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:365
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band cleared from the band layout (geometry presence); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S031/S032 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostBandVisibilityAndEventListProjection, mounted) prove the hidden velocity and automation sections clear every playhead projection while the other lane stays available; unproved: the canonical-layout geometry absence itself and the voice-changes data row (never hidden under assertion).
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, false);
@@ -709,8 +712,8 @@ Original expression:
   QVERIFY(plot && gutter)
 
 A105 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:383
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band plot item visibility; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S031 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostBandVisibilityAndEventListProjection, mounted) proves the hidden velocity and automation sections clear every playhead projection; unproved: the plot/gutter input items' own visibility and the voice-changes data row.
 Source context since previous assertion:
   ;
 
@@ -718,8 +721,8 @@ Original expression:
   QVERIFY(!plot->isVisible())
 
 A106 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:384
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band gutter item visibility; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S031/S032 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostBandVisibilityAndEventListProjection, mounted) prove the hidden velocity and automation sections clear every playhead projection; unproved: the plot/gutter input items' own visibility and the voice-changes data row.
 Source context since previous assertion:
   ;
 
@@ -766,8 +769,8 @@ A112 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:40
 Disposition: RETIRED-REPRESENTATION
 
 A113 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:405
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll band cleared from the band layout under the event-list toggle; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S033 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostBandVisibilityAndEventListProjection, mounted) proves the event list hides the roll projection (roll input invisible, roll body hidden, roll guide unavailable) while the velocity and automation projections remain; unproved: the canonical-layout roll geometry absence itself.
 Source context since previous assertion:
   ;
           view.setEventListVisible(true);
@@ -790,8 +793,8 @@ Original expression:
   QVERIFY(roll && gutter)
 
 A115 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:411
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll plot item visibility under the event-list toggle; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S033
 Source context since previous assertion:
   ;
 
@@ -808,8 +811,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A117 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:413
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the velocity band presence while roll is hidden; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S033 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_hostBandVisibilityAndEventListProjection, mounted) proves the velocity projection remains available while the roll projection hides; unproved: the canonical-layout velocity geometry presence itself.
 Source context since previous assertion:
   ;
 
@@ -1004,8 +1007,8 @@ A145 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_host
 Disposition: RETIRED-REPRESENTATION
 
 A146 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:534
-Disposition: GAP
-Mapping/reason: Swift AutomationPage/AutomationParameter owns the automation tempo parameter index discovery; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S036
 Source context since previous assertion:
   ;
           const int tempoIndex = checks::support::automationParameterIndex(
@@ -1097,8 +1100,8 @@ A159 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.c
 Disposition: RETIRED-REPRESENTATION
 
 A160 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:588
-Disposition: GAP
-Mapping/reason: Swift DocumentSession.revision owns the document revision unchanged by the pan gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
 
@@ -1106,8 +1109,8 @@ Original expression:
   QCOMPARE(host.document().revision(), revision)
 
 A161 | automationPanRoutesThroughQuickWindow | src/checks/host/tst_hostadapter.cpp:589
-Disposition: GAP
-Mapping/reason: Swift DocumentSession history (coreEditHistoryCountAtTip) owns the history depth unchanged by the pan gesture; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: MATCHED
+Mapping: S035
 Source context since previous assertion:
   ;
 
@@ -1269,8 +1272,8 @@ A183 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/
 Disposition: RETIRED-REPRESENTATION
 
 A184 | voiceChangesRefreshWithoutInvalidatingAutomationRaster | src/checks/host/tst_hostadapter.cpp:680
-Disposition: GAP
-Mapping/reason: Swift VoiceChangesPage/VoiceChangesPublication owns the voice band raster changed by the voice change; no equivalent predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The assertion compares two captureQuickBand QImage raster captures of the voice band (c17d966f:tst_hostadapter.cpp:663-678); raster comparisons pin the deleted harness framebuffer and are never re-proved.
 Source context since previous assertion:
   ;
 
@@ -1399,3 +1402,45 @@ Anchor: message "A009: setting loop start moves its marker to the cell edge"
 
 S022 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
 Anchor: message "A015/A017: the end marker is one snap cell later and changes the song"
+
+S023 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "track zero projects two seeded notes"
+
+S024 | hostNoteDiscovery | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "route101 fixture notes resolve from the loaded document with timeline note-on events"
+
+S025 | hostVelocityMarker | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "the selected note publishes one axis marker"
+
+S026 | hostVelocityMarker | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "the marker value equals the fixture velocity"
+
+S027 | test_hostRulerAndVelocityPlotOrigins | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the ruler band occupies the canonical top edge"
+
+S028 | test_hostRulerAndVelocityPlotOrigins | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the ruler plot begins at the split and ends at its band edge"
+
+S029 | test_hostRulerAndVelocityPlotOrigins | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the velocity gutter and plot tile the canonical band"
+
+S030 | test_hostRulerAndVelocityPlotOrigins | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the velocity plot retains the body viewport bounds"
+
+S031 | test_hostBandVisibilityAndEventListProjection | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "hidden bands clear every projection"
+
+S032 | test_hostBandVisibilityAndEventListProjection | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "hiding automation clears its clip while the velocity projection remains"
+
+S033 | test_hostBandVisibilityAndEventListProjection | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "event-list hides only the roll projection"
+
+S034 | test_hostAutomationTempoViewport | src/checks/rollqml/tst_SwiftRollAutomation.qml
+Anchor: message "the automation plot fills the viewport at the split"
+
+S035 | hostCosmeticOnly | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "pan attempts leave song bytes, revision and undo depth untouched"
+
+S036 | hostAutomationTempo | src/checks/host/HostBehaviorChecks.swift
+Anchor: message "the tempo parameter index resolves"

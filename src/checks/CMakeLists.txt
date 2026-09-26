@@ -197,6 +197,7 @@ if(APPLE)
         velocity/VelocityPageChecks.swift
         drawerpresentation/VoiceChangesPageChecks.swift
         automation/AutomationPageChecks.swift
+        host/HostBehaviorChecks.swift
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift

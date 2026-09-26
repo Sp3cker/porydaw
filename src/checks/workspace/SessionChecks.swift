@@ -80,6 +80,7 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
     runAutomationPageChecks(report, session: session, service: service)
+    runHostBehaviorChecks(report, session: session, service: service, fixtureRoot: fixtureRoot)
     drawerOriginalNumericPromptTransaction(report, suite: session, service: service)
     editorSelectionCommandChecks(report, suite: session, service: service)
     runTimeRoutingChecks(report: report, suite: session, service: service)
