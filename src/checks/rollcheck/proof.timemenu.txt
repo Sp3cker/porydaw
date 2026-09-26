@@ -51,8 +51,22 @@ deno task verify --filter swiftcore --qt projectSession lane is the one the task
 names for the presenter predicates; the controller re-runs it on the settled tree. This
 proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose --qt projectSession, and
+deno task verify:shell --filter shell-grid-menu --verbose (task-53b frozen sources)
+Result: PASS — implementer-recorded runs on the frozen sources: the projectSession lane passed
+(1/36 selected harness; 4 Qt results, 0 failed) and the mounted shell-grid-menu lane passed
+(1/26 selected harnesses). Evidence freshness: build/proof-evidence/
+swiftcore-projectsession.json (mtime 2026-09-26 16:06:34) postdates timemenu.swift (16:03:27)
+and tst_ShellGridMenu.qml (16:00:15), and shell-grid-menu.json (16:04:11) postdates the QML edit;
+every literal cited by S069-S098 is present in that evidence, the QML anchors classifying through
+the recorded test function names (the sweepNoteRange helper anchor S074 classifies unverifiable
+under that rule and is cited through the executed escape test S075). This task-53b ledger pass
+closed the two remaining GAP rows (A064 by the nudge no-edit predicate, A099 by the note-only
+Duplicate seed assert) and indexed the time-menu Clear row; it ran no lane, rebuilt nothing and
+re-ran no check, so the controller still owns the green re-run on the settled tree.
 
-Counts: MATCHED 76, PARTIAL 8, GAP 2, RETIRED-REPRESENTATION 14
+
+Counts: MATCHED 78, PARTIAL 8, GAP 0, RETIRED-REPRESENTATION 14
 
 A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
 Disposition: MATCHED
@@ -480,8 +494,8 @@ Disposition: MATCHED
 Mapping: S024
 
 A064 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:340
-Disposition: GAP
-Mapping/reason: GAP: no message-anchored predicate activates the time menu's Clear row; the selection clear is proved by the threshold/empty-space clicks (S087) and the Clear row's enablement by S024. Missing assertion site.
+Disposition: MATCHED
+Mapping: S036 (the empty-content nudge's no-edit predicate asserts the unchanged undo count with the bytes, revision and undo index)
 Source context since previous assertion:
   ;
 Original expression:
@@ -683,8 +697,8 @@ Disposition: MATCHED
 Mapping: S006
 
 A099 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:531
-Disposition: GAP
-Mapping/reason: GAP — the sweep menu test does not create or locate the original fixture seed note before switching from time selection to note-only selection.
+Disposition: MATCHED
+Mapping: S093 (checkNoteDuplicateArming asserts the seeded note's track, tick, pitch, duration and velocity — the executed fixture-seed lookup counterpart)
 Source context since previous assertion:
   ;
       // Note-only selection: the same canonical Duplicate command enables for
@@ -1010,6 +1024,26 @@ Anchor: message "an empty-band nudge moves the start to the next snap tick"
 
 S092 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
 Anchor: message "an empty-band nudge moves the end to start plus the band length"
+
+S093-S098 are the task-53 additions of the note-only Duplicate seed and the time-menu Clear row: S093 the note-only Duplicate fixture seed of checkNoteDuplicateArming (the A099 seed lookup), S094/S095/S096 the nudged empty band's Clear-row activation of checkEmptyTimeSelectionNudge (the enabled Clear row, the menu close with the dropped band, and the untouched undo stack), and S097/S098 the mounted rendered Clear-row activation of tst_ShellGridMenu.qml test_timeMenuClearRowDropsSelectionWithoutEditingSong (the dropped time selection and the unchanged applied revision). S094-S098 pin no timemenu.cpp site: the native suite activates no time-menu Clear row, so they record the added Swift surface and cite no A row (the A064 undo-count conjunct stays cited to S036, the empty-band nudge's own no-edit predicate).
+
+S093 | checkNoteDuplicateArming | src/checks/rollcheck/timemenu.swift
+Anchor: message "the sweep seed note is reachable for note-only Duplicate"
+
+S094 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
+Anchor: message "the time menu offers Clear for the nudged empty band"
+
+S095 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
+Anchor: message "the time menu Clear row closes and drops the empty band"
+
+S096 | checkEmptyTimeSelectionNudge | src/checks/rollcheck/timemenu.swift
+Anchor: message "the time menu Clear row leaves the undo stack untouched"
+
+S097 | test_timeMenuClearRowDropsSelectionWithoutEditingSong | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the rendered time menu Clear row drops the time selection"
+
+S098 | test_timeMenuClearRowDropsSelectionWithoutEditingSong | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the rendered time menu Clear row writes no song edit"
 
 Remaining original source (closing sequence and helper bodies):
   ;

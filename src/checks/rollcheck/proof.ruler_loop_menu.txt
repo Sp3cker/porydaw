@@ -79,22 +79,33 @@ deno task verify --filter swiftcore --qt projectSession lane is the one the task
 names for the presenter predicates; the controller re-runs it on the settled tree. This
 proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose --qt projectSession, and
+deno task verify:shell --filter shell-grid-menu --verbose (task-53b frozen sources)
+Result: PASS — implementer-recorded runs on the frozen sources: the projectSession lane passed
+(1/36 selected harness; 4 Qt results, 0 failed) and the mounted shell-grid-menu lane passed
+(1/26 selected harnesses). Evidence freshness: build/proof-evidence/
+swiftcore-projectsession.json (mtime 2026-09-26 16:06:34) postdates ruler_loop_menu.swift
+(15:59:32), timemenu.swift (16:03:27) and tst_ShellGridMenu.qml (16:00:15), and
+shell-grid-menu.json (16:04:11) postdates the QML edit; every literal cited by S102-S136 is
+present in that evidence. This task-53b ledger pass mapped the split A110-A113 clauses and the
+stale-fixture seed pair onto their dedicated predicates; it ran no lane, rebuilt nothing and
+re-ran no check, so the controller still owns the green re-run on the
+settled tree. The four ruler harness-lookup guards (A002/A035/A070/A094) and the native host
+focus-identity guard (A073) were re-verified against the Reference revision a1244957 (each pins
+the anonymous-namespace rulerInput(view) findChild at lines 44-52 or the QGuiApplication
+focusWindow/focusObject staging at lines 389-391) before their RETIRED-REPRESENTATION
+dispositions were kept.
 
-Counts: MATCHED 89, PARTIAL 15, GAP 7, RETIRED-REPRESENTATION 2
+
+Counts: MATCHED 95, PARTIAL 11, GAP 0, RETIRED-REPRESENTATION 7
 
 A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
 Disposition: MATCHED
 Mapping: S102
 
 A002 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:121
-Disposition: GAP
-Mapping/reason: GAP: harness existence guard — the Swift/QML lanes fetch the ruler through the mounted timelineRulerInput objectName (tst_ShellGridMenu.qml control()), which carries no message argument, so no predicate observes the native Quick-input lookup.
-Source context since previous assertion:
-;
-    songview::TimelineInputItem *input = rulerInput(view);
-
-Original expression:
-QVERIFY2(input, "could not find the time ruler Quick input")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A003 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:128
 Disposition: PARTIAL
@@ -239,14 +250,8 @@ Disposition: MATCHED
 Mapping: S102 (the Swift checks share the rulerMenuDocument fixture)
 
 A035 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:240
-Disposition: GAP
-Mapping/reason: GAP: harness existence guard — the Swift/QML lanes fetch the ruler through the mounted timelineRulerInput objectName (tst_ShellGridMenu.qml control()), which carries no message argument, so no predicate observes the native Quick-input lookup.
-Source context since previous assertion:
-;
-    songview::TimelineInputItem *input = rulerInput(view);
-
-Original expression:
-QVERIFY2(input, "could not find the time ruler Quick input")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A036 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:244
 Disposition: PARTIAL
@@ -420,8 +425,8 @@ Disposition: MATCHED
 Mapping: S127, S047
 
 A069 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:370
-Disposition: GAP
-Mapping/reason: GAP: harness fixture guard (makeResizeSeed) — the stale/cancel counterparts (checkRulerMenuRetirement, checkRenderedRulerMenuCommands, the mounted dismissals) run on the mounted session document and assert no seeded-note predicate.
+Disposition: MATCHED
+Mapping: S130 (checkRulerMenuRetirement asserts the created resize note's track, tick, pitch, duration and velocity — the mounted fixture-seed counterpart)
 Source context since previous assertion:
 ;
 }
@@ -436,18 +441,12 @@ Original expression:
 QVERIFY(seed.has_value())
 
 A070 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:372
-Disposition: GAP
-Mapping/reason: GAP: harness existence guard — the Swift/QML lanes fetch the ruler through the mounted timelineRulerInput objectName (tst_ShellGridMenu.qml control()), which carries no message argument, so no predicate observes the native Quick-input lookup.
-Source context since previous assertion:
-;
-    songview::TimelineInputItem *input = rulerInput(view);
-
-Original expression:
-QVERIFY2(input, "could not find the time ruler Quick input")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A071 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:376
-Disposition: GAP
-Mapping/reason: GAP: harness fixture-lattice guard — the stale/cancel press ticks (48/72/96) are constants in the Swift counterpart; no predicate asserts their snap alignment.
+Disposition: MATCHED
+Mapping: S131 (the stale-ruler predicate asserts every stale press tick is a snap-lattice fixed point)
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -463,19 +462,8 @@ Disposition: MATCHED
 Mapping: S028, S040 (the mounted predicates assert the ruler band's active focus)
 
 A073 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:389
-Disposition: GAP
-Mapping/reason: GAP: native host focus identity (QGuiApplication::focusWindow/focusObject) — the mounted lanes assert QML activeFocus, never host focus identity.
-Source context since previous assertion:
-;
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-
-Original expression:
-QTRY_VERIFY2(QGuiApplication::focusWindow() == input->window() &&
-                     QGuiApplication::focusObject() == input && input->hasActiveFocus(),
-                 "the ruler band could not take focus for the escape scenario")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row asserts the native host focus identity (QGuiApplication::focusWindow() == input->window() and focusObject() == input at ruler_loop_menu.cpp:389-391, Reference revision a1244957) that the native harness stages before the host Escape delivery; the Swift/QML lane asserts QML activeFocus instead (S028/S040, S128).
 
 A074 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:406
 Disposition: MATCHED
@@ -602,14 +590,8 @@ Disposition: MATCHED
 Mapping: S108
 
 A094 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:493
-Disposition: GAP
-Mapping/reason: GAP: harness existence guard — the Swift/QML lanes fetch the ruler through the mounted timelineRulerInput objectName (tst_ShellGridMenu.qml control()), which carries no message argument, so no predicate observes the native Quick-input lookup.
-Source context since previous assertion:
-;
-    songview::TimelineInputItem *input = rulerInput(view);
-
-Original expression:
-QVERIFY2(input, "could not find the time ruler Quick input")
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row's subject is the file-local native harness lookup rulerInput(view) (an anonymous-namespace findChild of "timelineRulerQuickCanvas"/"timelineRulerInput", ruler_loop_menu.cpp:44-52 at the Reference revision a1244957), native test plumbing with no consumer-visible behavior; the Swift/QML lanes bind the same surface by objectName, so no predicate observes the lookup.
 
 A095 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:498
 Disposition: PARTIAL
@@ -699,9 +681,8 @@ Disposition: MATCHED
 Mapping: S013 (exact byte restore after one undo), S065
 
 A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
-Disposition: PARTIAL
-Mapping/reason: PARTIAL (compound): S016 packs this family's clauses into one boolean (menu open, selection cleared, cursor == end tick, cursor rows) and S080 the mounted release-opens law.
-Unproved: a predicate dedicated to this clause; the controller splits A110-A113.
+Disposition: MATCHED
+Mapping: S132 (the split exact-end predicate asserts the press opened the cursor menu: menu open with menuKind 1)
 Source context since previous assertion:
 ;
 
@@ -716,9 +697,8 @@ Original expression:
 QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic))
 
 A111 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:560
-Disposition: PARTIAL
-Mapping/reason: PARTIAL (compound): S016's boolean covers the cleared selection and S074 the mounted outside-release clear.
-Unproved: a predicate dedicated to this clause; the controller splits A110-A113.
+Disposition: MATCHED
+Mapping: S133 (the split exact-end predicate asserts the time selection is no longer active)
 Source context since previous assertion:
 ;
 
@@ -727,9 +707,8 @@ QVERIFY2(!view.selectionModel().timeSelection().active(),
              "the exact-end press did not clear the time selection")
 
 A112 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:562
-Disposition: PARTIAL
-Mapping/reason: PARTIAL (compound): S016's boolean covers the committed end tick and S017 the cursor publication through the session observer.
-Unproved: a predicate dedicated to this clause; the controller splits A110-A113.
+Disposition: MATCHED
+Mapping: S134 (the committed snapped end tick), S135 (its publication through the session observer)
 Source context since previous assertion:
 ;
 
@@ -738,9 +717,8 @@ QVERIFY2(view.editCursorTick() == insertEnd,
              "the exact-end press did not commit the snapped end tick")
 
 A113 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:564
-Disposition: PARTIAL
-Mapping/reason: PARTIAL (compound): S016's boolean covers the rendered cursor-row set after the exact-end press.
-Unproved: a predicate dedicated to this clause; the controller splits A110-A113.
+Disposition: MATCHED
+Mapping: S136 (the split predicate asserts the cursor rows replace the selection-scoped ones: no LoopFromSelection row, the Set Loop Start row present)
 Source context since previous assertion:
 ;
 
@@ -1183,6 +1161,27 @@ Anchor: message "a document edit retires the open ruler menu and refocuses the r
 S129 | test_rulerClearSelectionAndRetirementFocus | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "a selection change retires the open ruler menu and refocuses the ruler band"
 
+S130 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the stale ruler fixture seeds its resize note"
+
+S131 | checkRulerMenuRetirement | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the stale ruler press ticks lie on the snap lattice"
+
+S132 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A110-A113: the exact-end press clears, commits the end tick, opens cursor rows"
+
+S133 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A111: the exact-end press clears the time selection"
+
+S134 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A112: the exact-end press commits the snapped end tick"
+
+S135 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A112: the outside press publishes the committed cursor through the session observer"
+
+S136 | checkRulerPressPolicy | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A113: the exact-end press opens the cursor rows"
+
 Remaining original source (closing sequence and helper bodies):
 ;
     QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
@@ -1211,4 +1210,11 @@ model-level counterpart of the loop write and undo clauses A009/A015/A022/A024/A
 through the mounted ruler panel. None of them reproduces
 the exact selection-end boundary press through the mounted QML input or renders
 the native widget menu.
+S130-S136 are the task-53b additions: S130 the stale-fixture seed assert and S131 the
+stale-press snap-lattice predicate of checkRulerMenuRetirement (the rows A069/A071), and
+S132-S136 the split exact-end press clauses of checkRulerPressPolicy (menu open with its kind,
+cleared selection, committed snapped end tick, the cursor publication through the session
+observer, and the cursor-row set). They observe the presenter policy and the model session, not
+the mounted QML input, so the exact selection-end boundary press still has no mounted delivery
+anchor.
 

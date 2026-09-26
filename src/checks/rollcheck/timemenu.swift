@@ -184,14 +184,24 @@ private func checkNoteDuplicateArming(_ report: CheckReport, session: DocumentSe
         session.selectedTrack = oldTrack
         session.setSelectedNotes(oldNotes)
     }
-    guard let note = session.document.notes(in: 0).first else {
-        report.fail(id, "the availability fixture has no source note")
-        return
+    let grid = PianoGrid(session: session)
+    let tick = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
+    let seedID = (try? session.document.addNotes([
+        NewNote(track: 0, tick: tick, pitch: 60, duration: 6, velocity: 100)
+    ]))?.first
+    defer {
+        if seedID != nil { _ = session.document.history.undoDocument() }
     }
+    let seed = seedID.flatMap { session.document.note($0) }
+    report.expect(seed.map {
+        $0.track == 0 && $0.tick == tick && $0.pitch == 60
+            && $0.duration == 6 && $0.velocity == 100
+    } == true, cppID: id,
+    message: "the sweep seed note is reachable for note-only Duplicate")
+    guard let note = seed else { return }
     session.selectPrimaryTrack(0)
     session.clearTimeSelection()
     session.setSelectedNotes([note.id])
-    let grid = PianoGrid(session: session)
     report.expect(session.timeSelection == nil
                   && grid.commandAvailable(command: EditCommand.duplicate.rawValue),
                   cppID: id, message: "Duplicate stays enabled for a note-only selection")
@@ -395,6 +405,17 @@ private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: Docume
                   && session.document.history.undoIndex == undoIndex
                   && session.document.history.undoCount == undoCount,
                   cppID: id, message: "nudging an empty band publishes no document edit")
+    let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
+    menu.openTimeSelection(tick: expectedStart + 1)
+    report.expect(menu.isOpen && menu.menuKind == 2
+                  && menu.rows.contains(where: { $0.actionId == 8 && $0.enabled }),
+                  cppID: id, message: "the time menu offers Clear for the nudged empty band")
+    _ = menu.activate(actionId: 8)
+    report.expect(!menu.isOpen && session.timeSelection == nil,
+                  cppID: id, message: "the time menu Clear row closes and drops the empty band")
+    report.expect(session.document.history.undoCount == undoCount
+                  && session.document.history.undoIndex == undoIndex,
+                  cppID: id, message: "the time menu Clear row leaves the undo stack untouched")
 }
 
 @MainActor

@@ -1408,6 +1408,23 @@ TestCase {
         menuStatusSpy.target = null
     }
 
+    function test_timeMenuClearRowDropsSelectionWithoutEditingSong() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var range = sweepNoteRange()
+        compare(session.gridCommandAvailable(17), true)
+        var revision = grid.appliedRevisionText
+        var menu = openTimeMenu(range.midX)
+        var clearRow = rulerRowIndex(menu, 8)
+        verify(clearRow >= 0 && menu.rowItem(clearRow).itemData.enabled)
+        clickRow(menu, clearRow)
+        tryVerify(rulerMenuGone, 3000)
+        compare(session.gridCommandAvailable(17), false,
+                "the rendered time menu Clear row drops the time selection")
+        compare(grid.appliedRevisionText, revision,
+                "the rendered time menu Clear row writes no song edit")
+    }
+
     function test_timeMenuRenderedRangePasteClearsSelectionAndAdvancesCursor() {
         var session = openSong()
         var grid = surface().gridModel

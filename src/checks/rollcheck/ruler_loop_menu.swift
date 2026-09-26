@@ -45,9 +45,21 @@ private func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSe
             guard session.document.history.undoDocument() else { break }
         }
     }
+    let track = session.selectedTrack ?? 0
+    let seed = try? session.document.addNotes([
+        NewNote(track: track, tick: rulerSeedTick, pitch: 60, duration: 6, velocity: 100)
+    ])
+    report.expect(seed?.first.flatMap { session.document.note($0) }.map {
+        $0.track == track && $0.tick == rulerSeedTick && $0.pitch == 60
+            && $0.duration == 6 && $0.velocity == 100
+    } == true, cppID: id, message: "the stale ruler fixture seeds its resize note")
+    guard seed?.first != nil else { return }
     session.document.setLoop(end: false, tick: nil)
     session.document.setLoop(end: true, tick: nil)
     let at = session.camera.contentX(tick: 48)
+    report.expect([Tick(48), 72, 96].allSatisfy {
+        Tick(grid.snapTickDown(Double($0))) == $0
+    }, cppID: id, message: "the stale ruler press ticks lie on the snap lattice")
     openRulerMenu(menu, at: at)
     let revision = session.document.revision
     let identity = session.document.history.currentIdentity
@@ -671,13 +683,16 @@ private func checkRulerPressPolicy(
     }
     openRulerMenu(menu, at: session.camera.contentX(tick: Double(endTick) + 0.5))
     session.onChange = priorEndChange
-    report.expect(menu.isOpen && menu.menuKind == 1
-                  && automation.selection?.isActive != true
-                  && session.editCursor == endTick
-                  && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 })
-                  && (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }),
+    report.expect(menu.isOpen && menu.menuKind == 1,
                   cppID: id,
                   message: "A110-A113: the exact-end press clears, commits the end tick, opens cursor rows")
+    report.expect(automation.selection?.isActive != true,
+                  cppID: id, message: "A111: the exact-end press clears the time selection")
+    report.expect(session.editCursor == endTick,
+                  cppID: id, message: "A112: the exact-end press commits the snapped end tick")
+    report.expect(!(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 })
+                  && (0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }),
+                  cppID: id, message: "A113: the exact-end press opens the cursor rows")
     report.expect(endPublications.contains(where: { $0.contains(.cursor) }), cppID: id,
                   message: "A112: the outside press publishes the committed cursor through the session observer")
     menu.close()
