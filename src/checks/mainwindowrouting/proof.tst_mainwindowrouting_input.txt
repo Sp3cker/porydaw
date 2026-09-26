@@ -30,6 +30,20 @@ run_checks PASS. Controller-run on the same frozen tree; the ledger agent did no
 Command: deno task verify:shell --filter shell-transport --verbose
 Result: PASS — shell-transport 1/1 applicable (4.78s).
 
+Task 46 note (fork menu surface landed; ledger re-verification only, no lane run): the new mounted
+menu predicates (tst_ShellMenus.qml test_forkMenuTopologyAndLabels,
+test_forkNoteContextShapeAndLoopGates and test_loopMenuCommandsUseCursorAndUndoOneMarkerAtATime;
+tst_ShellGridMenu.qml test_forkRulerAndTimeMenuWordingAndHints) execute no clause of this ledger's
+sites. The catalogueViewBindingsReachPersistentQuickFocus rows A022–A034 stay GAP as native
+QAction shortcut/tooltip/signal-delivery representations, because the Swift app has no QWidget
+layer and the QML menu-item observations the shell-menus lane makes are not the native action
+lookup this ledger pins. Every S anchor still resolves against the task-46 tst_ShellWindow.qml
+(S186 at :994, S187 at :945, S188 at :1025, S189 at :1040, S190 at :1041, S191 at :652 inside
+test_eTimeAndTracksMenuContainment, whose editIds list task 46 extended with songs.find and the
+four loop actions while the S191 literal itself is unchanged); no counterpart hash of a task-46
+source is pinned in this ledger, so no re-pin was needed. The pinned Original SHA-256 is the
+historical C++ original and is unchanged.
+
 A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
 Disposition: GAP
 Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.

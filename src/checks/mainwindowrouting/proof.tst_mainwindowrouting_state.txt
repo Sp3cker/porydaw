@@ -14,6 +14,7 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
@@ -31,6 +32,20 @@ remaining drawer, EditorViewState fanout/persistence, signal-count, byte,
 revision and snapshot rows stay GAP: cross-tab fanout plus QSettings
 persistence are not yet ported (the Swift app has no EditorViewState), and the
 single-layout drawer harness has no tab projection or key/action delivery.
+
+Task 46 note (fork menu surface landed; ledger re-verification only, no lane run): the mounted
+menu-topology predicates added under test_forkMenuTopologyAndLabels in
+src/checks/editorqml/tst_ShellMenus.qml execute the Edit-menu clauses this ledger pins, so those
+rows now carry that counterpart beside their tst_ShellWindow.qml rows — the head clipboard group
+(S208 on A074), the eight nested command submenus (S209/S210 on A075/A076) and the Time and
+Tracks submenu action lists (S211 on A077/A078, S212 on A079). No open row of this ledger is
+executed by the new menu predicates: A069–A072, A082–A085 and A094–A099 stay GAP on their native
+QAction pointer-identity/wiring reasons (the Swift app has no QWidget layer; the "stay NATIVE"
+summary above is not the disposition these rows carry), and A087–A091 stay GAP for the missing
+explicit rebind(nullptr) seam. Every S anchor still resolves against the task-46 tst_ShellWindow.qml
+(S193 at :608, S194 at :623, S195 at :641, S196 at :612, S207 at :645) and against the unchanged
+functions S186–S191/S197; no counterpart hash of a task-46 source is pinned in this ledger, so no
+re-pin was needed. The pinned Original SHA-256 is the historical C++ original and is unchanged.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — build ok (0.15s); ok swiftcore (10.38s); verify 1/6 ok (5 skipped);
@@ -693,27 +708,27 @@ Mapping: S187
 
 A074 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:231
 Disposition: MATCHED
-Mapping: S188
+Mapping: S188, S208
 
 A075 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:234
 Disposition: MATCHED
-Mapping: S193, S194
+Mapping: S193, S194, S209, S210
 
 A076 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:235
 Disposition: MATCHED
-Mapping: S193, S194
+Mapping: S193, S194, S209, S210
 
 A077 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:236
 Disposition: MATCHED
-Mapping: S195, S196
+Mapping: S195, S196, S211
 
 A078 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:237
 Disposition: MATCHED
-Mapping: S195, S196
+Mapping: S195, S196, S211
 
 A079 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:238
 Disposition: MATCHED
-Mapping: S207
+Mapping: S207, S212
 
 A080 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:242
 Disposition: MATCHED
@@ -2965,3 +2980,18 @@ Anchor: function
 
 S207 | test_eTimeAndTracksMenuContainment | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Tracks mounts " #1
+
+S208 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the Edit clipboard head follows Undo and Redo"
+
+S209 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the Edit menu mounts "
+
+S210 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the Edit menu nests the fork's eight command submenus in order"
+
+S211 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the Time submenu retains the fork actions"
+
+S212 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
+Anchor: message "the Tracks submenu retains the fork actions"

@@ -8,14 +8,14 @@ import PorydawAppCommands
 public final class RulerMenuRow {
     public var actionId: Int = 0
     public var text: String = ""
+    public var shortcutText: String = ""
     public var enabled: Bool = true
     public var separator: Bool = false
 
     public init() {}
 
-    init(_ id: Int, _ title: String, _ available: Bool = true) {
+    init(_ id: Int, _ available: Bool = true) {
         actionId = id
-        text = title
         enabled = available
     }
 
@@ -38,6 +38,18 @@ public final class RulerMenuPresenter {
         case duplicate, removeContents, clearSelection, editTimeSignature
         case removeTimeSignature, copy, cut, paste, deleteSelection
     }
+    private static let keybindingIds: [Action: String] = [
+        .copy: "roll.copy", .cut: "roll.cut", .paste: "roll.paste",
+        .deleteSelection: "roll.delete", .insertTime: "edit.insert_time",
+        .duplicate: "roll.duplicate_time", .removeContents: "edit.delete_time",
+        .clearSelection: "edit.clear_time_selection",
+        .loopFromSelection: "edit.loop_from_selection",
+        .setLoopStart: "edit.set_loop_start", .setLoopEnd: "edit.set_loop_end",
+        .removeLoop: "edit.remove_loop",
+        .editTimeSignature: "edit.edit_time_signature",
+        .removeTimeSignature: "edit.remove_time_signature",
+    ]
+    private let keybindings = KeybindingRegistry()
     private static let controlModifier = 0x0400_0000
     @QtTracked public var isOpen = false
     public var rows: QListModel<RulerMenuRow> = QListModel()
@@ -120,25 +132,24 @@ public final class RulerMenuPresenter {
         let hasLoop = loop.loopStartTick != TimeDefaults.noTick || loop.loopEndTick != TimeDefaults.noTick
         var items: [RulerMenuRow] = []
         if inside {
-            items = [RulerMenuRow(Action.loopFromSelection.rawValue, "Loop from Selection"),
-                     RulerMenuRow(Action.insertTime.rawValue, "Insert Time",
+            items = [RulerMenuRow(Action.loopFromSelection.rawValue),
+                     RulerMenuRow(Action.insertTime.rawValue,
                                   automation.selectionCommandAvailable(command: .insertTime)),
-                     RulerMenuRow(Action.duplicate.rawValue, "Duplicate Time",
+                     RulerMenuRow(Action.duplicate.rawValue,
                                   automation.selectionCommandAvailable(command: .duplicate)),
-                     RulerMenuRow(Action.removeContents.rawValue, "Delete Time",
+                     RulerMenuRow(Action.removeContents.rawValue,
                                   automation.selectionCommandAvailable(command: .deleteTime)),
-                     RulerMenuRow(Action.clearSelection.rawValue, "Clear Time Selection"),
-                     .divider(), RulerMenuRow(Action.removeLoop.rawValue, "Remove Loop Markers", hasLoop)]
+                     RulerMenuRow(Action.clearSelection.rawValue),
+                     .divider(), RulerMenuRow(Action.removeLoop.rawValue, hasLoop)]
         } else {
-            items = [RulerMenuRow(Action.insertTime.rawValue, "Insert Time",
-                                  tick < TimeDefaults.maxTick),
-                     RulerMenuRow(Action.paste.rawValue, "Paste", canPaste),
-                     .divider(), RulerMenuRow(Action.setLoopStart.rawValue, "Set Loop Start"),
-                     RulerMenuRow(Action.setLoopEnd.rawValue, "Set Loop End"),
-                     RulerMenuRow(Action.removeLoop.rawValue, "Remove Loop Markers", hasLoop),
-                     .divider(), RulerMenuRow(Action.editTimeSignature.rawValue, "Edit Time Signature")]
+            items = [RulerMenuRow(Action.insertTime.rawValue, tick < TimeDefaults.maxTick),
+                     RulerMenuRow(Action.paste.rawValue, canPaste),
+                     .divider(), RulerMenuRow(Action.setLoopStart.rawValue),
+                     RulerMenuRow(Action.setLoopEnd.rawValue),
+                     RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
+                     .divider(), RulerMenuRow(Action.editTimeSignature.rawValue)]
             let explicit = session.document.timeSignatures.contains { $0.tick == tick }
-            items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, "Remove Time Signature", explicit))
+            items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, explicit))
         }
         publish(items)
         menuKind = 1
@@ -157,21 +168,21 @@ public final class RulerMenuPresenter {
         capturedRevision = session.document.revision
         capturedCursor = session.editCursor
         capturedSelection = selection
-        publish([RulerMenuRow(Action.copy.rawValue, "Copy",
+        publish([RulerMenuRow(Action.copy.rawValue,
                               automation.selectionCommandAvailable(command: .copy)),
-                 RulerMenuRow(Action.cut.rawValue, "Cut",
+                 RulerMenuRow(Action.cut.rawValue,
                               automation.selectionCommandAvailable(command: .cut)),
-                 RulerMenuRow(Action.deleteSelection.rawValue, "Delete Selection",
+                 RulerMenuRow(Action.deleteSelection.rawValue,
                               automation.selectionCommandAvailable(command: .delete)),
-                 RulerMenuRow(Action.insertTime.rawValue, "Insert Time",
+                 RulerMenuRow(Action.insertTime.rawValue,
                               automation.selectionCommandAvailable(command: .insertTime)),
-                 RulerMenuRow(Action.duplicate.rawValue, "Duplicate Time",
+                 RulerMenuRow(Action.duplicate.rawValue,
                               automation.selectionCommandAvailable(command: .duplicate)),
-                 RulerMenuRow(Action.removeContents.rawValue, "Delete Time",
+                 RulerMenuRow(Action.removeContents.rawValue,
                               automation.selectionCommandAvailable(command: .deleteTime)),
-                 RulerMenuRow(Action.paste.rawValue, "Paste", canPaste),
+                 RulerMenuRow(Action.paste.rawValue, canPaste),
                  .divider(),
-                 RulerMenuRow(Action.clearSelection.rawValue, "Clear Time Selection")])
+                 RulerMenuRow(Action.clearSelection.rawValue)])
         menuKind = 2
     }
 
@@ -373,6 +384,12 @@ public final class RulerMenuPresenter {
 
     private func publish(_ items: [RulerMenuRow]) {
         close()
+        for row in items {
+            guard let action = Action(rawValue: row.actionId),
+                  let id = Self.keybindingIds[action] else { continue }
+            row.text = keybindings.label(id)
+            row.shortcutText = keybindings.sequences(id).first?.nativeText ?? ""
+        }
         rowSnapshot = items
         rows.replaceSubrange(0..<rows.count, with: items)
         isOpen = true

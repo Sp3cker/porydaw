@@ -27,6 +27,11 @@ final class NoteCommands {
         case .selectAll, .muteTracks, .soloTracks,
              .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
             return selectedTrack != nil
+        case .setLoopStart, .setLoopEnd:
+            return true
+        case .removeLoop:
+            return session.timeline.loopStartTick != TimeDefaults.noTick
+                || session.timeline.loopEndTick != TimeDefaults.noTick
         default:
             return false
         }
@@ -81,6 +86,13 @@ final class NoteCommands {
                 resizeTrailing(Int64(max(1, snapTicks)))
             case .shortenNote:
                 resizeTrailing(-Int64(max(1, snapTicks)))
+            case .setLoopStart:
+                session.document.setLoop(end: false, tick: Int64(editCursor))
+            case .setLoopEnd:
+                session.document.setLoop(end: true, tick: Int64(editCursor))
+            case .removeLoop:
+                session.document.setLoop(end: false, tick: nil)
+                session.document.setLoop(end: true, tick: nil)
             default:
                 return false
             }

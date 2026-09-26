@@ -626,13 +626,12 @@ TestCase {
         verify(editMenu && timeMenu && tracksMenu, "the active shell exposes Edit submenus")
         var editIds = [
             "edit.undo", "edit.redo", "roll.copy", "roll.cut", "roll.paste",
-            "roll.delete", "roll.select_all", "roll.transpose_up",
+            "roll.delete", "roll.select_all", "songs.find", "roll.transpose_up",
             "roll.transpose_down", "roll.transpose_up_octave",
             "roll.transpose_down_octave", "roll.nudge_left", "roll.nudge_right",
             "automation.pencil_mode", "roll.split", "roll.join",
-            "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
-            "roll.grid_widen", "roll.grid_triplet", "roll.pitch_bend",
-            "edit.set_velocity", "edit.loop_from_selection",
+            "roll.pitch_bend", "edit.set_velocity", "edit.set_loop_start",
+            "edit.set_loop_end", "edit.loop_from_selection", "edit.remove_loop",
             "eventlist.move_up", "eventlist.move_down", "edit.preferences",
             "edit.song_settings", "edit.engine_settings"
         ]

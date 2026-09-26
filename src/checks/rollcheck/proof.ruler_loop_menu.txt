@@ -57,6 +57,17 @@ yet, so these rows are executed per build/proof-evidence and await the controlle
 re-run for a green confirmation. This proof-only reconciliation ran no lane, rebuilt
 nothing and re-ran no check.
 
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-46 frozen sources)
+Result: implementer-recorded run: the nine new checkGridLoopCommandArms rows passed
+(artifact://7114:1905-1913) while the same run failed on the peer-owned
+scaleFoldSessionIntegration and clipcheck predicates, so the swiftcore-projectsession lane is
+not green end to end. Execution evidence: build/proof-evidence/swiftcore-projectsession.json was
+overwritten by that failing run and now reads
+{"check":"swiftcore-projectsession","passes":[],"functions":[]}, so
+`deno task proof check --executed` classifies the task-46 rows S093-S101 "not executed" on this
+frozen tree until the controller re-runs the lane. This proof-only reconciliation ran no lane,
+rebuilt nothing and re-ran no check.
+
 
 Counts: MATCHED 50, PARTIAL 31, GAP 30, NATIVE 0, RETIRED-REPRESENTATION 2.
 
@@ -267,7 +278,7 @@ QVERIFY2(startMenu.session && !startMenu.session->isOpen(),
 
 A009 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:153
 Disposition: MATCHED
-Mapping: S027
+Mapping: S027, S096
 
 A010 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:155
 Disposition: PARTIAL
@@ -315,7 +326,7 @@ QVERIFY2(quick_popup::clickMenuRow(*endMenu.session, setEndRow),
 
 A015 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:166
 Disposition: MATCHED
-Mapping: S029
+Mapping: S029, S098
 
 A016 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:168
 Disposition: PARTIAL
@@ -357,7 +368,7 @@ Mapping: S032
 
 A022 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:184
 Disposition: MATCHED
-Mapping: S033
+Mapping: S033, S099
 
 A023 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:187
 Disposition: MATCHED
@@ -371,15 +382,15 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
 
 A024 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:190
 Disposition: MATCHED
-Mapping: S034
+Mapping: S034, S100
 
 A025 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:194
 Disposition: MATCHED
-Mapping: S035
+Mapping: S035, S101
 
 A026 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:197
 Disposition: PARTIAL
-Mapping/reason: S035 (tst_ShellGridMenu.qml test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel, mounted) asserts the second undo after the rendered Remove Loop click renders both loop markers at their set ticks; S006 remains model-level byte evidence. Unproved: the mounted byte equality with the post-set song.
+Mapping/reason: S035 (tst_ShellGridMenu.qml test_rulerLoopRowsSetRemoveUndoAndDismissFromRenderedPanel, mounted) asserts the second undo after the rendered Remove Loop click renders both loop markers at their set ticks; S006 remains model-level byte evidence. Unproved: the mounted byte equality with the post-set song. Re-checked against the task-46 checkGridLoopCommandArms arms: they assert marker values and one-marker-per-undo steps only, never the SMF bytes, so this byte conjunct stays unproved.
 
 A027 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:210
 Disposition: GAP
@@ -1225,6 +1236,16 @@ rulerMenuRow_ items, click them, and observe the menu, rendered loop markers and
 cursor, focus and document revision. None of them reproduces the exact selection-end boundary
 press or renders the native widget menu.
 
+S093-S101 are the task-46 predicates of checkGridLoopCommandArms
+(src/checks/rollcheck/ruler_loop_menu.swift:772-816, executed under
+swiftcore/PianoRoll::gridLoopCommandArms): they drive PianoGrid.performCommand on the mounted
+page, so Set Loop Start and Set Loop End write their marker at the committed edit cursor,
+Remove Loop clears both markers with one undo entry per marker, availability follows a mounted
+page plus the marker count, and one undo restores one marker at a time. They observe the
+presenter model, the document history and the rendered-marker source of truth, not the rendered
+menu panel, so the loop write and undo clauses of A009/A015/A022/A024/A025 stay primarily
+proved through the mounted ruler rows S027/S029/S033/S034/S035.
+
 S066-S078 are the task-38a deferred-open and timing predicates of
 checkRulerDeferredTiming (src/checks/rollcheck/ruler_loop_menu.swift, executed
 under swiftcore/PianoRoll::timelineRulerScope): S066/S067 the right-press
@@ -1516,6 +1537,33 @@ Anchor: message "clearing the time selection unmounts its panel before the ruler
 S092 | test_rulerClipboardRowsFollowClipAndTimeSelection | src/checks/editorqml/tst_ShellGridMenu.qml
 Anchor: message "an outside ruler press drops Copy and Cut with the time selection"
 
+S093 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the mounted grid enables Set Loop Start without markers"
+
+S094 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the mounted grid enables Set Loop End without markers"
+
+S095 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the mounted grid disables Remove Loop without markers"
+
+S096 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the grid Set Loop Start arm writes at the committed edit cursor"
+
+S097 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the mounted grid enables Remove Loop when one marker exists"
+
+S098 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the grid Set Loop End arm writes at the committed edit cursor"
+
+S099 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the grid Remove Loop arm clears both markers"
+
+S100 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the grid Remove Loop arm records a separate end-marker undo"
+
+S101 | checkGridLoopCommandArms | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "the grid Remove Loop arm records a separate start-marker undo"
+
 Remaining original source (closing sequence and helper bodies):
 ;
     QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
@@ -1523,7 +1571,7 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The counterpart predicates for this suite are the S001-S092 indexed above:
+The counterpart predicates for this suite are the S001-S101 indexed above:
 S001-S013 cover the document and menu-model rows, S014-S017 and S025 the
 presenter sweep, chip and press policy, S018-S019 the ruler seek emission,
 S020-S024 the mounted ruler press, transport presentation and menu-mount
@@ -1537,6 +1585,10 @@ S084-S087 the live presenter retirement matrix of checkRulerMenuRetirement
 retirement and the selection-change retirement), S088 the rebuilt selection-scoped
 row set of checkRenderedRulerMenuCommands, and S089-S092 the mounted
 insert-time cursor/seam and retained-selection rows plus the panel-unmount and
-dropped-scoped-row rebuild laws of tst_ShellGridMenu.qml. None of them reproduces
+dropped-scoped-row rebuild laws of tst_ShellGridMenu.qml. S093-S101 add the task-46 grid command
+arms of checkGridLoopCommandArms (write at the committed edit cursor, clear both markers, one
+marker restored per undo; availability from the mounted page and the marker count); they are the
+model-level counterpart of the loop write and undo clauses A009/A015/A022/A024/A025 already match
+through the mounted ruler panel. None of them reproduces
 the exact selection-end boundary press through the mounted QML input or renders
 the native widget menu.

@@ -65,6 +65,15 @@ Item {
             }
             return Math.ceil(width)
         }
+        readonly property real widestShortcut: {
+            let width = 0
+            for (let i = 0; i < entries.count; ++i) {
+                const row = entries.objectAt(i)
+                if (row && !row.separator && row.shortcutText)
+                    width = Math.max(width, bodyFontMetrics.advanceWidth(row.shortcutText))
+            }
+            return Math.ceil(width)
+        }
         readonly property int separatorCount: {
             let count = 0
             for (let i = 0; i < entries.count; ++i) {
@@ -81,6 +90,7 @@ Item {
                 required property var model
                 readonly property var itemData: model.modelData ?? model
                 readonly property bool separator: itemData.separator ?? false
+                readonly property string shortcutText: itemData.shortcutText ?? ""
                 readonly property real advance: bodyFontMetrics.advanceWidth(itemData.text ?? "")
             }
         }
@@ -908,9 +918,17 @@ Item {
                     rowHeight: Math.round(bodyFontMetrics.height) + 2 * root.menuVerticalPadding
                     separatorHeight: 1
                     textX: root.menuHorizontalPadding
-                    textRight: menuWidth - 1 - root.menuHorizontalPadding
+                    textRight: rulerMeasure.widestShortcut > 0
+                               ? menuWidth - rulerMeasure.widestShortcut
+                                 - root.menuHorizontalPadding * 2
+                               : menuWidth - 1 - root.menuHorizontalPadding
+                    shortcutRight: rulerMeasure.widestShortcut > 0
+                                   ? menuWidth - root.menuHorizontalPadding : -1
                     menuWidth: Math.min(parent.width, 2 + textX
-                                        + rulerMeasure.widestText + root.menuHorizontalPadding)
+                                        + rulerMeasure.widestText + root.menuHorizontalPadding
+                                        + (rulerMeasure.widestShortcut > 0
+                                           ? rulerMeasure.widestShortcut
+                                             + root.menuHorizontalPadding * 2 : 0))
                     menuHeight: Math.min(parent.height, 2
                                          + (rowCount - rulerMeasure.separatorCount) * rowHeight
                                          + rulerMeasure.separatorCount)

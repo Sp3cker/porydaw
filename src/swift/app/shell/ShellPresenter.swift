@@ -7,108 +7,119 @@ import PorydawAppCommands
 public final class ShellPresenter: QmlInstantiableStatus {
     private struct Action {
         let id: String
-        let label: String
         let command: EditCommand?
 
-        init(_ id: String, _ label: String, _ command: EditCommand? = nil) {
+        init(_ id: String, _ command: EditCommand? = nil) {
             self.id = id
-            self.label = label
             self.command = command
         }
     }
 
     private static let actions: [Action] = [
-        Action("file.open_project", "Open Project…"),
-        Action("songs.find", "Find Song"),
-        Action("file.save_song", "Save"),
-        Action("file.close_tab", "Close Tab"),
-        Action("file.quit", "Quit"),
-        Action("edit.undo", "Undo"),
-        Action("edit.redo", "Redo"),
-        Action("edit.preferences", "Preferences…"),
-        Action("edit.song_settings", "Song Settings…"),
-        Action("edit.engine_settings", "Engine Settings…"),
-        Action("roll.copy", "Copy Notes", .copy),
-        Action("roll.cut", "Cut Notes", .cut),
-        Action("roll.duplicate_time", "Duplicate", .duplicate),
-        Action("roll.paste", "Paste Notes", .paste),
-        Action("roll.delete", "Delete Notes", .delete),
-        Action("roll.select_all", "Select All Notes", .selectAll),
-        Action("edit.insert_time", "Insert Time", .insertTime),
-        Action("edit.delete_time", "Delete Time", .deleteTime),
-        Action("edit.clear_time_selection", "Clear Time Selection", .clearTimeSelection),
-        Action("edit.edit_time_signature", "Edit Time Signature at Edit Cursor…", .editTimeSignature),
-        Action("edit.remove_time_signature", "Remove Time Signature", .removeTimeSignature),
-        Action("edit.loop_from_selection", "Loop from Time Selection", .loopFromSelection),
-        Action("roll.transpose_up", "Transpose Up", .transposeUp),
-        Action("roll.transpose_down", "Transpose Down", .transposeDown),
-        Action("roll.transpose_up_octave", "Transpose Up an Octave", .transposeUpOctave),
-        Action("roll.transpose_down_octave", "Transpose Down an Octave", .transposeDownOctave),
-        Action("roll.pitch_bend", "Edit Note Pitch Bend", .pitchBend),
-        Action("edit.set_velocity", "Set Velocity…", .setVelocity),
-        Action("roll.nudge_left", "Nudge Left", .nudgeLeft),
-        Action("roll.nudge_right", "Nudge Right", .nudgeRight),
-        Action("roll.mute_tracks", "Mute Selected Tracks", .muteTracks),
-        Action("roll.solo_tracks", "Solo Selected Tracks", .soloTracks),
-        Action("automation.pencil_mode", "Toggle Pencil Mode", .pencilMode),
-        Action("eventlist.move_up", "Move Event Up (Same Tick)", .moveEventUp),
-        Action("eventlist.move_down", "Move Event Down (Same Tick)", .moveEventDown),
-        Action("roll.split", "Split Notes", .split),
-        Action("roll.join", "Join Notes", .join),
-        Action("roll.lengthen_note", "Lengthen Notes", .lengthenNote),
-        Action("roll.shorten_note", "Shorten Notes", .shortenNote),
-        Action("roll.grid_narrow", "Narrow Grid", .gridNarrow),
-        Action("roll.grid_widen", "Widen Grid", .gridWiden),
-        Action("roll.grid_triplet", "Triplet Grid", .gridTriplet),
-        Action("transport.go_to_start", "Go to Start"),
-        Action("transport.play", "Play"),
-        Action("transport.play_pause", "Play/Pause"),
-        Action("transport.pause", "Pause"),
-        Action("transport.stop", "Stop"),
-        Action("transport.loop", "Toggle Loop"),
-        Action("transport.follow_playhead", "Follow Playhead"),
-        Action("transport.resonance", "Suppress Resonances"),
-        Action("view.event_list", "MIDI Event List"),
-        Action("view.automation_drawer", "Automation Drawer"),
-        Action("view.velocity_drawer", "Velocity Drawer"),
-        Action("view.voice_changes_drawer", "Voice Changes Drawer"),
-        Action("view.polyphony_debugger", "Polyphony Debugger"),
-        Action("view.velocity_colors", "Color Notes by Velocity"),
-        Action("view.note_names", "Show Note Names"),
-        Action("help.about", "About porydaw"),
+        Action("file.open_project"),
+        Action("songs.find"),
+        Action("file.save_song"),
+        Action("file.close_tab"),
+        Action("file.quit"),
+        Action("edit.undo"),
+        Action("edit.redo"),
+        Action("edit.preferences"),
+        Action("edit.song_settings"),
+        Action("edit.engine_settings"),
+        Action("roll.copy", .copy),
+        Action("roll.cut", .cut),
+        Action("roll.duplicate_time", .duplicate),
+        Action("roll.paste", .paste),
+        Action("roll.delete", .delete),
+        Action("roll.select_all", .selectAll),
+        Action("edit.insert_time", .insertTime),
+        Action("edit.delete_time", .deleteTime),
+        Action("edit.clear_time_selection", .clearTimeSelection),
+        Action("edit.edit_time_signature", .editTimeSignature),
+        Action("edit.remove_time_signature", .removeTimeSignature),
+        Action("edit.set_loop_start", .setLoopStart),
+        Action("edit.set_loop_end", .setLoopEnd),
+        Action("edit.loop_from_selection", .loopFromSelection),
+        Action("edit.remove_loop", .removeLoop),
+        Action("roll.transpose_up", .transposeUp),
+        Action("roll.transpose_down", .transposeDown),
+        Action("roll.transpose_up_octave", .transposeUpOctave),
+        Action("roll.transpose_down_octave", .transposeDownOctave),
+        Action("roll.pitch_bend", .pitchBend),
+        Action("edit.set_velocity", .setVelocity),
+        Action("roll.nudge_left", .nudgeLeft),
+        Action("roll.nudge_right", .nudgeRight),
+        Action("roll.mute_tracks", .muteTracks),
+        Action("roll.solo_tracks", .soloTracks),
+        Action("automation.pencil_mode", .pencilMode),
+        Action("eventlist.move_up", .moveEventUp),
+        Action("eventlist.move_down", .moveEventDown),
+        Action("roll.split", .split),
+        Action("roll.join", .join),
+        Action("roll.lengthen_note", .lengthenNote),
+        Action("roll.shorten_note", .shortenNote),
+        Action("roll.grid_narrow", .gridNarrow),
+        Action("roll.grid_widen", .gridWiden),
+        Action("roll.grid_triplet", .gridTriplet),
+        Action("transport.go_to_start"),
+        Action("transport.play"),
+        Action("transport.play_pause"),
+        Action("transport.pause"),
+        Action("transport.stop"),
+        Action("transport.loop"),
+        Action("transport.follow_playhead"),
+        Action("transport.resonance"),
+        Action("view.event_list"),
+        Action("view.automation_drawer"),
+        Action("view.velocity_drawer"),
+        Action("view.voice_changes_drawer"),
+        Action("view.polyphony_debugger"),
+        Action("view.velocity_colors"),
+        Action("view.note_names"),
+        Action("help.about"),
     ]
     private static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
     private static let allActionIds = actions.map(\.id)
-    private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") || $0 == "songs.find" }
+    private static let fileIds = allActionIds.filter { $0.hasPrefix("file.") }
     private static let editTopIds = ["edit.undo", "edit.redo"]
     private static let editClipboardIds = [
-        "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all",
+        "roll.copy", "roll.cut", "roll.paste", "roll.delete", "roll.select_all", "songs.find",
     ]
     private static let timeIds = [
         "edit.insert_time", "edit.delete_time", "roll.duplicate_time",
         "edit.clear_time_selection", "edit.edit_time_signature", "edit.remove_time_signature",
     ]
-    private static let tracksIds = ["roll.mute_tracks", "roll.solo_tracks"]
-    private static let editNotesIds = [
+    private static let notesIds = [
         "roll.transpose_up", "roll.transpose_down",
         "roll.transpose_up_octave", "roll.transpose_down_octave",
-        "roll.nudge_left", "roll.nudge_right",
+        "roll.pitch_bend", "edit.set_velocity", "roll.duplicate_time", "roll.split", "roll.join",
+    ]
+    private static let moveIds = ["roll.nudge_left", "roll.nudge_right"]
+    private static let tracksIds = ["roll.mute_tracks", "roll.solo_tracks"]
+    private static let automationIds = ["automation.pencil_mode"]
+    private static let eventsIds = ["eventlist.move_up", "eventlist.move_down"]
+    private static let loopIds = [
+        "edit.set_loop_start", "edit.set_loop_end", "edit.loop_from_selection", "edit.remove_loop",
     ]
     private static let editTailIds = [
-        "automation.pencil_mode", "roll.split", "roll.join",
-        "roll.lengthen_note", "roll.shorten_note", "roll.grid_narrow",
-        "roll.grid_widen", "roll.grid_triplet", "roll.pitch_bend",
-        "edit.set_velocity", "edit.loop_from_selection", "eventlist.move_up",
-        "eventlist.move_down", "edit.preferences", "edit.song_settings",
-        "edit.engine_settings",
+        "edit.preferences", "edit.song_settings", "edit.engine_settings",
     ]
-    private static let transportIds = allActionIds.filter {
-        $0.hasPrefix("transport.") && $0 != "transport.resonance"
-    }
+    private static let transportIds = [
+        "transport.go_to_start", "transport.play", "transport.play_pause",
+        "transport.pause", "transport.stop", "transport.loop",
+    ]
     private static let viewIds = allActionIds.filter { $0.hasPrefix("view.") }
-    private static let contextIds = [
-        "roll.copy", "roll.cut", "roll.duplicate_time", "roll.paste",
-        "roll.delete", "roll.split", "roll.join",
+        + ["transport.follow_playhead"]
+    private static let contextHeadIds = ["edit.set_velocity"]
+    private static let contextBodyIds = [
+        "roll.copy", "roll.cut", "roll.duplicate_time", "roll.split", "roll.join", "roll.delete",
+    ]
+    private static let menuLabels = [
+        "file.open_project": "Open Project...",
+        "edit.preferences": "Preferences...",
+        "edit.song_settings": "Song Settings...",
+        "edit.engine_settings": "Engine Settings...",
+        "view.voice_changes_drawer": "Voice-change Drawer",
     ]
 
     /// Scope inspection is pure Swift; Qt resolves sequence strings only after
@@ -130,14 +141,19 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public var fileActionIds: [String]
     public var editTopActionIds: [String]
     public var editClipboardActionIds: [String]
-    public var editNotesActionIds: [String]
+    public var notesActionIds: [String]
+    public var moveActionIds: [String]
+    public var automationActionIds: [String]
+    public var eventsActionIds: [String]
+    public var loopActionIds: [String]
     public var editTailActionIds: [String]
     public var timeActionIds: [String]
     public var tracksActionIds: [String]
     public var transportActionIds: [String]
     public var viewActionIds: [String]
     public var windowActionIds: [String]
-    public var contextActionIds: [String]
+    public var contextHeadActionIds: [String]
+    public var contextBodyActionIds: [String]
 
     @QtTracked public var closeReady = false
     @QtTracked public var sceneActive = true
@@ -165,20 +181,30 @@ public final class ShellPresenter: QmlInstantiableStatus {
         fileActionIds = Self.fileIds
         editTopActionIds = Self.editTopIds
         editClipboardActionIds = Self.editClipboardIds
-        editNotesActionIds = Self.editNotesIds
+        notesActionIds = Self.notesIds
+        moveActionIds = Self.moveIds
+        automationActionIds = Self.automationIds
+        eventsActionIds = Self.eventsIds
+        loopActionIds = Self.loopIds
         editTailActionIds = Self.editTailIds
         timeActionIds = Self.timeIds
         tracksActionIds = Self.tracksIds
         transportActionIds = Self.transportIds
         viewActionIds = Self.viewIds
         windowActionIds = Self.windowIds
-        contextActionIds = Self.contextIds
+        contextHeadActionIds = Self.contextHeadIds
+        contextBodyActionIds = Self.contextBodyIds
     }
 
     public func componentComplete() {}
 
     public func actionLabel(id: String) -> String {
-        Self.byId[id]?.label ?? ""
+        guard Self.byId[id] != nil else { return "" }
+        return id == "help.about" ? "About porydaw" : keybindings.label(id)
+    }
+
+    public func menuLabel(id: String) -> String {
+        Self.menuLabels[id] ?? actionLabel(id: id)
     }
 
     /// Portable Qt sequence text, including every platform StandardKey

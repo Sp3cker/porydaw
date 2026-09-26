@@ -104,18 +104,18 @@ TestCase {
         verify(item !== null, "the menu owns " + actionId)
         compare(shell.shellPresenter.actionLabel(actionId), label,
                 actionId + " keeps the keymap label")
-        verify(item.text.indexOf(label) === 0,
+        verify(item.text.indexOf(shell.shellPresenter.menuLabel(actionId)) === 0,
                 actionId + " shows its label, got: " + item.text)
         return item
     }
 
-    function menuOrder(menu, actionIds) {
+    function menuOrder(menu, actionIds, message) {
         var actual = []
         for (var index = 0; index < menu.count; ++index)
             actual.push(menu.itemAt(index).objectName)
         compare(JSON.stringify(actual),
                 JSON.stringify(actionIds.map(function(id) { return "shellAction_" + id })),
-                "the menu keeps the original order")
+                message || "the menu keeps the original order")
     }
 
     function test_menuItemsExistWithLabelsAndNoSongGates() {
@@ -127,7 +127,7 @@ TestCase {
         verify(fileMenu && transportMenu && viewMenu && helpMenu,
                "File, Transport, View and Help menus are mounted")
         compare(fileMenu.title, "&File")
-        compare(transportMenu.title, "&Transport")
+        compare(transportMenu.title, "Trans&port")
         compare(viewMenu.title, "&View")
         compare(helpMenu.title, "&Help")
 
@@ -140,7 +140,7 @@ TestCase {
         var pause = checkMenuItem(transportMenu, "transport.pause", "Pause")
         var stop = checkMenuItem(transportMenu, "transport.stop", "Stop")
         var loop = checkMenuItem(transportMenu, "transport.loop", "Toggle Loop")
-        var follow = checkMenuItem(transportMenu, "transport.follow_playhead", "Follow Playhead")
+        var follow = checkMenuItem(viewMenu, "transport.follow_playhead", "Follow Playhead")
         var transportRows = [goToStart, play, playPause, pause, stop, loop]
         for (var rowIndex = 0; rowIndex < transportRows.length; ++rowIndex)
             compare(transportRows[rowIndex].enabled, false,
@@ -151,8 +151,7 @@ TestCase {
         compare(goToStart.checkable, false, "Go to Start is not checkable")
         menuOrder(transportMenu, ["transport.go_to_start", "transport.play",
                                  "transport.play_pause", "transport.pause",
-                                 "transport.stop", "transport.loop",
-                                 "transport.follow_playhead"])
+                                 "transport.stop", "transport.loop"])
 
         var automation = checkMenuItem(viewMenu, "view.automation_drawer", "Automation Drawer")
         var velocity = checkMenuItem(viewMenu, "view.velocity_drawer", "Velocity Drawer")
@@ -169,13 +168,105 @@ TestCase {
         compare(colors.checkable, true, "velocity colours are checkable")
         var eventList = findChild(viewMenu, "shellAction_view.event_list")
         verify(eventList !== null, "the event list row still leads the View menu")
-        menuOrder(viewMenu, ["view.event_list", "view.automation_drawer",
-                             "view.velocity_drawer", "view.voice_changes_drawer",
-                             "view.polyphony_debugger", "view.velocity_colors",
-                             "view.note_names"])
+        compare(viewMenu.itemAt(5).objectName, "shellViewSectionSeparator",
+                "the global View preferences follow a separator")
+        compare(viewMenu.itemAt(8).objectName, "shellAction_transport.follow_playhead",
+                "Follow Playhead stays at the fork View position")
 
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
         compare(about.enabled, true, "About stays available with no song")
+    }
+
+    function test_forkMenuTopologyAndLabels() {
+        openShell()
+        var presenter = shell.shellPresenter
+        var file = findChild(shell, "shellFileMenu")
+        var edit = findChild(shell, "shellEditMenu")
+        var view = findChild(shell, "shellViewMenu")
+        menuOrder(file, ["file.open_project", "file.save_song", "file.close_tab", "file.quit"])
+        compare(file.count, 4, "the File menu keeps only the mounted file rows")
+        verify(findChild(file, "shellAction_songs.find") === null,
+               "Find Song moves from File to the Edit clipboard group")
+        var clipboard = ["roll.copy", "roll.cut", "roll.paste", "roll.delete",
+                         "roll.select_all", "songs.find"]
+        for (var i = 0; i < clipboard.length; ++i)
+            compare(edit.itemAt(i + 3).objectName, "shellAction_" + clipboard[i],
+                    "the Edit clipboard head follows Undo and Redo")
+        var submenuNames = ["shellTimeMenu", "shellNotesMenu", "shellMoveMenu",
+                            "shellTracksMenu", "shellAutomationMenu", "shellEventsMenu",
+                            "shellLoopMenu", "shellTransportMenu"]
+        var submenuTitles = ["&Time", "&Notes", "&Move", "Tr&acks", "&Automation",
+                             "&Events", "&Loop", "Trans&port"]
+        for (var sub = 0; sub < submenuNames.length; ++sub) {
+            verify(findChild(edit, submenuNames[sub]) !== null,
+                   "the Edit menu mounts " + submenuNames[sub])
+            compare(edit.itemAt(sub + 9).text, submenuTitles[sub],
+                    "the Edit menu nests the fork's eight command submenus in order")
+        }
+        menuOrder(findChild(edit, "shellTimeMenu"),
+                  ["edit.insert_time", "edit.delete_time", "roll.duplicate_time",
+                   "edit.clear_time_selection", "edit.edit_time_signature",
+                   "edit.remove_time_signature"], "the Time submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellNotesMenu"),
+                  ["roll.transpose_up", "roll.transpose_down", "roll.transpose_up_octave",
+                   "roll.transpose_down_octave", "roll.pitch_bend", "edit.set_velocity",
+                   "roll.duplicate_time", "roll.split", "roll.join"],
+                  "the Notes submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellMoveMenu"),
+                  ["roll.nudge_left", "roll.nudge_right"],
+                  "the Move submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellTracksMenu"),
+                  ["roll.mute_tracks", "roll.solo_tracks"],
+                  "the Tracks submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellAutomationMenu"),
+                  ["automation.pencil_mode"], "the Automation submenu retains the fork action")
+        menuOrder(findChild(edit, "shellEventsMenu"),
+                  ["eventlist.move_up", "eventlist.move_down"],
+                  "the Events submenu retains the fork actions")
+        menuOrder(findChild(edit, "shellLoopMenu"),
+                  ["edit.set_loop_start", "edit.set_loop_end",
+                   "edit.loop_from_selection", "edit.remove_loop"],
+                  "the Loop submenu retains the fork actions")
+        var transport = findChild(edit, "shellTransportMenu")
+        menuOrder(transport, ["transport.go_to_start", "transport.play",
+                              "transport.play_pause", "transport.pause",
+                              "transport.stop", "transport.loop"])
+        verify(findChild(transport, "shellAction_transport.follow_playhead") === null,
+               "Follow Playhead is not a Transport submenu row")
+        compare(view.itemAt(view.count - 1).objectName,
+                "shellAction_transport.follow_playhead",
+                "Follow Playhead ends the View preference group")
+        compare(presenter.actionLabel("roll.copy"), "Copy Selection",
+                "menu rows show the keymap label")
+        compare(presenter.actionLabel("file.save_song"), "Save Song",
+                "Save Song uses the keymap wording")
+        compare(findChild(file, "shellAction_file.open_project").text.indexOf("Open Project...") >= 0,
+                true, "the File menu keeps the fork Open Project ellipsis")
+        verify(findChild(view, "shellAction_view.voice_changes_drawer").text
+               .indexOf("Voice-change Drawer") === 0,
+               "the View menu keeps the fork drawer wording")
+    }
+
+    function test_forkNoteContextShapeAndLoopGates() {
+        openShell()
+        var context = findChild(shell, "shellGridContextMenu")
+        compare(context.itemAt(0).objectName, "shellContextAction_edit.set_velocity",
+                "the note context menu leads with Set Velocity and omits Paste")
+        var contextIds = ["roll.copy", "roll.cut", "roll.duplicate_time",
+                          "roll.split", "roll.join", "roll.delete"]
+        for (var i = 0; i < contextIds.length; ++i)
+            compare(context.itemAt(i + 2).objectName,
+                    "shellContextAction_" + contextIds[i],
+                    "the note context menu follows the fork command order")
+        verify(findChild(context, "shellContextAction_roll.paste") === null,
+               "the note context menu omits Paste")
+        var loop = findChild(shell, "shellLoopMenu")
+        menuOrder(loop, ["edit.set_loop_start", "edit.set_loop_end",
+                         "edit.loop_from_selection", "edit.remove_loop"])
+        compare(shell.shellPresenter.actionEnabled("edit.set_loop_start"), false,
+                "loop rows gate on song and markers")
+        compare(shell.shellPresenter.actionEnabled("edit.remove_loop"), false,
+                "Remove Loop Markers needs a song and marker")
     }
 
     function test_songMenuActionsDriveSessionState() {
@@ -463,6 +554,58 @@ TestCase {
             return markerX("loopStartMarker") === originalStart
                 && markerX("loopEndMarker") === originalEnd
         }, 3000), "second Undo restores both original loop endpoints")
+    }
+
+    function test_loopMenuCommandsUseCursorAndUndoOneMarkerAtATime() {
+        openShell()
+        openSong()
+        var presenter = shell.shellPresenter
+        var session = presenter.session
+        var page = editorPage()
+        var grid = session.gridPresenter()
+        var start = findChild(shell, "shellAction_edit.set_loop_start")
+        var end = findChild(shell, "shellAction_edit.set_loop_end")
+        var remove = findChild(shell, "shellAction_edit.remove_loop")
+        if (remove.enabled)
+            remove.triggered()
+        tryVerify(function() { return !remove.enabled }, 3000,
+                  "Remove Loop Markers gates on existing markers")
+        var startTick = Math.max(grid.snapTicks, grid.editCursorTick + grid.snapTicks)
+        grid.setEditCursorTick(startTick)
+        tryVerify(function() { return start.enabled && end.enabled }, 3000,
+                  "the open song enables both cursor loop rows")
+        start.triggered()
+        var markerStart = function() { return findChild(page, "loopStartMarker") }
+        var markerEnd = function() { return findChild(page, "loopEndMarker") }
+        var xAt = function(tick) {
+            return tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+        }
+        tryVerify(function() {
+            return markerStart() !== null
+                && Math.abs(markerStart().x + 0.5 - xAt(startTick)) <= 0.75
+        }, 3000, "Set Loop Start at Edit Cursor writes one undoable marker at the edit cursor")
+        var endTick = startTick + Math.max(1, grid.snapTicks)
+        grid.setEditCursorTick(endTick)
+        end.triggered()
+        tryVerify(function() {
+            return markerEnd() !== null
+                && Math.abs(markerEnd().x + 0.5 - xAt(endTick)) <= 0.75
+        }, 3000, "Set Loop End at Edit Cursor writes one undoable marker at the edit cursor")
+        tryVerify(function() { return remove.enabled }, 3000,
+                  "Remove Loop Markers enables when markers exist")
+        remove.triggered()
+        tryVerify(function() { return markerStart() === null && markerEnd() === null }, 3000,
+                  "Remove Loop Markers clears both markers")
+        tryVerify(function() { return session.canUndo }, 3000,
+                  "the marker removal publishes its Undo availability")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return markerStart() === null && markerEnd() !== null
+        }, 5000), "Remove Loop Markers writes two undo entries restoring one marker at a time")
+        session.requestUndo()
+        verify(waitForNative(function() {
+            return markerStart() !== null && markerEnd() !== null
+        }, 5000), "the second Undo restores the loop start independently")
     }
 
     function test_eventMoveRoutesThroughMenuAndEventListKey() {

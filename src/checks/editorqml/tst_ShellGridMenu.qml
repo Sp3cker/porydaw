@@ -1077,4 +1077,33 @@ TestCase {
                "one undo restores the rendered notes before the time-menu insertion")
     }
 
+    function test_forkRulerAndTimeMenuWordingAndHints() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var menu = openRulerMenu(ruler.width * 0.6, ruler.height * 0.75)
+        compare(menu.rowItem(rulerRowIndex(menu, 2)).itemData.text,
+                "Set Loop Start at Edit Cursor", "the ruler cursor menu shows the fork row wording")
+        compare(menu.rowItem(rulerRowIndex(menu, 13)).itemData.text,
+                "Paste at Edit Cursor", "the ruler Paste row keeps the edit cursor wording")
+        compare(menu.rowItem(rulerRowIndex(menu, 1)).itemData.shortcutText,
+                shell.shellPresenter.actionShortcut("edit.insert_time"),
+                "action-backed ruler rows show their native shortcut hint")
+        verify(menu.shortcutRight > menu.textRight,
+               "the rendered ruler panel reserves a visible shortcut column")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+
+        var range = sweepNoteRange()
+        menu = openTimeMenu(range.midX)
+        compare(menu.rowItem(rulerRowIndex(menu, 11)).itemData.text,
+                "Copy Selection", "the shared time menu shows the fork row wording")
+        compare(menu.rowItem(rulerRowIndex(menu, 13)).itemData.text,
+                "Paste at Edit Cursor", "the shared time menu keeps the cursor wording")
+        compare(menu.rowItem(rulerRowIndex(menu, 11)).itemData.shortcutText,
+                shell.shellPresenter.actionShortcut("roll.copy"),
+                "the time-menu Copy row shows the native shortcut")
+        verify(menu.shortcutRight > menu.textRight,
+               "the rendered time panel reserves a visible shortcut column")
+    }
+
 }

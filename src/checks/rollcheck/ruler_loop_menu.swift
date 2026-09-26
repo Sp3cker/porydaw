@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import PorydawAppCommands
 
 // The original resize seed requests a free cell near tick 88. The synthetic
 // document has no competing notes, so its six-tick grid cell starts at 84.
@@ -17,6 +18,7 @@ func runRulerLoopMenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkRulerSweepScopeTapAndChip(report, session: session)
     checkRulerSeekEmission(report, session: session)
     checkRulerDeferredTiming(report, session: session)
+    checkGridLoopCommandArms(report, session: session)
 }
 
 @MainActor
@@ -764,4 +766,52 @@ private func checkRulerSeekEmission(_ report: CheckReport, session: DocumentSess
     _ = playhead.observe(sample: sample, transport: 0)
     report.expect(playhead.tick == Double(end), cppID: id,
                   message: "the shared playhead presents the sought tick from its sample")
+}
+
+@MainActor
+private func checkGridLoopCommandArms(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::gridLoopCommandArms"
+    let grid = PianoGrid(session: session, palette: GridPalette())
+    let originalStart = session.timeline.loopStartTick
+    let originalEnd = session.timeline.loopEndTick
+    let previousCursor = session.editCursor
+    defer {
+        session.editCursor = previousCursor
+        session.document.setLoop(end: false, tick: originalStart == TimeDefaults.noTick
+                                 ? nil : Int64(originalStart))
+        session.document.setLoop(end: true, tick: originalEnd == TimeDefaults.noTick
+                                 ? nil : Int64(originalEnd))
+    }
+    session.document.setLoop(end: false, tick: nil)
+    session.document.setLoop(end: true, tick: nil)
+    report.expect(grid.commandAvailable(command: EditCommand.setLoopStart.rawValue),
+                  cppID: id, message: "the mounted grid enables Set Loop Start without markers")
+    report.expect(grid.commandAvailable(command: EditCommand.setLoopEnd.rawValue),
+                  cppID: id, message: "the mounted grid enables Set Loop End without markers")
+    report.expect(!grid.commandAvailable(command: EditCommand.removeLoop.rawValue),
+                  cppID: id, message: "the mounted grid disables Remove Loop without markers")
+    let startTick: Tick = 72
+    let endTick: Tick = 96
+    grid.setEditCursorTick(tick: Int(startTick))
+    grid.performCommand(command: EditCommand.setLoopStart.rawValue)
+    report.expect(session.timeline.loopStartTick == startTick, cppID: id,
+                  message: "the grid Set Loop Start arm writes at the committed edit cursor")
+    report.expect(grid.commandAvailable(command: EditCommand.removeLoop.rawValue),
+                  cppID: id, message: "the mounted grid enables Remove Loop when one marker exists")
+    grid.setEditCursorTick(tick: Int(endTick))
+    grid.performCommand(command: EditCommand.setLoopEnd.rawValue)
+    report.expect(session.timeline.loopEndTick == endTick, cppID: id,
+                  message: "the grid Set Loop End arm writes at the committed edit cursor")
+    grid.performCommand(command: EditCommand.removeLoop.rawValue)
+    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
+                  && session.timeline.loopEndTick == TimeDefaults.noTick,
+                  cppID: id, message: "the grid Remove Loop arm clears both markers")
+    _ = session.document.history.undoDocument()
+    report.expect(session.timeline.loopStartTick == TimeDefaults.noTick
+                  && session.timeline.loopEndTick == endTick, cppID: id,
+                  message: "the grid Remove Loop arm records a separate end-marker undo")
+    _ = session.document.history.undoDocument()
+    report.expect(session.timeline.loopStartTick == startTick
+                  && session.timeline.loopEndTick == endTick, cppID: id,
+                  message: "the grid Remove Loop arm records a separate start-marker undo")
 }

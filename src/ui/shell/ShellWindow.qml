@@ -106,7 +106,7 @@ ThemedWindow {
     // an Action.shortcut here would incorrectly add another Qt map entry.
     function nativeMenuText(actionId) {
         const shortcut = shell.actionShortcut(actionId)
-        const label = shell.actionLabel(actionId)
+        const label = shell.menuLabel(actionId)
         return shortcut.length > 0 ? label + "\t" + shortcut : label
     }
 
@@ -238,7 +238,6 @@ ThemedWindow {
             objectName: "shellFileMenu"
             title: qsTr("&File")
             onAboutToShow: ++root.actionRevision
-            MenuSeparator {}
             Instantiator {
                 model: shell.fileActionIds
                 delegate: MenuItem {
@@ -254,7 +253,7 @@ ThemedWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) => fileMenu.insertItem(index < 2 ? index : index + 1, object)
+                onObjectAdded: (index, object) => fileMenu.insertItem(index, object)
                 onObjectRemoved: (index, object) => fileMenu.removeItem(object)
             }
         }
@@ -266,7 +265,6 @@ ThemedWindow {
             Component.onCompleted: {
                 editTopItems.active = true
                 editClipboardItems.active = true
-                editNotesItems.active = true
                 editTailItems.active = true
             }
             Instantiator {
@@ -332,26 +330,45 @@ ThemedWindow {
                     onObjectRemoved: (index, object) => timeMenu.removeItem(object)
                 }
             }
-            Instantiator {
-                id: editNotesItems
-                active: false
-                model: shell.editNotesActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    indicator: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
+            Menu {
+                id: notesMenu
+                objectName: "shellNotesMenu"
+                title: qsTr("&Notes")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.notesActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        indicator: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
                     }
-                    onTriggered: shell.activate(modelData)
+                    onObjectAdded: (index, object) => notesMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => notesMenu.removeItem(object)
                 }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length
-                                        + shell.editClipboardActionIds.length + 2 + index, object)
-                onObjectRemoved: (index, object) => editMenu.removeItem(object)
+            }
+            Menu {
+                id: moveMenu
+                objectName: "shellMoveMenu"
+                title: qsTr("&Move")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.moveActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        indicator: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => moveMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => moveMenu.removeItem(object)
+                }
             }
             Menu {
                 id: tracksMenu
@@ -376,6 +393,88 @@ ThemedWindow {
                     onObjectRemoved: (index, object) => tracksMenu.removeItem(object)
                 }
             }
+            Menu {
+                id: automationMenu
+                objectName: "shellAutomationMenu"
+                title: qsTr("&Automation")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.automationActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        indicator: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => automationMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => automationMenu.removeItem(object)
+                }
+            }
+            Menu {
+                id: eventsMenu
+                objectName: "shellEventsMenu"
+                title: qsTr("&Events")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.eventsActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        indicator: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => eventsMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => eventsMenu.removeItem(object)
+                }
+            }
+            Menu {
+                id: loopMenu
+                objectName: "shellLoopMenu"
+                title: qsTr("&Loop")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.loopActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        indicator: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => loopMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => loopMenu.removeItem(object)
+                }
+            }
+            Menu {
+                id: transportMenu
+                objectName: "shellTransportMenu"
+                title: qsTr("Trans&port")
+                onAboutToShow: ++root.actionRevision
+                Instantiator {
+                    model: shell.transportActionIds
+                    delegate: MenuItem {
+                        arrow: null
+                        required property string modelData
+                        objectName: "shellAction_" + modelData
+                        text: root.nativeMenuText(modelData)
+                        checkable: shell.actionCheckable(modelData)
+                        checked: { root.actionRevision; return shell.actionChecked(modelData) }
+                        enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
+                        onTriggered: shell.activate(modelData)
+                    }
+                    onObjectAdded: (index, object) => transportMenu.insertItem(index, object)
+                    onObjectRemoved: (index, object) => transportMenu.removeItem(object)
+                }
+            }
+            MenuSeparator {}
             Instantiator {
                 id: editTailItems
                 active: false
@@ -386,51 +485,20 @@ ThemedWindow {
                     required property string modelData
                     objectName: "shellAction_" + modelData
                     text: root.nativeMenuText(modelData)
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
+                    enabled: { root.actionRevision; return shell.actionEnabled(modelData) }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) =>
-                    editMenu.insertItem(shell.editTopActionIds.length
-                                        + shell.editClipboardActionIds.length
-                                        + shell.editNotesActionIds.length + 3 + index, object)
+                onObjectAdded: (index, object) => editMenu.addItem(object)
                 onObjectRemoved: (index, object) => editMenu.removeItem(object)
             }
         }
-        Menu {
-            id: transportMenu
-            objectName: "shellTransportMenu"
-            title: qsTr("&Transport")
-            onAboutToShow: ++root.actionRevision
-            Instantiator {
-                model: shell.transportActionIds
-                delegate: MenuItem {
-                    arrow: null
-                    required property string modelData
-                    objectName: "shellAction_" + modelData
-                    text: root.nativeMenuText(modelData)
-                    checkable: shell.actionCheckable(modelData)
-                    checked: {
-                        root.actionRevision
-                        return shell.actionChecked(modelData)
-                    }
-                    enabled: {
-                        root.actionRevision
-                        return shell.actionEnabled(modelData)
-                    }
-                    onTriggered: shell.activate(modelData)
-                }
-                onObjectAdded: (index, object) => transportMenu.insertItem(index, object)
-                onObjectRemoved: (index, object) => transportMenu.removeItem(object)
-            }
-        }
+
         Menu {
             id: viewMenu
             objectName: "shellViewMenu"
             title: qsTr("&View")
             onAboutToShow: ++root.actionRevision
+            MenuSeparator { objectName: "shellViewSectionSeparator" }
             Instantiator {
                 model: shell.viewActionIds
                 delegate: MenuItem {
@@ -449,7 +517,8 @@ ThemedWindow {
                     }
                     onTriggered: shell.activate(modelData)
                 }
-                onObjectAdded: (index, object) => viewMenu.insertItem(index, object)
+                onObjectAdded: (index, object) =>
+                    viewMenu.insertItem(index < 5 ? index : index + 1, object)
                 onObjectRemoved: (index, object) => viewMenu.removeItem(object)
             }
         }
@@ -756,6 +825,53 @@ ThemedWindow {
         }
     }
 
+    Component {
+        id: contextRow
+        Basic.MenuItem {
+            id: contextAction
+            required property string modelData
+            objectName: "shellContextAction_" + modelData
+            text: shell.actionLabel(modelData)
+            readonly property string shortcutText: shell.actionShortcut(modelData)
+            readonly property color foreground: !enabled ? root.colors.disabledText
+                : down ? root.colors.buttonPressedText : root.colors.windowText
+            Accessible.description: shortcutText
+            hoverEnabled: true
+            padding: root.chromeSpacing.one
+            contentItem: Item {
+                implicitWidth: caption.implicitWidth + (hint.visible
+                    ? hint.implicitWidth + bodyMetrics.averageCharacterWidth * 2 : 0)
+                implicitHeight: Math.max(caption.implicitHeight, hint.implicitHeight)
+                Text {
+                    id: caption
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: contextAction.text
+                    font: contextAction.font
+                    color: contextAction.foreground
+                }
+                Text {
+                    id: hint
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: text.length > 0
+                    text: contextAction.shortcutText
+                    font: contextAction.font
+                    color: contextAction.foreground
+                }
+            }
+            background: Rectangle {
+                color: contextAction.down ? root.colors.buttonPressedBackground
+                    : contextAction.highlighted ? root.colors.menuHoverBackground
+                    : root.colors.menuBackground
+            }
+            enabled: {
+                root.actionRevision
+                return shell.actionEnabled(modelData)
+            }
+            onTriggered: shell.activate(modelData)
+        }
+    }
     Basic.Menu {
         id: gridContextMenu
         objectName: "shellGridContextMenu"
@@ -766,52 +882,16 @@ ThemedWindow {
         palette.dark: root.colors.outline
         onAboutToShow: ++root.actionRevision
         Instantiator {
-            model: shell.contextActionIds
-            delegate: Basic.MenuItem {
-                id: contextAction
-                required property string modelData
-                objectName: "shellContextAction_" + modelData
-                text: shell.actionLabel(modelData)
-                readonly property string shortcutText: shell.actionShortcut(modelData)
-                readonly property color foreground: !enabled ? root.colors.disabledText
-                    : down ? root.colors.buttonPressedText : root.colors.windowText
-                Accessible.description: shortcutText
-                hoverEnabled: true
-                padding: root.chromeSpacing.one
-                contentItem: Item {
-                    implicitWidth: caption.implicitWidth + (hint.visible
-                        ? hint.implicitWidth + bodyMetrics.averageCharacterWidth * 2 : 0)
-                    implicitHeight: Math.max(caption.implicitHeight, hint.implicitHeight)
-                    Text {
-                        id: caption
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: contextAction.text
-                        font: contextAction.font
-                        color: contextAction.foreground
-                    }
-                    Text {
-                        id: hint
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: text.length > 0
-                        text: contextAction.shortcutText
-                        font: contextAction.font
-                        color: contextAction.foreground
-                    }
-                }
-                background: Rectangle {
-                    color: contextAction.down ? root.colors.buttonPressedBackground
-                        : contextAction.highlighted ? root.colors.menuHoverBackground
-                        : root.colors.menuBackground
-                }
-                enabled: {
-                    root.actionRevision
-                    return shell.actionEnabled(modelData)
-                }
-                onTriggered: shell.activate(modelData)
-            }
+            model: shell.contextHeadActionIds
+            delegate: contextRow
             onObjectAdded: (index, object) => gridContextMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
+        }
+        Basic.MenuSeparator {}
+        Instantiator {
+            model: shell.contextBodyActionIds
+            delegate: contextRow
+            onObjectAdded: (index, object) => gridContextMenu.insertItem(index + 2, object)
             onObjectRemoved: (index, object) => gridContextMenu.removeItem(object)
         }
     }
