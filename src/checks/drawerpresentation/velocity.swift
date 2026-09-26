@@ -398,19 +398,39 @@ func drawerVelocityProjectionRefresh(_ report: CheckReport, session: DocumentSes
     let row = page.handles[1]
     report.expect(row.x == expectedX, cppID: drawerVelocityProjectionID,
                   message: "the QML model receives the moved handle")
+    report.expectEqual(expected: oldY, actual: row.y, cppID: drawerVelocityProjectionID,
+                       what: "camera refresh preserves the node's marker-y value")
+    report.expect(page.rulerWidth > page.axisModel.geometry.labelWidth
+                      && page.plotWidth > page.rulerWidth
+                      && page.plotHeight == page.axisModel.geometry.height,
+                  cppID: drawerVelocityProjectionID,
+                  message: "the live velocity body publishes its ruler and plot layout geometry")
     _ = page.pointerMove(x: moved.x, y: moved.y, buttons: 0)
     report.expect(page.hoveredNoteText == "\(note.id.rawValue)", cppID: drawerVelocityProjectionID,
                   message: "hit testing follows the camera-refreshed handle")
+    report.expect(page.axisModel.markers.contains { $0.velocity == Int(note.velocity) }
+                      && page.axisGraduationsVisible,
+                  cppID: drawerVelocityProjectionID,
+                  message: "hovering a node presents its velocity marker and intrinsic graduations")
     page.pointerLeave()
+    report.expect(!page.axisModel.markers.contains { $0.velocity == Int(note.velocity) },
+                  cppID: drawerVelocityProjectionID,
+                  message: "leaving the node removes its hover-only velocity marker")
     _ = fixture.document.setVelocities([NoteVelocity(noteID: note.id, velocity: 127)],
                                        expectedRevision: fixture.document.revision)
     page.refreshFromDocument()
     report.expect(fixture.handle(note)?.value == 127, cppID: drawerVelocityProjectionID,
                   message: "document edits invalidate cached note values")
+    report.expectEqual(expected: 127, actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
+                       cppID: drawerVelocityProjectionID,
+                       what: "document edits rebuild the live timeline projection")
     _ = try? runBlocking { try await fixture.session.undo() }
     page.refreshFromDocument()
     report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
                   message: "undo invalidates cached note values again")
+    report.expectEqual(expected: oldValue, actual: drawerVelocityTimelineVelocity(fixture.session, note.id),
+                       cppID: drawerVelocityProjectionID,
+                       what: "undo rebuilds the original timeline projection")
     page.detach()
 }
 

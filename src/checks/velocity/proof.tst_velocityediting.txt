@@ -10,7 +10,7 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 
-Verification: controller-provided final run reused by this ledger pass, not re-executed here.
+Verification: provided by the implementer (agent://Task59a, locked build) for the frozen Stage A tree: `deno task build:checks` ok; `deno task verify --filter swiftcore --verbose` PASS (12/36 ok, 24 sibling harnesses skipped by the filter); `deno task verify --filter swiftcore-projectsession --verbose` PASS (1/36 ok, 35 skipped). Reused by this ledger pass, not re-executed here.
 
 A001 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:90
 Disposition: NATIVE-SETUP
@@ -96,18 +96,12 @@ Disposition: MATCHED
 Mapping: S054
 
 A025 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:209
-Disposition: PARTIAL
-Swift: S053 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S053 asserts the document snapshot is unchanged after the first held move, but no predicate counts SongDocument::documentChanged emissions, so the zero-publication observation is unproved.
-Original expression:
-  QCOMPARE(documentChanged.count(), 0)
+Disposition: MATCHED
+Mapping: S101
 
 A026 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:210
-Disposition: PARTIAL
-Swift: S053 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S053 asserts the document snapshot is unchanged after the first held move, but no predicate counts SongTab::edited emissions, so the zero-publication observation is unproved.
-Original expression:
-  QCOMPARE(edited.count(), 0)
+Disposition: MATCHED
+Mapping: S102
 
 A027 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:211
 Disposition: MATCHED
@@ -122,25 +116,16 @@ Disposition: MATCHED
 Mapping: S057
 
 A030 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:214
-Disposition: PARTIAL
-Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A031 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:215
-Disposition: PARTIAL
-Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A032 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:216
-Disposition: PARTIAL
-Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A033 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:220
 Disposition: MATCHED
@@ -151,18 +136,12 @@ Disposition: MATCHED
 Mapping: S050
 
 A035 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:222
-Disposition: PARTIAL
-Swift: S052 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S052 asserts both staged previews share one relative delta and S067 pins the commit to the staged value, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
+Disposition: MATCHED
+Mapping: S104
 
 A036 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:223
-Disposition: PARTIAL
-Swift: S052 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S052 asserts both staged previews share one relative delta and S068 pins the commit to the staged value, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
+Disposition: MATCHED
+Mapping: S104
 
 A037 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:224
 Disposition: MATCHED
@@ -181,11 +160,8 @@ Disposition: MATCHED
 Mapping: S062, S054
 
 A041 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:232
-Disposition: PARTIAL
-Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S062 asserts the snapshot and bytes are frozen on the second held move, but no predicate counts SongDocument::documentChanged emissions, so the zero-publication observation is unproved.
-Original expression:
-  QCOMPARE(documentChanged.count(), 0)
+Disposition: MATCHED
+Mapping: S101, S105
 
 A042 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:233
 Disposition: MATCHED
@@ -200,25 +176,16 @@ Disposition: MATCHED
 Mapping: S062
 
 A045 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:236
-Disposition: PARTIAL
-Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A046 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:237
-Disposition: PARTIAL
-Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A047 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:238
-Disposition: PARTIAL
-Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S103
 
 A048 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:242
 Disposition: MATCHED
@@ -229,32 +196,20 @@ Disposition: MATCHED
 Mapping: S059
 
 A050 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:244
-Disposition: PARTIAL
-Swift: S061 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S060 and S061 assert the updated previews changed and still share one delta, and S067 pins the commit to the staged value, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S106
 
 A051 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:245
-Disposition: PARTIAL
-Swift: S061 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S060 and S061 assert the updated previews changed and still share one delta, and S068 pins the commit to the staged value, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S106
 
 A052 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:252
-Disposition: PARTIAL
-Swift: S063 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S063 and S064 assert one revision advance and one undoable history entry after release, but no predicate counts SongDocument::documentChanged emissions, so the single-publication observation is unproved.
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Disposition: MATCHED
+Mapping: S105
 
 A053 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:253
-Disposition: PARTIAL
-Swift: S064 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S064 asserts the released gesture made exactly one undoable history entry, but no predicate counts SongTab::edited emissions, so the single-emission observation is unproved.
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Disposition: MATCHED
+Mapping: S107
 
 A054 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:254
 Disposition: MATCHED
@@ -277,18 +232,12 @@ Disposition: MATCHED
 Mapping: S066
 
 A059 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:259
-Disposition: PARTIAL
-Swift: S067 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S067 pins the committed value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact committed value is unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S108, S067
 
 A060 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:260
-Disposition: PARTIAL
-Swift: S068 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S068 pins the committed value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact committed value is unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S108, S068
 
 A061 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:261
 Disposition: MATCHED
@@ -299,25 +248,16 @@ Disposition: MATCHED
 Mapping: S070
 
 A063 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:263
-Disposition: PARTIAL
-Swift: S067 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S067 asserts the committed document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S109
 
 A064 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:264
-Disposition: PARTIAL
-Swift: S068 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S068 asserts the committed document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S109
 
 A065 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:265
-Disposition: PARTIAL
-Swift: S069 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S069 asserts the untouched document value of the unselected note, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S109
 
 A066 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:269
 Disposition: MATCHED
@@ -344,25 +284,16 @@ Disposition: MATCHED
 Mapping: S074
 
 A072 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:275
-Disposition: PARTIAL
-Swift: S071 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S071 asserts the restored document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
+Disposition: MATCHED
+Mapping: S110
 
 A073 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:276
-Disposition: PARTIAL
-Swift: S072 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S072 asserts the restored document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
+Disposition: MATCHED
+Mapping: S110
 
 A074 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:277
-Disposition: PARTIAL
-Swift: S073 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S073 asserts the restored song bytes covering every document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S110
 
 A075 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:279
 Disposition: PARTIAL
@@ -376,43 +307,28 @@ Disposition: MATCHED
 Mapping: S075, S077
 
 A077 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:281
-Disposition: PARTIAL
-Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S075 pins the redone value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact redone value is unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S075, S108
 
 A078 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:282
-Disposition: PARTIAL
-Swift: S076 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S076 pins the redone value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact redone value is unproved.
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S076, S108
 
 A079 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:283
 Disposition: MATCHED
 Mapping: S077
 
 A080 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:284
-Disposition: PARTIAL
-Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S075 asserts the redone document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S111
 
 A081 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:285
-Disposition: PARTIAL
-Swift: S076 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S076 asserts the redone document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S111
 
 A082 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:286
-Disposition: PARTIAL
-Swift: S077 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
-Mapping/reason: S077 asserts the redone committed bytes covering every document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S111
 
 A083 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:302
 Disposition: MATCHED
@@ -423,18 +339,12 @@ Disposition: MATCHED
 Mapping: S078
 
 A085 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:304
-Disposition: PARTIAL
-Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S079 asserts both staged previews share one relative delta, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
+Disposition: MATCHED
+Mapping: S104
 
 A086 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:305
-Disposition: PARTIAL
-Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S079 asserts both staged previews share one relative delta, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved for the second selected note.
-Original expression:
-  QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
+Disposition: MATCHED
+Mapping: S104
 
 A087 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:312
 Disposition: MATCHED
@@ -445,18 +355,12 @@ Disposition: MATCHED
 Mapping: S080
 
 A089 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:314
-Disposition: PARTIAL
-Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S079 asserts the staged previews share one relative delta and S081 that the restage changed it, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
-Original expression:
-  QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S106
 
 A090 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:315
-Disposition: PARTIAL
-Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S079 asserts the staged previews share one relative delta and S081 that the restage changed it, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved for the second selected note.
-Original expression:
-  QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
+Disposition: MATCHED
+Mapping: S106
 
 A091 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:318
 Disposition: MATCHED
@@ -491,25 +395,16 @@ Disposition: MATCHED
 Mapping: S089
 
 A099 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:326
-Disposition: PARTIAL
-Swift: S087 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S087 asserts the untouched document value after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
+Disposition: MATCHED
+Mapping: S112
 
 A100 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:327
-Disposition: PARTIAL
-Swift: S088 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S088 asserts the untouched document value after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
+Disposition: MATCHED
+Mapping: S112
 
 A101 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:328
-Disposition: PARTIAL
-Swift: S089 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S089 asserts the untouched document value of the unselected note after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S112
 
 A102 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:334
 Disposition: MATCHED
@@ -540,25 +435,16 @@ Disposition: MATCHED
 Mapping: S091, S089
 
 A109 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:341
-Disposition: PARTIAL
-Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
+Disposition: MATCHED
+Mapping: S112, S091
 
 A110 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:342
-Disposition: PARTIAL
-Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
+Disposition: MATCHED
+Mapping: S112, S091
 
 A111 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:343
-Disposition: PARTIAL
-Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
-Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
+Disposition: MATCHED
+Mapping: S112, S091
 
 A112 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:348
 Disposition: MATCHED
@@ -599,21 +485,21 @@ Mapping: S095
 A121 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:369
 Disposition: PARTIAL
 Swift: S098 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
-Mapping/reason: S098 asserts the pressed document literal after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
+Mapping/reason: S095/S098 pin the frozen document state and the untouched literals after the stationary release, but no Swift predicate reads the playback-timeline projection in the stationary case: the Stage A projection anchors cover the held-drag, commit, undo/redo and Escape phases only, so this site's timeline sample stays unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A122 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:370
 Disposition: PARTIAL
 Swift: S099 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
-Mapping/reason: S099 asserts the companion document literal after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
+Mapping/reason: S095/S098 pin the frozen document state and the untouched literals after the stationary release, but no Swift predicate reads the playback-timeline projection in the stationary case: the Stage A projection anchors cover the held-drag, commit, undo/redo and Escape phases only, so this site's timeline sample stays unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A123 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:371
 Disposition: PARTIAL
 Swift: S095 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
-Mapping/reason: S095 asserts the frozen song bytes covering every document value after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
+Mapping/reason: S095/S098 pin the frozen document state and the untouched literals after the stationary release, but no Swift predicate reads the playback-timeline projection in the stationary case: the Stage A projection anchors cover the held-drag, commit, undo/redo and Escape phases only, so this site's timeline sample stays unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
@@ -933,3 +819,39 @@ Anchor: message "the companion literal is untouched"
 
 S100 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the mixed square and noise selection presents the continuous ruler"
+
+S101 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a held drag publishes no document change"
+
+S102 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a held drag publishes no dirty change"
+
+S103 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities"
+
+S104 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the staged preview pins to the fixture literal plus the dragged pixels"
+
+S105 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one release publishes exactly one document change"
+
+S106 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the reversed preview pins to the fixture literal minus the dragged pixels"
+
+S107 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one release publishes exactly one dirty change"
+
+S108 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the committed value equals the pinned staged preview"
+
+S109 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"
+
+S110 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "undo restores the timeline projection"
+
+S111 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "redo restores the committed timeline projection"
+
+S112 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "an escaped drag leaves the timeline projection untouched"

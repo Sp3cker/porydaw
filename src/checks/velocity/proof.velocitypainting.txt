@@ -13,11 +13,11 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 Command: deno task verify --filter swiftcore
 Result: PASS — 1/14 harnesses selected, 13 sibling harnesses skipped by the filter.
-Provenance: provided by the controller with the settled handoff for the pre-freeze source,
-and re-reported PASS by the GapsVelocity lane after the final edit of
-src/checks/velocity/VelocityPaintDetentChecks.swift (SHA-256 9c6f9389…). This ledger did
-not rerun the build or the suite; structural proof checking is not execution evidence
-and no parity or source-freshness claim follows from it.
+Provenance: supplied by the controller handoff for this tree, whose final edit of
+src/checks/velocity/VelocityPaintDetentChecks.swift carries SHA-256 4e616301…; the
+implementer re-reported PASS for the locked swiftcore and swiftcore-projectsession
+filters against it. This ledger did not rerun the build or the suite; structural proof
+checking is not execution evidence and no parity or source-freshness claim follows.
 
 Methods in file order: paintCommitsOnce, rampCommitsOnce.
 Exact original source anchors:
@@ -73,26 +73,12 @@ A011 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypaint
 Disposition: MATCHED
 
 A012 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:49
-Disposition: PARTIAL
-Mapping/reason: Related predicates S085 (src/checks/velocity/VelocityPaintDetentChecks.swift, revision frozen) and S086 (:66, history identity frozen) establish that the deferred paint committed nothing, which is the no-op the original counts. Unproved: the documentChanged emission count itself - the Swift check attaches no document.onChange observer and counts no publications, so the exact zero-count observation is not executed. Executed by runVelocityPageChecks (VelocityPageChecks.swift).
-Swift counterpart expression (S085):
-  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityPaintID, what: "the deferred paint stages no revision before release")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 0)
+Disposition: MATCHED
+Mapping: S125
 
 A013 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:50
-Disposition: PARTIAL
-Mapping/reason: Related predicates S085 (:65) and S086 (:66) show the deferred paint committed nothing. Unproved: the SongTab::edited emission count - the Swift page has no tab object and no edited/dirty publication counter to read. Executed by runVelocityPageChecks (VelocityPageChecks.swift).
-Swift counterpart expression (S086):
-  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityPaintID, what: "the deferred paint stages no history entry before release")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(edited.count(), 0)
+Disposition: MATCHED
+Mapping: S126
 
 A014 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:51
 Disposition: MATCHED
@@ -104,68 +90,27 @@ A016 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypaint
 Disposition: MATCHED
 
 A017 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:54
-Disposition: PARTIAL
-Mapping/reason: S087 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the first selected note's document velocity during the preview. Unproved: the timeline projection value - the original reacquires the rebuilt MidiTimeline and reads its note-on velocity (tst_velocityediting.cpp:431-442), while the Swift check never re-reads the page's published projection.
-Swift counterpart expression (S087):
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the first velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
+Disposition: MATCHED
+Mapping: S124
 
 A018 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:55
-Disposition: PARTIAL
-Mapping/reason: S088 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the second selected note's document velocity during the preview. Unproved: its timeline projection value (original helper tst_velocityediting.cpp:431-442); the Swift check never re-reads the published projection.
-Swift counterpart expression (S088):
-  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the last velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
+Disposition: MATCHED
+Mapping: S124
 
 A019 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:56
-Disposition: PARTIAL
-Mapping/reason: S089 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the unselected note's document velocity during the preview. Unproved: its timeline projection value (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S089):
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the unselected velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S124
 
 A020 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:57
 Disposition: MATCHED
 
 A021 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:64
-Disposition: PARTIAL
-Mapping/reason: Related predicates S091 (src/checks/velocity/VelocityPaintDetentChecks.swift, revision advanced by exactly one) and S092 (:73, a new history identity) establish the single release commit. Unproved: the documentChanged emission count - no document.onChange observer is attached, so exactly-one publication is corroborated but not executed.
-Swift counterpart expression (S091):
-  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityPaintID, what: "one paint release commits one revision")
-Source context since previous assertion:
-;
-
-    mouseRelease(Qt::LeftButton, paintEnd);
-
-    // Release commits the two independent literal values as one history entry,
-    // updates the actual timeline projection, and does not touch the unselected
-    // stacked sibling.
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Disposition: MATCHED
+Mapping: S128
 
 A022 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:65
-Disposition: PARTIAL
-Mapping/reason: Related predicates S091 (:72) and S092 (:73) establish the single release commit. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart. Executed by runVelocityPageChecks (VelocityPageChecks.swift).
-Swift counterpart expression (S092):
-  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityPaintID, message: "one paint release makes one history entry")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Disposition: MATCHED
+Mapping: S129
 
 A023 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:66
 Disposition: MATCHED
@@ -195,37 +140,16 @@ A031 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypaint
 Disposition: MATCHED
 
 A032 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:75
-Disposition: PARTIAL
-Mapping/reason: S095 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the committed document velocity of the first selected note. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442); the Swift check never re-reads the published projection.
-Swift counterpart expression (S095):
-  report.expectEqual(37, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the first literal velocity")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietPaintVelocity))
+Disposition: MATCHED
+Mapping: S127
 
 A033 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:76
-Disposition: PARTIAL
-Mapping/reason: S096 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the committed document velocity of the second selected note. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S096):
-  report.expectEqual(91, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the last literal velocity")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(kLaterPaintVelocity))
+Disposition: MATCHED
+Mapping: S127
 
 A034 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:77
-Disposition: PARTIAL
-Mapping/reason: S097 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the unselected note's document velocity after the release. Unproved: its post-commit timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S097):
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release leaves the unselected note alone")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S127
 
 A035 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:78
 Disposition: MATCHED
@@ -241,15 +165,8 @@ A038 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainti
 Disposition: MATCHED
 
 A039 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:97
-Disposition: PARTIAL
-Mapping/reason: S109 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the added middle note's document velocity. Unproved: its timeline projection - the original's QTRY re-read of the rebuilt timeline (tst_velocityediting.cpp:431-442) is not executed.
-Swift counterpart expression (S109):
-  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
+Disposition: MATCHED
+Mapping: S130
 
 A040 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:101
 Disposition: MATCHED
@@ -287,9 +204,7 @@ Disposition: MATCHED
 
 A050 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:150
 Disposition: PARTIAL
-Mapping/reason: S103 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the middle preview equals page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: pressX, y0: pressY, x1: endX, y1: endY)) computed at :114 - the same interpolation observable over the gesture's own span. Unproved: equality with the original's deliberately non-inferred literal 65, because the expectation is derived from the production ramp helper and axis quantizer rather than an independent constant.
-Swift counterpart expression (S103):
-  report.expectEqual(middleExpected, Int(page.frozenPreview[middle.id] ?? 0), cppID: drawerVelocityRampID, what: "the halfway middle note previews the interpolated velocity")
+Mapping/reason: PARTIAL: the midpoint literal 65 is pinned over the same tick-36 ramp span by the per-program unlocked ramp flow (S136); this case's own locked continuous ramp still derives its mid-preview expectation from the production ramp helper and axis quantizer, so an executing predicate asserting the non-inferred 65 for this gesture is still missing.
 Source context since previous assertion:
 ;
 
@@ -309,26 +224,12 @@ A054 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainti
 Disposition: MATCHED
 
 A055 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:155
-Disposition: PARTIAL
-Mapping/reason: Related predicates S106 (src/checks/velocity/VelocityPaintDetentChecks.swift) and S107 (:121) establish that the deferred ramp committed nothing, the no-op the original counts. Unproved: the documentChanged emission count - no document.onChange observer is attached. Executed by runVelocityPageChecks (VelocityPageChecks.swift).
-Swift counterpart expression (S106):
-  report.expectEqual(baseline.revision, document.revision, cppID: drawerVelocityRampID, what: "the deferred ramp stages no revision before release")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 0)
+Disposition: MATCHED
+Mapping: S131
 
 A056 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:156
-Disposition: PARTIAL
-Mapping/reason: Related predicates S106 (:120) and S107 (:121) establish that the deferred ramp committed nothing. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart.
-Swift counterpart expression (S107):
-  report.expectEqual(baseline.identity, document.history.currentIdentity, cppID: drawerVelocityRampID, what: "the deferred ramp stages no history entry before release")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(edited.count(), 0)
+Disposition: MATCHED
+Mapping: S132
 
 A057 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:157
 Disposition: MATCHED
@@ -344,78 +245,31 @@ A060 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainti
 Disposition: MATCHED
 
 A061 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:161
-Disposition: PARTIAL
-Mapping/reason: S108 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the first ramp note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S108):
-  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the first velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
+Disposition: MATCHED
+Mapping: S130
 
 A062 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:162
-Disposition: PARTIAL
-Mapping/reason: S109 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the middle note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S109):
-  report.expectEqual(56, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the middle velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
+Disposition: MATCHED
+Mapping: S130
 
 A063 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:163
-Disposition: PARTIAL
-Mapping/reason: Related predicates S104 (src/checks/velocity/VelocityPaintDetentChecks.swift, preview) and S117 (:134, commit) for the ramp-end note. Unproved: its pre-release timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S104):
-  report.expectEqual(93, Int(page.frozenPreview[notes[2].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp release endpoint previews its literal velocity")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
+Disposition: MATCHED
+Mapping: S130
 
 A064 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:164
-Disposition: PARTIAL
-Mapping/reason: S110 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the unselected note's document velocity during the preview. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S110):
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the outside velocity during preview")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S130
 
 A065 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:165
 Disposition: MATCHED
 
 A066 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:171
-Disposition: PARTIAL
-Mapping/reason: Related predicates S112 (src/checks/velocity/VelocityPaintDetentChecks.swift, revision advanced by exactly one) and S113 (:129, a new history identity) establish the single ramp commit. Unproved: the documentChanged emission count - no document.onChange observer is attached.
-Swift counterpart expression (S112):
-  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityRampID, what: "one ramp release commits one revision")
-Source context since previous assertion:
-;
-
-    mouseRelease(Qt::LeftButton, rampEnd, Qt::ShiftModifier);
-
-    // The ramp becomes one document command on release, clears every preview,
-    // and leaves the non-selected stacked note unchanged in document and view.
-
-Original expression:
-  QCOMPARE(documentChanged.count(), 1)
+Disposition: MATCHED
+Mapping: S134
 
 A067 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:172
-Disposition: PARTIAL
-Mapping/reason: Related predicates S112 (:128) and S113 (:129) establish the single ramp commit. Unproved: the SongTab::edited emission count, which has no Swift tab counterpart.
-Swift counterpart expression (S113):
-  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRampID, message: "one ramp release makes one history entry")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(edited.count(), 1)
+Disposition: MATCHED
+Mapping: S135
 
 A068 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:173
 Disposition: MATCHED
@@ -444,9 +298,7 @@ Mapping: S123, S102
 
 A076 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:181
 Disposition: PARTIAL
-Mapping/reason: S116 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the committed middle velocity equals middleExpected, the value derived from the production ramp helper and axis quantizer at :114. Unproved: equality with the original's independent literal 65.
-Swift counterpart expression (S116):
-  report.expectEqual(middleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the interpolated middle velocity")
+Mapping/reason: PARTIAL: the committed middle value is asserted only through the production-derived middleExpected (S116) and the literal 65 is pinned in the sibling per-program unlocked ramp flow (S136); this case's own locked continuous ramp has no executing predicate asserting the non-inferred 65 for its commit, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -460,21 +312,12 @@ A078 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainti
 Disposition: MATCHED
 
 A079 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:184
-Disposition: PARTIAL
-Mapping/reason: Related predicate S102 (src/checks/velocity/VelocityPaintDetentChecks.swift, the first note's preview 37). Unproved: any post-commit read of the first ramp note - the release side asserts only the committed middle (S116, :133), the committed last note (S117, :134) and the untouched outside note (S118, :135), so neither its document nor its projected value is re-read.
-Swift counterpart expression (S102):
-  report.expectEqual(37, Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityRampID, what: "the ramp press endpoint previews its literal velocity")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kRampStartVelocity))
+Disposition: MATCHED
+Mapping: S133
 
 A080 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:185
 Disposition: PARTIAL
-Mapping/reason: S116 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the committed middle note's document value (production-derived). Unproved: its post-commit timeline projection and an independent literal check of 65.
-Swift counterpart expression (S116):
-  report.expectEqual(middleExpected, Int(document.note(middle.id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the interpolated middle velocity")
+Mapping/reason: PARTIAL: the post-commit projection readback is now executed for this flow (S133, with a production-derived middle expectation) and the literal 65 is pinned in the sibling per-program unlocked ramp flow (S136); this case's own released projection still derives the middle from the production ramp helper, so the non-inferred literal check stays missing.
 Source context since previous assertion:
 ;
 
@@ -482,26 +325,12 @@ Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kRampMiddleVelocity))
 
 A081 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:186
-Disposition: PARTIAL
-Mapping/reason: S117 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the committed last ramp note's document value 93. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S117):
-  report.expectEqual(93, Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the last ramp velocity")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(kRampEndVelocity))
+Disposition: MATCHED
+Mapping: S133
 
 A082 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:187
-Disposition: PARTIAL
-Mapping/reason: S118 (src/checks/velocity/VelocityPaintDetentChecks.swift) asserts the unselected note's document value is unchanged after the release. Unproved: its timeline projection (original helper tst_velocityediting.cpp:431-442).
-Swift counterpart expression (S118):
-  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release leaves the outside note alone")
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S133
 
 A083 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:188
 Disposition: MATCHED
@@ -882,3 +711,42 @@ Anchor: message "the document keeps the last velocity during preview"
 
 S123 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the release commits the first ramp velocity"
+
+S124 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities"
+
+S125 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a held drag publishes no document change"
+
+S126 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a held drag publishes no dirty change"
+
+S127 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"
+
+S128 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one document change"
+
+S129 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one dirty change"
+
+S130 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities"
+
+S131 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a held drag publishes no document change"
+
+S132 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a held drag publishes no dirty change"
+
+S133 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"
+
+S134 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one document change"
+
+S135 | drawerVelocityRampCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one dirty change"
+
+S136 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "an unlocked ramp interpolates the middle note"

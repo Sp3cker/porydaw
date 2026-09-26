@@ -20,9 +20,21 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     page.refreshFromDocument()
     let baseline = DocumentSnapshot(document)
+    let dragDepth = document.history.undoCount
+    let dragPublications = drawerVelocityPublicationCounter(session: fixture.session)
     let before = fixture.handle(notes[0])?.y ?? 0
     fixture.drag(notes[0], dy: -24)
     let committed = DocumentSnapshot(document)
+    let committedVelocities = [notes[0], notes[1]].map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+    report.expectEqual(expected: [notes[0], notes[1]].map { Int(document.note($0.id)?.velocity ?? 0) },
+                       actual: committedVelocities, cppID: drawerVelocityTransactionID,
+                       what: "a released drag republishes the staged velocities into the timeline projection")
+    report.expectEqual(expected: dragDepth + 1, actual: document.history.undoCount,
+                       cppID: drawerVelocityTransactionID, what: "one release grows the undo depth by exactly one")
+    report.expectEqual(expected: 1, actual: dragPublications.document, cppID: drawerVelocityTransactionID,
+                       what: "one release publishes exactly one document change")
+    report.expectEqual(expected: 1, actual: dragPublications.dirty, cppID: drawerVelocityTransactionID,
+                       what: "one release publishes exactly one dirty change")
     report.expectEqual(expected: baseline.revision + 1, actual: committed.revision, cppID: drawerVelocityTransactionID,
                        what: "one released drag advances the document revision once")
     report.expect(committed.identity != baseline.identity, cppID: drawerVelocityTransactionID,
@@ -46,20 +58,28 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                        cppID: drawerVelocityHistoryID, what: "Undo restores the captured velocity")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0),
                        cppID: drawerVelocityHistoryID, what: "Undo restores every target of the transaction")
+    report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityHistoryID, what: "undo restores the timeline projection")
     page.refreshFromDocument()
     report.expectEqual(expected: 3, actual: fixture.handles.count, cppID: drawerVelocityHistoryID,
                        what: "Undo rebuilds the page without losing its handles")
     _ = try? runBlocking { try await fixture.session.redo() }
     report.expectEqual(expected: committed.identity, actual: DocumentSnapshot(document).identity, cppID: drawerVelocityHistoryID,
                        what: "Redo restores the committed history identity")
+    report.expectEqual(expected: committedVelocities,
+                       actual: [notes[0], notes[1]].map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityHistoryID, what: "redo restores the committed timeline projection")
     _ = try? runBlocking { try await fixture.session.undo() }
 
     // A press that never leaves the activation distance is a selection, not an
     // edit: no preview, no history.
     let pointerBaseline = DocumentSnapshot(document)
+    let pointerDepth = document.history.undoCount
     fixture.drag(notes[0], dy: 0)
     report.expectEqual(expected: pointerBaseline.revision, actual: DocumentSnapshot(document).revision,
                        cppID: drawerVelocityTransactionID, what: "a stationary click records no history")
+    report.expectEqual(expected: pointerDepth, actual: document.history.undoCount,
+                       cppID: drawerVelocityTransactionID, what: "a cancelled gesture leaves the undo depth unchanged")
     report.expect(fixture.session.selectedNotes == [notes[0].id], cppID: drawerVelocityTransactionID,
                   message: "a stationary click selects only its own note")
 
@@ -68,6 +88,9 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     fixture.session.setSelectedNotes([notes[2].id, notes[0].id])
     page.refreshFromDocument()
     let cancelBaseline = DocumentSnapshot(document)
+    let cancelDepth = document.history.undoCount
+    let cancelProjection = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+    let cancelPublications = drawerVelocityPublicationCounter(session: fixture.session)
     if let handle = fixture.handle(notes[0]) {
         _ = page.pointerPress(x: handle.x, y: handle.y, surface: 1, button: 1, modifiers: 0)
         _ = page.pointerMove(x: handle.x, y: handle.y - 30, buttons: 1)
@@ -75,6 +98,14 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                       message: "a live drag previews before release")
         report.expect(page.interactionActive, cppID: drawerVelocityTransactionID,
                       message: "a live drag reports an active interaction")
+        report.expectEqual(expected: cancelProjection,
+                           actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                           cppID: drawerVelocityCancellationID,
+                           what: "a drag preview holds the timeline projection at the captured velocities")
+        report.expectEqual(expected: 0, actual: cancelPublications.document,
+                           cppID: drawerVelocityCancellationID, what: "a held drag publishes no document change")
+        report.expectEqual(expected: 0, actual: cancelPublications.dirty,
+                           cppID: drawerVelocityCancellationID, what: "a held drag publishes no dirty change")
         report.expect(page.handleEscape(), cppID: drawerVelocityCancellationID,
                       message: "Escape is claimed while a gesture is live")
     }
@@ -84,6 +115,10 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
                   message: "Escape writes nothing at all")
     report.expect(fixture.session.selectedNoteOrder == [notes[2].id, notes[0].id], cppID: drawerVelocityCancellationID,
                   message: "Escape restores selection membership and insertion order")
+    report.expectEqual(expected: cancelProjection, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityCancellationID, what: "an escaped drag leaves the timeline projection untouched")
+    report.expectEqual(expected: cancelDepth, actual: document.history.undoCount,
+                       cppID: drawerVelocityCancellationID, what: "a cancelled gesture leaves the undo depth unchanged")
 
     // A stale revision cancels instead of retargeting the current selection.
     if let handle = fixture.handle(notes[0]) {

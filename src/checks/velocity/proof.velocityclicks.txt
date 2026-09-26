@@ -7,20 +7,20 @@ Swift counterpart: src/checks/velocity/tst_velocityediting.swift
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
+Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 
 Command: deno task verify --filter swiftcore; deno task verify:qml
-Result: swiftcore harness PASS (1/14 ok, 13 sibling harnesses skipped by the filter),
-re-run after the clicks strengthening and again after an unrelated paint-file edit, so
-it is current for the cited predicates with VelocityClickSelectionChecks.swift frozen at
-32d27d1758ea0293 (re-pinned by task 29, which added the required
-`typography: Typography(baseFontPx: 13)` argument to the DocumentWorkspace
-construction inside drawerVelocityLifecycleCancellation; the cited predicate
-bodies are unchanged); editorqml-drawer PASS (1/1 ok). Controller-provided integrated
-evidence, reused as final; no harness was rerun for this ledger. The SHA-256 values
-above pin the sources these predicates were read from.
+Result: provided by the implementer (agent://Task59a, locked build) for the frozen
+Stage A tree: build ok; swiftcore PASS (12/36 ok, 24 sibling harnesses skipped by the
+filter); swiftcore-projectsession PASS (1/36 ok, 35 skipped); editorqml-drawer PASS
+(1/1 ok). Current for the cited predicates with
+VelocityClickSelectionChecks.swift frozen at
+2d2eac05e41c8769f0f017f820c9eb2ac8e2a220 (agent://Task59a Stage A snapshot); no
+harness was rerun by this ledger pass. The SHA-256 values above pin the C++ originals
+these predicates were read from.
 
 Methods in file order: blankClickDeselectsOnRelease, graduationClickEditsSelectedNotes, clickBelowSelectedNodeChangesOnlySelection.
 Exact original source anchors:
@@ -81,13 +81,8 @@ Disposition: MATCHED
 Mapping: S087
 
 A008 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:55
-Disposition: PARTIAL
-Mapping/reason: S087: the snapshot also pins history identity, undoability and redoability; unproved: the undo stack depth delta of the original undoDepthBefore comparison, because the Swift owner publishes no public depth counter, so a stray entry with an unchanged tip identity would not be distinguished.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S117, S087
 
 A009 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:56
 Disposition: MATCHED
@@ -134,15 +129,8 @@ Disposition: MATCHED
 Mapping: S092
 
 A021 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:92
-Disposition: PARTIAL
-Mapping/reason: S093 and S094: the case resolves the label row to a velocity and the ruler consumes the press on that row; unproved: the original gutterInput bounds containment of gutterLocal is not re-asserted, because the Swift case declares surface 0 instead of testing the point against the published gutter rect.
-Source context since previous assertion:
-;
-
-    const QPointF gutterLocal{gutterInput->bounds().center().x(), maximumLabel->y};
-
-Original expression:
-  QVERIFY(gutterInput->bounds().contains(gutterLocal))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the retired native gutter input item (`quickRoot->findChild<songview::TimelineInputItem*>("timelineVelocityGutterInput")`, fork f842f7e1:75-78,91-92) and its `bounds().contains(gutterLocal)` containment; the mounted page classifies the ruler surface (surface 0) instead, so the native containment is unobservable.
 
 A022 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:100
 Disposition: MATCHED
@@ -165,13 +153,8 @@ Disposition: MATCHED
 Mapping: S098
 
 A027 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:107
-Disposition: PARTIAL
-Mapping/reason: S099: the history identity changed, corroborating one new tip entry; unproved: the exact undo depth delta of the original undoDepthBefore + 1 comparison, because the Swift owner publishes no public depth counter.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
+Disposition: MATCHED
+Mapping: S118, S099
 
 A028 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:108
 Disposition: MATCHED
@@ -194,13 +177,8 @@ Disposition: MATCHED
 Mapping: S103
 
 A033 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:113
-Disposition: PARTIAL
-Mapping/reason: S097: the unselected note document value is asserted unchanged; unproved: its published handle value after the graduation click, because the case asserts published handles only for the two selected notes.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S119, S097
 
 A034 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:114
 Disposition: MATCHED
@@ -211,42 +189,20 @@ Disposition: MATCHED
 Mapping: S105
 
 A036 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:123
-Disposition: PARTIAL
-Mapping/reason: S113: the Swift case asserts the first note keeps the value it carried at fixture construction; unproved: the original pre-click setNotesVelocity write to velocity 1 and its document result, because the Swift case performs no setup edit and compares against the constructed value.
-Source context since previous assertion:
-;
-
-    m_tab->document().setNotesVelocity({m_quietStacked}, kQuietVelocityAfterSetup);
-
-Original expression:
-  QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
+Disposition: MATCHED
+Mapping: S120, S113
 
 A037 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:124
-Disposition: PARTIAL
-Mapping/reason: S113: document side of the first note; unproved: the pre-click setup write and its published value, because the case publishes no predicate for the untouched note handle.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
+Disposition: MATCHED
+Mapping: S121
 
 A038 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:125
-Disposition: PARTIAL
-Mapping/reason: S107: the pressed note value is the loop comparison baseline, whose painted preview must differ from it; unproved: an explicit pre-click document reading of the pressed note, which plays the loud stacked role of the original.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S122
 
 A039 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:126
-Disposition: PARTIAL
-Mapping/reason: S114: the third note is asserted unchanged across the click; unproved: an explicit pre-click document reading of the note that plays the untouched later role.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S122
 
 A040 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:127
 Disposition: MATCHED
@@ -278,22 +234,12 @@ Disposition: MATCHED
 Mapping: S110
 
 A046 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:144
-Disposition: PARTIAL
-Mapping/reason: S111: the history identity changed, corroborating one new entry; unproved: the exact undo depth delta of the original undoDepthBefore + 1 comparison.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
+Disposition: MATCHED
+Mapping: S123, S111
 
 A047 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:145
-Disposition: PARTIAL
-Mapping/reason: S113: the untouched first note keeps its constructed value across the click; unproved: the original pre-click setup write to velocity 1 surviving the click, because the Swift case never edits that note.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
+Disposition: MATCHED
+Mapping: S113, S122
 
 A048 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:146
 Disposition: PARTIAL
@@ -309,31 +255,16 @@ Disposition: MATCHED
 Mapping: S114
 
 A050 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:148
-Disposition: PARTIAL
-Mapping/reason: S113: document side of the untouched first note; unproved: its published handle value and the original pre-click setup write to velocity 1.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
+Disposition: MATCHED
+Mapping: S124, S113
 
 A051 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:149
-Disposition: PARTIAL
-Mapping/reason: S112: document side of the pressed note; unproved: its published handle value after the commit and the pressed column value pin recorded at A043.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kClickVelocity))
+Disposition: MATCHED
+Mapping: S124, S112
 
 A052 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:150
-Disposition: PARTIAL
-Mapping/reason: S114: document side of the untouched second note; unproved: its published handle value.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S124, S114
 
 A053 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:151
 Disposition: MATCHED
@@ -694,3 +625,27 @@ Anchor: message "an off-node click keeps its own selection"
 
 S116 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "an off-node release ends the gesture"
+
+S117 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a cancelled gesture leaves the undo depth unchanged"
+
+S118 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "one release grows the undo depth by exactly one"
+
+S119 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"
+
+S120 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "document edits invalidate cached note values"
+
+S121 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "document edits rebuild the live timeline projection"
+
+S122 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "the published handles preserve the pre-click fixture values"
+
+S123 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "one release grows the undo depth by exactly one"
+
+S124 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"

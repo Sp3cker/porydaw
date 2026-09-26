@@ -79,47 +79,8 @@ src/checks/velocity/velocitydetentpainting.cpp:244 | mouseMove(paintEnd);
 src/checks/velocity/velocitydetentpainting.cpp:267 | mouseRelease(Qt::LeftButton, paintEnd);
 
 A001 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:36
-Disposition: PARTIAL
-Mapping/reason: Related predicate S081 (the ruler reports the fixture program context as intrinsic); the presentation checks resolve page.contextSlot and voice maps for their own program changes. Unproved: a view-level currentProgram(0) readback equal to the row program.
-Source context since previous assertion:
-#include "checks/velocity/tst_velocityediting.h"
-
-#include <optional>
-
-#include <QtTest>
-
-#include "ui/editordrawer/editordrawer.h"
-#include "ui/keymap.h"
-#include "ui/songview.h"
-#include "ui/songview/quick/timelinequickview.h"
-
-void VelocityEditingTest::rulerUnlockKeepsRawVelocity_data()
-{
-    QTest::addColumn<int>("program");
-    QTest::addColumn<bool>("unlockOnPress");
-    QTest::addColumn<int>("expectedVelocity");
-
-    QTest::newRow("square-modifier-unlock") << 1 << true << 73;
-    QTest::newRow("square-detents-disabled") << 1 << false << 73;
-    QTest::newRow("wave-modifier-unlock") << 2 << true << 73;
-    QTest::newRow("wave-detents-disabled") << 2 << false << 73;
-    QTest::newRow("noise-modifier-unlock") << 3 << true << 73;
-    QTest::newRow("noise-detents-disabled") << 3 << false << 73;
-}
-
-void VelocityEditingTest::rulerUnlockKeepsRawVelocity()
-{
-    QFETCH(int, program);
-    QFETCH(bool, unlockOnPress);
-    QFETCH(int, expectedVelocity);
-
-    constexpr int kRawVelocity = 73;
-
-    m_tab->document().addLanePoint(0, DOC_CC_VOICE, 0, program);
-    selectDragPair();
-
-Original expression:
-  QTRY_COMPARE(m_tab->view().currentProgram(0), program)
+Disposition: MATCHED
+Mapping: S150
 
 A002 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:37
 Disposition: MATCHED
@@ -182,7 +143,7 @@ Mapping/reason: S084
 
 A015 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:75
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: Swift publishes no documentChanged signal; S084/S085 count the same commit as one revision advance and a new history identity. Unproved: the notification count at the press instant.
+Mapping/reason: PARTIAL: the same commit is observed as one revision advance and a new history identity (S084/S085); the per-program flow now counts publications, but only for the drag, paint and ramp gestures (S152, S155), so this ruler-click commit's notification count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -194,7 +155,7 @@ Original expression:
 
 A016 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:76
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: SongTab::edited has no Swift analogue; the same commit is observed as one revision advance (S084). Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the same commit is observed as one revision advance (S084); the per-program flow counts dirty publications for the drag, paint and ramp gestures (S156) but no predicate counts them for a ruler click, so the edited count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -207,7 +168,7 @@ Mapping: S084, S083, S090
 
 A018 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:78
 Disposition: PARTIAL
-Mapping/reason: Related predicates S084/S085 (one revision advance and a new history identity). Unproved: the at-tip undo depth count; this fixture runs no coreEditHistoryCountAtTip traversal and revision is not a depth proxy.
+Mapping/reason: PARTIAL: one revision advance and a new history identity are asserted (S084/S085); the per-program flow now grows the undo depth by exactly one, but only for the drag, paint and ramp gestures (S154), so this ruler-click commit's depth stays unproved.
 Source context since previous assertion:
 ;
 
@@ -228,7 +189,7 @@ Mapping: S088
 
 A022 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:82
 Disposition: PARTIAL
-Mapping/reason: Related predicate S086 (the document value of the same note). Unproved: a projected timeline velocity readback for the note after this click.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S086); the per-program flow reads the timeline projection for the drag, paint and ramp gestures (S153), so this ruler click's projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -237,7 +198,7 @@ Original expression:
 
 A023 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:83
 Disposition: PARTIAL
-Mapping/reason: Related predicate S087 (the document value of the same note). Unproved: a projected timeline velocity readback after this click.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S087); the per-program flow reads the timeline projection for other gestures only (S153), so this ruler click's projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -246,7 +207,7 @@ Original expression:
 
 A024 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:84
 Disposition: PARTIAL
-Mapping/reason: Related predicate S088. Unproved: a projected timeline velocity readback for the unselected note.
+Mapping/reason: PARTIAL: the unselected note's document value is asserted (S088); the per-program flow reads the timeline projection for other gestures only (S153), so this ruler click's projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -259,7 +220,7 @@ Mapping: S089
 
 A026 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:90
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S090 asserts the following release writes nothing more and S084/S085 locate the single commit. Unproved: the notification counts after the release.
+Mapping/reason: PARTIAL: the following release writing nothing more is asserted (S090) and the single commit located (S084/S085); the per-program flow counts publications for other gestures only (S152, S155), so this post-release notification count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -272,7 +233,7 @@ Original expression:
 
 A027 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:91
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S084 observes the single revision advance. Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the single revision advance is asserted (S084); no predicate counts dirty publications for a ruler click (the per-program flow counts them for the drag, paint and ramp gestures, S156), so the edited count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -285,7 +246,7 @@ Mapping: S084, S090
 
 A029 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:93
 Disposition: PARTIAL
-Mapping/reason: Related predicate S085 (a new history identity). Unproved: the at-tip undo depth count.
+Mapping/reason: PARTIAL: a new history identity is asserted (S085); the per-program flow grows the undo depth by exactly one for other gestures only (S154), so this ruler-click commit's depth stays unproved.
 Source context since previous assertion:
 ;
 
@@ -306,7 +267,7 @@ Mapping: S088
 
 A033 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:97
 Disposition: PARTIAL
-Mapping/reason: Related predicate S086. Unproved: the projected timeline velocity readback.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S086); the per-program flow reads the timeline projection (S153) but not for this ruler click, so the projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -315,7 +276,7 @@ Original expression:
 
 A034 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:98
 Disposition: PARTIAL
-Mapping/reason: Related predicate S087. Unproved: the projected timeline velocity readback.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S087); the per-program flow reads the timeline projection (S153) but not for this ruler click, so the projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -324,7 +285,7 @@ Original expression:
 
 A035 | VelocityEditingTest::rulerUnlockKeepsRawVelocity | src/checks/velocity/velocitydetentpainting.cpp:99
 Disposition: PARTIAL
-Mapping/reason: Related predicate S088. Unproved: the projected timeline velocity readback.
+Mapping/reason: PARTIAL: the unselected note's document value is asserted (S088); the per-program flow reads the timeline projection (S153) but not for this ruler click, so the projected readback stays unproved.
 Source context since previous assertion:
 ;
 
@@ -336,34 +297,8 @@ Disposition: MATCHED
 Mapping: S089
 
 A037 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:122
-Disposition: PARTIAL
-Mapping/reason: Related predicate S104 (the ruler reports the fixture program context as intrinsic). Unproved: a view-level currentProgram(0) readback equal to the row program.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::lockedPaintUsesDetents_data()
-{
-    QTest::addColumn<int>("program");
-    QTest::addColumn<int>("expectedVelocity");
-
-    QTest::newRow("square") << 1 << 76;
-    QTest::newRow("wave") << 2 << 64;
-    QTest::newRow("noise") << 3 << 76;
-}
-
-void VelocityEditingTest::lockedPaintUsesDetents()
-{
-    QFETCH(int, program);
-    QFETCH(int, expectedVelocity);
-
-    constexpr uint8_t kRawVelocity = 73;
-
-    m_tab->document().addLanePoint(0, DOC_CC_VOICE, 0, program);
-    selectDragPair();
-
-Original expression:
-  QTRY_COMPARE(m_tab->view().currentProgram(0), program)
+Disposition: MATCHED
+Mapping: S150
 
 A038 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:123
 Disposition: MATCHED
@@ -412,16 +347,8 @@ Original expression:
   QVERIFY(m_quietStacked.tick > 0 && m_loudStacked.tick > 0 && m_later.tick > 0)
 
 A043 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:137
-Disposition: PARTIAL
-Mapping/reason: S106/S107 prove the sweep reached both selected columns, but the Swift plot surface accepts any coordinates, so no predicate asserts the press point lies inside the plot band.
-Source context since previous assertion:
-;
-    const QPoint paintStart = windowPoint(nodePoint(kRawVelocity, 0));
-    const QPoint quietPaint = windowPoint(nodePoint(kRawVelocity, m_quietStacked.tick));
-    const QPoint paintEnd = windowPoint(nodePoint(kRawVelocity, m_later.tick));
-
-Original expression:
-  QVERIFY(m_velocityInput->bounds().contains(nodePoint(kRawVelocity, 0)))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native quick-window input item's bounds: m_velocityInput is a QPointer<songview::TimelineInputItem> in the Reference revision's tst_velocityediting.h, and src/ui/songview/quick/timelineinputitem.h no longer exists at HEAD (deleted in ab73ca06). The Swift page consumes plot coordinates directly, so the widget-bounds guard for the locked paint start point has no Swift counterpart.
 
 A044 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:138
 Disposition: PARTIAL
@@ -484,7 +411,7 @@ Original expression:
 
 A055 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:163
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S109/S110 assert the unchanged revision and identity during the sweep. Unproved: the documentChanged notification count.
+Mapping/reason: PARTIAL: the unchanged revision and identity during the sweep are asserted (S109/S110) and the per-program flow now counts zero document publications for the staged wave row (S152); the locked square and noise rows of this case still have no notification count, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -493,7 +420,7 @@ Original expression:
 
 A056 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:164
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S109 asserts the unchanged revision. Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S109); the per-program flow installs a publication counter for the staged wave row but asserts no dirty count while a gesture is held, so the zero edited count stays unproved for every row of this case.
 Source context since previous assertion:
 ;
 
@@ -529,7 +456,7 @@ Original expression:
 
 A060 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:168
 Disposition: PARTIAL
-Mapping/reason: Related predicate S109 (unchanged revision during the sweep). Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S109) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the locked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -538,7 +465,7 @@ Original expression:
 
 A061 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:169
 Disposition: PARTIAL
-Mapping/reason: Related predicate S109. Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S109) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the locked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -547,7 +474,7 @@ Original expression:
 
 A062 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:170
 Disposition: PARTIAL
-Mapping/reason: Related predicate S109. Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S109) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the locked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -560,7 +487,7 @@ Mapping: S115
 
 A064 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:175
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S111 asserts the single revision advance of the release. Unproved: the documentChanged notification count.
+Mapping/reason: PARTIAL: the single revision advance of the release is asserted (S111) and the per-program flow now counts exactly one document publication for the staged wave row's release (S155); the locked square and noise rows' notification counts stay unproved.
 Source context since previous assertion:
 ;
 
@@ -572,7 +499,7 @@ Original expression:
 
 A065 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:176
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S111 observes the single revision advance. Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the single revision advance is asserted (S111) and the per-program flow now counts exactly one dirty publication for the staged wave row's release (S156); the locked square and noise rows' edited counts stay unproved.
 Source context since previous assertion:
 ;
 
@@ -585,7 +512,7 @@ Mapping: S111
 
 A067 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:178
 Disposition: PARTIAL
-Mapping/reason: Related predicate S111 (one revision advance). Unproved: the at-tip undo depth count.
+Mapping/reason: PARTIAL: one revision advance is asserted (S111) and the per-program flow now grows the undo depth by exactly one for the staged wave row's release (S154); the locked square and noise rows' depth stays unasserted, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -603,7 +530,7 @@ Original expression:
 
 A069 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:180
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149 (the sibling plain-paint case asserts the release clears the frozen preview). Unproved: a preview-cleared read for the quiet column in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the locked square and noise rows of this case still have no preview-cleared read, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -612,7 +539,7 @@ Original expression:
 
 A070 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:181
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149. Unproved: a preview-cleared read for the later column in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the locked square and noise rows of this case still have no preview-cleared read for the later column, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -621,7 +548,7 @@ Original expression:
 
 A071 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:182
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149. Unproved: a preview-cleared read for the unselected note in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the locked square and noise rows of this case still have no preview-cleared read for the unselected note, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -642,7 +569,7 @@ Mapping: S114
 
 A075 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:186
 Disposition: PARTIAL
-Mapping/reason: Related predicate S112 (the document value of the same note). Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S112) and the per-program flow now reads the released staged wave row's projection (S153); the locked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -651,7 +578,7 @@ Original expression:
 
 A076 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:187
 Disposition: PARTIAL
-Mapping/reason: Related predicate S113. Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the document value of the same note is asserted (S113) and the per-program flow now reads the released staged wave row's projection (S153); the locked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -660,7 +587,7 @@ Original expression:
 
 A077 | VelocityEditingTest::lockedPaintUsesDetents | src/checks/velocity/velocitydetentpainting.cpp:188
 Disposition: PARTIAL
-Mapping/reason: Related predicate S114. Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the unselected note's document value is asserted (S114) and the per-program flow now reads the released staged wave row's projection (S153); the locked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -672,37 +599,8 @@ Disposition: MATCHED
 Mapping: S115
 
 A079 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:214
-Disposition: PARTIAL
-Mapping/reason: Related predicate S128 (the ruler reports the fixture program context as intrinsic). Unproved: a view-level currentProgram(0) readback equal to the row program.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::unlockedPaintKeepsRawVelocities_data()
-{
-    QTest::addColumn<int>("program");
-    QTest::addColumn<int>("firstExpectedVelocity");
-    QTest::addColumn<int>("lastExpectedVelocity");
-
-    QTest::newRow("square") << 1 << 37 << 91;
-    QTest::newRow("wave") << 2 << 37 << 91;
-    QTest::newRow("noise") << 3 << 37 << 91;
-}
-
-void VelocityEditingTest::unlockedPaintKeepsRawVelocities()
-{
-    QFETCH(int, program);
-    QFETCH(int, firstExpectedVelocity);
-    QFETCH(int, lastExpectedVelocity);
-
-    constexpr uint8_t kFirstRawVelocity = 37;
-    constexpr uint8_t kLastRawVelocity = 91;
-
-    m_tab->document().addLanePoint(0, DOC_CC_VOICE, 0, program);
-    selectDragPair();
-
-Original expression:
-  QTRY_COMPARE(m_tab->view().currentProgram(0), program)
+Disposition: MATCHED
+Mapping: S150
 
 A080 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:215
 Disposition: MATCHED
@@ -752,16 +650,8 @@ Original expression:
   QVERIFY(m_quietStacked.tick > 0 && m_loudStacked.tick > 0 && m_later.tick > 0)
 
 A086 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:230
-Disposition: PARTIAL
-Mapping/reason: S130/S131 prove the sweep reached both selected columns, but the Swift plot surface accepts any coordinates, so no predicate asserts the press point lies inside the plot band.
-Source context since previous assertion:
-;
-    const QPoint paintStart = windowPoint(nodePoint(kFirstRawVelocity, 0));
-    const QPoint quietPaint = windowPoint(nodePoint(kFirstRawVelocity, m_quietStacked.tick));
-    const QPoint paintEnd = windowPoint(nodePoint(kLastRawVelocity, m_later.tick));
-
-Original expression:
-  QVERIFY(m_velocityInput->bounds().contains(nodePoint(kFirstRawVelocity, 0)))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native quick-window input item's bounds: m_velocityInput is a QPointer<songview::TimelineInputItem> in the Reference revision's tst_velocityediting.h, and src/ui/songview/quick/timelineinputitem.h no longer exists at HEAD (deleted in ab73ca06). The Swift page consumes plot coordinates directly, so the widget-bounds guard for the unlocked first paint point has no Swift counterpart.
 
 A087 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:231
 Disposition: PARTIAL
@@ -824,7 +714,7 @@ Original expression:
 
 A098 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:256
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S133 asserts the unchanged revision during the sweep. Unproved: the documentChanged notification count.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S133) and the per-program flow now counts zero document publications for the staged wave row (S152); the unlocked square and noise rows of this case still have no notification count, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -833,7 +723,7 @@ Original expression:
 
 A099 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:257
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S133. Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S133); the per-program flow installs a publication counter for the staged wave row but asserts no dirty count while a gesture is held, so the zero edited count stays unproved for every row of this case.
 Source context since previous assertion:
 ;
 
@@ -869,7 +759,7 @@ Original expression:
 
 A103 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:261
 Disposition: PARTIAL
-Mapping/reason: Related predicate S133. Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S133) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the unlocked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -878,7 +768,7 @@ Original expression:
 
 A104 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:262
 Disposition: PARTIAL
-Mapping/reason: Related predicate S133. Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S133) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the unlocked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -887,7 +777,7 @@ Original expression:
 
 A105 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:263
 Disposition: PARTIAL
-Mapping/reason: Related predicate S133. Unproved: a projected timeline velocity readback at the preview instant.
+Mapping/reason: PARTIAL: the unchanged revision during the sweep is asserted (S133) and the per-program flow now reads the staged wave row's projection at the preview instant (S151); the unlocked square and noise rows still have no projected readback at that instant, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -900,7 +790,7 @@ Mapping: S139
 
 A107 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:269
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S134 asserts the single revision advance of the release. Unproved: the documentChanged notification count.
+Mapping/reason: PARTIAL: the single revision advance of the release is asserted (S134) and the per-program flow now counts exactly one document publication for the staged wave row's release (S155); the unlocked square and noise rows' notification counts stay unproved.
 Source context since previous assertion:
 ;
 
@@ -913,7 +803,7 @@ Original expression:
 
 A108 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:270
 Disposition: PARTIAL
-Mapping/reason: Signal-count site: S134. Unproved: the edited-signal count.
+Mapping/reason: PARTIAL: the single revision advance is asserted (S134) and the per-program flow now counts exactly one dirty publication for the staged wave row's release (S156); the unlocked square and noise rows' edited counts stay unproved.
 Source context since previous assertion:
 ;
 
@@ -926,7 +816,7 @@ Mapping: S134
 
 A110 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:272
 Disposition: PARTIAL
-Mapping/reason: Related predicate S134 (one revision advance). Unproved: the at-tip undo depth count.
+Mapping/reason: PARTIAL: one revision advance is asserted (S134) and the per-program flow now grows the undo depth by exactly one for the staged wave row's release (S154); the unlocked square and noise rows' depth stays unasserted, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -939,7 +829,7 @@ Mapping: S135
 
 A112 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:274
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149. Unproved: a preview-cleared read for the quiet column in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the unlocked square and noise rows of this case still have no preview-cleared read, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -948,7 +838,7 @@ Original expression:
 
 A113 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:275
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149. Unproved: a preview-cleared read for the later column in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the unlocked square and noise rows of this case still have no preview-cleared read for the later column, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -957,7 +847,7 @@ Original expression:
 
 A114 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:276
 Disposition: PARTIAL
-Mapping/reason: Related predicate S149. Unproved: a preview-cleared read for the unselected note in this case.
+Mapping/reason: PARTIAL: the sibling plain-paint case asserts the release clears the frozen preview (S149) and the per-program flow now clears the staged wave row's preview (S157); the unlocked square and noise rows of this case still have no preview-cleared read for the unselected note, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -978,7 +868,7 @@ Mapping: S138
 
 A118 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:280
 Disposition: PARTIAL
-Mapping/reason: Related predicate S136. Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the committed document value is asserted (S136) and the per-program flow now reads the released staged wave row's projection (S153); the unlocked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -987,7 +877,7 @@ Original expression:
 
 A119 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:281
 Disposition: PARTIAL
-Mapping/reason: Related predicate S137. Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the committed document value is asserted (S137) and the per-program flow now reads the released staged wave row's projection (S153); the unlocked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -996,7 +886,7 @@ Original expression:
 
 A120 | VelocityEditingTest::unlockedPaintKeepsRawVelocities | src/checks/velocity/velocitydetentpainting.cpp:282
 Disposition: PARTIAL
-Mapping/reason: Related predicate S138. Unproved: a projected timeline velocity readback after the release.
+Mapping/reason: PARTIAL: the unselected note's document value is asserted (S138) and the per-program flow now reads the released staged wave row's projection (S153); the unlocked square and noise rows still have no post-release projected readback, so the site stays partly unproved.
 Source context since previous assertion:
 ;
 
@@ -1465,3 +1355,27 @@ Anchor: message "the unlocked wave paint keeps both raw velocities"
 
 S149 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift
 Anchor: message "the paint release clears its preview"
+
+S150 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the selected program resolves its own intrinsic page context"
+
+S151 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities" #4
+
+S152 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a held drag publishes no document change" #4
+
+S153 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection" #4
+
+S154 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release grows the undo depth by exactly one" #4
+
+S155 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one document change" #4
+
+S156 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "one release publishes exactly one dirty change" #4
+
+S157 | drawerVelocityProgramFlowChecks | src/checks/velocity/VelocityPaintDetentChecks.swift
+Anchor: message "the wave page paint clears its staged preview"

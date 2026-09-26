@@ -55,19 +55,17 @@ let drawerVelocityHistoryID = "swiftcore/VelocityPage::undoRedoRefresh"
 
 // MARK: - Synthetic fixture
 
-/// A synthetic song with a square-1 opening program and a voice change to noise
-/// at tick 96, over the suite's real bank lease and slots.
-func drawerVelocityVelocityPageFixture() -> MidiFile {
+func drawerVelocityVelocityPageFixture(contextSlot: UInt8 = 0) -> MidiFile {
     let conductor: [MidiEvent] = [
         .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
     ]
     let notes: [MidiEvent] = [
-        .channel(tick: 0, status: 0xC0, data0: 0),
+        .channel(tick: 0, status: 0xC0, data0: contextSlot),
         .channel(tick: 0, status: 0x90, data0: 60, data1: 100),
         .channel(tick: 24, status: 0x80, data0: 60),
         .channel(tick: 24, status: 0x90, data0: 67, data1: 64),
         .channel(tick: 48, status: 0x80, data0: 67),
-        .channel(tick: 96, status: 0xC0, data0: 2),
+        .channel(tick: 96, status: 0xC0, data0: contextSlot == 0 ? 2 : contextSlot),
         .channel(tick: 96, status: 0x90, data0: 72, data1: 32),
         .channel(tick: 120, status: 0x80, data0: 72),
     ]
@@ -75,6 +73,26 @@ func drawerVelocityVelocityPageFixture() -> MidiFile {
         MidiChunk(events: conductor, endTick: 144),
         MidiChunk(events: notes, endTick: 144),
     ])
+}
+
+@MainActor
+func drawerVelocityTimelineVelocity(_ session: DocumentSession, _ id: NoteID) -> Int {
+    session.timeline.events.first { $0.type == 0x9 && $0.noteID == id }.map { Int($0.data1) } ?? -1
+}
+
+@MainActor
+final class drawerVelocityPublicationCounter {
+    private(set) var document = 0
+    private(set) var dirty = 0
+
+    init(session: DocumentSession) {
+        let prior = session.onChange
+        session.onChange = { [weak self] change in
+            if change.domains.contains(.document) { self?.document += 1 }
+            if change.domains.contains(.dirty) { self?.dirty += 1 }
+            prior?(change)
+        }
+    }
 }
 
 /// A page attached to a synthetic session that shares the suite's service and
@@ -87,8 +105,8 @@ struct drawerVelocityVelocityFixture {
     let notes: [Note]
 
     init(session suite: DocumentSession, service: ProjectService,
-         baseFontPx: Double = 13) {
-        let document = SongDocument(file: drawerVelocityVelocityPageFixture(),
+         baseFontPx: Double = 13, contextSlot: UInt8 = 0) {
+        let document = SongDocument(file: drawerVelocityVelocityPageFixture(contextSlot: contextSlot),
                                     config: suite.document.state.config,
                                     source: suite.document.source,
                                     trackBudget: suite.document.trackBudget)
@@ -142,6 +160,7 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
     drawerVelocityLateUnlockKeepsSnapped(report, session: session, service: service)
     drawerVelocityUnlockedRelativeKeepsOffsets(report, session: session, service: service)
     drawerVelocityUnlockedRampInterpolates(report, session: session, service: service)
+    drawerVelocityProgramFlowChecks(report, session: session, service: service)
     drawerVelocityBlankClickDeselects(report, session: session, service: service)
     drawerVelocityGraduationClickEdits(report, session: session, service: service)
     drawerVelocityClickBelowNodeCommits(report, session: session, service: service)

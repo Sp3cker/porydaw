@@ -8,17 +8,19 @@ Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
 Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
+Additional Swift counterpart: src/checks/drawerpresentation/velocity.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 
-Command: deno task verify --filter swiftcore
-Result: PASS — swiftcore harness 1/14 ok (13 sibling harnesses skipped by the filter). Provided by the controller handoff for this tree; not re-run by the ledger writer.
+Command: deno task build:checks; deno task verify --filter swiftcore --verbose;
+deno task verify --filter swiftcore-projectsession --verbose
+Result: PASS — provided by the implementer (agent://Task59a, locked build) for the frozen Stage A tree: build ok; swiftcore 12/36 ok (24 sibling harnesses skipped by the filter); swiftcore-projectsession 1/36 ok (35 skipped). Not re-run by the ledger writer.
 Command: deno task verify:qml
-Result: PASS — editorqml-drawer 1/1 ok. Provided by the controller handoff for this tree; not re-run by the ledger writer.
+Result: PASS — editorqml-drawer 1/1 ok; provided by the controller handoff for this tree, not re-run by the ledger writer.
 
 Methods in file order: selectedCircleWinsOverStem, unselectedCircleWinsOverSelectedStem, selectedStemWinsAtStackedStem, movedNodeDoesNotClickThrough, rightPressPreservesSelectedGroup.
-Swift-side counterpart: the ported predicates read document values only.
+Swift-side counterpart: the ported predicates read document values and, since the Stage A pass, the published playback timeline velocity of each note (drawerVelocityTimelineVelocity).
 Exact original source anchors:
 src/checks/velocity/velocityhitpriority.cpp:24 | m_tab->document().addNote(0, kOverlapTick, kOverlapKey, kOverlapDuration, kQuietVelocity);
 src/checks/velocity/velocityhitpriority.cpp:30 | m_tab->view().selectionModel().setNoteSelection({overlap.noteId});
@@ -49,13 +51,8 @@ Disposition: MATCHED
 Mapping: S080, S081
 
 A002 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:28
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the added note document value against the press target (S086); it samples no published timeline velocity, so the timeline publication of the added note stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S134
 
 A003 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:31
 Disposition: MATCHED
@@ -102,13 +99,8 @@ Disposition: MATCHED
 Mapping: S080, S081
 
 A014 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:56
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the added note document value (S086) instead of the published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S135
 
 A015 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:59
 Disposition: MATCHED
@@ -155,22 +147,12 @@ Disposition: MATCHED
 Mapping: S080, S081
 
 A026 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:85
-Disposition: PARTIAL
-Mapping/reason: The Swift case neither re-levels the loud duplicate nor samples a timeline velocity; it asserts the document values stay captured (S107).
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S136
 
 A027 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:86
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the added note document value (S086) instead of the published timeline velocity; the re-leveled stacked pair publication stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S134
 
 A028 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:89
 Disposition: MATCHED
@@ -261,31 +243,16 @@ Disposition: MATCHED
 Mapping: S118, S129
 
 A050 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:131
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S137, S111
 
 A051 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:132
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S137
 
 A052 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:133
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S118) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S137
 
 A053 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:134
 Disposition: MATCHED
@@ -324,31 +291,16 @@ Disposition: MATCHED
 Mapping: S128, S129
 
 A062 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:155
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
+Disposition: MATCHED
+Mapping: S138
 
 A063 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:156
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S138
 
 A064 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:157
-Disposition: PARTIAL
-Mapping/reason: The Swift case asserts the document value (S128) and samples no published timeline velocity; the timeline sample stays unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
+Disposition: MATCHED
+Mapping: S138
 
 A065 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:158
 Disposition: MATCHED
@@ -760,3 +712,18 @@ Anchor: message "pressing the unselected circle is consumed"
 
 S133 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift
 Anchor: message "pressing the unselected circle holds a live gesture"
+
+S134 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a selected circle-over-stem click preserves the timeline projection"
+
+S135 | drawerVelocityStackedHitPriority | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "an unselected circle wins without changing the timeline projection"
+
+S136 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "document edits rebuild the live timeline projection"
+
+S137 | drawerVelocityMovedNodeNoClickThrough | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a moved node releases without changing the timeline projection"
+
+S138 | drawerVelocityRightPressPreservesGroup | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a secondary group click preserves the timeline projection"

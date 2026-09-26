@@ -4,11 +4,17 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/velocity.cpp
 Original SHA-256: 04258c2fe60a26ad1d11f8457296b0150ed1890a4d3bf09626f8775af7fff1cc
 Swift counterpart: src/checks/drawerpresentation/velocity.swift
+Additional Swift counterpart: src/checks/velocity/tst_velocityediting.swift
+Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
+Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
+Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 Command: deno task verify:qml --verbose
 Result: PASS — drawer lane PASS (drawer 1/1; profiles all 4) on the task-6 settled
 tst_EditorDrawer.qml. Controller-run; the ledger agent did not run it.
+Command: deno task build:checks; deno task verify --filter swiftcore-projectsession --verbose (sibling velocity lane)
+Result: PASS — provided by the implementer (agent://Task59a, locked build) for the frozen Stage A tree: build ok; 1/36 ok (35 sibling harnesses skipped by the filter), and the cited VelocityRollCore / VelocityClickSelection / drawerVelocityProjectionRefresh / click-case predicates appear in that lane's evidence (build/proof-evidence/swiftcore-projectsession.json); the keybinding and camera anchors appear in the same lane. Not re-run by the ledger writer.
 
 A001 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:39
 Disposition: RETIRED-REPRESENTATION
@@ -17,71 +23,48 @@ A002 | createVelocityFixture | src/checks/drawerpresentation/velocity.cpp:46
 Disposition: RETIRED-REPRESENTATION
 
 A003 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:86
-Disposition: PARTIAL
-Mapping/reason: The QML production page-mount case composes the page over the same staged route-101 project; the native ProjectFixture copy guard itself is unproved. [S092]
-Original expression:
-  QVERIFY2(project, qPrintable(error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `checks::ProjectFixture::copyOf` fixture guard (f3069ef6:85-86); the Swift lanes build their own fixture, so no Swift predicate reproduces it.
 
 A004 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:88
-Disposition: PARTIAL
-Mapping/reason: The page-mount case loads the same staged song; the native LoadedSong::load guard for this fixture is unproved. [S092]
-Original expression:
-  QVERIFY2(song, qPrintable(error))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `checks::LoadedSong::load` fixture guard (f3069ef6:87-88); the Swift counterpart loads its own staged song, so no Swift predicate reproduces it.
 
 A005 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:90
-Disposition: PARTIAL
-Mapping/reason: The page-mount case mounts the page against the same fixture; the native 48kHz buildTimeline guard is unproved. [S092]
-Original expression:
-  QVERIFY(timeline)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `SongDocument::buildTimeline(48000.0)` guard (f3069ef6:89-90); the Swift page reads its session timeline, so no Swift predicate reproduces it.
 
 A006 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:96
-Disposition: PARTIAL
-Mapping/reason: The page-mount case composes the production page in the lane's own window; the named timelineQuickCanvas quick view object for this fixture is unproved. [S092]
-Original expression:
-  QVERIFY(quick)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `songview::TimelineQuickView` object named "timelineQuickCanvas" (f3069ef6:95-96); the mounted page has no such object.
 
 A007 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:101
-Disposition: PARTIAL
-Mapping/reason: The page-mount case mounts the composition in the lane's window; the native showQuickViewport 960x480 show and its device pixel ratio are unproved. [S092]
-Original expression:
-  QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `checks::support::showQuickViewport(view, 960x480)` show call (f3069ef6:101); the drawer lane mounts through its own window.
 
 A008 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:110
-Disposition: PARTIAL
-Mapping/reason: The QML page-mount case finds and clicks the composed drawer's detent control; the editor drawer object for this fixture is unproved. [S099]
-Original expression:
-  QVERIFY(drawer)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `EditorDrawer` widget pointer (f3069ef6:102,110); the velocity page is composed in QML, and the QML lane observes its own objects.
 
 A009 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:111
-Disposition: PARTIAL
-Mapping/reason: The QML pointer-edit case drives the production velocity plot input with real mouse delivery; the named timelineVelocityInput item for this fixture is unproved. [S102]
-Original expression:
-  QVERIFY(input)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `TimelineInputItem` named "timelineVelocityInput" (f3069ef6:104-106,111); the page classifies pointer surfaces itself.
 
 A010 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:112
-Disposition: PARTIAL
-Mapping/reason: The page-mount case reads the ruler column beside the plot; the named timelineVelocityGutterInput item is unproved. [S093]
-Original expression:
-  QVERIFY(gutter)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `TimelineInputItem` named "timelineVelocityGutterInput" (f3069ef6:107-109,112); the page classifies pointer surfaces itself.
 
 A011 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:114
-Disposition: PARTIAL
-Mapping/reason: The velocity band's layout geometry object has no converted predicate; the QML cases read the composed ruler and plot parts directly. [S092]
-Original expression:
-  QVERIFY(geometry)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `TimelineBandLayout::geometry` struct (f3069ef6:113-114); the page publishes its own ruler/plot geometry instead.
 
 A012 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:115
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the plot spans the body beside the ruler; the named input item's bounds equality with the band's plotRect size is unproved. [S095]
-Original expression:
-  QCOMPARE(input->bounds(), QRectF(QPointF{}, geometry->plotRect.size()))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `TimelineInputItem::bounds()` equality with `geometry->plotRect.size()` (f3069ef6:115); the composed page publishes its own plot extents.
 
 A013 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:116
-Disposition: PARTIAL
-Mapping/reason: The QML case asserts the ruler is the shared gutter column and the plot starts at its width; the gutter input's bounds derivation from the band rect is unproved. [S093]
-Original expression:
-  QCOMPARE(gutter->bounds(), QRectF(QPointF{}, QSizeF(geometry->plotRect.x() - geometry->rect.x(),
-                                                          geometry->rect.height())))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native gutter item bounds derived from `geometry->plotRect.x() - geometry->rect.x()` (f3069ef6:116-117); the composed page publishes its own ruler width.
 
 A014 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:119
 Disposition: PARTIAL
@@ -149,11 +132,8 @@ Original expression:
                                                     layout::space(layout::Space::One))
 
 A025 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:151
-Disposition: PARTIAL
-Mapping/reason: The QML drawer case clicks the composed toggle control through the bar; the bar bounds hosting the toggle center are unproved. [S100]
-Original expression:
-  QVERIFY(fixture.barItem->bounds().contains(chrome.velocityToggleRect().center() -
-                                                 chrome.barRect().topLeft()))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native bar item `bounds()` hosting the chrome toggle rect center (f3069ef6:151); the QML drawer composes its own control bounds.
 
 A026 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:153
 Disposition: PARTIAL
@@ -172,16 +152,12 @@ Disposition: MATCHED
 Mapping: S001
 
 A029 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:156
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native focus-item obligation: VelocityAxis::nodesFocusable is a Qt focus-item policy. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(!VelocityAxis::nodesFocusable())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the Qt focus policy `VelocityAxis::nodesFocusable()` (f3069ef6:156); no Swift surface exposes an item focus policy.
 
 A030 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:157
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native focus-item obligation: VelocityAxis::graduationLabelsFocusable is a Qt focus-item policy. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(!VelocityAxis::graduationLabelsFocusable())
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the Qt focus policy `VelocityAxis::graduationLabelsFocusable()` (f3069ef6:157); no Swift surface exposes an item focus policy.
 
 A031 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:163
 Disposition: PARTIAL
@@ -240,16 +216,12 @@ Original expression:
       }))
 
 A042 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:222
-Disposition: GAP
-Mapping/reason: pointer-camera behavior not owned by velocity page.
-Original expression:
-  QCOMPARE(view.camera().scrollX(), scroll)
+Disposition: MATCHED
+Mapping: S113
 
 A043 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:223
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native framebuffer obligation: samePixels over captured quick bands. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(samePixels(before, checks::support::captureQuickBand(view, fixture.bandRect())))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins a `checks::support::captureQuickBand` framebuffer `samePixels` equality over the retired quick window (f3069ef6:223); no Swift surface captures those pixels.
 
 A044 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:243
 Disposition: MATCHED
@@ -260,48 +232,36 @@ Disposition: MATCHED
 Mapping: S023, S024, S108
 
 A046 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:256
-Disposition: PARTIAL
-Mapping/reason: The drag's arming press is exercised only through the sibling transaction predicate's page.pointerPress: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
+Disposition: MATCHED
+Mapping: S114, S115
 
 A047 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:257
-Disposition: PARTIAL
-Mapping/reason: The drag's update is exercised only through the sibling transaction predicate's page.pointerMove and frozenPreview: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
+Disposition: MATCHED
+Mapping: S116
 
 A048 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:271
 Disposition: MATCHED
 Mapping: S060
 
 A049 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:272
-Disposition: PARTIAL
-Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the hover input that publishes the hovered level is unproved. [S027]
-Original expression:
-  QVERIFY(fixture.area->axis().graduations()[9].active)
+Disposition: MATCHED
+Mapping: S117, S027
 
 A050 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:285
-Disposition: PARTIAL
-Mapping/reason: The drag's arming press is exercised only through the sibling transaction predicate's page.pointerPress: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
+Disposition: MATCHED
+Mapping: S114, S115
 
 A051 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:286
-Disposition: PARTIAL
-Mapping/reason: The drag's update is exercised only through the sibling transaction predicate's page.pointerMove and frozenPreview: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
+Disposition: MATCHED
+Mapping: S116
 
 A052 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:294
 Disposition: MATCHED
 Mapping: S026
 
 A053 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:295
-Disposition: PARTIAL
-Mapping/reason: The Swift predicate asserts detentsAvailable for a per-key PSG context; the enabled useDetents preference is asserted only by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S057]
-Original expression:
-  QVERIFY(fixture.area->useDetents())
+Disposition: MATCHED
+Mapping: S118
 
 A054 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:296
 Disposition: PARTIAL
@@ -315,10 +275,8 @@ Original expression:
           1)
 
 A055 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:302
-Disposition: PARTIAL
-Mapping/reason: Graduation 9's active flag is asserted for a displayed value supplied as activeValues [76]; the hover input that publishes the hovered level is unproved. [S027]
-Original expression:
-  QVERIFY(fixture.area->axis().graduations()[9].active)
+Disposition: MATCHED
+Mapping: S117, S027
 
 A056 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:307
 Disposition: GAP
@@ -334,16 +292,12 @@ Original expression:
   QCOMPARE(fixture.area->axis().markers()[0].velocity, 74)
 
 A058 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:312
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native framebuffer obligation: captured quick-band pixel inequality across the detent toggle. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != snapped)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins a `captureQuickBand` framebuffer inequality across the detent toggle (f3069ef6:312); no Swift surface captures those pixels.
 
 A059 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:315
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native framebuffer obligation: captured quick-band pixel equality once the detent toggle is restored. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(samePixels(snapped, checks::support::captureQuickBand(view, fixture.bandRect())))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins a `captureQuickBand` framebuffer equality once the detent toggle is restored (f3069ef6:315); no Swift surface captures those pixels.
 
 A060 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:319
 Disposition: MATCHED
@@ -456,10 +410,8 @@ Disposition: MATCHED
 Mapping: S100
 
 A078 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:383
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/velocity.cpp) no longer builds or runs. Previous native note: Original native framebuffer obligation: ruler-band pixel equality between the continuous and direct-sound captures. A page-level Swift predicate cannot establish this observation.
-Original expression:
-  QVERIFY(samePixels(continuousBand.copy(rulerBounds), directSoundBand.copy(rulerBounds)))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins a `captureQuickBand` ruler-band framebuffer equality between two captures (f3069ef6:383); no Swift surface captures those pixels.
 
 A079 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:384
 Disposition: PARTIAL
@@ -488,10 +440,8 @@ Original expression:
   QTRY_VERIFY(!fixture.detentItem->isVisible())
 
 A084 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:403
-Disposition: PARTIAL
-Mapping/reason: The QML lane mounts the production composition and reads its drawn parts; the named timelineQuickCanvas quick view object for this fixture is unproved. [S092]
-Original expression:
-  QVERIFY(quick)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The row pins the native `TimelineQuickView` named "timelineQuickCanvas" in the edit-cursor case (f3069ef6:401-403); the mounted page has no such object.
 
 A085 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:409
 Disposition: PARTIAL
@@ -604,70 +554,48 @@ Original expression:
                            themes::color(themes::Role::song_view_edit_preview_outline)))
 
 A102 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:534
-Disposition: GAP
-Mapping/reason: roll-surface velocity drag owned by roll lane (src/checks/rollcheck/velocity_prompt.swift).
-Original expression:
-  QVERIFY(roll)
+Disposition: MATCHED
+Mapping: S119
 
 A103 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:537
-Disposition: GAP
-Mapping/reason: keybinding registry owned by keybinding lane.
-Original expression:
-  QVERIFY(modifiers != Qt::NoModifier)
+Disposition: MATCHED
+Mapping: S120
 
 A104 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:544
-Disposition: GAP
-Mapping/reason: roll-surface velocity drag owned by roll lane (src/checks/rollcheck/velocity_prompt.swift).
-Original expression:
-  QVERIFY(view.previewVelocity(first.noteId).has_value())
+Disposition: MATCHED
+Mapping: S121
 
 A105 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:561
-Disposition: PARTIAL
-Mapping/reason: The live drag's active interaction is asserted by the QML pointer-edit case and its preview by the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S102]
-Original expression:
-  QVERIFY(view.previewVelocity(fixture.notes[0].noteId).has_value())
+Disposition: MATCHED
+Mapping: S116, S102
 
 A106 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:562
-Disposition: PARTIAL
-Mapping/reason: The no-write state while the drag previews is asserted only by the sibling's document snapshot equality: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(fixture.snapshot() == baseline)
+Disposition: MATCHED
+Mapping: S122
 
 A107 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:564
-Disposition: PARTIAL
-Mapping/reason: Escape's cancel outcome is asserted only by the sibling, which calls page.handleEscape() directly and compares document snapshots; the native Escape key delivery into the page is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(fixture.snapshot() == baseline)
+Disposition: MATCHED
+Mapping: S123
 
 A108 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:565
-Disposition: PARTIAL
-Mapping/reason: The cleared preview after Escape is asserted only by the sibling operating on its own gesture: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QVERIFY(!view.previewVelocity(fixture.notes[0].noteId).has_value())
+Disposition: MATCHED
+Mapping: S124
 
 A109 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:571
-Disposition: PARTIAL
-Mapping/reason: One released drag advancing the document revision once is asserted by the QML pointer-edit case and the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S103]
-Original expression:
-  QCOMPARE(committed.revision, baseline.revision + 1)
+Disposition: MATCHED
+Mapping: S125, S126
 
 A110 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:572
-Disposition: PARTIAL
-Mapping/reason: Private undo-stack index inspection is replaced by history identity in the sibling: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(committed.undoIndex, baseline.undoIndex + 1)
+Disposition: MATCHED
+Mapping: S126
 
 A111 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:573
-Disposition: PARTIAL
-Mapping/reason: The commit reaching the document is asserted by the QML pointer-edit case and the sibling's value inequality: executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here. [S103]
-Original expression:
-  QVERIFY(committed.smf != baseline.smf)
+Disposition: MATCHED
+Mapping: S127
 
 A112 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:576
-Disposition: PARTIAL
-Mapping/reason: One undo restoring the captured values is asserted by the sibling; snapshot byte equality is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(undone.smf, baseline.smf)
+Disposition: MATCHED
+Mapping: S128
 
 A113 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:577
 Disposition: PARTIAL
@@ -682,10 +610,8 @@ Original expression:
   QCOMPARE(undone.revision, committed.revision + 1)
 
 A115 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:581
-Disposition: PARTIAL
-Mapping/reason: Redo restoring the committed history identity is asserted by the sibling; snapshot byte equality is unproved. executing predicate lives in sibling velocity lane file src/checks/velocity/tst_velocityediting.swift:drawerVelocityGestureTransactions; representation/ownership unproved here.
-Original expression:
-  QCOMPARE(redone.smf, committed.smf)
+Disposition: MATCHED
+Mapping: S129
 
 A116 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:582
 Disposition: PARTIAL
@@ -1072,3 +998,54 @@ Anchor: message "axis uses note-name weight"
 
 S112 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "hovered velocity marker paints the bold note-name face"
+
+S113 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift
+Anchor: message "horizontal scrolling clamps to production pre-roll"
+
+S114 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag reports an active interaction"
+
+S115 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities"
+
+S116 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a live drag previews before release"
+
+S117 | drawerVelocityProjectionRefresh | src/checks/drawerpresentation/velocity.swift
+Anchor: message "hovering a node presents its velocity marker and intrinsic graduations"
+
+S118 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "a PSG context offers the detent control, enabled by default"
+
+S119 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the roll grid fixture exposes a real input surface"
+
+S120 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "Control still arms velocity drag"
+
+S121 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the roll drag previews the selected note on the roll surface"
+
+S122 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "the first held move writes no document state"
+
+S123 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape writes nothing at all"
+
+S124 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "Escape clears the frozen preview"
+
+S125 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one released drag advances the document revision once"
+
+S126 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "one release grows the undo depth by exactly one"
+
+S127 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediting.swift
+Anchor: message "the drag's commit reached the document"
+
+S128 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "undo restores the exact pre-drag song bytes"
+
+S129 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "redo restores the exact committed song bytes"

@@ -13,13 +13,15 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 
 
-Command: deno task verify --filter swiftcore (swiftcore lane) and deno task verify:qml
-(drawer QML surface)
-Result: provided by the controller for this settled tree, not re-run by this
-reconciliation: swiftcore harness PASS (1/14 ok, the 13 sibling harnesses skipped by
-the filter), and verify:qml editorqml-drawer PASS (1/1 ok). Structure only below:
-deno task proof check validates metadata, entries and the Tally line, never source
-freshness, execution or parity.
+Command: deno task build:checks; deno task verify --filter swiftcore --verbose;
+deno task verify --filter swiftcore-projectsession --verbose (swiftcore lanes) and
+deno task verify:qml (drawer QML surface)
+Result: provided by the implementer (agent://Task59a, locked build) for the frozen
+Stage A tree, not re-run by this reconciliation: build ok; swiftcore PASS (12/36 ok,
+24 sibling harnesses skipped by the filter); swiftcore-projectsession PASS (1/36 ok,
+35 sibling harnesses skipped by the filter); verify:qml editorqml-drawer PASS (1/1 ok).
+Structure only below: deno task proof check validates metadata, entries and anchors
+against their sources, never source freshness, execution or parity.
 
 
 Data rows: primaryTrackSwitchCancelsDrag_data: production-route.
@@ -104,13 +106,8 @@ Disposition: MATCHED
 Mapping: S112
 
 A013 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:49
-Disposition: PARTIAL
-Mapping/reason: S112 (src/checks/velocity/VelocityClickSelectionChecks.swift) compares revision and history identity before and after the release, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter equivalent to QUndoStack::count().
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S117, S112
 
 A014 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:50
 Disposition: MATCHED
@@ -161,13 +158,8 @@ Disposition: MATCHED
 Mapping: S092
 
 A026 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:78
-Disposition: PARTIAL
-Mapping/reason: S092 (src/checks/velocity/VelocityClickSelectionChecks.swift) compares revision, history identity and undo/redo reachability before and after the cancellation, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S118, S092, S093
 
 A027 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:79
 Disposition: MATCHED
@@ -186,22 +178,12 @@ Disposition: MATCHED
 Mapping: S094
 
 A031 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:87
-Disposition: PARTIAL
-Mapping/reason: S093 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the post-cancellation pointerRelease returns false (inert, and a release is the only path a gesture has to the document) and S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every velocity still equals its captured value; unproved: the post-release revision comparison itself, which this case does not read.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Disposition: MATCHED
+Mapping: S092, S093, S095
 
 A032 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:88
-Disposition: PARTIAL
-Mapping/reason: S093 (src/checks/velocity/VelocityClickSelectionChecks.swift) proves the post-cancellation release is inert and S095 (src/checks/velocity/VelocityClickSelectionChecks.swift) proves no velocity moved; unproved: history depth after that release, since the case compares no post-release snapshot and Swift has no public undo-stack counter.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S118, S093, S095
 
 A033 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:89
 Disposition: MATCHED
@@ -284,13 +266,8 @@ Disposition: MATCHED
 Mapping: S085
 
 A046 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:131
-Disposition: PARTIAL
-Mapping/reason: S085 (src/checks/velocity/VelocityClickSelectionChecks.swift) compares the full snapshot (revision, identity, canUndo/canRedo) after the band release, corroborating that no entry was created; unproved: history depth, since Swift exposes no public undo-stack counter.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S119, S085
 
 A047 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:132
 Disposition: MATCHED
@@ -305,31 +282,16 @@ Disposition: MATCHED
 Mapping: S086
 
 A050 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:135
-Disposition: PARTIAL
-Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the document velocities are unchanged after the band release; unproved: the playback-timeline projection of those values, because the Swift case reads the document only and builds no PlaybackTimeline, so the legacy timelineVelocity helper has no counterpart here.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
+Disposition: MATCHED
+Mapping: S120, S086
 
 A051 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:136
-Disposition: PARTIAL
-Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the document velocity of every note after the band release; unproved: the playback-timeline projection for this note, since the Swift case reads the document only and builds no PlaybackTimeline.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), 70)
+Disposition: MATCHED
+Mapping: S120, S086
 
 A052 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:137
-Disposition: PARTIAL
-Mapping/reason: S086 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the document velocity of every note after the band release; unproved: the playback-timeline projection for this note, since the Swift case reads the document only and builds no PlaybackTimeline.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), 70)
+Disposition: MATCHED
+Mapping: S120, S086
 
 A053 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:143
 Disposition: MATCHED
@@ -393,22 +355,12 @@ Disposition: MATCHED
 Mapping: S102
 
 A064 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:180
-Disposition: PARTIAL
-Mapping/reason: S101 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts the post-cancellation release returns false (no band starts) and S103 (src/checks/velocity/VelocityClickSelectionChecks.swift) asserts every velocity still equals its captured value; unproved: the post-release revision comparison itself, which this case does not read.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().revision(), revisionBefore)
+Disposition: MATCHED
+Mapping: S100, S101, S103
 
 A065 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:181
-Disposition: PARTIAL
-Mapping/reason: S101 (src/checks/velocity/VelocityClickSelectionChecks.swift) proves no band starts after the cancellation and S103 (src/checks/velocity/VelocityClickSelectionChecks.swift) proves no velocity moved; unproved: history depth after that input, since no post-release snapshot is compared and Swift has no public undo-stack counter.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
+Disposition: MATCHED
+Mapping: S121, S101, S103
 
 A066 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:182
 Disposition: MATCHED
@@ -777,3 +729,18 @@ Anchor: message "a PSG voice uses the intrinsic level ruler"
 
 S116 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Programmable Wave publishes five volume levels"
+
+S117 | drawerVelocityPrimaryTrackSwitchCancels | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a cancelled gesture leaves the undo depth unchanged"
+
+S118 | drawerVelocityPressCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a cancelled gesture leaves the undo depth unchanged"
+
+S119 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a cancelled gesture leaves the undo depth unchanged"
+
+S120 | drawerVelocityBandExpandContract | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a band selection preserves the timeline projection"
+
+S121 | drawerVelocityBandCancelRestores | src/checks/velocity/VelocityClickSelectionChecks.swift
+Anchor: message "a cancelled gesture leaves the undo depth unchanged"

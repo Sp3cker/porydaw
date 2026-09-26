@@ -261,22 +261,12 @@ Disposition: MATCHED
 Mapping: S147
 
 A032 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:147
-Disposition: PARTIAL
-Mapping/reason: S146/S147 assert the document snapshot and history depth are unchanged (no commit occurred), but the C++ QSignalSpy documentChanged emission count itself has no Swift counterpart; the emission-count observation is unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(session->documentChanged->count(), 0)
+Disposition: MATCHED
+Mapping: S219
 
 A033 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:148
-Disposition: PARTIAL
-Mapping/reason: As A032 for SongTab::edited: no Swift predicate observes that signal's emission count; the no-commit consequence is asserted by S146/S147.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(session->edited->count(), 0)
+Disposition: MATCHED
+Mapping: S220
 
 A034 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:149
 Disposition: MATCHED
@@ -291,31 +281,16 @@ Disposition: MATCHED
 Mapping: S148
 
 A037 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:152
-Disposition: PARTIAL
-Mapping/reason: Document-value counterparts are asserted (S148 for the pressed note), but no Swift predicate reads a rebuilt playback timeline projection for this note while the drag is staged; the timelineVelocity projection value is unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
+Disposition: MATCHED
+Mapping: S218
 
 A038 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:153
-Disposition: PARTIAL
-Mapping/reason: As A037: the staged roll drag's timeline projection for the pressed note is asserted only through document state (S148), never through a rebuilt timeline projection.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
+Disposition: MATCHED
+Mapping: S218
 
 A039 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:154
-Disposition: PARTIAL
-Mapping/reason: S148 (VelocityRollCoreChecks.swift) now asserts the unselected note remains unchanged in the staged roll document, but no Swift predicate reads its playback timeline projection; that projection value is unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S218
 
 A040 | VelocityEditingTest::beginStagedRollDrag | src/checks/velocity/velocityroll.cpp:155
 Disposition: PARTIAL
@@ -352,7 +327,7 @@ Mapping: S166, S179, S182
 
 A047 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:170
 Disposition: PARTIAL
-Mapping/reason: S165/S178/S182 prove no commit was made, but the QSignalSpy documentChanged emission count has no Swift counterpart to assert; the emission-count observation is unproved.
+Mapping/reason: PARTIAL: the roll escape and controller-cancellation flows prove no commit was made (S165, S169, S179, S182), but neither installs the session publication counter that the drag and roll-commit flows use (S219/S221), so the post-cancellation documentChanged emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -361,7 +336,7 @@ Original expression:
 
 A048 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:171
 Disposition: PARTIAL
-Mapping/reason: As A047 for the SongTab::edited emission count, which no Swift predicate observes.
+Mapping/reason: PARTIAL: the roll escape and controller-cancellation flows prove no commit was made (S165, S169, S179, S182), but neither installs the session publication counter (S220/S222), so the post-cancellation edited emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -380,7 +355,7 @@ Disposition: MATCHED
 
 A052 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:175
 Disposition: PARTIAL
-Mapping/reason: Byte and document equality is asserted (S165/S169/S179), but no Swift predicate reads the playback timeline projection for this note after cancellation; the timelineVelocity value is unproved.
+Mapping/reason: PARTIAL: byte and document equality is asserted after cancellation (S165, S169, S179) and the sibling page-level escape flow now reads the projection after its own cancel (S224); the roll escape and controller-cancellation flows read no playback timeline projection, so this note's timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -389,7 +364,7 @@ Original expression:
 
 A053 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:176
 Disposition: PARTIAL
-Mapping/reason: As A052 for the pressed note.
+Mapping/reason: PARTIAL: byte and document equality is asserted after cancellation (S165, S169, S179) and the sibling page-level escape flow now reads the projection after its own cancel (S224); the roll escape and controller-cancellation flows read no playback timeline projection for the pressed note, so its timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -398,7 +373,7 @@ Original expression:
 
 A054 | VelocityEditingTest::verifyCancelledRollDragIdle | src/checks/velocity/velocityroll.cpp:177
 Disposition: PARTIAL
-Mapping/reason: As A052 for the unselected note.
+Mapping/reason: PARTIAL: byte and document equality is asserted after cancellation (S165, S169, S179) and the sibling page-level escape flow now reads the projection after its own cancel (S224); the roll escape and controller-cancellation flows read no playback timeline projection for the unselected note, so its timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -410,34 +385,12 @@ Disposition: MATCHED
 Mapping: S167, S180
 
 A056 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:191
-Disposition: PARTIAL
-Mapping/reason: S149/S150/S151 assert one revision advance, one undoable history-identity change and undoCount+1 for the single roll release, but the C++ QSignalSpy documentChanged emission count itself is not asserted by any Swift predicate; the emission-count observation is unproved.
-Source context since previous assertion:
-;
-}
-
-void VelocityEditingTest::rollDragCommitsOnce()
-{
-    RollDragSession session;
-    beginStagedRollDrag(&session);
-    if (QTest::currentTestFailed())
-        return;
-
-    mouseRelease(Qt::LeftButton, session.dragWindow, session.dragModifiers);
-
-    // One release produces one document command and republished timeline values.
-
-Original expression:
-  QCOMPARE(session.documentChanged->count(), 1)
+Disposition: MATCHED
+Mapping: S221
 
 A057 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:192
-Disposition: PARTIAL
-Mapping/reason: As A056 for SongTab::edited: no Swift predicate observes that signal's count; the one-commit consequence is asserted by S149/S150/S151.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(session.edited->count(), 1)
+Disposition: MATCHED
+Mapping: S222
 
 A058 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:193
 Disposition: MATCHED
@@ -476,31 +429,16 @@ Disposition: MATCHED
 Mapping: S155
 
 A067 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:202
-Disposition: PARTIAL
-Mapping/reason: S154 (VelocityRollCoreChecks.swift) now asserts the selected companion commits 64 + 11 in the roll document, but no Swift predicate observes its rebuilt playback timeline projection. The original at 7607c6d7 velocityroll.cpp:202 checks that separate timeline value; that observation remains unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_quietStacked.noteId), session.expectedQuiet)
+Disposition: MATCHED
+Mapping: S223
 
 A068 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:203
-Disposition: PARTIAL
-Mapping/reason: S153 asserts the pressed note's committed document value, but no Swift predicate reads the rebuilt playback timeline projection for it; the timelineVelocity value after commit is unproved.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_later.noteId), session.expectedLater)
+Disposition: MATCHED
+Mapping: S223
 
 A069 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:204
-Disposition: PARTIAL
-Mapping/reason: As A068 for the unselected note: S155 asserts its document literal, while no predicate reads the timeline projection.
-Source context since previous assertion:
-;
-
-Original expression:
-  QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
+Disposition: MATCHED
+Mapping: S223
 
 A070 | VelocityEditingTest::rollDragCommitsOnce | src/checks/velocity/velocityroll.cpp:205
 Disposition: MATCHED
@@ -551,7 +489,7 @@ Mapping: S166, S172, S179
 
 A082 | VelocityEditingTest::escapeStopsRollDrag | src/checks/velocity/velocityroll.cpp:269
 Disposition: PARTIAL
-Mapping/reason: No Swift predicate observes the documentChanged emission count; S165/S172/S182 assert the no-commit consequences (snapshot and song bytes unchanged) instead.
+Mapping/reason: PARTIAL: the no-commit consequences are asserted (S165, S172, S182), but the roll escape flow installs no session publication counter (the drag, roll-commit and page-level escape flows do, S219, S221, S224), so this documentChanged emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -560,7 +498,7 @@ Original expression:
 
 A083 | VelocityEditingTest::escapeStopsRollDrag | src/checks/velocity/velocityroll.cpp:270
 Disposition: PARTIAL
-Mapping/reason: As A082 for SongTab::edited, which no Swift predicate in this lane observes.
+Mapping/reason: PARTIAL: the no-commit consequences are asserted (S165, S172, S182), but the roll escape flow installs no session publication counter (S220, S222), so this edited emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -638,7 +576,7 @@ Mapping: S197
 
 A102 | VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes | src/checks/velocity/velocityroll.cpp:310
 Disposition: PARTIAL
-Mapping/reason: S196/S197 assert the one-revision, one-history-entry consequences, but no Swift predicate observes the documentChanged emission count itself; that observation is unproved.
+Mapping/reason: PARTIAL: the one-revision and one-history-entry consequences are asserted (S196, S197), but the octave-shortcut flow installs no session publication counter (the drag and roll-commit flows do, S221), so this documentChanged emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -647,7 +585,7 @@ Original expression:
 
 A103 | VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes | src/checks/velocity/velocityroll.cpp:311
 Disposition: PARTIAL
-Mapping/reason: As A102 for SongTab::edited, whose emission count no Swift predicate observes.
+Mapping/reason: PARTIAL: the one-revision and one-history-entry consequences are asserted (S196, S197), but the octave-shortcut flow installs no session publication counter (S222), so this edited emission count stays unproved.
 Source context since previous assertion:
 ;
 
@@ -668,7 +606,7 @@ Mapping: S195
 
 A107 | VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes | src/checks/velocity/velocityroll.cpp:315
 Disposition: PARTIAL
-Mapping/reason: S195 asserts the document velocity literal, but no Swift predicate reads the rebuilt playback timeline projection after the shortcut; the timelineVelocity value is unproved.
+Mapping/reason: PARTIAL: the document velocity literal is asserted (S195) and the drag, roll-commit and page-level escape flows now read the rebuilt projection (S218, S223, S224); the octave-shortcut flow reads no playback timeline projection, so this timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -677,7 +615,7 @@ Original expression:
 
 A108 | VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes | src/checks/velocity/velocityroll.cpp:316
 Disposition: PARTIAL
-Mapping/reason: As A107 for this second selected note.
+Mapping/reason: PARTIAL: the document velocity literal is asserted (S195) and the drag, roll-commit and page-level escape flows now read the rebuilt projection (S218, S223, S224); the octave-shortcut flow reads no playback timeline projection for this second selected note, so its timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -686,7 +624,7 @@ Original expression:
 
 A109 | VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes | src/checks/velocity/velocityroll.cpp:317
 Disposition: PARTIAL
-Mapping/reason: As A107 for the unselected note.
+Mapping/reason: PARTIAL: the document velocity literal is asserted (S195) and the drag, roll-commit and page-level escape flows now read the rebuilt projection (S218, S223, S224); the octave-shortcut flow reads no playback timeline projection for the unselected note, so its timelineVelocity value stays unproved.
 Source context since previous assertion:
 ;
 
@@ -1355,3 +1293,24 @@ Anchor: function
 
 S217 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
 Anchor: function
+
+S218 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a drag preview holds the timeline projection at the captured velocities"
+
+S219 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a held drag publishes no document change"
+
+S220 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a held drag publishes no dirty change"
+
+S221 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one release publishes exactly one document change"
+
+S222 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "one release publishes exactly one dirty change"
+
+S223 | drawerVelocityRollCoreRollCommit | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "a released drag republishes the staged velocities into the timeline projection"
+
+S224 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "an escaped drag leaves the timeline projection untouched"

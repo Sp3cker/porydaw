@@ -58,6 +58,8 @@ func drawerVelocityPaintCommitsOnce(_ report: CheckReport, session: DocumentSess
     let endY = page.axisModel.velocityToY(91)
     report.expect(pressX != endX, cppID: drawerVelocityPaintID, message: "the paint endpoints span two note columns")
     let baseline = DocumentSnapshot(document)
+    let depth = document.history.undoCount
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: 0)
     _ = page.pointerMove(x: endX, y: endY, buttons: 1)
     report.expectEqual(expected: 37, actual: Int(page.frozenPreview[notes[0].id] ?? 0), cppID: drawerVelocityPaintID, what: "the press column previews its literal paint velocity")
@@ -69,6 +71,10 @@ func drawerVelocityPaintCommitsOnce(_ report: CheckReport, session: DocumentSess
     report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the last velocity during preview")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the document keeps the unselected velocity during preview")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the preview keeps the paint selection")
+    report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityPaintID, what: "a drag preview holds the timeline projection at the captured velocities")
+    report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityPaintID, what: "a held drag publishes no document change")
+    report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityPaintID, what: "a held drag publishes no dirty change")
     _ = page.pointerRelease(x: endX, y: endY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityPaintID, what: "one paint release commits one revision")
     report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityPaintID, message: "one paint release makes one history entry")
@@ -78,6 +84,12 @@ func drawerVelocityPaintCommitsOnce(_ report: CheckReport, session: DocumentSess
     report.expectEqual(expected: 91, actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release commits the last literal velocity")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityPaintID, what: "the release leaves the unselected note alone")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityPaintID, message: "the release keeps the paint selection")
+    report.expectEqual(expected: [37, 64, 91], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityPaintID, what: "a released drag republishes the staged velocities into the timeline projection")
+    report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                       cppID: drawerVelocityPaintID, what: "one release grows the undo depth by exactly one")
+    report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityPaintID, what: "one release publishes exactly one document change")
+    report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityPaintID, what: "one release publishes exactly one dirty change")
 }
 
 @MainActor
@@ -111,6 +123,8 @@ func drawerVelocityRampCommitsOnce(_ report: CheckReport, session: DocumentSessi
     report.expect(pressX != endX, cppID: drawerVelocityRampID, message: "the ramp endpoints span two note columns")
     report.expect(middleHandle.x > min(pressX, endX) && middleHandle.x < max(pressX, endX), cppID: drawerVelocityRampID, message: "the middle note sits inside the swept span")
     let baseline = DocumentSnapshot(document)
+    let depth = document.history.undoCount
+    let publications = drawerVelocityPublicationCounter(session: fixture.session)
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: shift)
     let middleExpected = page.axisModel.yToVelocity(velocityRampValue(at: middleHandle.x, x0: pressX, y0: pressY, x1: endX, y1: endY))
     _ = page.pointerMove(x: endX, y: endY, buttons: 1)
@@ -125,6 +139,11 @@ func drawerVelocityRampCommitsOnce(_ report: CheckReport, session: DocumentSessi
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the outside velocity during preview")
     report.expectEqual(expected: Int(notes[2].velocity), actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the document keeps the last velocity during preview")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the preview keeps the ramp selection")
+    report.expectEqual(expected: [100, 64, 32, 56],
+                       actual: (notes + [middle]).map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityRampID, what: "a drag preview holds the timeline projection at the captured velocities")
+    report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityRampID, what: "a held drag publishes no document change")
+    report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityRampID, what: "a held drag publishes no dirty change")
     _ = page.pointerRelease(x: endX, y: endY, button: 1)
     report.expectEqual(expected: baseline.revision + 1, actual: document.revision, cppID: drawerVelocityRampID, what: "one ramp release commits one revision")
     report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityRampID, message: "one ramp release makes one history entry")
@@ -135,6 +154,13 @@ func drawerVelocityRampCommitsOnce(_ report: CheckReport, session: DocumentSessi
     report.expectEqual(expected: 93, actual: Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release commits the last ramp velocity")
     report.expectEqual(expected: Int(notes[1].velocity), actual: Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRampID, what: "the release leaves the outside note alone")
     report.expect(fixture.session.selectedNoteOrder == [notes[0].id, middle.id, notes[2].id], cppID: drawerVelocityRampID, message: "the release keeps the ramp selection")
+    report.expectEqual(expected: [37, 64, 93, middleExpected],
+                       actual: (notes + [middle]).map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                       cppID: drawerVelocityRampID, what: "a released drag republishes the staged velocities into the timeline projection")
+    report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                       cppID: drawerVelocityRampID, what: "one release grows the undo depth by exactly one")
+    report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityRampID, what: "one release publishes exactly one document change")
+    report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityRampID, what: "one release publishes exactly one dirty change")
 }
 
 @MainActor
@@ -551,4 +577,222 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
     report.expectEqual(expected: 37, actual: Int(waveGesture.preview[NoteID(109)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp starts raw")
     report.expectEqual(expected: 65, actual: Int(waveGesture.preview[NoteID(110)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave middle interpolates raw")
     report.expectEqual(expected: 93, actual: Int(waveGesture.preview[NoteID(111)] ?? 0), cppID: drawerVelocityUnlockedRampID, what: "the unlocked wave ramp ends raw")
+}
+
+@MainActor
+func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSession, service: ProjectService) {
+    let unlock = KeybindingRegistry().modifierBinding("velocity.detent_unlock")
+    let shift = 0x0200_0000
+    guard unlock != 0 else {
+        report.fail(drawerVelocityLateUnlockID, "the detent unlock hold resolved to no modifier")
+        return
+    }
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(drawerVelocityLateUnlockID, "the staged wave bank fixture is unavailable")
+        return
+    }
+    let scratch = FileManager.default.temporaryDirectory
+        .appendingPathComponent("swiftcore-velocity-wave-\(UUID().uuidString)", isDirectory: true)
+    let waveService = ProjectService()
+    defer {
+        do {
+            try runBlocking { await waveService.close() }
+        } catch {
+            report.fail(drawerVelocityLateUnlockID, "could not close the wave bank fixture: \(error)")
+        }
+        try? FileManager.default.removeItem(at: scratch)
+    }
+    let waveSession: DocumentSession
+    do {
+        try FileManager.default.copyItem(at: URL(filePath: fixtureRoot), to: scratch)
+        try runBlocking { try await waveService.open(root: scratch.path) }
+        let loaded = try runBlocking { try await waveService.openSong(label: "mus_gym") }
+        let waveDocument = SongDocument(file: drawerVelocityVelocityPageFixture(contextSlot: 6),
+                                        config: loaded.config, source: loaded.source,
+                                        trackBudget: loaded.trackBudget)
+        waveSession = DocumentSession(document: waveDocument, service: waveService,
+                                      lease: loaded.bank, slots: loaded.bankSlots,
+                                      dirty: loaded.bankDirty, loadName: loaded.bankLoadName)
+    } catch {
+        report.fail(drawerVelocityLateUnlockID, "could not load the staged wave bank fixture: \(error)")
+        return
+    }
+    for program: UInt8 in [0, 6, 2] {
+        let kind: VoiceKind = program == 0 ? .square1 : program == 6 ? .wave : .noise
+        let expectedSnap = program == 6 ? [64, 127] : [44, 92]
+        let sourceSession = program == 6 ? waveSession : session
+        let sourceService = program == 6 ? waveService : service
+        do {
+            let fixture = drawerVelocityVelocityFixture(session: sourceSession, service: sourceService, contextSlot: program)
+            let notes = fixture.notes
+            let page = fixture.page
+            let document = fixture.document
+            drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
+            fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
+            page.refreshFromDocument()
+            report.expect(page.contextSlot == Int(program) && page.axisModel.map == VelocityMap(voiceKind: kind),
+                          cppID: drawerVelocityLateUnlockID,
+                          message: "the selected program resolves its own intrinsic page context")
+            if program == 6 {
+                report.expect(page.detentsAvailable && page.detentsEnabled
+                                  && page.axisMode == VelocityAxisModel.Mode.intrinsic.rawValue,
+                              cppID: drawerVelocityLateUnlockID,
+                              message: "the wave pair presents the intrinsic ruler with the enabled detent control")
+            }
+            page.setUseDetents(enabled: false)
+            report.expect(!page.detentsEnabled && !page.axisGraduationsVisible,
+                          cppID: drawerVelocityLateUnlockID,
+                          message: "detents toggle between intrinsic and continuous for every program family")
+            page.setUseDetents(enabled: true)
+            guard let first = fixture.handle(notes[0]) else {
+                report.fail(drawerVelocityLateUnlockID, "the selected program published no first handle")
+                continue
+            }
+            let publications = drawerVelocityPublicationCounter(session: fixture.session)
+            let depth = document.history.undoCount
+            let before = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+            _ = page.pointerPress(x: first.x, y: first.y, surface: 1, button: 1, modifiers: 0)
+            let nextLevel = program == 6 ? 2 : 5
+            let nextY = page.axisModel.levelToY(nextLevel)
+            _ = page.pointerMove(x: first.x, y: nextY, buttons: 1)
+            report.expectEqual(expected: expectedSnap,
+                               actual: [notes[0], notes[1]].map { Int(page.frozenPreview[$0.id] ?? 0) },
+                               cppID: drawerVelocityLateUnlockID,
+                               what: "a late unlock keeps the gesture snapped to the level bands")
+            report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityLateUnlockID, what: "a drag preview holds the timeline projection at the captured velocities")
+            report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityLateUnlockID, what: "a held drag publishes no document change")
+            report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityLateUnlockID, what: "a held drag publishes no dirty change")
+            _ = page.pointerRelease(x: first.x, y: nextY, button: 1)
+            report.expectEqual(expected: expectedSnap + [before[2]],
+                               actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityLateUnlockID,
+                               what: "a released drag republishes the staged velocities into the timeline projection")
+            report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                               cppID: drawerVelocityLateUnlockID, what: "one release grows the undo depth by exactly one")
+            report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityLateUnlockID, what: "one release publishes exactly one document change")
+            report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityLateUnlockID, what: "one release publishes exactly one dirty change")
+            report.expect(page.frozenPreview.isEmpty && fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id],
+                          cppID: drawerVelocityLateUnlockID,
+                          message: "the per-program locked release clears preview and retains selection")
+        }
+        do {
+            let fixture = drawerVelocityVelocityFixture(session: sourceSession, service: sourceService, contextSlot: program)
+            let notes = fixture.notes
+            let page = fixture.page
+            let document = fixture.document
+            drawerVelocityPaintSetOrigins(document, page, notes[0], 33, notes[1], 87)
+            fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
+            page.refreshFromDocument()
+            guard let first = fixture.handle(notes[0]) else {
+                report.fail(drawerVelocityUnlockedRelativeID, "the selected program published no first handle")
+                continue
+            }
+            let targetY = page.axisModel.velocityToY(page.axisModel.yToVelocity(first.y) + 7)
+            let publications = drawerVelocityPublicationCounter(session: fixture.session)
+            let depth = document.history.undoCount
+            let before = notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+            _ = page.pointerPress(x: first.x, y: first.y, surface: 1, button: 1, modifiers: unlock)
+            _ = page.pointerMove(x: first.x, y: targetY, buttons: 1)
+            report.expectEqual(expected: [40, 94], actual: [notes[0], notes[1]].map { Int(page.frozenPreview[$0.id] ?? 0) },
+                               cppID: drawerVelocityUnlockedRelativeID,
+                               what: "an unlocked press keeps per-note offsets under a raw delta")
+            report.expectEqual(expected: before, actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityUnlockedRelativeID, what: "a drag preview holds the timeline projection at the captured velocities")
+            report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityUnlockedRelativeID, what: "a held drag publishes no document change")
+            report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityUnlockedRelativeID, what: "a held drag publishes no dirty change")
+            _ = page.pointerRelease(x: first.x, y: targetY, button: 1)
+            report.expectEqual(expected: [40, 94, before[2]], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityUnlockedRelativeID,
+                               what: "a released drag republishes the staged velocities into the timeline projection")
+            report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                               cppID: drawerVelocityUnlockedRelativeID, what: "one release grows the undo depth by exactly one")
+            report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityUnlockedRelativeID, what: "one release publishes exactly one document change")
+            report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityUnlockedRelativeID, what: "one release publishes exactly one dirty change")
+            report.expect(page.frozenPreview.isEmpty && fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id],
+                          cppID: drawerVelocityUnlockedRelativeID,
+                          message: "the per-program raw release clears preview and retains selection")
+        }
+        do {
+            let fixture = drawerVelocityVelocityFixture(session: sourceSession, service: sourceService, contextSlot: program)
+            let notes = fixture.notes
+            let page = fixture.page
+            let document = fixture.document
+            guard let middle = drawerVelocityPaintAddNote(report, cppID: drawerVelocityUnlockedRampID,
+                                                         document: document, page: page, tick: 36,
+                                                         pitch: 72, duration: 12, velocity: 56),
+                  let endpoint = drawerVelocityPaintAddNote(report, cppID: drawerVelocityUnlockedRampID,
+                                                           document: document, page: page, tick: 72,
+                                                           pitch: 76, duration: 12, velocity: 87) else { continue }
+            fixture.session.setSelectedNotes([notes[0].id, middle.id, endpoint.id])
+            page.refreshFromDocument()
+            guard let first = fixture.handle(notes[0]), let last = fixture.handle(endpoint) else {
+                report.fail(drawerVelocityUnlockedRampID, "the selected program published no ramp endpoints")
+                continue
+            }
+            let pressY = page.axisModel.velocityToY(37)
+            let endY = page.axisModel.velocityToY(93)
+            let publications = drawerVelocityPublicationCounter(session: fixture.session)
+            let depth = document.history.undoCount
+            let before = [notes[0], notes[1], notes[2], middle, endpoint].map { drawerVelocityTimelineVelocity(fixture.session, $0.id) }
+            _ = page.pointerPress(x: first.x, y: pressY, surface: 1, button: 1, modifiers: unlock | shift)
+            _ = page.pointerMove(x: last.x, y: endY, buttons: 1)
+            report.expectEqual(expected: [37, 65, 93],
+                               actual: [notes[0].id, middle.id, endpoint.id].map { Int(page.frozenPreview[$0] ?? 0) },
+                               cppID: drawerVelocityUnlockedRampID,
+                               what: "an unlocked ramp interpolates the middle note")
+            report.expectEqual(expected: before,
+                               actual: [notes[0], notes[1], notes[2], middle, endpoint].map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityUnlockedRampID, what: "a drag preview holds the timeline projection at the captured velocities")
+            report.expectEqual(expected: 0, actual: publications.document, cppID: drawerVelocityUnlockedRampID, what: "a held drag publishes no document change")
+            report.expectEqual(expected: 0, actual: publications.dirty, cppID: drawerVelocityUnlockedRampID, what: "a held drag publishes no dirty change")
+            _ = page.pointerRelease(x: last.x, y: endY, button: 1)
+            report.expectEqual(expected: [37, before[1], before[2], 65, 93],
+                               actual: [notes[0], notes[1], notes[2], middle, endpoint].map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                               cppID: drawerVelocityUnlockedRampID,
+                               what: "a released drag republishes the staged velocities into the timeline projection")
+            report.expectEqual(expected: depth + 1, actual: document.history.undoCount,
+                               cppID: drawerVelocityUnlockedRampID, what: "one release grows the undo depth by exactly one")
+            report.expectEqual(expected: 1, actual: publications.document, cppID: drawerVelocityUnlockedRampID, what: "one release publishes exactly one document change")
+            report.expectEqual(expected: 1, actual: publications.dirty, cppID: drawerVelocityUnlockedRampID, what: "one release publishes exactly one dirty change")
+            report.expect(page.frozenPreview.isEmpty && fixture.session.selectedNoteOrder == [notes[0].id, middle.id, endpoint.id],
+                          cppID: drawerVelocityUnlockedRampID,
+                          message: "the per-program ramp release clears preview and retains selection")
+        }
+        if program == 6 {
+            for locked in [true, false] {
+                let fixture = drawerVelocityVelocityFixture(session: sourceSession, service: sourceService, contextSlot: program)
+                let notes = fixture.notes
+                let page = fixture.page
+                fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
+                page.refreshFromDocument()
+                guard let first = fixture.handle(notes[0]), let last = fixture.handle(notes[1]) else {
+                    report.fail(drawerVelocityLockedPaintID, "the wave pair published no paint endpoints")
+                    continue
+                }
+                let y = page.axisModel.velocityToY(73)
+                let id = locked ? drawerVelocityLockedPaintID : drawerVelocityUnlockedPaintID
+                let publications = drawerVelocityPublicationCounter(session: fixture.session)
+                let depth = fixture.document.history.undoCount
+                _ = page.pointerPress(x: first.x, y: y, surface: 1, button: 1, modifiers: locked ? 0 : unlock)
+                _ = page.pointerMove(x: last.x, y: y, buttons: 1)
+                let expected = locked ? 64 : 73
+                report.expectEqual(expected: [expected, expected],
+                                   actual: [notes[0], notes[1]].map { Int(page.frozenPreview[$0.id] ?? 0) },
+                                   cppID: id, what: "the wave page paint stages both selected note values")
+                report.expectEqual(expected: [100, 64, 32], actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                                   cppID: id, what: "a drag preview holds the timeline projection at the captured velocities")
+                report.expectEqual(expected: 0, actual: publications.document, cppID: id, what: "a held drag publishes no document change")
+                _ = page.pointerRelease(x: last.x, y: y, button: 1)
+                report.expectEqual(expected: [expected, expected, 32],
+                                   actual: notes.map { drawerVelocityTimelineVelocity(fixture.session, $0.id) },
+                                   cppID: id, what: "a released drag republishes the staged velocities into the timeline projection")
+                report.expectEqual(expected: depth + 1, actual: fixture.document.history.undoCount,
+                                   cppID: id, what: "one release grows the undo depth by exactly one")
+                report.expectEqual(expected: 1, actual: publications.document, cppID: id, what: "one release publishes exactly one document change")
+                report.expectEqual(expected: 1, actual: publications.dirty, cppID: id, what: "one release publishes exactly one dirty change")
+                report.expect(page.frozenPreview.isEmpty, cppID: id, message: "the wave page paint clears its staged preview")
+            }
+        }
+    }
 }
