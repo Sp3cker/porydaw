@@ -29,10 +29,12 @@ Item {
         return true
     }
     function eventListIsActive() {
-        for (let index = 0; index < pages.count; ++index) {
-            const page = pages.itemAt(index)
-            if (page && page.visible && page.showEvents)
+        const window = Window.window
+        let focus = window ? window.activeFocusItem : null
+        while (focus && focus !== root) {
+            if (focus.objectName === "eventListPage")
                 return true
+            focus = focus.parent
         }
         return false
     }
