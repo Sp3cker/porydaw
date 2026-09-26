@@ -353,4 +353,53 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     } else {
         report.fail(drawerAutomationPaintingModelID, "the tempo lane projected no node at tick 48")
     }
+    let emptyTempo = drawerAutomationAutomationFixture(suite: suite, service: service, tempo: [])
+    let emptyComposition = emptyTempo.makeProjection(.tempo)
+    report.expect(emptyTempo.document.state.tempo.isEmpty && emptyComposition.points.isEmpty
+                      && emptyComposition.segments.isEmpty,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "an empty tempo store composes no lead-in")
+    let implicitTempo = drawerAutomationAutomationFixture(
+        suite: suite, service: service, tempo: [(96, 400_000)])
+    let implicitComposition = implicitTempo.makeProjection(.tempo)
+    report.expectEqual(expected: AutomationCurveSegment(
+        kind: .step, tickBegin: 0, tickEnd: 96, fromValue: 120,
+        toValue: 120, isLeadIn: true, isSelected: false),
+        actual: implicitComposition.segments.first,
+        cppID: drawerAutomationPaintingModelID,
+        what: "a first-nonzero tempo point composes its implicit lead-in")
+    let explicitTempo = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        tempo: [(0, 500_000), (96, 400_000)])
+    let explicitComposition = explicitTempo.makeProjection(.tempo)
+    report.expect(explicitComposition.leadIn == nil
+                      && !explicitComposition.segments.contains(where: \.isLeadIn),
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "an explicit tick-zero point suppresses the lead-in")
+    let stepComposition = fixture.makeProjection(fixture.panLane)
+    report.expectEqual(expected: [Tick(0), 24, 120],
+                       actual: stepComposition.segments.map(\.tickBegin),
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "step curves compose the projected origin and written nodes")
+    report.expectEqual(expected: [.step, .step, .step],
+                       actual: stepComposition.segments.map(\.kind),
+                       cppID: drawerAutomationPaintingModelID,
+                       what: "step curves compose their nodes")
+    let halfOpen = AutomationTimeSelection(range: TimeRange(startTick: 24, endTick: 120),
+                                           scope: .lanes, lanes: [fixture.panLane])
+    let selectedComposition = fixture.makeProjection(fixture.panLane, selection: halfOpen)
+    report.expectEqual(expected: [Tick(24)], actual: selectedComposition.points
+        .filter(\.selected).map(\.tick),
+        cppID: drawerAutomationPaintingModelID,
+        what: "a half-open time selection composes node rings")
+    page.selectRange(from: 24, to: 120, lanes: [fixture.panLane])
+    fixture.activate(fixture.panLane)
+    let selectedNodes = page.publishedNodes.filter(\.selected)
+    report.expect(selectedNodes.map(\.tick) == [24]
+                      && selectedNodes.allSatisfy {
+                          $0.ringRadius > $0.radius && $0.ringColor == page.palette.selectionRing
+                      }
+                      && page.selectionRects.count > 0,
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "selection rings and reticles compose")
 }

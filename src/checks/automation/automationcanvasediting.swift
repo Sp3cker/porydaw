@@ -306,6 +306,23 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
                            what: "an arrow node hover offers the node profile")
         report.expectEqual(expected: revision, actual: fixture.snapshot, cppID: drawerAutomationHoverModelID,
                            what: "hovering a node writes nothing")
+        report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
+                      message: "a hover is not the page's interaction")
+        if let second = lane.points.first(where: { $0.tick == 120 }) {
+            _ = page.pointerMove(x: second.x, y: second.y, buttons: 0)
+            report.expectEqual(expected: Tick(120), actual: page.hover?.tick,
+                               cppID: drawerAutomationHoverModelID,
+                               what: "hover move republishes without writing")
+            report.expectEqual(expected: [120.0],
+                               actual: page.publishedNodes.filter(\.hovered).map(\.tick),
+                               cppID: drawerAutomationHoverModelID,
+                               what: "hover enter publishes exactly one ring")
+            report.expectEqual(expected: revision, actual: fixture.snapshot,
+                               cppID: drawerAutomationHoverModelID,
+                               what: "hover move republishes without writing")
+        } else {
+            report.fail(drawerAutomationHoverModelID, "the pan lane projected no second node")
+        }
     } else {
         report.fail(drawerAutomationHoverModelID, "the pan lane projected no node at tick 24")
     }
@@ -389,10 +406,16 @@ func drawerAutomationHoverModel(_ report: CheckReport, suite: DocumentSession,
                                points: [LaneWrite(tick: 24, value: 64), LaneWrite(tick: 72, value: 70),
                                         LaneWrite(tick: 120, value: 40)])
     page.refreshFromDocument()
+    report.expect(!page.hasGesture, cppID: drawerAutomationHoverModelID,
+                  message: "a document rebuild aborts the drag")
+    let rebuilt = fixture.snapshot
     let afterRebuild = fixture.values(fixture.panLane)
     _ = page.pointerRelease(x: pressX + 24, y: pressY - 12, button: AutomationQtButton.left)
     report.expectEqual(expected: afterRebuild, actual: fixture.values(fixture.panLane), cppID: drawerAutomationHoverModelID,
                        what: "a stale release after a mid-gesture rebuild commits nothing")
+    report.expectEqual(expected: rebuilt, actual: fixture.snapshot,
+                       cppID: drawerAutomationHoverModelID,
+                       what: "a stale batch release writes nothing")
     report.expect(!page.interactionActive, cppID: drawerAutomationHoverModelID,
                   message: "a stale release leaves no interaction live")
 }
@@ -626,6 +649,14 @@ func drawerAutomationKeyboardIngress(_ report: CheckReport, suite: DocumentSessi
                                                 surface: 1, button: 1),
                   cppID: selID, message: "a press inside the selection grabs the node")
     let grabbed = precedence.snapshot
+    _ = precedence.page.pointerMove(x: precedence.x(24) + 30,
+                                    y: precedence.y(precedence.panLane, 64),
+                                    buttons: AutomationQtButton.left)
+    _ = precedence.page.pointerMove(x: precedence.x(24) + 60,
+                                    y: precedence.y(precedence.panLane, 64),
+                                    buttons: AutomationQtButton.left)
+    report.expect(precedence.page.hasGesture, cppID: selID,
+                  message: "the adapter drag arms before Escape")
     report.expect(precedence.page.handleEscape(), cppID: selID,
                   message: "Escape with a live gesture claims it")
     report.expect(!precedence.page.hasGesture, cppID: selID,
@@ -634,6 +665,11 @@ func drawerAutomationKeyboardIngress(_ report: CheckReport, suite: DocumentSessi
                   message: "the selection survives a gesture-first Escape")
     report.expectEqual(expected: grabbed, actual: precedence.snapshot, cppID: selID,
                        what: "a gesture-first Escape writes nothing")
+    _ = precedence.page.pointerRelease(x: precedence.x(24) + 60,
+                                       y: precedence.y(precedence.panLane, 64),
+                                       button: AutomationQtButton.left)
+    report.expectEqual(expected: grabbed, actual: precedence.snapshot, cppID: selID,
+                       what: "escape cancels the adapter drag without mutation")
 
     let keyID = "automation/AutomationEditingTest::selectedRangeDragAndDelete"
     let armed = EditSurfaceState(pointerGestureActive: false, timeSelectionActive: true,

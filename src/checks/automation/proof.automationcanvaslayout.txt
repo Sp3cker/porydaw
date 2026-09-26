@@ -28,8 +28,8 @@ voice-changes task, so every anchor below was re-resolved against the current sn
 must re-run that lane on the settled file before any executed claim is treated as final. These anchors are converted observations; they do
 not restate the native harness.
 
-Disposition tally: MATCHED 86, PARTIAL 26, GAP 5, RETIRED-REPRESENTATION 11 (128 sites).
-Open rows: 31. The PARTIAL rows keep the drawer's own bounds, the native view-state
+Disposition tally: MATCHED 93, PARTIAL 19, GAP 5, RETIRED-REPRESENTATION 11 (128 sites).
+Open rows: 24. The PARTIAL rows keep the drawer's own bounds, the native view-state
 blocks, the per-tick GridMetrics readouts, the retired row-handle identities and the
 routes the converted lane does not re-read; the GAP rows are the page-switch split read
 and the post-resize view-state blocks. Every open row names what the converted lane does
@@ -441,8 +441,8 @@ Original expression:
   QVERIFY(QRectF(gutterRect).contains(labelRect))
 
 A072 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:225
-Disposition: PARTIAL
-Mapping/reason: The pan predicates run on a fixture whose pan lane is activated through the production catalog (S031 presses on it), but no Swift predicate asserts the original's activation return value.
+Disposition: MATCHED
+Mapping: S135
 Original expression:
   QVERIFY(activateParameter(pan))
 
@@ -463,14 +463,14 @@ Disposition: MATCHED
 Mapping: S026, S067
 
 A076 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:255
-Disposition: PARTIAL
-Mapping/reason: The converted lane asserts a second drawn track header exists and is not the add-track row (S071) instead of the original's minted index, so the original's addTrack(0) return value still has no predicate.
+Disposition: MATCHED
+Mapping: S136
 Original expression:
   QCOMPARE(m_tab->document().addTrack(0), 1)
 
 A077 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:259
-Disposition: PARTIAL
-Mapping/reason: The converted mid-pan switch journey does not activate the pan lane through the catalog first and no predicate asserts an activation return value for it; the pan anchors run on the fixture's own pan lane (S031).
+Disposition: MATCHED
+Mapping: S137
 Original expression:
   QVERIFY(activateParameter(oldPan))
 
@@ -491,8 +491,8 @@ Disposition: MATCHED
 Mapping: S034, S069, S127
 
 A081 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:276
-Disposition: PARTIAL
-Mapping/reason: The converted page publishes one active parameter after the switch (S034), but no Swift predicate asserts the previous lane's row handle became invalid: the row-handle concept is retired into parameter identity.
+Disposition: MATCHED
+Mapping: S140
 Original expression:
   QVERIFY(!findRow(oldPan).valid())
 
@@ -507,14 +507,14 @@ Disposition: MATCHED
 Mapping: S035, S070
 
 A084 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:281
-Disposition: PARTIAL
-Mapping/reason: The converted lane re-reads the active parameter and the drawn tab set before the release (S034, S069, S127) and only the document revision and cursor after it (S070); the rebuilt row handle itself is not re-read after the release.
+Disposition: MATCHED
+Mapping: S140
 Original expression:
   QVERIFY(findRow(newPan).valid())
 
 A085 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:282
-Disposition: PARTIAL
-Mapping/reason: No Swift predicate asserts the previous lane's row handle stays invalid after the release; the row-handle concept is retired into parameter identity.
+Disposition: MATCHED
+Mapping: S140
 Original expression:
   QVERIFY(!findRow(oldPan).valid())
 
@@ -659,8 +659,8 @@ Disposition: MATCHED
 Mapping: S046
 
 A113 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:360
-Disposition: PARTIAL
-Mapping/reason: The converted wheel lane activates its own lane through the drawn selector and re-checks the active index (S110) — the Volume lane, not the original's pan lane — and no predicate asserts an activation return value.
+Disposition: MATCHED
+Mapping: S141
 Original expression:
   QVERIFY(activateParameter(pan))
 
@@ -1145,3 +1145,24 @@ Anchor: message "the zoom preserves the drawer's page state" #5
 
 S134 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "wheel zoom keeps the anchor tick under the pointer" #2
+
+S135 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "activating the pan lane returns its handle" #1
+
+S136 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the added track has its own row identity"
+
+S137 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "activating the pan lane returns its handle" #2
+
+S138 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the old row belongs to the original track"
+
+S139 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a track switch rebuilds rows during the pan"
+
+S140 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the rebuilt row keeps its handle and retires the old track row"
+
+S141 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "activating the volume lane returns its handle"

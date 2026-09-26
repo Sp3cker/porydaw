@@ -237,8 +237,6 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
     report.expectEqual(expected: Tick(24), actual: phantom.move?.sourceTick ?? 0, cppID: drawerAutomationNodeDragID,
                        what: "the phantom's write names its own source tick")
 
-    // The committed drag writes once, moves the node and evicts the occupant of
-    // the destination tick.
     var committed = AutomationNodeDragTransaction.single(facts: facts, source: sources[0],
                                                          press: (100, 100),
                                                          deleteOnStationary: true)
@@ -264,7 +262,6 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
                        cppID: drawerAutomationNodeDragID,
                        what: "one undo restores the moved node and the evicted occupant")
 
-    // A write on the projected engine node promotes it into a written event.
     let promotion = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [])
     let promotionFacts = promotion.facts(promotion.panLane)
     report.expectEqual(expected: ["0:64"], actual: promotion.laneValues(promotionFacts.displayPoints), cppID: drawerAutomationNodeDragID,
@@ -285,6 +282,118 @@ func drawerAutomationNodeDragAndPhantomOutcomes(_ report: CheckReport, suite: Do
                        what: "the projected node becomes a written event at its own tick")
     report.expect(promotion.undo() && promotion.values(promotion.panLane).isEmpty, cppID: drawerAutomationNodeDragID,
                   message: "one undo returns the lane to its projected node alone")
+    let tickID = "automation/AutomationEditingTest::nodeDragCommits"
+    for parameter in [AutomationParameter.tempo, fixture.panLane] {
+        let tickMove = drawerAutomationAutomationFixture(
+            suite: suite, service: service,
+            pan: [(24, 60), (120, 40)],
+            tempo: [(24, 600_000), (120, 500_000)])
+        tickMove.activate(parameter)
+        let value = parameter == .tempo ? 100 : 60
+        let before = tickMove.snapshot
+        let y = tickMove.y(parameter, value)
+        let start = tickMove.x(24)
+        let finish = tickMove.x(96) + 30
+        report.expect(tickMove.page.pointerPress(x: start, y: y, surface: 1,
+                                                 button: AutomationQtButton.left),
+                      cppID: tickID, message: "the written node takes its drag")
+        _ = tickMove.page.pointerMove(x: start + 30, y: y, buttons: AutomationQtButton.left)
+        _ = tickMove.page.pointerMove(x: finish, y: y, buttons: AutomationQtButton.left)
+        report.expectEqual(expected: before, actual: tickMove.snapshot, cppID: tickID,
+                           what: "a node drag preview writes nothing before release")
+        _ = tickMove.page.pointerRelease(x: finish, y: y, button: AutomationQtButton.left)
+        let actual = parameter == .tempo ? tickMove.tempoValues : tickMove.values(tickMove.panLane)
+        let expected = parameter == .tempo ? ["96:100", "120:120"] : ["96:60", "120:40"]
+        report.expectEqual(expected: expected, actual: actual, cppID: tickID,
+                           what: "a node drag commits the tick and count outcomes")
+        report.expectEqual(expected: before.revision + 1, actual: tickMove.document.revision,
+                           cppID: tickID, what: "a node drag commits one revision")
+        report.expect(tickMove.undo(), cppID: tickID, message: "the moved tick is undoable")
+    }
+    let phantomID = "automation/AutomationEditingTest::scrolledOriginPhantomCommits"
+    for parameter in [AutomationParameter.tempo, fixture.panLane] {
+        let scrolled = drawerAutomationAutomationFixture(
+            suite: suite, service: service,
+            pan: [(24, 60), (120, 40)],
+            tempo: [(24, 600_000), (120, 500_000)])
+        scrolled.activate(parameter)
+        let scroll = scrolled.x(24) + scrolled.page.geometry.pointHitRadius * 2
+        _ = scrolled.session.mutateCamera { $0.setHScroll(scroll) }
+        guard let projected = scrolled.page.projection?.originPhantom,
+              let handle = scrolled.page.publishedNodes.first(where: \.phantom) else {
+            report.fail(phantomID, "scrolling leaves no origin phantom in the production plot")
+            continue
+        }
+        let before = scrolled.snapshot
+        let original = parameter == .tempo ? scrolled.tempoValues : scrolled.values(scrolled.panLane)
+        report.expectEqual(expected: Tick(24), actual: projected.point.tick, cppID: phantomID,
+                           what: "a scrolled node becomes the origin phantom")
+        report.expectEqual(expected: Double(projected.point.tick), actual: handle.tick,
+                           cppID: phantomID, what: "the phantom retains its source tick")
+        let y = projected.point.y
+        let targetY = scrolled.y(parameter, 110)
+        report.expect(scrolled.page.pointerPress(x: 0, y: y, surface: 1,
+                                                 button: AutomationQtButton.left),
+                      cppID: phantomID, message: "the origin phantom takes its press")
+        _ = scrolled.page.pointerMove(x: 0, y: y - 30, buttons: AutomationQtButton.left)
+        _ = scrolled.page.pointerMove(x: 0, y: targetY - 30, buttons: AutomationQtButton.left)
+        report.expectEqual(expected: before, actual: scrolled.snapshot, cppID: phantomID,
+                           what: "a scrolled-origin preview writes nothing")
+        _ = scrolled.page.pointerRelease(x: 0, y: targetY - 30,
+                                         button: AutomationQtButton.left)
+        let written = parameter == .tempo ? scrolled.tempoValues : scrolled.values(scrolled.panLane)
+        report.expectEqual(expected: ["24:110", "120:\(parameter == .tempo ? 120 : 40)"],
+                           actual: written, cppID: phantomID,
+                           what: "a scrolled-origin drag commits through its phantom")
+        report.expectEqual(expected: before.revision + 1, actual: scrolled.document.revision,
+                           cppID: phantomID, what: "the phantom edit commits once")
+        report.expect(scrolled.undo(), cppID: phantomID, message: "the phantom edit undoes")
+        report.expectEqual(expected: original,
+                           actual: parameter == .tempo ? scrolled.tempoValues
+                               : scrolled.values(scrolled.panLane),
+                           cppID: phantomID, what: "undo restores the phantom source")
+    }
+    let rangeID = "automation/AutomationEditingTest::selectedRangeDragAndDelete"
+    for parameter in [AutomationParameter.tempo, fixture.panLane] {
+        let selected = drawerAutomationAutomationFixture(
+            suite: suite, service: service,
+            pan: [(0, 80), (96, 100), (192, 64), (384, 110)],
+            tempo: [(0, 750_000), (96, 600_000), (192, 937_500), (384, 545_455)])
+        selected.activate(parameter)
+        selected.page.selectRange(from: 96, to: 288, lanes: [parameter])
+        let sourceX = selected.x(96)
+        let sourceY = selected.y(parameter, 100)
+        let endX = selected.x(144) + 30
+        let before = selected.snapshot
+        report.expect(selected.page.pointerPress(x: sourceX, y: sourceY, surface: 1,
+                                                 button: AutomationQtButton.left),
+                      cppID: rangeID, message: "the selected node takes the group drag")
+        _ = selected.page.pointerMove(x: sourceX + 30, y: sourceY,
+                                      buttons: AutomationQtButton.left)
+        _ = selected.page.pointerMove(x: endX, y: sourceY,
+                                      buttons: AutomationQtButton.left)
+        report.expectEqual(expected: before, actual: selected.snapshot, cppID: rangeID,
+                           what: "the selected-range preview writes nothing")
+        _ = selected.page.pointerRelease(x: endX, y: sourceY, button: AutomationQtButton.left)
+        let movedValues = parameter == .tempo ? selected.tempoValues : selected.values(selected.panLane)
+        report.expectEqual(expected: ["0:80", "144:100", "240:64", "384:110"],
+                           actual: movedValues, cppID: rangeID,
+                           what: "the selected-range drag moves both nodes and preserves outside points")
+        report.expectEqual(expected: TimeRange(startTick: 144, endTick: 336),
+                           actual: selected.page.selection?.range, cppID: rangeID,
+                           what: "the selected-range band follows its drag")
+        report.expectEqual(expected: before.revision + 1, actual: selected.document.revision,
+                           cppID: rangeID, what: "the selected-range drag commits once")
+        selected.page.selectRange(from: 96, to: 288, lanes: [parameter])
+        let beforeDelete = selected.snapshot
+        report.expect(selected.page.consumeSelectionCommand(command: .delete), cppID: rangeID,
+                      message: "the moved selection consumes Delete")
+        let retainedValues = parameter == .tempo ? selected.tempoValues : selected.values(selected.panLane)
+        report.expectEqual(expected: ["0:80", "384:110"], actual: retainedValues,
+                           cppID: rangeID, what: "a selected-range drag deletes through the range")
+        report.expectEqual(expected: beforeDelete.revision + 1, actual: selected.document.revision,
+                           cppID: rangeID, what: "the selected-range delete commits once")
+    }
 }
 
 /// Supplemental history regression from the production QML Pan sequence.

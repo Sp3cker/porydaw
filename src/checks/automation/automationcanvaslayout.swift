@@ -84,7 +84,9 @@ func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSe
                                         service: ProjectService) {
     let id = "automation/AutomationEditingTest::middlePanIsolated"
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
-    fixture.activate(fixture.panLane)
+    report.expect(fixture.page.activateParameter(
+        index: fixture.page.catalogIndex(of: fixture.panLane)),
+        cppID: id, message: "activating the pan lane returns its handle")
     let page = fixture.page
     let before = fixture.snapshot
     let cursorBefore = fixture.session.editCursor
@@ -123,6 +125,30 @@ func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSe
     _ = page.pointerRelease(x: 100, y: 60, button: AutomationQtButton.middle)
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: switchID,
                        what: "releasing after the switch commits nothing")
+    let track = fixture.document.addTrack(voice: 0)
+    report.expectEqual(expected: 1, actual: track, cppID: switchID,
+                       what: "the added track has its own row identity")
+    let oldPan = fixture.panLane
+    let newPan = AutomationParameter.controlChange(track: 1, controller: TimeDefaults.ccPan)
+    report.expect(page.activateParameter(index: page.catalogIndex(of: oldPan)), cppID: switchID,
+                  message: "activating the pan lane returns its handle")
+    let oldRows = AutomationRowStack.build(
+        document: fixture.document, primaryTrack: 0, selection: nil,
+        ready: true, songEndTick: fixture.songEndTick)
+    report.expect(oldRows.row(for: oldPan) != nil, cppID: switchID,
+                  message: "the old row belongs to the original track")
+    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
+    fixture.session.selectedTrack = 1
+    page.refreshFromDocument()
+    _ = page.pointerRelease(x: 100, y: 60, button: AutomationQtButton.middle)
+    let newRows = AutomationRowStack.build(
+        document: fixture.document, primaryTrack: 1, selection: nil,
+        ready: true, songEndTick: fixture.songEndTick)
+    report.expectEqual(expected: newPan, actual: page.activeParameter, cppID: switchID,
+                       what: "a track switch rebuilds rows during the pan")
+    report.expect(newRows.row(for: newPan) != nil && newRows.row(for: oldPan) == nil,
+                  cppID: switchID,
+                  message: "the rebuilt row keeps its handle and retires the old track row")
 }
 
 @MainActor
@@ -132,7 +158,10 @@ func drawerAutomationViewStatePreservation(_ report: CheckReport, suite: Documen
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                     volume: [(24, 70)],
                                                     tempo: [(0, 500_000), (384, 428_571)])
-    fixture.activate(fixture.volumeLane)
+    fixture.activate(fixture.panLane)
+    report.expect(fixture.page.activateParameter(
+        index: fixture.page.catalogIndex(of: fixture.volumeLane)),
+        cppID: id, message: "activating the volume lane returns its handle")
     let page = fixture.page
     _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.volumeLane), x: 0, y: 0)
     report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),

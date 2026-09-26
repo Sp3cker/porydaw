@@ -13,12 +13,12 @@ Additional Swift counterpart: src/checks/automation/automationselection.swift
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including drawerAutomationInflightDragInvalidation, drawerAutomationPencilOwnershipAndShift and the gesture predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
-Delta snapshot: the counterpart hashes above were re-pinned for the delta that added the Escape-cancel, Delete-key arbiter and idle-quiescence predicates (drawerAutomationKeyboardIngress, drawerAutomationBandEscape) and restored the double-click-once deletion. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) for its own snapshot; the keyboard-ingress, band-escape, arbiter and quiescence predicates were not covered by a verification result supplied to this ledger task, so no execution claim is made for them here.
+Delta snapshot: the counterpart hashes above were re-pinned for the delta that added the Escape-cancel, Delete-key arbiter and idle-quiescence predicates (drawerAutomationKeyboardIngress, drawerAutomationBandEscape) and restored the double-click-once deletion. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) for its own snapshot; the band-escape, arbiter and quiescence predicates were not covered by a verification result supplied to this ledger task, so no execution claim is made for them here. Task-57 evidence: the controller-supplied build/proof-evidence/swiftcore-projectsession.json pass rows execute the keyboard-ingress escape-cancel predicate cited as S197 and the stale-release rebuild-abort predicate cited as S198 below (both in src/checks/automation/automationcanvasediting.swift, unmodified since that evidence run). Fresh evidence: the controller re-ran verify --filter swiftcore to 12/12 PASS after Task57's final comment-only edit (build/proof-evidence/swiftcore-projectsession.json, newer than all cited Swift sources, messages unchanged); its pass rows execute the node-drag tick/commit, scrolled-origin phantom, and selected-range predicates cited as S199-S202 below, closing A001/A002/A008/A009/A014/A015/A019-A021/A040/A041/A043/A045/A046.
 Converted-window command: deno task verify:qml --verbose
 
 A001 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:151
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S199
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -175,8 +175,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A002 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:152
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S199
 Source context since previous assertion:
 
 
@@ -204,8 +204,8 @@ Disposition: MATCHED
 Mapping: S094
 
 A008 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:204
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationBandIsolatesTempoAndCc asserts the tempo point's value after a tempo drag through the production route; it does not re-execute a drag that moves the tempo point's tick. Unproved: the dragged tempo point's tick and point count. [S176]
+Disposition: MATCHED
+Mapping: S199
 Source context since previous assertion:
 
 
@@ -213,8 +213,8 @@ Original expression:
   QCOMPARE(m_tab->document().tempoPoints().size(), std::size_t{2});
 
 A009 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:205
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationBandIsolatesTempoAndCc asserts the tempo point's value after a tempo drag through the production route; it does not re-execute a drag that moves the tempo point's tick. Unproved: the dragged tempo point's tick and point count. [S176]
+Disposition: MATCHED
+Mapping: S199
 Source context since previous assertion:
 
 
@@ -238,8 +238,8 @@ Disposition: MATCHED
 Mapping: S077
 
 A014 | AutomationEditingTest::nodeDragShiftAxisLocks | src/checks/automation/automationnodedrag.cpp:258
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S165, S166
 Source context since previous assertion:
 
   }
@@ -266,8 +266,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A015 | AutomationEditingTest::nodeDragShiftAxisLocks | src/checks/automation/automationnodedrag.cpp:259
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S165, S166
 Source context since previous assertion:
 
 
@@ -287,8 +287,8 @@ Disposition: MATCHED
 Mapping: S165, S166
 
 A019 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:304
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S200
 Source context since previous assertion:
 
       }
@@ -312,8 +312,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A020 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:314
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S200
 Source context since previous assertion:
 
       m_tab->view().setEditorTimeZoom(96.0);
@@ -330,8 +330,8 @@ Original expression:
   QVERIFY(activateParameter(other));
 
 A021 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:315
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S200
 Source context since previous assertion:
 
 
@@ -465,8 +465,8 @@ Disposition: MATCHED
 Mapping: S096
 
 A040 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:385
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S201
 Source context since previous assertion:
 
   }
@@ -492,8 +492,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A041 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:386
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S201
 Source context since previous assertion:
 
 
@@ -505,8 +505,8 @@ Disposition: MATCHED
 Mapping: S168
 
 A043 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:413
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationMultiCcDragExcludesOthers drives a real selected-range drag through the production route and asserts the committed values and history; it does not assert the grabbed node's destination tick for a range drag. Unproved: the range drag's destination tick. [S178]
+Disposition: MATCHED
+Mapping: S201
 Source context since previous assertion:
 
 
@@ -518,8 +518,8 @@ Disposition: MATCHED
 Mapping: S178
 
 A045 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:420
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationBandIsolatesTempoAndCc and drawerAutomationRestoredInteractionContracts assert lane-scoped selection state and range movement after commands, but no predicate asserts the moved time-selection range produced by dragging a selected range. Unproved: the drag-shifted selection range. [S173,S174]
+Disposition: MATCHED
+Mapping: S202
 Source context since previous assertion:
 
 
@@ -527,8 +527,8 @@ Original expression:
   QCOMPARE(m_tab->view().selectionModel().timeSelection().startTick, uint64_t{144});
 
 A046 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:421
-Disposition: PARTIAL
-Mapping/reason: drawerAutomationBandIsolatesTempoAndCc and drawerAutomationRestoredInteractionContracts assert lane-scoped selection state and range movement after commands, but no predicate asserts the moved time-selection range produced by dragging a selected range. Unproved: the drag-shifted selection range. [S173,S174]
+Disposition: MATCHED
+Mapping: S202
 Source context since previous assertion:
 
 
@@ -548,8 +548,8 @@ Disposition: MATCHED
 Mapping: S191, S192
 
 A050 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:448
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S197
 Source context since previous assertion:
 
   }
@@ -572,8 +572,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A051 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:449
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S197
 Source context since previous assertion:
 
 
@@ -634,8 +634,8 @@ Disposition: MATCHED
 Mapping: S185, S186
 
 A060 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:493
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S198
 Source context since previous assertion:
 
   }
@@ -659,8 +659,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A061 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:494
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S198
 Source context since previous assertion:
 
 
@@ -680,8 +680,8 @@ Disposition: MATCHED
 Mapping: S155
 
 A065 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:513
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S198
 Source context since previous assertion:
 
 
@@ -704,8 +704,8 @@ Original expression:
   QVERIFY(!m_page->canvas()->bandPreviewContainsLane(findRow(rowId(adapter))));
 
 A068 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:526
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationnodedrag.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane row/handle and its body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture + activate); the Swift drag predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S198
 Source context since previous assertion:
 
 
@@ -1322,3 +1322,21 @@ Anchor: message "undo restores the covered CC point"
 
 S196 | drawerAutomationSelectionDeleteCommand | src/checks/automation/automationselection.swift
 Anchor: message "an empty Delete writes nothing"
+
+S197 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "escape cancels the adapter drag without mutation"
+
+S198 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a document rebuild aborts the drag"
+
+S199 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag commits the tick and count outcomes"
+
+S200 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a scrolled-origin drag commits through its phantom"
+
+S201 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range drag moves both nodes and preserves outside points"
+
+S202 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range band follows its drag"

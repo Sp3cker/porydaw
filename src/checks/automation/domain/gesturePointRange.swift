@@ -158,8 +158,6 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
     let committed = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [(0, 20)])
     let committedBefore = committed.snapshot
     committed.activate(committed.modulationLane)
-    // Historical CCLanes defaults Modulation to Auto: this fixture's maximum
-    // 20 displays 0–32. Request the full range before targeting value 60.
     _ = committed.page.openParameterMenu(
         index: committed.page.catalogIndex(of: committed.modulationLane), x: 0, y: 0)
     report.expect(committed.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue),
@@ -184,6 +182,44 @@ func drawerAutomationPointRangeAndPencilReplacements(_ report: CheckReport, suit
                        what: "one undo restores the pre-stroke lane")
     report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
                   message: "the released stroke recorded exactly one history entry")
+    let isolated = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        volume: [(24, 60), (72, 80)], pan: [(24, 60)],
+        modulation: [(48, 70)],
+        tempo: [(0, 500_000), (96, 400_000)])
+    let lfo = AutomationParameter.controlChange(track: 0, controller: 21)
+    isolated.document.writeLane(track: 0, lane: .controller(21), from: 0,
+                                through: TimeDefaults.noTick,
+                                points: [LaneWrite(tick: 48, value: 75)])
+    isolated.activate(isolated.panLane)
+    let isolationBefore = isolated.snapshot
+    report.expect(isolated.drag(isolated.panLane, from: (24, 60), to: 90, modifiers: 0),
+                  cppID: drawerAutomationPointRangeID,
+                  message: "a cross-lane gesture takes its own lane")
+    report.expectEqual(expected: ["24:90"], actual: isolated.values(isolated.panLane),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "a cross-lane gesture changes the active lane")
+    report.expectEqual(expected: ["24:60", "72:80"], actual: isolated.values(isolated.volumeLane),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "a cross-lane gesture writes nothing outside its lane")
+    report.expectEqual(expected: ["48:70"], actual: isolated.values(isolated.modulationLane),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "the modulation row keeps its original point")
+    report.expectEqual(expected: ["48:75"], actual: isolated.values(lfo),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "tempo, pan and LFO lanes isolate by band")
+    report.expectEqual(expected: ["0:120", "96:150"], actual: isolated.tempoValues,
+                       cppID: drawerAutomationPointRangeID,
+                       what: "tempo, pan and LFO lanes isolate by band")
+    report.expect(isolated.undo(), cppID: drawerAutomationPointRangeID,
+                  message: "the isolated gesture is undoable")
+    report.expectEqual(expected: isolationBefore.identity,
+                       actual: isolated.snapshot.identity,
+                       cppID: drawerAutomationPointRangeID,
+                       what: "the isolated gesture has one undoable edit")
+    report.expectEqual(expected: ["24:60"], actual: isolated.values(isolated.panLane),
+                       cppID: drawerAutomationPointRangeID,
+                       what: "undo restores the isolated lane")
 }
 
 @MainActor

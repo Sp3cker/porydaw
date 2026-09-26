@@ -221,9 +221,10 @@ func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: Doc
                                                service: ProjectService) {
     let id = "automation/AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume"
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
-                                                    volume: [(48, 70)],
+                                                    volume: [(48, 70), (144, 20)],
                                                     pan: [(24, 60)],
-                                                    modulation: [(48, 70)])
+                                                    modulation: [(48, 70)],
+                                                    tempo: [(0, 500_000), (144, 400_000)])
     fixture.activate(fixture.panLane)
     fixture.page.selectRange(from: 0, to: 96, lanes: [fixture.panLane, fixture.modulationLane])
     let before = fixture.snapshot
@@ -232,9 +233,9 @@ func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: Doc
                        what: "the grabbed lane moves with the selection")
     report.expectEqual(expected: ["48:80"], actual: fixture.values(fixture.modulationLane), cppID: id,
                        what: "the second selected lane shares the delta")
-    report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.volumeLane), cppID: id,
-                       what: "the unselected volume lane is excluded")
-    report.expectEqual(expected: ["0:120"], actual: fixture.tempoValues, cppID: id,
+    report.expectEqual(expected: ["48:70", "144:20"], actual: fixture.values(fixture.volumeLane),
+                       cppID: id, what: "the unselected volume lane is excluded")
+    report.expectEqual(expected: ["0:120", "144:150"], actual: fixture.tempoValues, cppID: id,
                        what: "tempo is excluded from the CC drag")
     report.expectEqual(expected: before.revision + 1, actual: fixture.document.revision, cppID: id,
                        what: "the multi-lane drag is one revision")
@@ -243,6 +244,9 @@ func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: Doc
                        what: "undo restores the grabbed lane")
     report.expectEqual(expected: ["48:70"], actual: fixture.values(fixture.modulationLane), cppID: id,
                        what: "undo restores the second selected lane")
+    report.expect(fixture.values(fixture.volumeLane) == ["48:70", "144:20"]
+                      && fixture.tempoValues == ["0:120", "144:150"],
+                  cppID: id, message: "a multi-lane drag preserves tempo and CC order")
     report.expect(!fixture.document.history.canUndo, cppID: id,
                   message: "the drag recorded exactly one history entry")
 }
@@ -419,6 +423,7 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
     let tempo = drawerAutomationAutomationFixture(suite: suite, service: service, tempo: [])
     tempo.activate(.tempo)
     tempo.page.isPencilMode = true
+    let tempoBefore = tempo.snapshot
     report.expect(tempo.page.pointerPress(x: tempo.x(48), y: tempo.y(.tempo, 150),
                                            surface: 1, button: 1),
                   cppID: tempoID, message: "the pencil press on the empty tempo lane starts")
@@ -426,6 +431,17 @@ func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: Documen
                   cppID: tempoID, message: "the tempo click commits")
     report.expectEqual(expected: ["48:150", "120:120"], actual: tempo.tempoValues, cppID: tempoID,
                        what: "the click writes its BPM at the cell start and restores default at the end")
+    report.expectEqual(expected: tempoBefore.revision + 1,
+                       actual: tempo.document.revision, cppID: tempoID,
+                       what: "the tempo pencil click records one revision")
+    report.expect(tempo.document.history.canUndo, cppID: tempoID,
+                  message: "the tempo pencil click records one undo entry")
+    report.expect(tempo.undo(), cppID: tempoID, message: "the tempo pencil click undoes")
+    report.expectEqual(expected: tempoBefore.identity,
+                       actual: tempo.snapshot.identity, cppID: tempoID,
+                       what: "one undo restores the empty tempo lane")
+    report.expect(tempo.tempoValues.isEmpty, cppID: tempoID,
+                  message: "undo removes the tempo click's points")
 
     let bendID = "automation/AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd"
     let bend = drawerAutomationAutomationFixture(suite: suite, service: service)

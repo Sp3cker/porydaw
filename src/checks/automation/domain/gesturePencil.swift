@@ -206,6 +206,7 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
     plainLane.activate(plainLane.panLane)
     plainLane.page.isPencilMode = true
     let plainBits = drawerAutomationQtModifiers(AutomationModifiers())
+    let plainBefore = plainLane.snapshot
     guard plainLane.page.pointerPress(x: plainLane.x(48), y: plainLane.y(plainLane.panLane, 36),
                                       surface: 1, button: 1, modifiers: plainBits) else {
         report.fail(altID, "the plain stroke did not start")
@@ -213,6 +214,8 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
     }
     plainLane.page.pointerMove(x: plainLane.x(120), y: plainLane.y(plainLane.panLane, 96),
                                buttons: 1, modifiers: plainBits)
+    report.expectEqual(expected: plainBefore, actual: plainLane.snapshot, cppID: altID,
+                       what: "a pencil preview mutates nothing until release")
     guard plainLane.page.pointerRelease(x: plainLane.x(120), y: plainLane.y(plainLane.panLane, 96),
                                         button: 1, modifiers: plainBits) else {
         report.fail(altID, "the plain stroke did not commit")
@@ -238,4 +241,14 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
     report.expect(!plain.isEmpty, cppID: altID, message: "the plain stroke writes the empty lane")
     report.expectEqual(expected: plain, actual: altLane.values(altLane.panLane), cppID: altID,
                        what: "the fine modifier leaves the stroke unchanged")
+    report.expectEqual(expected: plainBefore.revision + 1,
+                       actual: plainLane.document.revision, cppID: altID,
+                       what: "a pencil stroke on an empty lane commits once")
+    report.expect(plainLane.undo(), cppID: altID,
+                  message: "the empty-lane stroke is undoable")
+    report.expectEqual(expected: plainBefore.identity,
+                       actual: plainLane.snapshot.identity, cppID: altID,
+                       what: "one undo restores the empty pencil lane")
+    report.expect(plainLane.values(plainLane.panLane).isEmpty, cppID: altID,
+                  message: "undo removes the empty-lane stroke")
 }

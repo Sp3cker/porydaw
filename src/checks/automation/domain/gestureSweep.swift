@@ -144,7 +144,21 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
                        cppID: drawerAutomationSweepTailID,
                        what: "the ramp's tail re-anchors the original held value too")
 
-    // A stroke that ends at the song's end has no tail to restore.
+    let rampBefore = fixture.snapshot
+    guard let rampEdit else {
+        report.fail(drawerAutomationSweepTailID, "the ramp produced no band replacement")
+        return
+    }
+    report.expect(AutomationCommit.apply(rampEdit, in: fixture.document),
+                  cppID: drawerAutomationSweepTailID,
+                  message: "a sweep ramp commits its band")
+    report.expectEqual(expected: ["0:85", "72:70", "96:55", "120:40", "144:25", "168:85"],
+                       actual: fixture.values(fixture.panLane),
+                       cppID: drawerAutomationSweepTailID,
+                       what: "a sweep ramp commits its band")
+    report.expectEqual(expected: rampBefore.revision + 1,
+                       actual: fixture.document.revision, cppID: drawerAutomationSweepTailID,
+                       what: "a sweep ramp commits one document edit")
     let endFixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(0, 85)],
                                        tailTick: 384)
     let endProjection = AutomationProjection(
@@ -165,8 +179,6 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
     report.expect(endEdit?.points.allSatisfy { $0.tick <= endTick } == true, cppID: drawerAutomationSweepTailID,
                   message: "a stroke that ends at the song's end restores no tail")
 
-    // The released sweep lands in the document exactly once, with its tail, and
-    // the draft never wrote anything before the release.
     let committed = drawerAutomationAutomationFixture(suite: suite, service: service, division: 576,
                                       modulation: [(0, 85)], config: SongConfig(), tailTick: 960)
     let committedFacts = committed.facts(committed.modulationLane)

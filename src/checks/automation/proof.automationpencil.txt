@@ -14,15 +14,15 @@ Additional Swift counterpart: src/checks/automation/automationcanvasediting.swif
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
-Delta snapshot: the counterpart hashes and the drawerAutomationTempoBendClickRestore anchors were re-pinned after the delta moved that function in automationselection.swift, and the pencil cancellation rows A073/A074 gained their page-level delivery citations. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) and deno task verify:qml --verbose PASS (33.90 s) for its own snapshot; the keyboard-ingress predicates cited on A072-A074 were registered after that run, so no execution claim is made for them here.
+Delta snapshot: the counterpart hashes and the drawerAutomationTempoBendClickRestore anchors were re-pinned after the delta moved that function in automationselection.swift, and the pencil cancellation rows A073/A074 gained their page-level delivery citations. The implementing lane reported deno task verify --filter swiftcore --verbose PASS (10.08 s) and deno task verify:qml --verbose PASS (33.90 s) for its own snapshot; the keyboard-ingress predicates cited on A072-A074 were registered after that run, so no execution claim is made for them here. Task-57 evidence: the controller-supplied build/proof-evidence/swiftcore-projectsession.json pass rows execute the empty-lane stroke predicate cited as S175 below (drawerAutomationPencilStrokeModifiers in src/checks/automation/domain/gesturePencil.swift, unmodified since that evidence run).
 Converted-window command: deno task verify:qml --verbose
 
 A001 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:112
 Disposition: RETIRED-REPRESENTATION
 
 A002 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:113
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpencil.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas lane-row handle and body geometry are replaced by construction of the production Swift AutomationPage (drawerAutomationAutomationFixture :: configureBody + activate); reaching the stroke/completion predicates establishes the row. This is not a native rendering assertion.
+Disposition: MATCHED
+Mapping: S175
 Source context since previous assertion:
 
 
@@ -921,3 +921,6 @@ Anchor: message "redo restores the node value move"
 
 S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestureNodeDrag.swift
 Anchor: message "only a second undo removes the preceding Pan sweep"
+
+S175 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
+Anchor: message "a pencil stroke on an empty lane commits once"

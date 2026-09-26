@@ -10,7 +10,7 @@ Additional Swift counterpart: src/checks/automation/domain/gesturePointRange.swi
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 
-Disposition tally: 21 sites: 8 MATCHED, 11 PARTIAL, 2 NATIVE.
+Disposition tally: 21 sites: 8 MATCHED, 11 PARTIAL, 2 GAP.
 
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
@@ -27,10 +27,17 @@ re-verified against the current content, whose hash is pinned above. The appende
 menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
+Task-57 reconciliation: S042..S054 index the Task-57 predicates above; S050 and
+S051 disambiguate the two occurrences of one shared message (#1 the commit call,
+#2 the band-values assertion) and every other anchor literal resolves uniquely in
+its named function; each appears as a pass row in
+build/proof-evidence/swiftcore-projectsession.json (2026-09-26). No disposition
+flips: undo-index halves, raw-byte conjuncts, lane-set/scope flags, and the
+retired-surface halves stay open, so deletion stays blocked.
 
 A001 | expectOneEdit | src/checks/automationgesturecheck/parity.cpp:184
 Disposition: PARTIAL
-Mapping/reason: One-edit helper guard; related one-edit predicates are indexed below (S015 and S016 fractional drag, S020 selected drag one revision, S021 redo, S028 and S029 recovered drag); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: One-edit helper guard; related one-edit predicates are indexed below (S015 and S016 fractional drag, S020 selected drag one revision, S021 redo, S028 and S029 recovered drag, S043 a node drag commits one revision, S049 the selected-range drag commits once, S052 a sweep ramp commits one document edit, S053 a pencil stroke on an empty lane commits once, S054 the tempo pencil click records one revision); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -222,7 +229,7 @@ Original expression:
 
 A002 | expectUnchanged | src/checks/automationgesturecheck/parity.cpp:191
 Disposition: PARTIAL
-Mapping/reason: Unchanged helper guard; related non-mutation predicates are indexed below (S025, S026, and S027 stale release snapshots, S031 sub-threshold write, S033 parked press); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Unchanged helper guard; related non-mutation predicates are indexed below (S025, S026, and S027 stale release snapshots, S031 sub-threshold write, S033 parked press, S044 a node drag preview writes nothing before release, S045 a pencil preview mutates nothing until release, S046 a stale batch release writes nothing); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   }
 
@@ -257,7 +264,7 @@ Original expression:
 
 A007 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:274
 Disposition: PARTIAL
-Mapping/reason: S018 (same-tick CC writes keep their order) and S019 (a move onto a free tick keeps every occupant in order) are indexed below; unproved: a same-tick group dragged as a group keeps both raw events ordered at the destination tick, plus native pointer delivery.
+Mapping/reason: S018 (same-tick CC writes keep their order) and S019 (a move onto a free tick keeps every occupant in order) are indexed below; S042 (a node drag commits the tick and count outcomes) and S043 (a node drag commits one revision) assert a production drag's outcomes and revision at model level; unproved: a same-tick group dragged as a group keeps both raw events ordered at the destination tick, plus native pointer delivery.
 Source context since previous assertion:
           return;
       }
@@ -285,7 +292,7 @@ Original expression:
 
 A008 | runSelection | src/checks/automationgesturecheck/parity.cpp:289
 Disposition: PARTIAL
-Mapping/reason: Selection outcome; S020 (heterogeneous selected drag is one revision), S021 (the drag is redoable), and S022 (redo restores the committed Tempo stream) are indexed below; unproved: the translated selection range and the per-node outcome list on the retired fixture, plus native pointer delivery.
+Mapping/reason: Selection outcome; S020 (heterogeneous selected drag is one revision), S021 (the drag is redoable), and S022 (redo restores the committed Tempo stream) are indexed below; S047 (the selected-range drag moves both nodes and preserves outside points), S048 (the selected-range band follows its drag), and S049 (the selected-range drag commits once) assert the same outcome list, translated range, and one revision at model level; unproved: the editor undo-index half of the one-edit conjunct, native pointer delivery, and the retired fixture.
 Source context since previous assertion:
   }
 
@@ -305,7 +312,7 @@ Original expression:
 
 A009 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:311
 Disposition: PARTIAL
-Mapping/reason: Sweep-ramp one-edit outcome; S040 (each stepped tick interpolates its value across the stroke) and S015 (a fractional drag commits one edit) are indexed below; unproved: the mapped target point list on the retired fixture and native pointer delivery.
+Mapping/reason: Sweep-ramp one-edit outcome; S040 (each stepped tick interpolates its value across the stroke) and S015 (a fractional drag commits one edit) and S050 and S051 (a sweep ramp commits its band, #1 the commit call and #2 the band-values assertion) and S052 (a sweep ramp commits one document edit) are indexed below; unproved: the mapped target point list on the retired fixture, the undo-index half of the one-edit conjunct, and native pointer delivery.
 Source context since previous assertion:
       seed(ctx, kMulti);
       selectRange(ctx, kFixtureTick, 288);
@@ -330,7 +337,7 @@ Original expression:
 
 A010 | runSweepRamp | src/checks/automationgesturecheck/parity.cpp:323
 Disposition: PARTIAL
-Mapping/reason: Sweep-ramp outcome; S004 (the ramp midpoint interpolates linearly) and S041 (a ramp sweep fills every lattice tick between its endpoints) are indexed below; unproved: the committed endpoint pair on the retired fixture and native pointer delivery.
+Mapping/reason: Sweep-ramp outcome; S004 (the ramp midpoint interpolates linearly) and S041 (a ramp sweep fills every lattice tick between its endpoints) and S051 (a sweep ramp commits its band #2, asserting the committed band values) are indexed below; unproved: the committed endpoint pair on the retired fixture and native pointer delivery.
 Source context since previous assertion:
       seed(ctx, kFixture);
       start = at(ctx, 48, 80);
@@ -349,7 +356,7 @@ Original expression:
 
 A011 | runPencil | src/checks/automationgesturecheck/parity.cpp:342
 Disposition: PARTIAL
-Mapping/reason: Pencil outcome; S006 (one pencil press and release is one revision) and S007 (one undo restores the pre-stroke lane) are indexed below; unproved: a non-empty committed point list, native pointer delivery, and the retired rig fixture.
+Mapping/reason: Pencil outcome; S006 (one pencil press and release is one revision) and S007 (one undo restores the pre-stroke lane) and S053 (a pencil stroke on an empty lane commits once) and S054 (the tempo pencil click records one revision) assert one-revision commits with undo at model level; unproved: a non-empty committed point list, native pointer delivery, and the retired rig fixture.
 Source context since previous assertion:
   }
 
@@ -373,7 +380,7 @@ Original expression:
 
 A012 | runBandSelect | src/checks/automationgesturecheck/parity.cpp:366
 Disposition: PARTIAL
-Mapping/reason: S023 (a right-drag band publishes its shared time selection) asserts the published range; unproved: the lane set and scope flags of the published selection, plus native pointer delivery.
+Mapping/reason: S023 (a right-drag band publishes its shared time selection) asserts the published range; S048 (the selected-range band follows its drag) asserts the translated band range at model level; unproved: the lane set and scope flags of the published selection, plus native pointer delivery.
 Source context since previous assertion:
       ctx.rig.setPersistentPencil(false);
   }
@@ -414,7 +421,7 @@ Mapping: S025, S026, S027
 
 A015 | runRebuildCancel | src/checks/automationgesturecheck/parity.cpp:414
 Disposition: PARTIAL
-Mapping/reason: S026 (a cancelled stale gesture never writes on release) covers the unchanged conjunct; unproved: the retired geometry-stack rebuild path and the native band-preview clearing.
+Mapping/reason: S026 (a cancelled stale gesture never writes on release) covers the unchanged conjunct; S046 (a stale batch release writes nothing) asserts the snapshot-unchanged conjunct at model level; unproved: the retired geometry-stack rebuild path and the native band-preview clearing.
 Source context since previous assertion:
       const QSize size = ctx.rig.automationViewportSize();
       before = snapshot(ctx.rig.document());
@@ -706,3 +713,42 @@ Anchor: message "each stepped tick interpolates its value across the stroke"
 
 S041 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestureSweep.swift
 Anchor: message "a ramp sweep fills every lattice tick between its endpoints"
+
+S042 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag commits the tick and count outcomes"
+
+S043 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag commits one revision"
+
+S044 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag preview writes nothing before release"
+
+S045 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
+Anchor: message "a pencil preview mutates nothing until release"
+
+S046 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a stale batch release writes nothing"
+
+S047 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range drag moves both nodes and preserves outside points"
+
+S048 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range band follows its drag"
+
+S049 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range drag commits once"
+
+S050 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "a sweep ramp commits its band" #1
+
+S051 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "a sweep ramp commits its band" #2
+
+S052 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestureSweep.swift
+Anchor: message "a sweep ramp commits one document edit"
+
+S053 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
+Anchor: message "a pencil stroke on an empty lane commits once"
+
+S054 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection.swift
+Anchor: message "the tempo pencil click records one revision"

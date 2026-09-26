@@ -11,7 +11,7 @@ Additional Swift counterpart: src/checks/automation/automationselection.swift
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
-Delta snapshot: the automationcanvasediting.swift and automationselection.swift hashes above were re-pinned for the delta (double-click-once deletion moved the selection file; keyboard-ingress/band-escape predicates extended the canvasediting file), and every indexed S anchor was re-audited against the pinned sources with no drift. This ledger's dispositions are unchanged.
+Delta snapshot: the automationcanvasediting.swift and automationselection.swift hashes above were re-pinned for the delta (double-click-once deletion moved the selection file; keyboard-ingress/band-escape predicates extended the canvasediting file), and every indexed S anchor was re-audited against the pinned sources with no drift. Task-57 delta: drawerAutomationPresentationPaintingModel in src/checks/automation/presentation/painting.swift (unmodified since the controller's build/proof-evidence/swiftcore-projectsession.json run, whose pass rows execute it) now composes the empty tempo store with no lead-in, indexed as S040 and closing A004; all other dispositions are unchanged.
 Task-25 delta: drawerAutomationPresentationPaintingModel (src/checks/automation/presentation/painting.swift) now also pins the drawer curve ink — every published active run #EA3C3C and every published pinned-ghost run #80EA3C3C, vanilla — indexed as S038/S039 and cited by A016/A037 for the ink half of those layer-probe clauses. A018/A038 keep GAP because the presenter's node handles still publish palette.primaryText/secondaryText, not the node ink. The added predicates executed in the implementer's deno task verify --filter swiftcore --verbose run on this snapshot; this ledger pass read that evidence (build/proof-evidence/swiftcore-projectsession.json) and did not re-run the lane.
 Converted-window command: deno task verify:qml --verbose
 
@@ -35,8 +35,8 @@ A003 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/aut
 Disposition: RETIRED-REPRESENTATION
 
 A004 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:117
-Disposition: PARTIAL
-Mapping/reason: The presentation predicates assert a Tempo row's event count through the row stack (drawerAutomationScaleLabelsAndLaneCounts :: stack.row(for:) event counts), but no predicate executes an empty Tempo storage composition. Unproved: empty tempo storage producing no lead-in. [S015]
+Disposition: MATCHED
+Mapping: S040
 Source context since previous assertion:
 
 
@@ -697,3 +697,6 @@ Anchor: message "active vanilla automation curve runs use #EA3C3C node ink"
 
 S039 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
 Anchor: message "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink"
+
+S040 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "an empty tempo store composes no lead-in"

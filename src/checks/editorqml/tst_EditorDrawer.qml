@@ -4187,9 +4187,6 @@ TestCase {
         mouseRelease(input, toX, toY, Qt.LeftButton, mods)
     }
 
-    /// A time selection through the production range entry: a right press, a
-    /// travel and a right release, all in plot coordinates. The row is the case's
-    /// own: a right press on a node opens that node's menu instead of a band.
     function automateRangeSelection(fromX, toX, row) {
         var input = testCase.automationPlotInput()
         var y = row === undefined ? input.height / 2 : row
@@ -7771,6 +7768,47 @@ TestCase {
                      delta, 0.5, "the edit guide over the automation band follows the cursor")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "the moving guide writes nothing")
+    }
+
+    function test_productionAutomationHoverTransfersBetweenWrittenNodes() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-hover-transfer")
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var input = testCase.automationPlotInput()
+        var nodes = testCase.automationLaneNodes().filter(function(node) {
+            return !node.model.projected
+        })
+        verify(nodes.length >= 2, "the written sweep has two distinct hover targets")
+        var first = testCase.automationNodePoint(nodes[0])
+        var last = testCase.automationNodePoint(nodes[nodes.length - 1])
+        verify(first && last && Math.abs(first.x - last.x) > 16,
+               "the sweep endpoints are separate drawn nodes")
+        var revision = bootstrap.automationDocumentRevision()
+        mouseMove(input, first.x, first.y)
+        tryVerify(function() {
+            return nodes[0].model.hovered && testCase.automationModel().hoverDisplay.nodeTick
+                === nodes[0].model.tick
+        }, 2000, "hover enter publishes exactly one ring")
+        mouseMove(input, last.x, last.y)
+        tryVerify(function() {
+            return nodes[nodes.length - 1].model.hovered
+                && !nodes[0].model.hovered
+                && testCase.automationModel().hoverDisplay.nodeTick
+                    === nodes[nodes.length - 1].model.tick
+        }, 2000, "hover move republishes without writing")
+        compare(nodes.filter(function(node) { return node.model.hovered }).length, 1,
+                "hover move republishes without writing")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "hover move republishes without writing")
+        mouseMove(testCase.automationGutter(), 4, 4)
+        tryVerify(function() {
+            return !testCase.automationModel().hoverVisible
+                && !nodes[nodes.length - 1].model.hovered
+        }, 2000, "hover leave clears the ring")
+        compare(bootstrap.automationInteractionActive(), false,
+                "a hover is not the page's interaction")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "hover leave clears the ring")
     }
 
 }

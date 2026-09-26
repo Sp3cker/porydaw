@@ -13,7 +13,7 @@ Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.
 Additional Swift counterpart: src/checks/automation/automationselection.swift
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 67 sites: 33 MATCHED, 27 PARTIAL, 2 GAP, 5 NATIVE.
+Disposition tally: 67 sites: 33 MATCHED, 29 PARTIAL, 4 GAP, 1 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
@@ -30,10 +30,18 @@ re-verified against the current content, whose hash is pinned above. The appende
 menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
+Task-57 reconciliation: S061..S077 index the Task-57 predicates above; S075 cites
+occurrence #1 of its twice-asserted message and every other anchor literal
+resolves uniquely in its named function; each appears as a pass row in
+build/proof-evidence/swiftcore-projectsession.json (2026-09-26). A062 and A064
+move GAP to PARTIAL on the production row-stack predicates; every other open row
+keeps its disposition with the unproved half named. Deletion stays blocked: A008,
+A010, A065, and A067 remain GAP and the PARTIAL rows still pin native delivery,
+undo-index, and retired-surface conjuncts.
 
 A001 | expectPoints | src/checks/automationgesturecheck/contract.cpp:120
 Disposition: PARTIAL
-Mapping/reason: expectPoints snapshot guard; related point predicates are indexed below (S023 empty-lane completion, S024 projected engine node, S028 same-tick order, S037 engine-default rows, S042..S057 xcmd occurrence, edit, and cut outcomes); unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: expectPoints snapshot guard; related point predicates are indexed below (S023 empty-lane completion, S024 projected engine node, S028 same-tick order, S037 engine-default rows, S042..S057 xcmd occurrence, edit, and cut outcomes, S061 a node drag commits the tick and count outcomes, S064 a scrolled-origin drag commits through its phantom, S067 the selected-range drag moves both nodes and preserves outside points); unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   #include "domains.h"
   #include "support.h"
@@ -161,7 +169,7 @@ Original expression:
 
 A002 | expectOneEdit | src/checks/automationgesturecheck/contract.cpp:128
 Disposition: PARTIAL
-Mapping/reason: expectOneEdit revision/undo guard; related one-edit predicates are indexed below (S043 and S053 xcmd one-edit, S029 two hops are two revisions, S033 one tempo move is one revision, S034 one fractional drag is one revision, S038 promotion one edit); unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: expectOneEdit revision/undo guard; related one-edit predicates are indexed below (S043 and S053 xcmd one-edit, S029 two hops are two revisions, S033 one tempo move is one revision, S034 one fractional drag is one revision, S038 promotion one edit, S062 a node drag commits one revision, S065 the phantom edit commits once, S069 the selected-range drag commits once, S076 a pencil stroke on an empty lane commits once, S077 the tempo pencil click records one revision); unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
 Source context since previous assertion:
   }
 
@@ -179,7 +187,7 @@ Original expression:
 
 A003 | checkUndoRestores | src/checks/automationgesturecheck/contract.cpp:183
 Disposition: PARTIAL
-Mapping/reason: Undo-restore outcome; S033 (the tempo move is undoable, line 903), S038 (undo restores the original MIDI bytes), and S055 and S056 (cut undos restore the pre-cut bytes) are indexed below; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, the retired lane-stack surface, and the editor undo-index value.
+Mapping/reason: Undo-restore outcome; S033 (the tempo move is undoable, line 903), S038 (undo restores the original MIDI bytes), S055 and S056 (cut undos restore the pre-cut bytes), S063 (the moved tick is undoable), and S066 (undo restores the phantom source) are indexed below; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, the retired lane-stack surface, and the editor undo-index value.
 Source context since previous assertion:
   }
 
@@ -239,7 +247,7 @@ Original expression:
 
 A004 | checkUndoRestores | src/checks/automationgesturecheck/contract.cpp:191
 Disposition: PARTIAL
-Mapping/reason: Redo restoration is exercised at model level by S035 and S036 (redo restores the committed Tempo stream and secondary CC lane, then a second undo parks the drag and one history entry remains) and by S057 (a range-cut redo reproduces the cleared lane); unproved: NodeLane delivery, the Tempo/CC adapters, the retired contract fixture, and the editor undo-index value.
+Mapping/reason: Redo restoration is exercised at model level by S035 and S036 (redo restores the committed Tempo stream and secondary CC lane, then a second undo parks the drag and one history entry remains) and by S057 (a range-cut redo reproduces the cleared lane); Task 57 adds no redo predicate, so no new S is indexed here; unproved: NodeLane delivery, the Tempo/CC adapters, the retired contract fixture, and the editor undo-index value.
 Source context since previous assertion:
       document.undoStack()->redo();
       const auto redone = snapshot(document);
@@ -252,7 +260,7 @@ Original expression:
 
 A005 | checkEffectivePoints | src/checks/automationgesturecheck/contract.cpp:231
 Disposition: PARTIAL
-Mapping/reason: S023 (drawerAutomationSweepSteppingAndRampFinish, gestureSweep.swift) asserts an empty lane projects no points and carries no lead-in; unproved: the Tempo adapter empty projection and a CC lane that carries an engine default.
+Mapping/reason: S023 (drawerAutomationSweepSteppingAndRampFinish, gestureSweep.swift) asserts an empty lane projects no points and carries no lead-in; S071 (an empty tempo store composes no lead-in) asserts the empty-tempo composition at model level; unproved: the Tempo adapter empty projection and a CC lane that carries an engine default.
 Source context since previous assertion:
       document.undoStack()->undo();
   }
@@ -366,7 +374,7 @@ Original expression:
 
 A014 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:310
 Disposition: PARTIAL
-Mapping/reason: S027 (gestureNodeDrag.swift) asserts the published band start tick and (line 811) that a band covers its own lane; unproved: the published end tick and the CC adapter lane-coverage identity.
+Mapping/reason: S027 (gestureNodeDrag.swift) asserts the published band start tick and (line 811) that a band covers its own lane; S068 (the selected-range band follows its drag) asserts the dragged band range at model level; unproved: the published end tick and the CC adapter lane-coverage identity.
 Source context since previous assertion:
       }
       uint32_t usedTrackMask = 0;
@@ -392,7 +400,7 @@ Original expression:
 
 A015 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:316
 Disposition: PARTIAL
-Mapping/reason: S027 (gestureNodeDrag.swift) asserts a CC band excludes Tempo and (line 819) a Tempo band excludes CC lanes; unproved: the excluded band reported active tick range.
+Mapping/reason: S027 (gestureNodeDrag.swift) asserts a CC band excludes Tempo and (line 819) a Tempo band excludes CC lanes; S068 (the selected-range band follows its drag) asserts the dragged band range at model level; unproved: the excluded band reported active tick range.
 Source context since previous assertion:
       selectTicks(context, 50, 150, false);
       const auto uncoveredRange = laneSelection.activeTickRange();
@@ -404,7 +412,7 @@ Original expression:
 
 A016 | checkRangesTextSelection | src/checks/automationgesturecheck/contract.cpp:321
 Disposition: PARTIAL
-Mapping/reason: S027 (gestureNodeDrag.swift) indexes the band range and coverage predicates; unproved: an active/covers query after a cleared time selection.
+Mapping/reason: S027 (gestureNodeDrag.swift) indexes the band range and coverage predicates; S068 (the selected-range band follows its drag) asserts the dragged band range at model level; unproved: an active/covers query after a cleared time selection.
 Source context since previous assertion:
       selection.clearTimeSelection();
 Original expression:
@@ -780,8 +788,8 @@ A061 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:9
 Disposition: RETIRED-REPRESENTATION
 
 A062 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:932
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/contract.cpp) no longer builds or runs. Previous native note: Requires native lane-handle to row identity on the retired canvas stack.
+Disposition: PARTIAL
+Mapping/reason: S074 (the old row belongs to the original track), S075 (activating the pan lane returns its handle), S072 (a track switch rebuilds rows during the pan), and S073 (the rebuilt row keeps its handle and retires the old track row) prove row-handle resolution through the production row stack at model level; unproved: native rowMatches and bodyFor identity on the retired canvas stack.
 Source context since previous assertion:
           return;
       }
@@ -801,7 +809,7 @@ Original expression:
 
 A063 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:943
 Disposition: PARTIAL
-Mapping/reason: Stale-arm snapshot guard; S058 (a cancelled stale gesture never writes on release) and S059 and S060 (a stale release after a mid-gesture rebuild commits nothing and leaves no interaction live) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
+Mapping/reason: Stale-arm snapshot guard; S058 (a cancelled stale gesture never writes on release) and S059 and S060 (a stale release after a mid-gesture rebuild commits nothing and leaves no interaction live) and S070 (a stale batch release writes nothing) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
 Source context since previous assertion:
 
       const auto grabbed = rig.pointAt(rig.lfo, kFixtureTick, 96);
@@ -816,8 +824,8 @@ Original expression:
                        QStringLiteral("arming a row-rebuild stale-handle gesture mutated data"));
 
 A064 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:951
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/contract.cpp) no longer builds or runs. Previous native note: Requires native handle ordering across a row rebuild on the retired canvas stack.
+Disposition: PARTIAL
+Mapping/reason: S073 (the rebuilt-row predicate in drawerAutomationMiddlePanIsolation, automationcanvaslayout.swift) proves handle validity across a production row-stack rebuild at model level; unproved: native handle ordering and the inserted-lane index on the retired canvas stack.
 Source context since previous assertion:
 
       rig.page().addEmptyLane(inserted.track, inserted.controller);
@@ -842,7 +850,7 @@ Original expression:
 
 A066 | checkRowRebuildHandles | src/checks/automationgesturecheck/contract.cpp:961
 Disposition: PARTIAL
-Mapping/reason: Stale-release snapshot and idle guard; S058, S059, and S060 (stale releases write nothing and leave no interaction live) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
+Mapping/reason: Stale-release snapshot and idle guard; S058, S059, and S060 (stale releases write nothing and leave no interaction live) and S070 (a stale batch release writes nothing) are indexed below; unproved: native row handles, canvas bodies, and the retired rig fixture.
 Source context since previous assertion:
 
       rig.mouseRelease(activation);
@@ -1092,3 +1100,54 @@ Anchor: message "a stale release after a mid-gesture rebuild commits nothing"
 
 S060 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a stale release leaves no interaction live"
+
+S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag commits the tick and count outcomes"
+
+S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a node drag commits one revision"
+
+S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the moved tick is undoable"
+
+S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "a scrolled-origin drag commits through its phantom"
+
+S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the phantom edit commits once"
+
+S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "undo restores the phantom source"
+
+S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range drag moves both nodes and preserves outside points"
+
+S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range band follows its drag"
+
+S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestureNodeDrag.swift
+Anchor: message "the selected-range drag commits once"
+
+S070 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a stale batch release writes nothing"
+
+S071 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "an empty tempo store composes no lead-in"
+
+S072 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a track switch rebuilds rows during the pan"
+
+S073 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the rebuilt row keeps its handle and retires the old track row"
+
+S074 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the old row belongs to the original track"
+
+S075 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "activating the pan lane returns its handle" #1
+
+S076 | drawerAutomationPencilStrokeModifiers | src/checks/automation/domain/gesturePencil.swift
+Anchor: message "a pencil stroke on an empty lane commits once"
+
+S077 | drawerAutomationTempoBendClickRestore | src/checks/automation/automationselection.swift
+Anchor: message "the tempo pencil click records one revision"

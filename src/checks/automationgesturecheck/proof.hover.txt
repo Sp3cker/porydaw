@@ -6,7 +6,7 @@ Original: src/checks/automationgesturecheck/hover.cpp
 Original SHA-256: c0bbc4a68e09aec50cdbfcbf6f3fec04750e3c34fcf6f7c7de7a6e5d495d3bed
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
 
-Disposition tally: 30 sites: 7 MATCHED, 23 NATIVE.
+Disposition tally: 30 sites: 7 MATCHED, 2 PARTIAL, 18 GAP, 3 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore (implementer run on the counterpart
 hashes pinned above) -> run_checks PASS (1/14 ok, 13 skipped).
@@ -23,6 +23,15 @@ re-verified against the current content, whose hash is pinned above. The appende
 menu-muting and hover-residual predicates are owned by sibling lanes and out of scope here.
 Converted-suite note: the retired automation-gestures C++ harness never runs again;
 candidate model predicates live in the automation lane Swift suite.
+Task-57 reconciliation: S025..S028 index the Task-57 hover predicates above. S025
+and S026 resolve uniquely in drawerAutomationHoverModel and appear as pass rows
+in build/proof-evidence/swiftcore-projectsession.json (2026-09-26); S027 and S028
+share one message string (hover-tick republish and snapshot-unchanged republish)
+and are cited for PARTIAL rows only. A005 and A027 move GAP to PARTIAL on S026;
+every other GAP row still pins retired Quick-window, cursor, focus, grab, pixel,
+or topology internals with no executing production predicate, so deletion stays
+blocked. The mounted QML journey test_productionAutomationHoverTransfersBetweenWrittenNodes
+exercises the same two anchors but records no per-verify pass rows yet.
 
 A001 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:330
 Disposition: RETIRED-REPRESENTATION
@@ -52,8 +61,8 @@ Disposition: MATCHED
 Mapping: S011, S012, S013
 
 A005 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:365
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires native hover visibility on the retired Quick host.
+Disposition: PARTIAL
+Mapping/reason: S026 (hover enter publishes exactly one ring) proves a pointer move publishes the hover ring on the production page at model level; unproved: native hover visibility and layer revision on the retired Quick host.
 Source context since previous assertion:
       };
 
@@ -280,8 +289,8 @@ Original expression:
                     QStringLiteral("repeat hover at the same coordinate churned Quick state"));
 
 A027 | runCase | src/checks/automationgesturecheck/hover.cpp:537
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automationgesturecheck/hover.cpp) no longer builds or runs. Previous native note: Requires the native node-ring topology flag on the retired surface.
+Disposition: PARTIAL
+Mapping/reason: S026 (hover enter publishes exactly one ring) proves an existing-node hover publishes exactly one ring on the production page at model level; unproved: Quick annulus pixels, framebuffer readiness, and layer revision on the retired surface.
 Source context since previous assertion:
 
       rig.mouseMove(lane.nodePos, Qt::NoButton);
@@ -474,3 +483,15 @@ Anchor: message "the insertion tick sits between its neighboring nodes"
 
 S024 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
 Anchor: message "Tempo hover topology preserves the document"
+
+S025 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a hover is not the page's interaction"
+
+S026 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "hover enter publishes exactly one ring"
+
+S027 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "hover move republishes without writing" #1
+
+S028 | drawerAutomationHoverModel | src/checks/automation/automationcanvasediting.swift
+Anchor: message "hover move republishes without writing" #2
