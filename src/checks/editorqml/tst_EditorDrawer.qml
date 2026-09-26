@@ -6856,4 +6856,496 @@ TestCase {
                    + " of " + bootstrap.profileFontPx + ")")
         compare(page.objectName, "velocityPage", "the capture composition is the production page")
     }
+
+    function test_productionAutomationBandGeometry() {
+        if (testCase.containerPhase) skip("production composition only")
+        var page = testCase.mountProductionAutomation("automation-band-geometry")
+        var plot = testCase.automationPlot()
+        var input = testCase.automationPlotInput()
+        var gutter = testCase.automationGutter()
+        var roll = findChild(testCase.surface, "timelineQuickRollPlot")
+        verify(roll && plot && input && gutter, "the mounted automation and roll bands have plots and input")
+        var split = testCase.surface.timelineSplitX
+        fuzzyCompare(plot.mapToItem(testCase.surface, 0, 0).x, split, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(roll.mapToItem(testCase.surface, 0, 0).x, split, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(plot.width, page.width - split, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(input.width, plot.width, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(input.height, plot.height, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(input.mapToItem(plot, 0, 0).x, 0, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        fuzzyCompare(input.mapToItem(plot, 0, 0).y, 0, 0.01,
+                     "the automation plot and the roll plot share the split origin")
+        var scroller = findChild(gutter, "automationTabsScroller")
+        verify(scroller && scroller.clip, "the gutter input covers the gutter rect")
+        fuzzyCompare(scroller.width, gutter.width, 0.01, "the gutter input covers the gutter rect")
+        fuzzyCompare(scroller.height, gutter.height, 0.01, "the gutter input covers the gutter rect")
+        fuzzyCompare(gutter.mapToItem(testCase.surface, 0, 0).x, 0, 0.01,
+                     "the gutter input covers the gutter rect")
+        fuzzyCompare(gutter.width, split, 0.01, "the gutter input covers the gutter rect")
+        fuzzyCompare(gutter.height, page.height, 0.01, "the gutter input covers the gutter rect")
+        for (var i = 0; i < testCase.automationModel().tabCount; ++i) {
+            var tab = testCase.revealAutomationTab(i)
+            var point = tab.mapToItem(gutter, 0, 0)
+            verify(tab.visible && tab.width > 0 && tab.height > 0
+                   && point.x >= -0.01 && point.y >= -0.01
+                   && point.x + tab.width <= gutter.width + 0.01
+                   && point.y + tab.height <= gutter.height + 0.01,
+                   "the selector gutter hosts every parameter tab inside its rect")
+            testCase.clickAutomationTab(i)
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === i },
+                      1000, "the selector gutter hosts every parameter tab inside its rect")
+        }
+        compare(findChild(testCase.surface, "drawerAutomationScrollBar"), null,
+                "the automation drawer mounts no scrollbar")
+        testCase.auditVisibleTextInk(page, "automation band geometry")
+    }
+
+    function test_productionAutomationSectionResizeKeepsTabsClickable() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-resize-tabs")
+        var presenter = testCase.presenter()
+        var section = testCase.section(testCase.automationKind)
+        var page = testCase.automationPageItem()
+        var plot = testCase.automationPlot()
+        var scroller = findChild(testCase.automationGutter(), "automationTabsScroller")
+        var revision = bootstrap.automationDocumentRevision()
+        var cursor = testCase.surface.gridModel.editCursorTick
+        var split = testCase.surface.timelineSplitX
+        var original = section.bodyHeight
+        try {
+            for (var e = 0; e < 2; ++e) {
+                presenter.setSectionBodyHeight(testCase.automationKind, e ? 100000 : 0)
+                testCase.awaitRenderedLayout()
+                fuzzyCompare(page.height, section.bodyHeight, 0.01,
+                             "the clamped body extremes follow the drawer's own policy")
+                fuzzyCompare(plot.height, section.bodyHeight, 0.01,
+                             "the clamped body extremes follow the drawer's own policy")
+                if (!e) {
+                    verify(scroller.contentHeight > scroller.height,
+                           "at the minimum body the tab stack overflows the scroller")
+                    scroller.contentY = 0
+                    var first = testCase.automationTab(0)
+                    fuzzyCompare(first.mapToItem(scroller, 0, 0).y, first.y, 0.01,
+                                 "at the minimum body the tab stack overflows the scroller")
+                }
+                for (var i = 0; i < testCase.automationModel().tabCount; ++i) {
+                    var tab = testCase.revealAutomationTab(i)
+                    var point = tab.mapToItem(scroller, 0, 0)
+                    verify(point.y >= -0.01 && point.y + tab.height <= scroller.height + 0.01,
+                           "every parameter tab activates after its reveal at both body extremes")
+                    testCase.clickAutomationTab(i)
+                    tryVerify(function() { return bootstrap.automationActiveParameterIndex() === i },
+                              1000, "every parameter tab activates after its reveal at both body extremes")
+                    fuzzyCompare(plot.mapToItem(testCase.surface, 0, 0).x, split, 0.01,
+                                 "every parameter tab activates after its reveal at both body extremes")
+                }
+                compare(findChild(testCase.surface, "drawerAutomationScrollBar"), null,
+                        "the automation drawer mounts no scrollbar")
+            }
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "resizing the automation section writes nothing")
+            compare(testCase.surface.gridModel.editCursorTick, cursor,
+                    "resizing the automation section writes nothing")
+            fuzzyCompare(testCase.surface.timelineSplitX, split, 0.01,
+                         "resizing the automation section writes nothing")
+        } finally {
+            presenter.setSectionBodyHeight(testCase.automationKind, original)
+            testCase.awaitRenderedLayout()
+        }
+    }
+
+    function test_productionAutomationMiddlePanAndTrackSwitch() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-middle-pan")
+        var input = testCase.automationPlotInput()
+        var grid = testCase.surface.gridModel
+        var rows = findChild(testCase.surface, "timelineTrackHeaderRows")
+        var headers = findChild(testCase.surface, "timelineTrackHeadersInput")
+        verify(rows && headers && rows.count > 1, "the track switch has another drawn header")
+        var first = rows.itemAt(0)
+        var second = rows.itemAt(1)
+        verify(first && second && !second.isAddTrack, "the track switch has another drawn header")
+        var initial = first.mapToItem(headers, first.titleRect.x + first.titleRect.width / 2,
+                                      first.titleRect.y + first.titleRect.height / 2)
+        mouseClick(headers, initial.x, initial.y, Qt.LeftButton)
+        var revision = bootstrap.automationDocumentRevision()
+        var cursor = grid.editCursorTick
+        var start = grid.cameraScrollX
+        var x = input.width / 2
+        var y = input.height / 2
+        mousePress(input, x, y, Qt.MiddleButton)
+        mouseMove(input, x - 24, y, -1, Qt.MiddleButton)
+        mouseMove(input, x - 48, y, -1, Qt.MiddleButton)
+        tryVerify(function() { return Math.abs(grid.cameraScrollX - start - 48) < 0.5 },
+                  1000, "a middle drag pans the shared camera by its travel")
+        tryCompare(input, "cursorShape", Qt.ClosedHandCursor, 1000,
+                   "the pan shows the closed hand")
+        mouseRelease(input, x - 48, y, Qt.MiddleButton)
+        var oldBody = testCase.automationPageItem()
+        mousePress(input, x, y, Qt.MiddleButton)
+        mouseMove(input, x - 24, y, -1, Qt.MiddleButton)
+        var target = second.mapToItem(headers, second.titleRect.x + second.titleRect.width / 2,
+                                     second.titleRect.y + second.titleRect.height / 2)
+        mouseClick(headers, target.x, target.y, Qt.LeftButton)
+        tryVerify(function() { return second.titleBold && !bootstrap.automationInteractionActive() },
+                  1000, "a mid-pan track switch rebuilds the lane rows and ends the pan")
+        verify(testCase.automationPageItem() === oldBody
+               && testCase.automationTabItems().length === testCase.automationModel().tabCount
+               && testCase.drawnAutomationTabLabels().length > 0,
+               "a mid-pan track switch rebuilds the lane rows and ends the pan")
+        mouseRelease(input, x - 24, y, Qt.MiddleButton)
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the interrupted pan writes nothing")
+        compare(grid.editCursorTick, cursor, "the interrupted pan writes nothing")
+        mouseClick(headers, initial.x, initial.y, Qt.LeftButton)
+        tryVerify(function() { return first.titleBold }, 1000,
+                  "a mid-pan track switch rebuilds the lane rows and ends the pan")
+    }
+
+    function test_productionAutomationEmptySwitchPreservesGrid() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-empty-grid")
+        var grid = testCase.surface.gridModel
+        var empty = testCase.automationEmptyTab()
+        verify(empty >= 0, "the selector offers an empty parameter lane")
+        var snap = grid.snapTicks
+        var visible = grid.visibleGridTicks
+        var gridLines = findChild(testCase.automationPageItem(), "automationGridLines")
+        var drawn = testCase.collectByNames(gridLines, ["automationGrid"], [])
+        verify(drawn.length > 0, "the empty lane still paints grid lines")
+        var before = drawn.map(function(line) { return line.x })
+        var revision = bootstrap.automationDocumentRevision()
+        var cursor = grid.editCursorTick
+        var split = testCase.surface.timelineSplitX
+        testCase.clickAutomationTab(empty)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === empty },
+                  1000, "activating an empty lane preserves the grid resolution")
+        compare(grid.snapTicks, snap, "activating an empty lane preserves the grid resolution")
+        compare(grid.visibleGridTicks, visible,
+                "activating an empty lane preserves the grid resolution")
+        compare(testCase.collectByNames(gridLines, ["automationGrid"], [])
+                .map(function(line) { return line.x }), before,
+                "activating an empty lane preserves the grid resolution")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the empty activation writes nothing")
+        compare(grid.editCursorTick, cursor, "the empty activation writes nothing")
+        fuzzyCompare(testCase.surface.timelineSplitX, split, 0.01,
+                     "the empty activation writes nothing")
+    }
+
+    function test_productionAutomationViewStateAcrossDrawerPages() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-page-roundtrip",
+            { "automationVisible": true, "velocityVisible": true, "activePage": "automation" })
+        var index = bootstrap.automationVolumeIndex()
+        testCase.openAutomationTabMenu(index)
+        var panel = findChild(testCase.surface, "automationMenuPanel")
+        var child = findChild(testCase.surface, "automationMenuSubmenu")
+        var row = testCase.menuRowByAction(panel, 12)
+        verify(row, "the active lane has a real range menu")
+        mouseMove(row, row.width / 2, row.height / 2)
+        tryVerify(function() { return testCase.menuRowByAction(child, 16) !== null },
+                  1000, "the active lane has a real 0-64 choice")
+        var range = testCase.menuRowByAction(child, 16)
+        mouseClick(range, range.width / 2, range.height / 2, Qt.LeftButton)
+        testCase.awaitAutomationModal("automationMenu", false)
+        var presenter = testCase.presenter()
+        presenter.setSectionBodyHeight(testCase.automationKind, 140)
+        testCase.awaitRenderedLayout()
+        var height = testCase.section(testCase.automationKind).bodyHeight
+        var revision = bootstrap.automationDocumentRevision()
+        testCase.clickToggle(testCase.velocityKind)
+        testCase.awaitRenderedLayout()
+        testCase.clickToggle(testCase.automationKind)
+        testCase.awaitRenderedLayout()
+        presenter.setSectionBodyHeight(testCase.velocityKind, 100000)
+        testCase.clickToggle(testCase.automationKind)
+        testCase.awaitRenderedLayout()
+        compare(bootstrap.automationActiveParameterIndex(), index,
+                "a drawer page switch preserves the automation view state")
+        fuzzyCompare(testCase.section(testCase.automationKind).bodyHeight, height, 0.01,
+                     "a drawer page switch preserves the automation view state")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "a drawer page switch preserves the automation view state")
+        testCase.openAutomationTabMenu(index)
+        row = testCase.menuRowByAction(panel, 12)
+        mouseMove(row, row.width / 2, row.height / 2)
+        tryVerify(function() {
+            var choice = testCase.menuRowByAction(child, 16)
+            return choice && choice.model.checked
+        }, 1000, "a drawer page switch preserves the automation view state")
+        keyClick(Qt.Key_Escape)
+        keyClick(Qt.Key_Escape)
+        fuzzyCompare(testCase.automationPlot().mapToItem(testCase.surface, 0, 0).x,
+                     testCase.surface.timelineSplitX, 0.01,
+                     "returning to automation restores the canonical plot")
+        compare(testCase.automationTabItems().length, testCase.automationModel().tabCount,
+                "returning to automation restores the canonical plot")
+    }
+
+    function test_productionAutomationWheelZoomPreservesDrawerState() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-wheel-zoom",
+            { "automationVisible": true, "velocityVisible": true,
+              "voiceChangesVisible": true, "activePage": "automation" })
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var node = testCase.automationLaneNodes()[testCase.automationWrittenNodeIndex()]
+        var point = testCase.automationNodePoint(node)
+        verify(point, "the written node supplies the zoom anchor")
+        var grid = testCase.surface.gridModel
+        var input = testCase.automationPlotInput()
+        var width = grid.beatWidth
+        var tick = (point.x + grid.cameraScrollX) * grid.ticksPerBeat / width
+        var revision = bootstrap.automationDocumentRevision()
+        var cursor = grid.editCursorTick
+        var kinds = [testCase.automationKind, testCase.velocityKind, testCase.voiceChangesKind]
+        var states = kinds.map(function(kind) {
+            return [testCase.section(kind).visible, testCase.section(kind).bodyHeight]
+        })
+        mouseWheel(input, point.x, point.y, 0, 120, Qt.NoButton, Qt.NoModifier)
+        tryVerify(function() { return grid.beatWidth > width }, 1000,
+                  "wheel zoom keeps the anchor tick under the pointer")
+        verify(Math.abs((point.x + grid.cameraScrollX) * grid.ticksPerBeat / grid.beatWidth
+                        - tick) < 0.001, "wheel zoom keeps the anchor tick under the pointer")
+        for (var i = 0; i < kinds.length; ++i) {
+            compare(testCase.section(kinds[i]).visible, states[i][0],
+                    "the zoom preserves the drawer's page state")
+            fuzzyCompare(testCase.section(kinds[i]).bodyHeight, states[i][1], 0.01,
+                         "the zoom preserves the drawer's page state")
+        }
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the zoom preserves the drawer's page state")
+        compare(grid.editCursorTick, cursor, "the zoom preserves the drawer's page state")
+        testCase.presenter().setSectionBodyHeight(testCase.automationKind, 0)
+        testCase.awaitRenderedLayout()
+        fuzzyCompare(testCase.automationPlot().mapToItem(testCase.surface, 0, 0).x,
+                     testCase.surface.timelineSplitX, 0.01,
+                     "the zoom preserves the drawer's page state")
+    }
+
+    function automationPreviewCovers(point, radius) {
+        var drawn = testCase.automationPreviewItems()
+        for (var i = 0; i < drawn.length; ++i) {
+            var item = drawn[i]
+            if (item.visible && item.width > 0 && item.height > 0
+                && item.x <= point.x + radius && item.x + item.width >= point.x - radius
+                && item.y <= point.y + radius && item.y + item.height >= point.y - radius
+                && String(item.color).toLowerCase()
+                    === testCase.drawerPalette().selectionEdge.toLowerCase())
+                return true
+        }
+        return false
+    }
+
+    function test_productionAutomationDragPreviews() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-drag-previews")
+        var input = testCase.automationPlotInput()
+        var model = testCase.automationModel()
+        var lanes = [bootstrap.automationVolumeIndex(), model.tabCount - 1]
+        for (var lane = 0; lane < lanes.length; ++lane) {
+            testCase.clickAutomationTab(lanes[lane])
+            tryVerify(function() { return bootstrap.automationActiveParameterIndex() === lanes[lane] },
+                      1000, "the preview lane activates through its drawn selector")
+            if (bootstrap.automationLaneEventCount() === 0) {
+                var seed = testCase.automationFreePoint()
+                verify(seed, "the preview lane leaves a real sweep start")
+                testCase.dragAutomationPlot(seed.x, seed.y,
+                    Math.min(input.width - 8, seed.x + 120), seed.y)
+            }
+            tryVerify(function() { return testCase.automationWrittenNodeIndex() >= 0 },
+                      1000, "the preview lane has a written node")
+            var nodes = testCase.automationLaneNodes()
+            var node = nodes[testCase.automationWrittenNodeIndex()]
+            var start = testCase.automationNodePoint(node)
+            var revision = bootstrap.automationDocumentRevision()
+            var target = { x: Math.min(input.width - 16, start.x + 32),
+                           y: Math.max(16, start.y - 20) }
+            var armed = { x: (start.x + target.x) / 2,
+                          y: (start.y + target.y) / 2 }
+            var drafted = { x: start.x + target.x - armed.x,
+                            y: start.y + target.y - armed.y }
+            mousePress(input, start.x, start.y, Qt.LeftButton)
+            mouseMove(input, armed.x, armed.y, -1, Qt.LeftButton)
+            waitForRendering(input)
+            mouseMove(input, target.x, target.y, -1, Qt.LeftButton)
+            waitForRendering(input)
+            tryVerify(function() {
+                return testCase.automationPreviewCovers(drafted, node.model.ringRadius)
+            }, 1000, "a held node drag paints its preview at the target")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the live preview writes nothing")
+            mouseRelease(input, target.x, target.y, Qt.LeftButton)
+            tryVerify(function() { return testCase.automationPreviewItems().length === 0 },
+                      1000, "the node preview retires on release")
+
+            nodes = testCase.automationLaneNodes()
+            var written = nodes.filter(function(item) { return !item.model.projected })
+            if (written.length < 2) {
+                var extra = testCase.automationFreePoint()
+                verify(extra, "the selection lane leaves a real sweep start")
+                testCase.dragAutomationPlot(extra.x, extra.y,
+                    Math.min(input.width - 8, extra.x + 120), extra.y)
+            }
+            var bandRow = testCase.automationFreePoint()
+            verify(bandRow, "the selection lane has a free band row")
+            mousePress(input, bandRow.x, bandRow.y, Qt.RightButton)
+            mouseMove(input, input.width - 4, bandRow.y, -1, Qt.RightButton)
+            mouseRelease(input, input.width - 4, bandRow.y, Qt.RightButton)
+            verify(bootstrap.automationSelectionRange().length > 0,
+                   "the time selection spans the written lane")
+            nodes = testCase.automationLaneNodes()
+            var selected = nodes.filter(function(item) {
+                return !item.model.projected && item.model.selected
+            })
+            verify(selected.length >= 2, "the real band selects multiple written nodes")
+            var first = testCase.automationNodePoint(selected[0])
+            var second = null
+            for (var n = 1; n < selected.length; ++n) {
+                var candidate = testCase.automationNodePoint(selected[n])
+                if (Math.abs(candidate.x - first.x) > 3 * selected[0].model.ringRadius) {
+                    second = candidate
+                    break
+                }
+            }
+            verify(second, "the band selects two separated node probes")
+            revision = bootstrap.automationDocumentRevision()
+            mousePress(input, first.x, first.y, Qt.LeftButton)
+            mouseMove(input, first.x + 16, first.y, -1, Qt.LeftButton)
+            waitForRendering(input)
+            mouseMove(input, first.x + 32, first.y, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return testCase.automationPreviewCovers(
+                    { x: first.x + 16, y: first.y }, selected[0].model.ringRadius)
+                    && testCase.automationPreviewCovers(
+                        { x: second.x + 16, y: second.y }, selected[0].model.ringRadius)
+            }, 1000, "a selection drag previews every moved node")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the live preview writes nothing")
+            mouseRelease(input, first.x + 32, first.y, Qt.LeftButton)
+
+            var blank = testCase.automationFreePoint()
+            verify(blank, "the lane has a clear sweep start")
+            var finish = Math.min(input.width - 8, blank.x + 100)
+            var armX = (blank.x + finish) / 2
+            revision = bootstrap.automationDocumentRevision()
+            mousePress(input, blank.x, blank.y, Qt.LeftButton)
+            mouseMove(input, armX, blank.y, -1, Qt.LeftButton)
+            waitForRendering(input)
+            mouseMove(input, finish, blank.y, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return testCase.automationPreviewCovers(
+                    { x: blank.x + finish - armX, y: blank.y }, 8)
+            }, 1000, "a sweep drag paints its preview at the target")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the live preview writes nothing")
+            mouseRelease(input, finish, blank.y, Qt.LeftButton)
+
+            blank = testCase.automationFreePoint()
+            verify(blank, "the lane has a clear shift-ramp start")
+            var rampStart = testCase.automationFreeColumn(blank.x + 64, blank.y)
+            verify(rampStart >= 0, "the ramp has a free on-grid column")
+            blank.x = rampStart
+            finish = Math.min(input.width - 8, blank.x + 100)
+            var endY = Math.max(16, blank.y - 30)
+            revision = bootstrap.automationDocumentRevision()
+            mousePress(input, blank.x, blank.y, Qt.LeftButton, Qt.ShiftModifier)
+            mouseMove(input, (blank.x + finish) / 2, (blank.y + endY) / 2,
+                      -1, Qt.LeftButton, Qt.ShiftModifier)
+            waitForRendering(input)
+            mouseMove(input, finish, endY, -1, Qt.LeftButton, Qt.ShiftModifier)
+            tryVerify(function() {
+                return testCase.automationPreviewCovers(
+                    { x: (blank.x + finish) / 2, y: (blank.y + endY) / 2 }, 3)
+            }, 1000, "a shift ramp paints its preview line")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the live preview writes nothing")
+            mouseRelease(input, finish, endY, Qt.LeftButton, Qt.ShiftModifier)
+        }
+    }
+
+    function test_productionAutomationPencilPreviewAndLabel() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-pencil-preview")
+        testCase.clickAutomationTab(bootstrap.automationVolumeIndex())
+        var model = testCase.automationModel()
+        var input = testCase.automationPlotInput()
+        var blank = testCase.automationFreePoint()
+        verify(blank, "the pencil begins in empty plot space")
+        var endX = Math.min(input.width - 8, blank.x + 90)
+        var endY = Math.max(16, blank.y - 20)
+        var label = findChild(testCase.automationPageItem(), "automationPreviewLabel")
+        var revision = bootstrap.automationDocumentRevision()
+        model.isPencilMode = true
+        try {
+            mousePress(input, blank.x, blank.y, Qt.LeftButton)
+            mouseMove(input, (blank.x + endX) / 2, (blank.y + endY) / 2,
+                      -1, Qt.LeftButton)
+            mouseMove(input, endX, endY, -1, Qt.LeftButton)
+            tryVerify(function() {
+                return testCase.automationPreviewCovers(
+                    { x: (blank.x + endX) / 2, y: (blank.y + endY) / 2 }, 8)
+            }, 1000, "the pencil stroke paints its preview line")
+            tryVerify(function() { return label && label.visible && label.text.length > 0 },
+                      1000, "the pencil preview labels the drafted value")
+            var rect = model.previewLabelRect
+            fuzzyCompare(label.x, rect.x, 0.01,
+                         "the pencil preview labels the drafted value")
+            fuzzyCompare(label.y, rect.y, 0.01,
+                         "the pencil preview labels the drafted value")
+            fuzzyCompare(label.width, rect.width, 0.01,
+                         "the pencil preview labels the drafted value")
+            fuzzyCompare(label.height, rect.height, 0.01,
+                         "the pencil preview labels the drafted value")
+            verify(label.x >= 0 && label.y >= 0
+                   && label.x + label.width <= input.width
+                   && label.y + label.height <= input.height,
+                   "the pencil preview labels the drafted value")
+            compare(bootstrap.automationDocumentRevision(), revision,
+                    "the live preview writes nothing")
+            mouseRelease(input, endX, endY, Qt.LeftButton)
+            tryVerify(function() { return bootstrap.automationDocumentRevision() === revision + 1 },
+                      1000, "the pencil commit lands one edit")
+            verify(bootstrap.automationLaneEventCount() > 0,
+                   "the pencil commit lands one edit")
+        } finally {
+            model.isPencilMode = false
+        }
+    }
+
+    function test_productionAutomationEditGuideTracksCursor() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-edit-guide")
+        var input = testCase.automationPlotInput()
+        var grid = testCase.surface.gridModel
+        var guide = findChild(testCase.surface, "sharedPlayheadEditAutomationGuide")
+        verify(guide, "the automation band mounts the shared edit guide")
+        var revision = bootstrap.automationDocumentRevision()
+        var first = testCase.automationFreePoint()
+        verify(first, "the edit cursor has a free first press")
+        var secondX = testCase.automationFreeColumn(first.x + 100, first.y)
+        verify(secondX > first.x, "the edit cursor has a free second press")
+        mouseClick(input, first.x, first.y, Qt.LeftButton)
+        tryVerify(function() { return guide.visible }, 1000,
+                  "the edit guide over the automation band follows the cursor")
+        var oldTick = grid.editCursorTick
+        var oldX = guide.mapToItem(testCase.surface, guide.children[0].x, 0).x
+        mouseClick(input, secondX, first.y, Qt.LeftButton)
+        tryVerify(function() { return guide.visible && grid.editCursorTick !== oldTick },
+                  1000, "the edit guide over the automation band follows the cursor")
+        var delta = (grid.editCursorTick - oldTick) * grid.beatWidth / grid.ticksPerBeat
+        tryVerify(function() {
+            return Math.abs(guide.children[0].x - (oldX - guide.x) - delta) <= 0.5
+        }, 1000, "the edit guide over the automation band follows the cursor")
+        fuzzyCompare(guide.mapToItem(testCase.surface, guide.children[0].x, 0).x - oldX,
+                     delta, 0.5, "the edit guide over the automation band follows the cursor")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the moving guide writes nothing")
+    }
+
 }

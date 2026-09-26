@@ -8,6 +8,7 @@ Additional Swift counterpart: src/checks/automation/automationcanvasediting.swif
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
 Additional Swift counterpart: src/checks/automation/automationmenus.swift
 Additional Swift counterpart: src/checks/rollcheck/static/camera.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
 
 
@@ -15,109 +16,120 @@ Command: deno task verify --filter swiftcore --verbose. Result: build: ok (0.13s
 swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; verify: 1/14 ok
 (9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
 this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
-Converted-window command: deno task verify:qml --verbose.
-drawerAutomationViewStatePreservation (automationcanvaslayout.swift) is registered by
-runAutomationPageChecks at AutomationPageChecks.swift and executes under cppID
-automation/AutomationEditingTest::viewStateSwitchPreservesAutomationState (its
-detach/attach block) and cppID
-automation/AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState (its
-Disposition tally: MATCHED 22, PARTIAL 37, GAP 7, NATIVE 62 (128 sites).
+Converted-window command: deno task verify:qml --verbose. The rendered counterpart of
+these rows is the drawer lane's production composition (src/checks/editorqml/
+tst_EditorDrawer.qml, EditorDrawerLane :: run_checks): its nine task-56 append functions
+carry the band, resize, pan, track-switch, empty-lane, view-state, wheel-zoom, preview,
+pencil and edit-guide anchors cited below as S051-S111. The drawer lane's execution
+evidence (build/proof-evidence/editorqml-drawer.json, written against the previous file
+state 7cf14c09ce689c9b3957f78ce512f62bed9c072028b518dd6e6bfa2a1d0bd8f9) lists all nine function names; the file is concurrently edited by the
+voice-changes task, so every anchor below was re-resolved against the current snapshot
+801ef010fdce5643e8ca1aa4fba1e6f20d1374454f9e531a7ac857cb28091774 and the controller
+must re-run that lane on the settled file before any executed claim is treated as final. These anchors are converted observations; they do
+not restate the native harness.
+
+Disposition tally: MATCHED 86, PARTIAL 26, GAP 5, RETIRED-REPRESENTATION 11 (128 sites).
+Open rows: 31. The PARTIAL rows keep the drawer's own bounds, the native view-state
+blocks, the per-tick GridMetrics readouts, the retired row-handle identities and the
+routes the converted lane does not re-read; the GAP rows are the page-switch split read
+and the post-resize view-state blocks. Every open row names what the converted lane does
+and does not assert.
 
 A001 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:46
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry from the native TimelineBandLayout). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S052 — the mounted production page draws the automation plot and its input (S051) and the plot's left edge is the split the surface publishes (S052); the native TimelineBandLayout geometry value is replaced by the mounted plot.
 Original expression:
   QVERIFY(automation.has_value())
 
 A002 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:47
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry from the native TimelineBandLayout). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S053 — the same mounted page draws the roll plot (S051) and pins its left edge at the split (S053).
 Original expression:
   QVERIFY(roll.has_value())
 
 A003 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:48
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the lane body rect's top-left is the canvas origin). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S057, S058 — the converted lane body is the plot's own input, which the band-geometry predicate maps to the plot's origin in both axes (S057, S058); the retired AutomationCanvas lane-body rect is that input.
 Original expression:
   QCOMPARE(body.topLeft(), QPoint{})
 
 A004 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:49
-Disposition: PARTIAL
-Mapping/reason: The page's own body-height policy is asserted (S001: the requested height never falls under the minimum; S003: it is a fifth of the host inside those bounds), but the original compares the native lane body rect with the native automation viewport size.
+Disposition: MATCHED
+Mapping/reason: S062, S056 — the converted viewport is the hosted page's own body height, which the resize predicate proves equal to the published section body height and to the plot's at both request extremes (S062), and the lane body (the plot input) fills the plot (S056).
 Original expression:
   QCOMPARE(body.height(), page.automationViewportSize().height())
 
 A005 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:50
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the lane body rect equals the automation band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S055, S056 — the converted lane body is the plot input, whose width and height the predicate pins to the plot's (S055, S056).
 Original expression:
   QCOMPARE(body.size(), automation->plotRect.size())
 
 A006 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:51
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S061, S065 — the converted lane asserts no drawerAutomationScrollBar under the mounted surface at the mount and again at both resize extremes (S061, S065).
 Original expression:
   QVERIFY(checks::support::visualDescendant(view.quickView()->rootObject(),
                                                 QStringLiteral("drawerAutomationScrollBar")) ==
               nullptr)
 
 A007 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:54
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping: S052
 Original expression:
   QCOMPARE(automation->plotRect.left(), view.timelineSplitX())
 
 A008 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:55
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping: S053
 Original expression:
   QCOMPARE(roll->plotRect.left(), view.timelineSplitX())
 
 A009 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:60
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the converted loop resolves the drawn tab for every published index and asserts it is visible.
 Original expression:
   QVERIFY(label)
 
 A010 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:61
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab item is visible). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — visibility is asserted per index by the same predicate.
 Original expression:
   QVERIFY(label->isVisible())
 
 A011 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:63
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the same predicate asserts a positive width and height for the drawn tab of every index.
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A012 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:64
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the label rows (S037: the row stack has AutomationCatalog.count rows), but the original's rendered tab rect lying inside the native gutter rect has no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: S060 — the same predicate asserts the drawn tab's rect lies inside the gutter item, whose rect the gutter anchors pin to the band gutter.
 Original expression:
   QVERIFY(labelRect.left() >= gutterRect.left() && labelRect.right() <= gutterRect.right())
 
 A013 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:82
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S104, S051 — the converted band is the mounted production page (its drawn body size is asserted on mount, S104) with the automation plot and input pinned to the split (S051, S052).
 Original expression:
   QVERIFY(band.has_value())
 
 A014 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:83
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S104 — the hosted page's drawn body size is asserted positive in both axes, which is the converted band rect.
 Original expression:
   QVERIFY(!band->rect.isEmpty())
 
 A015 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:84
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationInput item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051 — the mounted band predicate dereferences the automation plot input.
 Original expression:
   QVERIFY(m_automationInput)
 
 A016 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:85
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the timelineAutomationGutterInput item exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S059 — the mounted band predicate dereferences the gutter and the gutter anchors pin the scroller's fill of it.
 Original expression:
   QVERIFY(gutter)
 
@@ -125,14 +137,14 @@ A017 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automa
 Disposition: RETIRED-REPRESENTATION
 
 A018 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:87
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's window is the quick window). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — at the reference revision (f3069ef6, line 87) the row compares the native QQuickItem::window() pointer of the automation input with the harness quick window (m_quickWindow.data()): Qt-object pointer identity with no converted representation. The observable half (the input is mounted in the presented scene) is carried by the lane's mount guard (S104) and the band anchors (S051).
 Original expression:
   QCOMPARE(m_automationInput->window(), m_quickWindow.data())
 
 A019 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:88
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's window is the quick window). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — at the reference revision (f3069ef6, line 88) the row compares the native gutter item's QQuickItem::window() pointer with the harness quick window: Qt-object pointer identity with no converted representation. The observable half is carried by the mount guard (S104) and S059.
 Original expression:
   QCOMPARE(gutter->window(), m_quickWindow.data())
 
@@ -140,8 +152,8 @@ A020 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarS
 Disposition: RETIRED-REPRESENTATION
 
 A021 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:97
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native TimelineQuickView exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — at the reference revision (f3069ef6, line 97) the row pins the native TimelineQuickView pointer (QVERIFY(quick)); the converted lane mounts the production surface instead, asserted by its own mount guard (S104, S105).
 Original expression:
   QVERIFY(quick)
 
@@ -152,8 +164,8 @@ A023 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarS
 Disposition: RETIRED-REPRESENTATION
 
 A024 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:103
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the tabs scroller publishes clip == true). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S059 — the converted scroller is the production gutter input and the predicate reads its own clip property true.
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
@@ -171,144 +183,144 @@ Original expression:
 
 A027 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:116
 Disposition: PARTIAL
-Mapping/reason: The sizing policy is asserted (S001 and S003), but the original observes the rendered automation viewport adopting the requested section height.
+Mapping/reason: The converted lane proves the hosted page and the plot follow the drawer's published body height at both request extremes (S062) and that the drawer's own floor and ceiling bind through the real grip and keyboard routes (S108, S109), but no predicate re-reads a direct setSectionBodyHeight(request) value as the automation viewport height, so the original's equality with the native minimumSectionHeight/maximumSectionHeight stays unproved.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), height)
 
 A028 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:120
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry survives the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S062, S051 — the automation plot and the hosted band are re-read after the resize at both extremes (S062) and the band predicate pins the plot and its input (S051).
 Original expression:
   QVERIFY(automation.has_value())
 
 A029 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:121
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry survives the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: PARTIAL
+Mapping/reason: The roll band's split alignment is asserted for the mounted page (S053) and the resize predicate re-reads the automation plot at both extremes (S062, S064), but no predicate re-reads the roll geometry after a body resize.
 Original expression:
   QVERIFY(roll.has_value())
 
 A030 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:122
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root at either section height). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S065 — the converted resize predicate asserts no drawerAutomationScrollBar at either body extreme.
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                       root, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A031 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:124
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S121 — the same predicate reads the split after both extremes and asserts it unchanged.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A032 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:125
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge stays at the split). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S119, S121 — every tab activation re-pins the plot's left edge to the split (S119) and the split itself is asserted unchanged after the resize (S121).
 Original expression:
   QCOMPARE(automation->plotRect.left(), splitBefore)
 
 A033 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:126
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge stays at the split). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: PARTIAL
+Mapping/reason: The roll plot's split alignment is asserted for the mounted page (S053) and the split is re-read as unchanged after the resize sequence (S121), but no predicate re-reads the roll plot after the resize.
 Original expression:
   QCOMPARE(roll->plotRect.left(), splitBefore)
 
 A034 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:127
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's scene rect equals the automation band's gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S112, S113 — the converted gutter input is the scroller, whose width and height the predicate pins to the gutter's, the converted statement of the gutter input's item rect.
 Original expression:
   QCOMPARE(itemSceneRect(automationGutterInput()), QRectF(automation->gutterRect()))
 
 A035 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:131
 Disposition: PARTIAL
-Mapping/reason: The converted row stack publishes a positive row count (S037: AutomationCatalog.count rows), but the original's Flickable contentHeight is a native scroller measurement.
+Mapping/reason: The converted lane reads the scroller's own contentHeight at the minimum body and asserts it overflows the scroller (S063) with every revealed tab laid out inside it at both extremes (S064), but no predicate re-reads a positive stack height at both extremes (the mount-sequence row stack count stays S037).
 Original expression:
   QVERIFY(stackHeight > 0.0)
 
 A036 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:133
-Disposition: PARTIAL
-Mapping/reason: The uniform body floor is asserted (S001: preferredBodyHeight(200, metrics) >= metrics.minimumBody), but the original's Flickable content height exceeding the section height is a native measurement.
+Disposition: MATCHED
+Mapping/reason: S063 — the converted predicate reads the production scroller's own contentHeight and height at the minimum body and asserts the overflow the original measured natively.
 Original expression:
   QVERIFY2(stackHeight > height,
                        "the tab stack does not overflow the uniform body floor")
 
 A037 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:137
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first parameter tab item exists at the content top). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S106, S064 — the reveal helper dereferences the drawn tab for the index at both body extremes (S106) and the loop asserts every revealed tab is laid out inside the scroller (S064).
 Original expression:
   QVERIFY(firstTab)
 
 A038 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first tab's scene rect lies inside the native gutter rect at the content top). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S111, S107 — the converted lane zeroes contentY and asserts the first tab sits at the content top (S111) and that the revealed control is wholly inside the scroller (S107).
 Original expression:
   QVERIFY2(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
                                                    QRectF(automation->gutterRect())),
                        "the first tab is not visible at the content top")
 
 A039 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:142
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's scene rect equals the band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S056, S062 — the converted lane body is the plot input, whose extent the band predicate pins to the plot's (S056) and whose height the resize predicate pins to the published body height (S062).
 Original expression:
   QCOMPARE(itemSceneRect(automationInput()), QRectF(automation->plotRect))
 
 A040 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:148
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the parameter rows (S037, S038), but no Swift predicate asserts a rendered row handle's validity.
+Disposition: MATCHED
+Mapping/reason: S106, S064 — the drawn row handle is the converted catalog identity: the reveal helper dereferences the tab for each published index at both extremes (S106) and the loop re-checks its laid-out containment (S064).
 Original expression:
   QVERIFY(row.has_value())
 
 A041 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:151
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S106, S064 — existence is asserted for every index by the reveal helper at both extremes (S106) and re-checked by the loop (S064).
 Original expression:
   QVERIFY(label)
 
 A042 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:152
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab item is visible). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the band-geometry loop asserts the drawn tab is visible for every published index; the resize loop re-asserts each revealed tab's containment at both extremes (S064).
 Original expression:
   QVERIFY(label->isVisible())
 
 A043 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:156
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the same predicate asserts a positive width and height for the drawn tab of every index; the resize loop re-checks the revealed tabs' containment (S064).
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A044 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:157
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the parameter rows (S037), but the original's rendered tab rect lying inside the native gutter viewport has no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: S107, S064, S112, S113 — the reveal helper asserts the whole parameter control sits inside the scroller at the current body height (S107), the loop re-checks the revealed tab's containment (S064), and the scroller fills the gutter rect (S112, S113).
 Original expression:
   QVERIFY2(checks::support::rectInside(labelRect, QRectF(automation->gutterRect())),
                        "the scrolled tab is not fully inside the gutter viewport")
 
 A045 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:159
 Disposition: MATCHED
-Mapping: S034
+Mapping: S034, S118
 
 A046 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:160
 Disposition: MATCHED
-Mapping: S034
+Mapping: S034, S118
 
 A047 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:162
 Disposition: MATCHED
-Mapping: S035
+Mapping: S035, S066
 
 A048 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:163
-Disposition: PARTIAL
-Mapping/reason: Cursor stability across the pan route is asserted (S030: the released pan leaves the cursor where it was), but no Swift predicate asserts the edit cursor is unchanged by a rendered tab activation.
+Disposition: MATCHED
+Mapping/reason: S120 — the converted resize predicate reads the edit cursor after both extremes and the whole tab-activation loop and asserts it unchanged.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A049 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:164
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by each tab activation). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S121, S119 — the split is asserted unchanged after both extremes (S121) while every activation re-pins the plot to that split (S119).
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A050 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:176
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native TimelineQuickView exists). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — at the reference revision (f3069ef6, line 176) the row pins the native TimelineQuickView pointer (QVERIFY(quick)); the converted lane mounts the production surface, asserted by its own mount guard (S104, S105).
 Original expression:
   QVERIFY(quick)
 
@@ -319,26 +331,26 @@ A052 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/aut
 Disposition: RETIRED-REPRESENTATION
 
 A053 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:187
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S052 — the mounted production page draws the automation plot and its input and pins the plot's left edge at the split.
 Original expression:
   QVERIFY(automation.has_value())
 
 A054 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:188
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll band geometry is present). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S053 — the same mounted page draws the roll plot and pins its left edge at the split.
 Original expression:
   QVERIFY(roll.has_value())
 
 A055 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:189
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S054, S062 — the converted plot's width is the page width less the split (S054) and its height is the published body height (S062), so the drawn plot rect is non-empty.
 Original expression:
   QVERIFY(!automation->plotRect.isEmpty())
 
 A056 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:190
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S051, S053 — the converted lane dereferences the mounted roll plot and pins its left edge at the split; the band's drawn extent is the surface width less the split (S054).
 Original expression:
   QVERIFY(!roll->plotRect.isEmpty())
 
@@ -346,85 +358,85 @@ A057 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/aut
 Disposition: RETIRED-REPRESENTATION
 
 A058 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:195
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the quick window's rect contains the gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S114, S115, S116 — the gutter's surface-relative origin (a zero x at the surface edge), width (the split) and height (the band body) are pinned, the converted window containment for the gutter rect.
 Original expression:
   QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(gutterRect))
 
 A059 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping: S052
 Original expression:
   QCOMPARE(automation->plotRect.left(), view.timelineSplitX())
 
 A060 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:197
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the roll plot rect's left edge equals the native timeline split x). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping: S053
 Original expression:
   QCOMPARE(roll->plotRect.left(), view.timelineSplitX())
 
 A061 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:198
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (no drawerAutomationScrollBar item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S061, S065 — no drawerAutomationScrollBar under the mounted surface at the mount or at either resize extreme.
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                   quick->rootObject(), QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A062 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:200
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's scene rect equals the band's plot rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S055, S056, S057, S058 — the converted input's extent equals the plot's and its origin maps to the plot's own.
 Original expression:
   QCOMPARE(itemSceneRect(*m_automationInput), QRectF(automation->plotRect))
 
 A063 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:201
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter input item's scene rect equals the band's gutter rect). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S112, S113 — the converted scroller's width and height equal the gutter's.
 Original expression:
   QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect))
 
 A064 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:202
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the automation input item's rounded width equals the plot rect's width). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S055 — the converted input's width equals the plot's; the native qRound comparison becomes the float equality the QML predicate asserts.
 Original expression:
   QCOMPARE(qRound(m_automationInput->width()), automation->plotRect.width())
 
 A065 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:203
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter item's rounded width equals the gutter rect's width). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S112 — the converted scroller's width equals the gutter's.
 Original expression:
   QCOMPARE(qRound(gutter->width()), gutterRect.width())
 
 A066 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:204
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the gutter item's rounded height equals the automation band rect's height). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S116, S062 — the converted gutter's height equals the band body's (the hosted page), which the resize predicate pins to the published body height.
 Original expression:
   QCOMPARE(qRound(gutter->height()), automation->rect.height())
 
 A067 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:209
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the parameter rows (S037), but no Swift predicate asserts a rendered row handle's validity.
+Disposition: MATCHED
+Mapping/reason: S060, S106 — the band-geometry loop asserts a drawn tab for every published index (S060) and the reveal helper dereferences that drawn row handle (S106).
 Original expression:
   QVERIFY(row.has_value())
 
 A068 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:210
 Disposition: MATCHED
-Mapping: S034
+Mapping: S034, S117
 
 A069 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:214
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the parameter tab item exists under the quick root). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the converted loop resolves the drawn tab for every published index.
 Original expression:
   QVERIFY(label)
 
 A070 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:216
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rendered parameter tab's scene rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S060 — the same predicate asserts a positive width and height for the drawn tab of every index.
 Original expression:
   QVERIFY(!labelRect.isEmpty())
 
 A071 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:217
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the parameter rows and their scale labels (S037), but the original's rendered tab rect contained by the native gutter rect has no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: S060 — the same predicate asserts the drawn tab's rect lies inside the gutter item, whose rect the gutter anchors pin to the band gutter.
 Original expression:
   QVERIFY(QRectF(gutterRect).contains(labelRect))
 
@@ -435,48 +447,48 @@ Original expression:
   QVERIFY(activateParameter(pan))
 
 A073 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:227
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S056, S067 — the converted lane body is the plot input, whose extent equals the plot's (S056), and the middle drag from its centre moves the shared camera by its travel (S067), so the body is non-empty at the press.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A074 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:237
-Disposition: PARTIAL
-Mapping/reason: The pan publishes its cursor kind (S023: page.cursorKind == closedHand while panning), but the original reads the native cursor shape on the automation input item.
+Disposition: MATCHED
+Mapping/reason: S068 — the converted predicate reads the production input item's own cursorShape mid-gesture and asserts the closed hand.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
 A075 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:242
 Disposition: MATCHED
-Mapping: S026
+Mapping: S026, S067
 
 A076 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:255
 Disposition: PARTIAL
-Mapping/reason: The converted suite stages its second lane directly on the same fixture; no Swift predicate asserts the minted index the original's addTrack(0) returns.
+Mapping/reason: The converted lane asserts a second drawn track header exists and is not the add-track row (S071) instead of the original's minted index, so the original's addTrack(0) return value still has no predicate.
 Original expression:
   QCOMPARE(m_tab->document().addTrack(0), 1)
 
 A077 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:259
 Disposition: PARTIAL
-Mapping/reason: The pan predicates run on a fixture activated through the production catalog (S031), but no Swift predicate asserts the original's activation return value for the old pan lane.
+Mapping/reason: The converted mid-pan switch journey does not activate the pan lane through the catalog first and no predicate asserts an activation return value for it; the pan anchors run on the fixture's own pan lane (S031).
 Original expression:
   QVERIFY(activateParameter(oldPan))
 
 A078 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:261
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S056, S067 — the pan's press lands inside the plot input whose extent equals the plot's (S056) and its travel moves the shared camera (S067).
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A079 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:268
-Disposition: PARTIAL
-Mapping/reason: The pan publishes its cursor kind (S023), but the original reads the native cursor shape on the automation input item mid-gesture.
+Disposition: MATCHED
+Mapping/reason: S068 — the converted middle drag reads the production input's cursorShape and asserts the closed hand mid-gesture.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
 A080 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:275
 Disposition: MATCHED
-Mapping: S034
+Mapping: S034, S069, S127
 
 A081 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:276
 Disposition: PARTIAL
@@ -485,18 +497,18 @@ Original expression:
   QVERIFY(!findRow(oldPan).valid())
 
 A082 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the rebuilt row's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S127, S055 — the converted switch predicate asserts the rebuilt tab catalog and drawn labels after the header click (S127) and the lane body (the plot input) fills the plot (S055).
 Original expression:
   QVERIFY(!laneBody(findRow(newPan)).isEmpty())
 
 A083 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:278
 Disposition: MATCHED
-Mapping: S035
+Mapping: S035, S070
 
 A084 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:281
 Disposition: PARTIAL
-Mapping/reason: The switched parameter is asserted active before the release (S034), but no Swift predicate re-reads the rebuilt row handle after the release.
+Mapping/reason: The converted lane re-reads the active parameter and the drawn tab set before the release (S034, S069, S127) and only the document revision and cursor after it (S070); the rebuilt row handle itself is not re-read after the release.
 Original expression:
   QVERIFY(findRow(newPan).valid())
 
@@ -508,49 +520,49 @@ Original expression:
 
 A086 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:283
 Disposition: MATCHED
-Mapping: S036
+Mapping: S036, S070
 
 A087 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:290
-Disposition: PARTIAL
-Mapping/reason: The converted suites stage empty lanes (an empty pan fixture, and an unwritten lane projects no point), but no Swift predicate asserts the document's LFO lane is empty at this point.
+Disposition: MATCHED
+Mapping/reason: S072 — the converted staging activates the first eventless catalog parameter (the page's own event count is zero) in place of the fixed LFO lane, which is the same empty-lane precondition.
 Original expression:
   QVERIFY(m_tab->document().lanePoints(0, kLfoController).empty())
 
 A088 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:301
 Disposition: MATCHED
-Mapping: S034
+Mapping/reason: S034, S074 — the converted lane clicks the drawn selector tab for the empty parameter and the activation predicate asserts it became the active parameter.
 
 A089 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:303
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish the parameter rows (S037), but no Swift predicate asserts a rendered row handle's validity.
+Disposition: MATCHED
+Mapping/reason: S072, S074 — the activated empty lane is the drawn catalog row whose activation the predicate re-checks; the native row handle is retired into catalog identity.
 Original expression:
   QVERIFY(lane.valid())
 
 A090 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:305
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the empty-lane activation). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S126 — the converted empty-activation predicate reads the split after the activation and asserts it unchanged.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A091 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:306
 Disposition: MATCHED
-Mapping: S035
+Mapping: S035, S075
 
 A092 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:307
-Disposition: PARTIAL
-Mapping/reason: Cursor stability across the pan route is asserted (S030), but no Swift predicate asserts the edit cursor is unchanged by an empty-lane parameter switch.
+Disposition: MATCHED
+Mapping/reason: S125 — the converted predicate reads the edit cursor after the activation and asserts it unchanged.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A093 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:308
 Disposition: PARTIAL
-Mapping/reason: The converted drawer derives its snap policy from the same document and timeline (S040: the empty-lane press parks the edit cursor at AutomationSnapPolicy.snap), but no Swift predicate publishes a gridTicksAt(48) resolution readout.
+Mapping/reason: The converted lane asserts the published snapTicks (S122), visibleGridTicks (S123) and the drawn grid-line columns (S124) are unchanged by the empty-lane activation, but the original's per-tick GridMetrics readout (gridTicksAt(48)) has no predicate: snapTickDown/gridCell are @QtIgnored and no presenter check publishes that readout. Missing predicate site: a presenter predicate on session.grid.gridTicksAt(48).
 Original expression:
   QCOMPARE(view.grid().gridTicksAt(48), grid.gridTicks)
 
 A094 | AutomationEditingTest::emptyParameterSwitchPreservesGridResolution | src/checks/automation/automationcanvaslayout.cpp:309
 Disposition: PARTIAL
-Mapping/reason: The snap policy is exercised (S040), but no Swift predicate publishes a snapTicksAt(48) resolution readout.
+Mapping/reason: The converted lane asserts the published snapTicks and visibleGridTicks are unchanged by the empty-lane activation (S122, S123), but the original's snapTicksAt(48) per-tick readout has no predicate. Missing predicate site: a presenter predicate on session.grid.snapTicksAt(48).
 Original expression:
   QCOMPARE(view.grid().snapTicksAt(48), grid.snapTicks)
 
@@ -598,31 +610,31 @@ Original expression:
 
 A102 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:323
 Disposition: PARTIAL
-Mapping/reason: The converted page activates parameters through the production catalog and the new view-state predicates require the activated lane to stay active (S042 consumes the lane's range menu, S043 keeps it active across the page switch), but the original's activateParameter return value still has no predicate.
+Mapping/reason: The converted view-state lane opens the real parameter menu on the mounted active lane and takes the 0-64 choice (S076, S077) in place of an activation return value, and keeps that same lane active across the round trip (S078).
 Original expression:
   QVERIFY(activateParameter(bendRange))
 
 A103 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:340
 Disposition: MATCHED
-Mapping: S043, S044
+Mapping: S043, S044, S078
 
 A104 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:341
 Disposition: MATCHED
-Mapping: S044
+Mapping: S044, S130
 
 A105 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:342
 Disposition: PARTIAL
-Mapping/reason: The page's body-size policy is asserted (S001 and S003) and the new switch predicates match the same sequence's active-parameter, lane-range, document and cursor observables (S043-S047), but the original's automation viewport size is a rendered page measurement that no Swift predicate reads.
+Mapping/reason: The converted switch predicate asserts the automation section's published body height unchanged across the real page round trip (S128) and the page follows that height at the clamp extremes (S062), but the page's full viewport size pair and the native automationViewportSize readout have no predicate.
 Original expression:
   QCOMPARE(m_page->automationViewportSize(), viewportBefore)
 
 A106 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:343
 Disposition: MATCHED
-Mapping: S043
+Mapping: S043, S078
 
 A107 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:344
 Disposition: MATCHED
-Mapping: S045
+Mapping: S045, S129
 
 A108 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:345
 Disposition: MATCHED
@@ -630,17 +642,17 @@ Mapping: S046
 
 A109 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:350
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the page switch). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Mapping/reason: No executing check: the native C++ lane no longer builds or runs, and the converted lane re-aligns the plot to the split the surface publishes after the round trip (S079) while never reading the split before and after a page switch.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A110 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:351
 Disposition: MATCHED
-Mapping: S044, S047
+Mapping: S044, S047, S130
 
 A111 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:352
 Disposition: MATCHED
-Mapping: S045
+Mapping: S045, S129
 
 A112 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:353
 Disposition: MATCHED
@@ -648,81 +660,81 @@ Mapping: S046
 
 A113 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:360
 Disposition: PARTIAL
-Mapping/reason: The pan and wheel predicates run on a fixture activated through the production catalog (S031), but no Swift predicate asserts the original's activation return value.
+Mapping/reason: The converted wheel lane activates its own lane through the drawn selector and re-checks the active index (S110) — the Volume lane, not the original's pan lane — and no predicate asserts an activation return value.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A114 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:362
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the pan lane's QQuickItem body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S080, S056 — the converted wheel lane reads the written node's drawn point inside the plot input (S080) whose extent equals the plot's (S056), so the lane body is non-empty.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A115 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:372
 Disposition: MATCHED
-Mapping: S041
+Mapping: S041, S081
 
 A116 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:373
 Disposition: MATCHED
-Mapping: S041
+Mapping: S041, S134
 
 A117 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:375
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState velocity block after a wheel zoom.
+Disposition: MATCHED
+Mapping/reason: S082, S131 — the converted zoom predicate reads every section's published visible and bodyHeight before and after the zoom and asserts them unchanged, which is the converted content of the view-state block.
 Original expression:
   QVERIFY(afterZoom.velocity == beforeZoom.velocity)
 
 A118 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:376
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState voiceChanges block after a wheel zoom.
+Disposition: MATCHED
+Mapping/reason: S082, S131 — the same predicate reads the voice-changes section's visible and bodyHeight across the zoom.
 Original expression:
   QVERIFY(afterZoom.voiceChanges == beforeZoom.voiceChanges)
 
 A119 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:377
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState automation block after a wheel zoom.
+Disposition: MATCHED
+Mapping/reason: S082, S131 — the same predicate reads the automation section's visible and bodyHeight across the zoom.
 Original expression:
   QVERIFY(afterZoom.automation == beforeZoom.automation)
 
 A120 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:378
 Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer view-state block): no Swift predicate reads an EditorViewState activePage after a wheel zoom.
+Mapping/reason: No executing check: the native C++ lane no longer builds or runs, and the converted zoom predicate reads each section's visibility and body height (S082, S131) plus the document revision and cursor while never reading the drawer's active page after the zoom.
 Original expression:
   QVERIFY(afterZoom.activePage == beforeZoom.activePage)
 
 A121 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:385
 Disposition: PARTIAL
-Mapping/reason: The converted drawer's bounds are asserted (S001: the minimum body floor; S003: the fifth-of-host height; S004: no page maximum), but the original's targetHeight != originalHeight guard reads the native drawer section bounds.
+Mapping/reason: The converted lane requests the two extremes (0 and 100000) instead of the drawer's own bound getters, and the drawer's floor and ceiling bind through the real grip and keyboard routes (S108, S109), so the original's targetHeight != originalHeight guard is covered in effect but by no predicted-value predicate.
 Original expression:
   QVERIFY(targetHeight != originalHeight)
 
 A122 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:388
 Disposition: PARTIAL
-Mapping/reason: The sizing policy is asserted (S001 and S003), but the original observes the rendered viewport adopting the requested section height.
+Mapping/reason: The converted lane proves the hosted page and the plot follow the drawer's published body height at the request extremes (S062) and that the floor and ceiling bind through the real grip and keyboard routes (S108, S109), but no predicate re-reads a direct setSectionBodyHeight(request) value as the automation viewport height.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), targetHeight)
 
 A123 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:390
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationcanvaslayout.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the native timeline split x is unchanged by the section resize). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: MATCHED
+Mapping/reason: S121, S133 — the resize sequence asserts the split unchanged after both body extremes (S121) and the zoom predicate re-pins the plot to the split after its own resize (S133).
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A124 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:392
 Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState velocity block after a section resize.
+Mapping/reason: No executing check: the native C++ lane no longer builds or runs, and the converted zoom predicate reads the sections' visible and height facts (S082, S131) while no predicate re-reads them after the section resize.
 Original expression:
   QVERIFY(afterHeight.velocity == afterZoom.velocity)
 
 A125 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:393
 Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState voiceChanges block after a section resize.
+Mapping/reason: No executing check: the native C++ lane no longer builds or runs, and the converted zoom predicate reads the sections' visible and height facts (S082, S131) while no predicate re-reads them after the section resize.
 Original expression:
   QVERIFY(afterHeight.voiceChanges == afterZoom.voiceChanges)
 
 A126 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:394
 Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate reads an EditorViewState activePage after a section resize.
+Mapping/reason: No executing check: the native C++ lane no longer builds or runs, and no converted predicate reads the drawer's active page after the section resize (S082, S131 cover only the per-section visibility and height across the zoom).
 Original expression:
   QVERIFY(afterHeight.activePage == afterZoom.activePage)
 
@@ -883,3 +895,253 @@ Anchor: message "a section resize moves no cursor"
 
 S050 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift
 Anchor: message "a section resize leaves the streams alone"
+S051 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted automation and roll bands have plots and input"
+
+S052 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #1
+
+S053 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #2
+
+S054 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #3
+
+S055 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #4
+
+S056 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #5
+
+S057 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #6
+
+S058 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation plot and the roll plot share the split origin" #7
+
+S059 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #1
+
+S060 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selector gutter hosts every parameter tab inside its rect" #1
+
+S061 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation drawer mounts no scrollbar"
+
+S062 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the clamped body extremes follow the drawer's own policy" #1
+
+S063 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "at the minimum body the tab stack overflows the scroller" #1
+
+S064 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "every parameter tab activates after its reveal at both body extremes" #1
+
+S065 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation drawer mounts no scrollbar"
+
+S066 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resizing the automation section writes nothing" #1
+
+S067 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a middle drag pans the shared camera by its travel"
+
+S068 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pan shows the closed hand"
+
+S069 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a mid-pan track switch rebuilds the lane rows and ends the pan" #1
+
+S070 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the interrupted pan writes nothing" #1
+
+S071 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the track switch has another drawn header" #1
+
+S072 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selector offers an empty parameter lane"
+
+S073 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the empty lane still paints grid lines"
+
+S074 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "activating an empty lane preserves the grid resolution" #1
+
+S075 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the empty activation writes nothing" #1
+
+S076 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the active lane has a real range menu"
+
+S077 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the active lane has a real 0-64 choice"
+
+S078 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a drawer page switch preserves the automation view state" #1
+
+S079 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "returning to automation restores the canonical plot" #1
+
+S080 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the written node supplies the zoom anchor"
+
+S081 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "wheel zoom keeps the anchor tick under the pointer" #1
+
+S082 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the zoom preserves the drawer's page state" #1
+
+S083 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a held node drag paints its preview at the target"
+
+S084 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the preview lane activates through its drawn selector"
+
+S085 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the live preview writes nothing" #1
+
+S086 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a selection drag previews every moved node"
+
+S087 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a sweep drag paints its preview at the target"
+
+S088 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the live preview writes nothing" #2
+
+S089 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a shift ramp paints its preview line"
+
+S090 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the live preview writes nothing" #3
+
+S091 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the node preview retires on release"
+
+S092 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the time selection spans the written lane"
+
+S093 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the real band selects multiple written nodes"
+
+S094 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the band selects two separated node probes"
+
+S095 | test_productionAutomationDragPreviews | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the lane has a clear sweep start"
+
+S096 | test_productionAutomationPencilPreviewAndLabel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil begins in empty plot space"
+
+S097 | test_productionAutomationPencilPreviewAndLabel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil stroke paints its preview line"
+
+S098 | test_productionAutomationPencilPreviewAndLabel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil preview labels the drafted value" #1
+
+S099 | test_productionAutomationPencilPreviewAndLabel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the live preview writes nothing"
+
+S100 | test_productionAutomationPencilPreviewAndLabel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the pencil commit lands one edit" #1
+
+S101 | test_productionAutomationEditGuideTracksCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the automation band mounts the shared edit guide"
+
+S102 | test_productionAutomationEditGuideTracksCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the edit guide over the automation band follows the cursor" #1
+
+S103 | test_productionAutomationEditGuideTracksCursor | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the moving guide writes nothing"
+
+S104 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the hosted production page took its drawn body size"
+
+S105 | mountProductionAutomation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the page drew one selector tab per published catalog parameter"
+
+S106 | revealAutomationTab | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selector drew tab "
+
+S107 | revealAutomationTab | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "keyboard focus minimally reveals the whole parameter control"
+
+S108 | test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "dragging down clamps at a positive minimum"
+
+S109 | test_resizeClampAndCancellation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the container clamps above the status strip"
+
+S110 | writeVolumeLanePoints | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the Volume lane is active"
+
+S111 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "at the minimum body the tab stack overflows the scroller" #2
+S112 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #2
+
+S113 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #3
+
+S114 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #4
+
+S115 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #5
+
+S116 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input covers the gutter rect" #6
+
+S117 | test_productionAutomationBandGeometry | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selector gutter hosts every parameter tab inside its rect" #2
+
+S118 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "every parameter tab activates after its reveal at both body extremes" #2
+
+S119 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "every parameter tab activates after its reveal at both body extremes" #3
+
+S120 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resizing the automation section writes nothing" #2
+
+S121 | test_productionAutomationSectionResizeKeepsTabsClickable | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resizing the automation section writes nothing" #3
+
+S122 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "activating an empty lane preserves the grid resolution" #2
+
+S123 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "activating an empty lane preserves the grid resolution" #3
+
+S124 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "activating an empty lane preserves the grid resolution" #4
+
+S125 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the empty activation writes nothing" #2
+
+S126 | test_productionAutomationEmptySwitchPreservesGrid | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the empty activation writes nothing" #3
+
+S127 | test_productionAutomationMiddlePanAndTrackSwitch | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a mid-pan track switch rebuilds the lane rows and ends the pan" #2
+
+S128 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a drawer page switch preserves the automation view state" #2
+
+S129 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a drawer page switch preserves the automation view state" #3
+
+S130 | test_productionAutomationViewStateAcrossDrawerPages | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a drawer page switch preserves the automation view state" #4
+
+S131 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the zoom preserves the drawer's page state" #2
+
+S132 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the zoom preserves the drawer's page state" #3
+
+S133 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the zoom preserves the drawer's page state" #5
+
+S134 | test_productionAutomationWheelZoomPreservesDrawerState | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "wheel zoom keeps the anchor tick under the pointer" #2

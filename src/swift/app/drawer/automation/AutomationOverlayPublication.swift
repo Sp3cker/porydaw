@@ -85,7 +85,19 @@ extension AutomationPage {
     /// The frozen gesture's draft: one marker per draft point and the value
     /// readout at the last of them.
     func publishPreview() {
-        applyPreviewDraft(AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen))
+        var rampProjection: AutomationProjection?
+        if case let .sweep(transaction) = gesture, transaction.mode == .ramp,
+           let facts = frozen {
+            let projection = makeProjection(facts: facts, camera: gestureCamera)
+            rampProjection = projection
+            let points = transaction.finishedPoints(fine: facts.modifiers.fine,
+                                                    projection: projection)
+            let text = points.last.map { facts.metadata.valueText($0.value) } ?? ""
+            applyPreviewDraft(AutomationPreviewDraft(parameter: facts.parameter,
+                                                    points: points, text: text))
+        } else {
+            applyPreviewDraft(AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen))
+        }
         guard let facts = frozen, !previewPoints.isEmpty else {
             syncRects(previewRects, [])
             previewLabelVisible = false
@@ -93,7 +105,7 @@ extension AutomationPage {
             previewLabelRect = Self.rect(0, 0, 0, 0)
             return
         }
-        let projection = makeProjection(facts: facts, camera: gestureCamera)
+        let projection = rampProjection ?? makeProjection(facts: facts, camera: gestureCamera)
         let extent = nodePaint.nodeRadius
         let limit = max(0, plotWidth)
         let rects = previewPoints.map { point in
