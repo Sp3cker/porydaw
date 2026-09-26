@@ -13,7 +13,6 @@ public enum PlayheadGuideHoverOwner: Int, Sendable {
     case none = 0
     case automation = 1
     case voiceChanges = 2
-    case roll = 3
 }
 
 /// One guide's QML-facing presentation. The kind is fixed for the lifetime of
@@ -109,12 +108,6 @@ public final class PlayheadGuidesPresenter {
 
     // MARK: - Hover ownership
 
-    /// Publishes the roll's pointer-local hover. QML calls this one-argument
-    /// entry; drawer owners use the owner-aware Swift entry below.
-    public func updateHover(contentX: Double) {
-        updateHover(owner: PlayheadGuideHoverOwner.roll.rawValue, contentX: contentX)
-    }
-
     /// Publishes a hover for one owner. A before-song-start or invalid position
     /// clears only that owner, preserving a different owner's active hover.
     @QtIgnored
@@ -132,12 +125,6 @@ public final class PlayheadGuidesPresenter {
         hoverOwner = owner
         hoverTick = tick
         apply()
-    }
-
-
-    /// Clears the roll's hover owner. A drawer-owned hover is not affected.
-    public func clearHover() {
-        clearHover(owner: PlayheadGuideHoverOwner.roll.rawValue)
     }
 
     /// Clears an owner only when that owner currently owns the published hover.

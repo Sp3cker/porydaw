@@ -102,8 +102,7 @@ struct VoiceChangesSceneInput: Sendable {
     /// and the document's own clock lattice.
     var camera: EditorCamera
     var metrics: GridMetrics
-    var division: Int = 24
-    var extendedClocks = false
+    var grid: RollGrid = RollGrid()
     /// The live interaction the marker projection marks its rows with.
     var interaction: VoiceInteractionSnapshot
 }
@@ -170,19 +169,6 @@ enum VoiceChangesScene {
         camera.displayX(tick: Double(tick), origin: 0, dpr: devicePixelRatio)
     }
 
-    /// `VoiceChangeArea`'s snap seam: the shared grid's editing lattice for a
-    /// plain drag, and the legacy alt-fine clock lattice while the modifier is
-    /// held — `Grid::snapTick(rawTick, modifiers & Qt::AltModifier)`.
-    static func snapTick(at x: Double, fine: Bool, camera: EditorCamera, metrics: GridMetrics,
-                         division: Int, extendedClocks: Bool) -> Tick {
-        let raw = max(0, camera.tickAtContentX(max(0, x)))
-        guard !fine else {
-            return TimelineSnapPolicy.fineSnap(
-                raw, clockTicks: TimelineSnapPolicy.clockTicks(
-                    division: division, extendedClocks: extendedClocks))
-        }
-        return Tick(max(0, metrics.snapTick(raw, camera: camera)))
-    }
 
     /// The nearest marker whose drawn x is inside the font-relative hit radius;
     /// ties keep the later point, exactly as the legacy scan does.
@@ -270,6 +256,7 @@ enum VoiceChangesScene {
             metrics: input.metrics,
             camera: input.camera,
             plotWidth: input.plotWidth,
+            grid: input.grid,
             plotHeight: input.plotHeight,
             colors: VoiceGridProjectionColors(
                 subdivision1: palette.gridLineSub1,

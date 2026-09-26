@@ -22,9 +22,7 @@ func drawerAutomationPanNeutralSnap(_ report: CheckReport, suite: DocumentSessio
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: height, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     let yNear = (0..<Int(height)).first { y in
         let value = projection.value(atY: Double(y), metadata: metadata)

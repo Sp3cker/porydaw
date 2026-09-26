@@ -192,6 +192,8 @@ enum VelocityScene {
     static func grid(_ input: VelocitySceneInput) -> [SceneRect] {
         guard let camera = input.camera, let metrics = input.metrics,
               input.plotHeight > 0, input.plotWidth > input.rulerWidth else { return [] }
+        guard var grid = input.grid else { return [] }
+        grid.metrics = metrics
         let physicalPixel = max(input.geometry.pixel, 0.0001)
         let roundingMargin = physicalPixel / 2
         let beginTick = camera.tickAtContentX(-roundingMargin)
@@ -201,7 +203,7 @@ enum VelocityScene {
                      end: Tick(max(1, endTick.rounded(.up))))
         let stroke = metrics.gridLineStroke
         var rects: [SceneRect] = []
-        metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
+        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
             let color = level == 1 ? input.palette.gridLineSub1
                 : level == 2 ? input.palette.gridLineSub2 : input.palette.gridLineSub3
@@ -210,11 +212,11 @@ enum VelocityScene {
                                    primitiveName: "velocityGrid"))
         }
         var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
         metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
             if tick >= segment.next {
                 segment = metrics.timeAxis.segmentAt(tick)
-                finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+                finest = grid.gridTicksAt(tick, camera: camera) == 1
             }
             let x = camera.displayX(tick: Double(tick), origin: 0, dpr: input.devicePixelRatio)
             rects.append(SceneRect(

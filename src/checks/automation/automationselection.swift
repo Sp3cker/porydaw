@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with automationselection.cpp.
@@ -372,9 +372,7 @@ func drawerAutomationDetailThresholdPrecedence(_ report: CheckReport, suite: Doc
             camera: fixture.session.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: fixture.page.geometry,
-            snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                             timeline: fixture.session.timeline,
-                                             baseFontPx: 13, devicePixelRatio: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
             songEndTick: fixture.songEndTick).markersVisible()
     }
     report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")

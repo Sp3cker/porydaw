@@ -129,6 +129,7 @@ extension VelocityPage {
             devicePixelRatio: devicePixelRatio,
             baseFontPx: baseFontPx,
             metrics: session.map { gridMetrics($0) },
+            grid: session?.grid,
             palette: scenePalette(),
             reuseGeometry: reuseGeometry)
     }

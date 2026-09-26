@@ -346,6 +346,7 @@ enum VoiceChangesProjection {
     }
 
     static func grid(metrics: GridMetrics, camera: EditorCamera, plotWidth: Double,
+                     grid source: RollGrid,
                      plotHeight: Double, colors: VoiceGridProjectionColors,
                      displayX: (Tick) -> Double) -> [SceneRect] {
         let physicalPixel = max(metrics.pixel, 0.0001)
@@ -356,8 +357,10 @@ enum VoiceChangesProjection {
         let range = (begin: Tick(max(0, beginTick.rounded(.down))),
                      end: Tick(max(1, endTick.rounded(.up))))
         let stroke = metrics.gridLineStroke
+        var grid = source
+        grid.metrics = metrics
         var rects: [SceneRect] = []
-        metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
+        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let color = level == 1 ? colors.subdivision1
                 : level == 2 ? colors.subdivision2 : colors.subdivision3
             rects.append(SceneRect(
@@ -369,11 +372,11 @@ enum VoiceChangesProjection {
                 primitiveName: "voiceGrid"))
         }
         var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
         metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
             if tick >= segment.next {
                 segment = metrics.timeAxis.segmentAt(tick)
-                finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+                finest = grid.gridTicksAt(tick, camera: camera) == 1
             }
             rects.append(SceneRect(
                 x: displayX(tick) - stroke / 2,

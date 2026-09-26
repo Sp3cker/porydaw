@@ -30,7 +30,7 @@ TestCase {
     // AudioTransportState raw values the presenter consumes.
     readonly property int transportPaused: 1
     readonly property int transportPlaying: 2
-    // PlayheadGuideHoverOwner raw values (none/roll/automation/voiceChanges).
+    // PlayheadGuideHoverOwner raw values (none/automation/voiceChanges).
     readonly property int ownerAutomation: 1
     readonly property int ownerVoiceChanges: 2
     // checks::support::isPlayheadPixel: alpha >= 32, channel delta <= 24.
@@ -374,6 +374,25 @@ TestCase {
                 return false
         }
         return true
+    }
+
+    function test_rollHoverNeverPublishesGuide() {
+        var g = grid()
+        var guide = guides()
+        var roll = findChild(surface(), "swiftRollInput")
+        verify(roll !== null, "the mounted roll input accepts the pointer")
+        g.resetCameraScroll()
+        g.setEditCursorTick(0)
+        bootstrap.guideClear(testCase.ownerAutomation)
+        bootstrap.guideClear(testCase.ownerVoiceChanges)
+        settle()
+        verify(!guide.hover.visible && guide.edit.visible,
+               "the edit guide is visible before roll hover")
+        var editX = guide.edit.contentX
+        mouseMove(roll, roll.width / 2, roll.height / 2)
+        settle()
+        verify(!guide.hover.visible && guide.edit.visible && guide.edit.contentX === editX,
+               "roll hover leaves the edit guide visible and stationary")
     }
 
     function test_guidesResizeScrollAndOwnership() {

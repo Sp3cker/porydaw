@@ -12,7 +12,7 @@ Result: pending integrated run.
 Converted-window command: deno task verify:qml-roll --verbose
 Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_mountedBandGeometryAndRows (:109-132) exercises A001-A003, A005-A008 and A010-A017, test_scrollThumbAtBothLimits (:136-154) exercises A088-A089. This proof-only pass cites the exercised lines without re-running the suite.
 Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
-Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 2d587554d2f01337418c727f4b59f9c2b52e059bbc1f9f4c869c23373aff144c (re-pinned by task 32; re-pinned again by task 33 after the dead applicationFont default at :9 was deleted and the fix round's dead-code deletions shifted the file: the header presenter property is now :21, menu-action routing :90-106 with the header branch at :95-96, and the header band mount :206-218)
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 98ab54f1f86e393ffcaaaea037a1230f3b22deb1937458be342fbd248569d74f (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover, whose GridRowControl key handling and rollInput hover/pointer edits shifted the later lines; the cited ranges are re-verified on the frozen tree: the header presenter property is :21, menu-action routing :90-106 with the header branch at :95-96, and the header band mount :206-218)
 
 A001 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:80
 Disposition: MATCHED

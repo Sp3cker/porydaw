@@ -1,17 +1,23 @@
 import Foundation
 import PorydawCore
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppEventList
 
 private let remapNotifyOrderID = "eventviews/EventViewsRemapTest::notifyOrder"
 private let bucketSumID = "eventviews/ViewBucketsGridTest::bucketSum"
 private let clockLatticeID = "eventviews/ViewBucketsGridTest::clockLatticeCrossesSignatureSeam"
+private let snapLadderID = "eventviews/ViewBucketsGridTest::snapLadder"
+private let linesSnappableID = "eventviews/ViewBucketsGridTest::gridLinesSnappable"
+private let densityID = "eventviews/ViewBucketsGridTest::fixedGridPaintDensityGuard"
 
 @MainActor
 func runEventViewsRemapBucketsParityChecks(_ report: CheckReport) {
     remapParityAnchorTracking(report)
     bucketParitySum(report)
     clockParityLattice(report)
+    gridSnapLadder(report)
+    gridLinesSnappable(report)
+    fixedGridPaintDensityGuard(report)
 }
 
 @MainActor
@@ -246,4 +252,119 @@ private func clockParityLattice(_ report: CheckReport) {
     report.expect(axis.segmentAt(36).next == 37, cppID: clockLatticeID, message: "previous segment ends at the seam")
     let clock = TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat, extendedClocks: document.state.config.extendedClocks)
     report.expect(clock > 1 && 37 % clock != 0, cppID: clockLatticeID, message: "seam sits off the clock lattice")
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320, timeAxis: axis)
+    var camera = EditorCamera(ticksPerBeat: 48, lengthTicks: 120, viewportWidth: 640,
+                              rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+    _ = camera.setTimeZoom(24 * metrics.autoGridMinCell)
+    var grid = RollGrid(axis: axis, clockTicks: clock, metrics: metrics)
+    grid.setSelection(.clock)
+    report.expectEqual(expected: 36, actual: grid.snapTickDown(37, camera: camera),
+                       cppID: clockLatticeID, what: "clock snap down crosses the seam")
+    report.expectEqual(expected: 38, actual: grid.snapTickUp(37, camera: camera),
+                       cppID: clockLatticeID, what: "clock snap up crosses the seam")
+    report.expectEqual(expected: 36, actual: grid.nextSnapTickAfter(35, camera: camera),
+                       cppID: clockLatticeID, what: "next snap after 35")
+    report.expectEqual(expected: 38, actual: grid.nextSnapTickAfter(36, camera: camera),
+                       cppID: clockLatticeID, what: "next snap after 36 skips the seam")
+    report.expectEqual(expected: 38, actual: grid.nextSubdivisionTickAfter(36, camera: camera),
+                       cppID: clockLatticeID, what: "next subdivision after 36 skips the seam")
+    report.expectEqual(expected: 38, actual: grid.nextSnapTickAfter(37, camera: camera),
+                       cppID: clockLatticeID, what: "next snap after 37")
+    var lines: [Tick] = []
+    grid.forEachSubdivision(from: 30, to: 46, camera: camera) { tick, _ in lines.append(tick) }
+    let expected: [Tick] = [30, 32, 34, 38, 40, 42, 44]
+    report.expectEqual(expected: expected.count, actual: lines.count, cppID: clockLatticeID,
+                       what: "clock sub-grid line count")
+    report.expect(lines == expected, cppID: clockLatticeID,
+                  message: "clock sub-grid ticks are the absolute lattice")
+}
+
+@MainActor
+private func gridSnapLadder(_ report: CheckReport) {
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320)
+    let cell = metrics.autoGridMinCell
+    let rows: [(String, Double, GridSelection, GridFeel, Tick, Tick)] = [
+        ("straight below", 4 * cell - 1, .auto, .straight, 12, 6),
+        ("straight threshold", 4 * cell, .auto, .straight, 6, 3),
+        ("triplet", 6 * cell, .auto, .triplet, 4, 2),
+        ("triplet eighth fixed", 6 * cell, .musical(8), .triplet, 8, 8),
+        ("straight sixteenth fixed", 4 * cell, .musical(16), .straight, 6, 6),
+        ("straight quarter fixed", 4 * cell, .musical(4), .straight, 24, 24),
+        ("clock fixed", 4 * cell, .clock, .straight, 1, 1)
+    ]
+    for (name, zoom, selection, feel, visible, snap) in rows {
+        var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 120, viewportWidth: 640,
+                                  rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+        _ = camera.setTimeZoom(zoom)
+        var grid = RollGrid(clockTicks: 1, metrics: metrics)
+        grid.setState(selection, feel: feel)
+        report.expectEqual(expected: visible, actual: grid.gridTicksAt(0, camera: camera),
+                           cppID: snapLadderID, what: "snap ladder \(name): grid ticks")
+        report.expectEqual(expected: snap, actual: grid.snapTicksAt(0, camera: camera),
+                           cppID: snapLadderID, what: "snap ladder \(name): snap ticks")
+    }
+}
+
+@MainActor
+private func gridLinesSnappable(_ report: CheckReport) {
+    for (shape, signatures) in [
+        ("flat quarter grid", [TimeSigPoint]()),
+        ("mid-song signature restart", [TimeSigPoint(tick: 37, numerator: 5, denomPow2: 3)]),
+        ("denominator rescale", [TimeSigPoint(tick: 48, numerator: 3, denomPow2: 3)])
+    ] {
+        let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 120,
+                                        timeSigs: signatures))
+        let grid = RollGrid(axis: axis, clockTicks: 1)
+        let camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 120, viewportWidth: 640,
+                                  rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+        var count = 0
+        var unsnappable: [Tick] = []
+        axis.forEachGridLine(from: 0, to: 120) { tick, _, _, _ in
+            count += 1
+            if grid.snapTick(Double(tick), camera: camera) != tick { unsnappable.append(tick) }
+        }
+        report.expect(count > 0, cppID: linesSnappableID,
+                      message: "\(shape): grid lines exist")
+        report.expect(unsnappable.isEmpty, cppID: linesSnappableID,
+                      message: "\(shape): every drawn grid line is snappable")
+    }
+}
+
+@MainActor
+private func fixedGridPaintDensityGuard(_ report: CheckReport) {
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320)
+    let cell = metrics.autoGridMinCell
+    var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 120, viewportWidth: 640,
+                              rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+    var grid = RollGrid(clockTicks: 1, metrics: metrics)
+    func lines() -> [Tick] {
+        var result: [Tick] = []
+        grid.forEachSubdivision(from: 0, to: 120, camera: camera) { tick, _ in
+            result.append(tick)
+        }
+        return result
+    }
+    grid.setSelection(.musical(8))
+    _ = camera.setTimeZoom(2 * cell)
+    report.expect(!lines().isEmpty, cppID: densityID,
+                  message: "fixed eighth sub-grid paints at twice the cell")
+    _ = camera.setTimeZoom(cell)
+    report.expect(lines().isEmpty, cppID: densityID,
+                  message: "fixed eighth sub-grid suppresses at the cell")
+    report.expectEqual(expected: 12, actual: grid.snapTicksAt(0, camera: camera),
+                       cppID: densityID, what: "fixed snap ignores paint suppression")
+    report.expectEqual(expected: 36, actual: grid.snapTickDown(37, camera: camera),
+                       cppID: densityID, what: "fixed snap ignores paint suppression")
+    report.expectEqual(expected: 36, actual: grid.nextSnapTickAfter(24, camera: camera),
+                       cppID: densityID, what: "fixed snap ignores paint suppression")
+    grid.setSelection(.clock)
+    let clock = grid.snapTicksAt(0, camera: camera)
+    _ = camera.setTimeZoom(6 * cell)
+    report.expect(!lines().isEmpty, cppID: densityID,
+                  message: "clock sub-grid paints at six cells")
+    _ = camera.setTimeZoom(2 * cell)
+    report.expect(lines().isEmpty, cppID: densityID,
+                  message: "clock sub-grid suppresses at two cells")
+    report.expectEqual(expected: clock, actual: grid.snapTicksAt(0, camera: camera),
+                       cppID: densityID, what: "clock snap ignores paint suppression")
 }

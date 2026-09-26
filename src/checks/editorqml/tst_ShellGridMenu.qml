@@ -154,38 +154,96 @@ TestCase {
         compare(checkedCount, 1)
     }
 
+    function rowTextEqualsControlText(menu, controlText) {
+        for (var index = 0; index < menu.rowCount; ++index) {
+            var row = menu.rowItem(index)
+            if (row.itemData.checked) {
+                compare(row.itemData.text, controlText)
+                return
+            }
+        }
+        fail("the menu has no checked row")
+    }
+
+    function alternateGridMenuId(id) {
+        return id === 8 ? 16 : 8
+    }
+
     function test_gridDivisionAndFeelMenusDispatchAndDismiss() {
-        openSong()
+        var session = openSong()
         var grid = surface().gridModel
         var division = control("timelineRulerDivisionControl")
         var feel = control("timelineRulerFeelControl")
         verify(division.visible && feel.visible)
-        var ids = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+        var ids = [-1, 4, 8, 16, 32, 0]
         var initialSnap = grid.snapTicks
         var divisionMenu = openGrid("timelineRulerDivisionControl", 1)
-        assertRows(divisionMenu, ids, 0)
+        assertRows(divisionMenu, ids, grid.gridSelectionMenuId)
+        var texts = ["Auto", "1/4", "1/8", "1/16", "1/32", "Clock"]
+        for (var rung = 0; rung < texts.length; ++rung)
+            compare(divisionMenu.rowItem(rung).itemData.text, texts[rung])
+        compare(grid.gridSelectionMenuId, -1)
         compare(grid.gridDivisionControlText, "Auto")
-        clickRow(divisionMenu, 1)
+        rowTextEqualsControlText(divisionMenu, grid.gridDivisionControlText)
+        var pickedId = alternateGridMenuId(grid.gridSelectionMenuId)
+        var pickedRow = ids.indexOf(pickedId)
+        var pickedText = divisionMenu.rowItem(pickedRow).itemData.text
+        compare(pickedText, "1/8")
+        clickRow(divisionMenu, pickedRow)
         tryCompare(grid, "gridMenuKind", 0)
-        tryCompare(grid, "gridDivisionControlText", "÷8")
-        verify(grid.snapTicks < initialSnap)
+        tryCompare(grid, "gridSelectionMenuId", pickedId)
+        compare(grid.gridDivisionControlText, pickedText)
+        verify(grid.snapTicks !== initialSnap)
 
         divisionMenu = openGrid("timelineRulerDivisionControl", 1)
-        assertRows(divisionMenu, ids, -3)
+        assertRows(divisionMenu, ids, grid.gridSelectionMenuId)
+        rowTextEqualsControlText(divisionMenu, grid.gridDivisionControlText)
         var settledSnap = grid.snapTicks
-        clickRow(divisionMenu, 1)
+        var settledText = grid.gridDivisionControlText
+        clickRow(divisionMenu, pickedRow)
         tryCompare(grid, "gridMenuKind", 0)
+        compare(grid.gridSelectionMenuId, pickedId)
+        compare(grid.gridDivisionControlText, settledText)
+        compare(grid.tripletGrid, false)
         compare(grid.snapTicks, settledSnap)
 
+        division.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        tryCompare(grid, "gridMenuKind", 1)
+        divisionMenu = panel()
+        assertRows(divisionMenu, ids, grid.gridSelectionMenuId)
+        rowTextEqualsControlText(divisionMenu, grid.gridDivisionControlText)
+        tryCompare(divisionMenu.parent, "activeFocus", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(grid, "gridMenuKind", 0)
+        grid.setEditCursorTick(96)
+        compare(grid.editCursorTick, 96)
+        divisionMenu = openGrid("timelineRulerDivisionControl", 1)
+        pickedId = alternateGridMenuId(grid.gridSelectionMenuId)
+        pickedRow = ids.indexOf(pickedId)
+        pickedText = divisionMenu.rowItem(pickedRow).itemData.text
+        compare(pickedText, "1/16")
+        clickRow(divisionMenu, pickedRow)
+        tryCompare(grid, "gridSelectionMenuId", pickedId)
+        compare(grid.gridDivisionControlText, pickedText)
+        compare(grid.editCursorTick, 96)
+
+        divisionMenu = openGrid("timelineRulerDivisionControl", 1)
+        assertRows(divisionMenu, ids, grid.gridSelectionMenuId)
+        rowTextEqualsControlText(divisionMenu, grid.gridDivisionControlText)
+        keyClick(Qt.Key_Escape)
+        tryCompare(grid, "gridMenuKind", 0)
         var feelMenu = openGrid("timelineRulerFeelControl", 2)
         assertRows(feelMenu, [0, 1], 0)
         compare(grid.gridFeelControlText, "Straight")
+        rowTextEqualsControlText(feelMenu, grid.gridFeelControlText)
         clickRow(feelMenu, 1)
         tryCompare(grid, "gridMenuKind", 0)
         tryCompare(grid, "tripletGrid", true)
         compare(grid.gridFeelControlText, "Triplet")
         feelMenu = openGrid("timelineRulerFeelControl", 2)
         assertRows(feelMenu, [0, 1], 1)
+        rowTextEqualsControlText(feelMenu, grid.gridFeelControlText)
         clickRow(feelMenu, 1)
         tryCompare(grid, "gridMenuKind", 0)
         compare(grid.tripletGrid, true)
@@ -209,8 +267,49 @@ TestCase {
         openGrid("timelineRulerDivisionControl", 1)
         keyClick(Qt.Key_Escape)
         tryCompare(grid, "gridMenuKind", 0)
-        compare(grid.gridDivisionControlText, "÷8")
+        compare(grid.gridSelectionMenuId, 16)
+        compare(grid.editCursorTick, beforeCursor)
+        compare(grid.snapTicks, beforeSnap)
+        compare(grid.gridDivisionControlText, "1/16")
         compare(grid.tripletGrid, true)
+
+        openGrid("timelineRulerDivisionControl", 1)
+        grid.dismissGridMenu()
+        tryCompare(grid, "gridMenuKind", 0)
+        tryVerify(function() { return findChild(surface(), "quickMenuPanelRoot") === null }, 3000)
+        compare(grid.gridSelectionMenuId, 16)
+        compare(grid.tripletGrid, true)
+        compare(grid.gridDivisionControlText, "1/16")
+        mouseClick(ruler, ruler.width / 2, ruler.height / 2, Qt.RightButton)
+        tryCompare(session, "timeSigMenuOpen", true)
+        compare(grid.gridSelectionMenuId, 16)
+        compare(grid.tripletGrid, true)
+        timeSigHost.closeTimeSigMenu()
+        tryCompare(session, "timeSigMenuOpen", false)
+        divisionMenu = openGrid("timelineRulerDivisionControl", 1)
+        assertRows(divisionMenu, ids, grid.gridSelectionMenuId)
+        compare(grid.tripletGrid, true)
+        compare(grid.gridDivisionControlText, "1/16")
+        keyClick(Qt.Key_Escape)
+        tryCompare(grid, "gridMenuKind", 0)
+    }
+
+    function test_gridShortcutsWalkDenominationsAndFeel() {
+        openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        compare(grid.gridSelectionMenuId, -1)
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        tryCompare(grid, "gridSelectionMenuId", 4)
+        keyClick(Qt.Key_1, Qt.ControlModifier)
+        tryCompare(grid, "gridSelectionMenuId", 8)
+        keyClick(Qt.Key_2, Qt.ControlModifier)
+        tryCompare(grid, "gridSelectionMenuId", 4)
+        keyClick(Qt.Key_3, Qt.ControlModifier)
+        tryCompare(grid, "tripletGrid", true)
+        compare(grid.gridFeelControlText, "Triplet")
     }
 
     function test_gridControlsShowComboboxAffordance() {
@@ -220,6 +319,7 @@ TestCase {
                      ["timelineRulerFeelControl", "gridFeelControlText"]]
         for (var i = 0; i < pairs.length; ++i) {
             var item = control(pairs[i][0])
+            compare(item.activeFocusOnTab, true)
             var background = findChild(item, "gridControlBackground")
             verify(background !== null)
             verify(background.border.width > 0)

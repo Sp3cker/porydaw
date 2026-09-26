@@ -7,6 +7,7 @@ private let viewportID = "swiftcore/EditorGridCamera::viewportPushAndBounds"
 let gridCameraWheelID = "swiftcore/EditorGridCamera::wheelPolicy"
 private let projectionID = "swiftcore/EditorGridCamera::projectionAndHitTesting"
 private let isolationID = "swiftcore/EditorGridCamera::navigationIsolationAndReveal"
+private let latticeID = "rollcheck/PianoRollStaticTest::tickRangeWalksFractionalLattice"
 @MainActor
 final class GridCameraIntegrationCounters {
     var camera = 0
@@ -54,6 +55,54 @@ func runEditorGridCameraChecks(_ report: CheckReport, session: DocumentSession) 
     checkProjection(report, session: session, grid: grid)
     checkIsolation(report, session: session, grid: grid, counters: counters)
     checkTrackOwnerRemap(report, session: session)
+    checkFractionalGridLattice(report)
+}
+
+@MainActor
+private func checkFractionalGridLattice(_ report: CheckReport) {
+    let axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 384))
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320,
+                              timeAxis: axis)
+    var camera = EditorCamera(ticksPerBeat: 24, lengthTicks: 384, viewportWidth: 640,
+                              rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+    _ = camera.setTimeZoom(384)
+    var grid = RollGrid(axis: axis, clockTicks: 1, metrics: metrics)
+    let stride = grid.gridTicksAt(96, camera: camera)
+    report.expect(stride > 0 && stride < axis.segmentAt(96).beatTicks,
+                  cppID: latticeID, message: "segment lattice stride is positive")
+    var seen: [Tick] = []
+    grid.forEachSubdivision(from: 96, to: 289, camera: camera) { tick, _ in seen.append(tick) }
+    report.expect(!seen.isEmpty && seen.allSatisfy { $0 >= 96 && $0 < 289 && $0 % stride == 0
+        && $0 % 24 != 0 }, cppID: latticeID,
+                  message: "visible auto sub-grid is culled to the viewport and skips beats")
+
+    _ = camera.setTimeZoom(192)
+    grid.setSelection(.musical(16))
+    let snap = grid.snapTicksAt(96, camera: camera)
+    let drawn = grid.gridTicksAt(96, camera: camera)
+    report.expect(snap >= 3 && 24 % snap == 0 && drawn > 1 && 96 % drawn == 0,
+                  cppID: latticeID, message: "coarse lattice divides the beat")
+    report.expect(grid.nextSubdivisionTickAfter(96, camera: camera) == 96 + drawn
+        && grid.nextSubdivisionTickAfter(97, camera: camera) == 96 + drawn,
+                  cppID: latticeID, message: "subdivision restarts at the segment anchor")
+    let midpoint = 96.0 + Double(snap) / 2
+    report.expect(grid.snapTick(midpoint, camera: camera) == 96
+        && grid.snapTick(midpoint - 0.25, camera: camera) == 96
+        && grid.snapTick(midpoint + 0.25, camera: camera) == 96 + snap,
+                  cppID: latticeID, message: "auto tie rounds down")
+    report.expectEqual(expected: 96, actual: grid.snapTickDown(midpoint + 0.25, camera: camera),
+                       cppID: latticeID, what: "tie down is floor")
+    report.expectEqual(expected: 96 + snap,
+                       actual: grid.snapTickUp(midpoint - 0.25, camera: camera),
+                       cppID: latticeID, what: "tie up is ceil")
+
+    grid.axis = TimeAxis(map: TimeMap(ticksPerBeat: 24, lengthTicks: 384,
+        timeSigs: [TimeSigPoint(tick: 102, numerator: 5, denomPow2: 3)]))
+    report.expect(grid.snapTickDown(103.5, camera: camera) == 102
+        && grid.snapTickUp(101.5, camera: camera) == 102
+        && grid.nextSubdivisionTickAfter(101, camera: camera) == 102
+        && grid.nextSubdivisionTickAfter(102, camera: camera) == 102 + drawn,
+                  cppID: latticeID, message: "sub-grid restarts at the signature seam")
 }
 
 @MainActor

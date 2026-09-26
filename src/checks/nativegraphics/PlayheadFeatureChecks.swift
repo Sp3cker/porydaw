@@ -101,7 +101,6 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
 
     let automation = PlayheadGuideHoverOwner.automation.rawValue
     let voiceChanges = PlayheadGuideHoverOwner.voiceChanges.rawValue
-    let roll = PlayheadGuideHoverOwner.roll.rawValue
     let automationTick = 72.0
     let automationX = session.camera.contentX(tick: automationTick)
     guides.updateHover(owner: automation, contentX: automationX)
@@ -148,12 +147,12 @@ private func checkPlayheadGuides(_ report: CheckReport, suite: DocumentSession,
                   message: "an invalid hover does not suppress the edit guide")
 
     let viewportWidth = session.camera.snapshot.viewportWidth
-    guides.updateHover(owner: roll, contentX: viewportWidth + 1.0)
+    guides.updateHover(owner: automation, contentX: viewportWidth + 1.0)
     report.expect(!guides.hover.visible && guides.hover.contentX >= viewportWidth,
                   cppID: playheadCppID(playheadGuidesID, "viewport-edge"),
                   message: "a projected hover outside [0, viewportWidth) is hidden")
 
-    guides.updateHover(owner: roll, contentX: automationX)
+    guides.updateHover(owner: automation, contentX: automationX)
     let editBeforeScroll = guides.edit.contentX
     let hoverBeforeScroll = guides.hover.contentX
     let priorScroll = session.camera.snapshot.scrollX

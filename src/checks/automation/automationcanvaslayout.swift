@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with automationcanvaslayout.cpp.
@@ -52,9 +52,7 @@ func drawerAutomationHitGeometry(_ report: CheckReport, suite: DocumentSession,
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     let cell = projection.cell(atRawTick: 48)
     report.expect(cell.tickBegin < cell.tickEnd && cell.tickEnd <= fixture.songEndTick,

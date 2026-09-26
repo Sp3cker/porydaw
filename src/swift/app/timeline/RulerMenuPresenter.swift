@@ -325,10 +325,7 @@ public final class RulerMenuPresenter {
 
     private func snapped(_ raw: Double) -> Tick {
         let position = min(Double(TimeDefaults.maxTick), max(0, raw))
-        let lower = grid.snapTickDown(position)
-        let upper = min(Int(TimeDefaults.maxTick), lower + max(1, grid.snapTicks))
-        let nearest = position - Double(lower) <= Double(upper) - position ? lower : upper
-        return Tick(nearest)
+        return session.grid.snapTick(position, camera: session.camera)
     }
 
     private func publish(_ items: [RulerMenuRow]) {

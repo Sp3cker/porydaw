@@ -672,7 +672,10 @@ The S entries are exact report.expect/fail predicates already executed by the sw
 projectSession suite (selection.swift, pencil.swift, interlock.swift, resize.swift) or by
 the shell-grid-input lane (tst_ShellGridInput.qml). deno task verify --filter swiftcore
 --verbose PASS 1/14 ok and deno task verify:shell --verbose PASS 11/11 (both
-controller-recorded).
+controller-recorded). The draw sites in this ledger use the shared pencil.swift helper
+pencilDraw, which since task 35 performs the fork gesture (press + release parks the cursor,
+doublePointer + release commits the note); the A004/A032 latch reasons below stay open because
+the Swift draws still use the fixture latch of 100.
 
 S001 | checkGestureInterlock | src/checks/rollcheck/interlock.swift
 Anchor: message "A001 velocity fixture seeds notes A and B"

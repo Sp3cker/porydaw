@@ -56,8 +56,7 @@ extension AutomationPage {
                 camera: camera, bounds: bounds, geometry: geometry, font: baseFontPx,
                 range: laneRanges[facts.parameter])
         }
-        let snapPolicy = AutomationSnapPolicy(baseFontPx: baseFontPx,
-            devicePixelRatio: devicePixelRatio, timeAxis: TimeAxis(), clockTicks: 1)
+        let snapPolicy = AutomationSnapPolicy(grid: RollGrid(), clockTicks: 1)
         return AutomationProjection(
             camera: camera,
             bounds: bounds,
@@ -167,6 +166,8 @@ extension AutomationPage {
         }
         let camera = session.camera
         let metrics = gridMetrics(session)
+        var grid = session.grid
+        grid.metrics = metrics
         let physicalPixel = max(metrics.pixel, 0.0001)
         let roundingMargin = physicalPixel / 2
         let beginTick = camera.tickAtContentX(-roundingMargin)
@@ -179,7 +180,7 @@ extension AutomationPage {
                      end: Tick(max(1, endTick.rounded(.up))))
         let stroke = metrics.gridLineStroke
         var rects: [SceneRect] = []
-        metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
+        grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let color = level == 1 ? palette.gridLineSub1
                 : level == 2 ? palette.gridLineSub2 : palette.gridLineSub3
             rects.append(SceneRect(x: xForTick(tick) - stroke / 2, y: 0, width: stroke,
@@ -187,11 +188,11 @@ extension AutomationPage {
                                    primitiveName: "automationGrid"))
         }
         var segment = metrics.timeAxis.segmentAt(range.begin)
-        var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+        var finest = grid.gridTicksAt(range.begin, camera: camera) == 1
         metrics.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
             if tick >= segment.next {
                 segment = metrics.timeAxis.segmentAt(tick)
-                finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
+                finest = grid.gridTicksAt(tick, camera: camera) == 1
             }
             rects.append(SceneRect(
                 x: xForTick(tick) - stroke / 2, y: 0, width: stroke, height: plotHeight,

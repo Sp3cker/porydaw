@@ -71,6 +71,8 @@ private func pencilFreeCell(
 private func pencilDraw(_ cell: PencilCell, grid: PianoGrid) {
     grid.beginPointer(x: cell.x, y: cell.y, modifiers: 0)
     grid.endPointer(x: cell.x, y: cell.y)
+    grid.doublePointer(x: cell.x, y: cell.y)
+    grid.endPointer(x: cell.x, y: cell.y)
 }
 
 @MainActor

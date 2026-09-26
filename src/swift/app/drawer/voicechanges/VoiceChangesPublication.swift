@@ -47,10 +47,8 @@ extension VoiceChangesPage {
     @QtIgnored
     func snapTick(at x: Double, fine: Bool = false) -> Tick {
         guard let session else { return 0 }
-        return VoiceChangesScene.snapTick(
-            at: x, fine: fine, camera: session.camera, metrics: gridMetrics(session),
-            division: session.document.ticksPerBeat,
-            extendedClocks: session.document.state.config.extendedClocks)
+        let raw = max(0, session.camera.tickAtContentX(max(0, x)))
+        return session.grid.snapTick(raw, camera: session.camera, fine: fine)
     }
 
     @QtIgnored
@@ -136,8 +134,7 @@ extension VoiceChangesPage {
             stairLimit: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceFourFactor),
             camera: session.camera,
             metrics: gridMetrics(session),
-            division: session.document.ticksPerBeat,
-            extendedClocks: session.document.state.config.extendedClocks,
+            grid: session.grid,
             interaction: interactionSnapshot())
     }
 

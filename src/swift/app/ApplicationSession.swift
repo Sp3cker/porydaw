@@ -1013,6 +1013,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             if let tab {
                 session.selectedTrack = tab.selectedTrack
                 session.editCursor = tab.editCursor
+                session.grid = tab.grid
+                session.grid.axis = session.projectionCache.timeAxis
+                session.grid.setTicksPerClock(session.gridClockTicks)
             }
             let workspace = DocumentWorkspace(
                 session: session, audio: audio, playhead: playhead,
@@ -1035,19 +1038,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 }
                 workspace.grid.refreshCamera()
             }
-            if let tab {
-                if tab.snapScale != 0 {
-                    workspace.grid.openGridMenu(kind: 1)
-                    workspace.grid.activateGridMenuRow(actionId: tab.snapScale)
-                }
-                if tab.tripletGrid {
-                    workspace.grid.openGridMenu(kind: 2)
-                    workspace.grid.activateGridMenuRow(actionId: 1)
-                }
-            }
             workspace.rulerMenu.onSeek = { [weak self, weak workspace] tick in
                 guard let self, let workspace else { return }
                 self.seekToTick(tick, in: workspace)
+            }
+            workspace.grid.onCommitCursor = { [weak self, weak workspace] tick in
+                guard let self, let workspace else { return }
+                self.seekToTick(tick, in: workspace)
+            }
+            workspace.grid.onClearTimeSelection = { [weak workspace] in
+                workspace?.automationPage.clearTimeSelection()
             }
             // New tabs receive the current View menu display modes: the grid
             // defaults both off, and each setter no-ops (without rebuilding)

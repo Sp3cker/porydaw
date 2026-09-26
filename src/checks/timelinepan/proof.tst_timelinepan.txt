@@ -876,6 +876,11 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 checkPlayheadMiddlePan -> swiftcore/PlayheadFeature::middlePan::{begin,camera-delta,active,follow-suspended,end,cancel}
+checkPlayheadGuides -> swiftcore/PlayheadFeature::guidesResizeScrollAndOwnership; the hover
+owners are automation and voiceChanges only. Task 35 deleted the Swift `.roll` hover owner
+because the fork had no roll hover guide (fork pianoroll_interaction.cpp:109-111 refreshes only
+the cursor shape and RollPlot mouse hint on idle pointer moves), so no site in this ledger
+asserts a roll hover guide and none is retired here.
 roll_qml_tests lane (src/checks/rollqml/): tst_TimelinePan.qml functions carry the
 wheel/middle-drag pan, hover-chip overlay, coalesced-refresh, track-switch label,
 and selected-pan assertions.

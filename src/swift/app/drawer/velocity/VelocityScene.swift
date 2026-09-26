@@ -130,6 +130,7 @@ struct VelocitySceneInput: Sendable {
     var baseFontPx: Double
     /// The page's cached grid metrics; the scene owns no cache of its own.
     var metrics: GridMetrics?
+    var grid: RollGrid? = nil
     var palette: VelocityScenePalette
     /// The page's handle-reuse decision.
     var reuseGeometry: Bool

@@ -70,8 +70,10 @@ extension AutomationPage {
 
     func selectionSnapPolicy() -> AutomationSnapPolicy? {
         guard let session else { return nil }
-        return AutomationSnapPolicy(document: session.document, timeline: session.timeline,
-                                    baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio)
+        var grid = session.grid
+        grid.metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio,
+                                   width: 0, height: 0, timeAxis: grid.axis)
+        return AutomationSnapPolicy(grid: grid, clockTicks: session.gridClockTicks)
     }
 
     func selectionSnapDuration() -> Tick {

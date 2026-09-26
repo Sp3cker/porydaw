@@ -287,6 +287,11 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
+Task 35 note: A001-A015 draw through the shared pencil.swift helper pencilDraw, which now
+performs the fork gesture of harness.cpp:298-304 drawNote — press + release (the click parks
+the edit cursor) and then doublePointer + release (the double-click commits the note), with the
+mounted lane using mouseDoubleClickSequence. The predicates S007, S009 and S013 below and the
+mounted S011/S012 rows were re-verified against that helper; no disposition changed.
 S001..S010 are report.expect predicates in the registered swiftcore check pencil.swift (plus
 S013 in EditorGridCameraChecks.swift), executed by deno task verify --filter swiftcore
 --verbose. S011/S012 are shell-lane Qt Quick Test predicates (src/checks/editorqml/

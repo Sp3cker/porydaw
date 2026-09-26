@@ -82,6 +82,11 @@ public final class DocumentSession {
         }
     }
     public private(set) var camera: EditorCamera
+    var grid: RollGrid
+    var gridClockTicks: Tick {
+        TimelineSnapPolicy.clockTicks(division: document.ticksPerBeat,
+                                      extendedClocks: document.state.config.extendedClocks)
+    }
     public var mutedTracks: Set<Int> = [] {
         didSet {
             if mutedTracks != oldValue { publishChange([.mixState]) }
@@ -135,6 +140,15 @@ public final class DocumentSession {
             viewportWidth: 0,
             rollHeight: 0,
             limits: limits)
+        grid = RollGrid(axis: TimeAxis(map: TimeMap(
+            ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
+            lengthTicks: timeline.lengthTicks,
+            timeSigs: document.timeSignatures.map {
+                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                             denomPow2: $0.denominatorPower)
+            })), clockTicks: TimelineSnapPolicy.clockTicks(
+                division: document.ticksPerBeat,
+                extendedClocks: document.state.config.extendedClocks))
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
@@ -619,6 +633,8 @@ public final class DocumentSession {
             camera.updateTimeDomain(
                 ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
                 lengthTicks: UInt64(timeline.lengthTicks))
+            grid.axis = projectionCache.timeAxis
+            grid.setTicksPerClock(gridClockTicks)
             onPlayback?(timeline)
             var domains: SessionChangeDomains = [.document, .dirty, .history]
             if selectedNoteOrder != priorNotes || selectedTrack != priorPrimary

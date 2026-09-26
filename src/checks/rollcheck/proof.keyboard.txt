@@ -5,6 +5,7 @@ Original: src/checks/rollcheck/keyboard.cpp
 Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
 Swift counterpart: src/checks/rollcheck/keyboard.swift
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift counterpart: src/checks/rollcheck/selection.swift (A056 click-clears-time-selection predicate, cppID swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
@@ -18,6 +19,8 @@ Result: PASS — 24 applicable entries, 7 filtered skips; runtime swiftcore 20.3
 The swiftcore lane executes the four checkKeyboardSkipsGhosts report.expect predicates indexed as S078–S081 under cppID swiftcore/PianoRoll::keyboardTranspose, and build/proof-evidence/swiftcore.json records all four anchor literals.
 Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose
 Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/editorqml-drawer.json, swiftcore-projectsession.json and swiftroll-window.json record the predicates anchored as S083–S086.
+Command: deno task verify --filter swiftcore --verbose (task-35 roll-pointer handoff, locked at /tmp/porydaw-build.lock)
+Result: PASS — implementer-reported 12/37 ok, 25 skipped on the frozen tree; S087's row is recorded in build/proof-evidence/swiftcore-projectsession.json under cppID swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts. This bookkeeping pass ran no lane.
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -566,8 +569,8 @@ Original expression:
   QVERIFY2(emptyKey >= 0, "could not find empty roll space inside the time selection");
 
 A056 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:470
-Disposition: GAP
-Mapping/reason: GAP — no pointer-click delivery or time selection in the Swift roll: click-to-clear-time-selection is unmodelled (Swift drives grid.performCommand directly).
+Disposition: MATCHED
+Mapping: S087
 Source context since previous assertion:
       const QPoint emptyInside(qRound(view.camera().displayX(double(emptyTick), 0.0, rows.dpr())),
                                rows.centerY(emptyKey));
@@ -1385,3 +1388,6 @@ Anchor: message "track markers use the stable track-identity fill"
 
 S086 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
 Anchor: message "marker x is the shared camera content position of its tick"
+
+S087 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "A056 clicking inside the primary time selection clears its active span"

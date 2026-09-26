@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with painting.cpp.
@@ -267,9 +267,8 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(
+            session: fixture.session, font: page.baseFontPx, dpr: 1),
         songEndTick: fixture.songEndTick)
     if let first = tempoProjection.points.first, let last = tempoProjection.points.last {
         report.expectEqual(expected: sharedMap.x(first.tick), actual: first.x, cppID: drawerAutomationPaintingModelID,

@@ -33,6 +33,312 @@ enum GridCameraPolicy {
     }
 }
 
+enum GridFeel: Equatable {
+    case straight
+    case triplet
+}
+
+enum GridSelection: Equatable {
+    case auto
+    case musical(Int)
+    case clock
+
+    func toMenuId() -> Int {
+        switch self {
+        case .auto: -1
+        case .musical(let denominator): denominator
+        case .clock: 0
+        }
+    }
+
+    static func fromMenuId(_ id: Int) -> GridSelection {
+        id < 0 ? .auto : id == 0 ? .clock : .musical(id)
+    }
+}
+
+struct RollGrid {
+    private static let straightLadder = [32, 16, 8, 4, 2, 1]
+    private static let tripletLadder = [48, 24, 12, 6, 3, 1]
+    var axis: TimeAxis
+    var metrics: GridMetrics
+    private(set) var feel: GridFeel = .straight
+    private(set) var selection: GridSelection = .auto
+    private var clock: Tick = 0
+
+    init(axis: TimeAxis = TimeAxis(), clockTicks: Tick = 0,
+         metrics: GridMetrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)) {
+        self.axis = axis
+        self.clock = clockTicks
+        self.metrics = metrics
+    }
+
+    private var clockTicks: Tick { max(1, clock) }
+
+    private func musicalTicks(_ selection: GridSelection, feel: GridFeel) -> Tick {
+        guard case .musical(let denominator) = selection,
+              denominator >= 4, denominator <= Int(UInt32.max),
+              denominator & (denominator - 1) == 0 else { return 0 }
+        let numerator = UInt64(axis.ticksPerBeat) * (feel == .straight ? 4 : 8)
+        let divisor = UInt64(denominator) * (feel == .straight ? 1 : 3)
+        return numerator % divisor == 0 ? Tick(numerator / divisor) : 0
+    }
+
+    var selections: [GridSelection] {
+        var ladder: [GridSelection] = [.auto]
+        var denominator = 4
+        while denominator <= Int(UInt32.max) {
+            let candidate = GridSelection.musical(denominator)
+            let ticks = musicalTicks(candidate, feel: feel)
+            if ticks == 0 || ticks <= clockTicks { break }
+            ladder.append(candidate)
+            if denominator > Int(UInt32.max) / 2 { break }
+            denominator *= 2
+        }
+        ladder.append(.clock)
+        return ladder
+    }
+
+    private func canonical(_ candidate: GridSelection) -> GridSelection {
+        if candidate == .auto { return .auto }
+        if case .musical = candidate, musicalTicks(candidate, feel: feel) > clockTicks {
+            return candidate
+        }
+        return .clock
+    }
+
+    @discardableResult
+    mutating func setState(_ candidate: GridSelection, feel newFeel: GridFeel) -> Bool {
+        let oldFeel = feel
+        let oldSelection = selection
+        feel = newFeel
+        selection = canonical(candidate)
+        return feel != oldFeel || selection != oldSelection
+    }
+
+    @discardableResult
+    mutating func setSelection(_ candidate: GridSelection) -> Bool {
+        setState(candidate, feel: feel)
+    }
+
+    @discardableResult
+    mutating func setFeel(_ newFeel: GridFeel) -> Bool {
+        setState(selection, feel: newFeel)
+    }
+
+    @discardableResult
+    mutating func setTicksPerClock(_ ticks: Tick) -> Bool {
+        let changed = clock != ticks
+        clock = ticks
+        let recanonicalized = setState(selection, feel: feel)
+        return recanonicalized || changed
+    }
+
+    @discardableResult
+    mutating func narrow() -> Bool {
+        let ladder = selections
+        guard let index = ladder.firstIndex(of: selection) else { return setSelection(selection) }
+        return index + 1 < ladder.count && setSelection(ladder[index + 1])
+    }
+
+    @discardableResult
+    mutating func widen() -> Bool {
+        let ladder = selections
+        guard let index = ladder.firstIndex(of: selection) else { return setSelection(selection) }
+        return index > 0 && setSelection(ladder[index - 1])
+    }
+
+    @discardableResult
+    mutating func toggleFeel() -> Bool {
+        let previousFeel = feel
+        let previousSelection = selection
+        let previousSpacing = musicalTicks(previousSelection, feel: previousFeel)
+        feel = previousFeel == .straight ? .triplet : .straight
+        guard case .musical = previousSelection else { return true }
+        if canonical(previousSelection) == previousSelection { return true }
+        let towardFiner = previousFeel == .straight
+        var nearest: GridSelection = .clock
+        var nearestSpacing: Tick = towardFiner ? 0 : Tick.max
+        for candidate in selections {
+            guard case .musical = candidate else { continue }
+            let spacing = musicalTicks(candidate, feel: feel)
+            if towardFiner ? (spacing <= previousSpacing && spacing > nearestSpacing)
+                : (spacing >= previousSpacing && spacing < nearestSpacing) {
+                nearest = candidate
+                nearestSpacing = spacing
+            }
+        }
+        selection = nearest
+        return true
+    }
+
+    private func adaptiveTicks(_ segment: GridSegment, camera: EditorCamera, snap: Bool) -> Tick {
+        let ladder = feel == .straight ? Self.straightLadder : Self.tripletLadder
+        let beat = UInt64(segment.beatTicks)
+        let width = Double(beat) * camera.snapshot.pixelsPerTick
+        let step = ladder.firstIndex {
+            width / Double($0) >= metrics.autoGridMinCell
+        } ?? ladder.count - 1
+        let visible = max(UInt64(clockTicks), beat / UInt64(ladder[step]))
+        guard snap && step > 0 else { return Tick(visible) }
+        let fine = max(1, beat / UInt64(ladder[step - 1]))
+        var a = visible
+        var b = fine
+        while b != 0 { (a, b) = (b, a % b) }
+        return Tick(max(UInt64(clockTicks), a))
+    }
+
+    private var fixedTicks: Tick {
+        switch selection {
+        case .musical: max(clockTicks, musicalTicks(selection, feel: feel))
+        case .auto, .clock: clockTicks
+        }
+    }
+
+    func gridTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
+        selection == .auto ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: false)
+            : fixedTicks
+    }
+
+    func snapTicksAt(_ tick: Tick, camera: EditorCamera) -> Tick {
+        selection == .auto ? adaptiveTicks(axis.segmentAt(tick), camera: camera, snap: true)
+            : fixedTicks
+    }
+
+    func fineGridTicks(camera: EditorCamera) -> Tick {
+        clock == 0 ? gridTicksAt(0, camera: camera) : clockTicks
+    }
+
+    func subGridAnchorIn(_ segment: GridSegment) -> Tick {
+        selection == .clock ? 0 : segment.start
+    }
+
+    func drawsSubGridIn(_ segment: GridSegment, camera: EditorCamera) -> Bool {
+        switch selection {
+        case .clock:
+            Double(fixedTicks) * camera.snapshot.pixelsPerTick >= metrics.gridLineStroke
+        case .musical:
+            Double(fixedTicks) * camera.snapshot.pixelsPerTick >= metrics.autoGridMinCell
+        case .auto:
+            Double(segment.beatTicks) * camera.snapshot.pixelsPerTick >= metrics.detailMinPxPerBeat
+        }
+    }
+
+    func visibleGridCellContaining(_ tick: Tick, camera: EditorCamera) -> (start: Tick, end: Tick) {
+        let segment = axis.segmentAt(tick)
+        let beat = UInt64(segment.beatTicks)
+        let stride: UInt64
+        if camera.snapshot.pixelsPerBeat < metrics.detailMinPxPerBeat {
+            stride = beat * UInt64(segment.beatsPerBar)
+        } else if drawsSubGridIn(segment, camera: camera) {
+            stride = UInt64(gridTicksAt(tick, camera: camera))
+        } else {
+            stride = beat
+        }
+        let start = UInt64(segment.start) + (UInt64(tick) - UInt64(segment.start)) / stride * stride
+        let next = start > UInt64(TimeDefaults.maxTick) - stride
+            ? UInt64(TimeDefaults.noTick) : start + stride
+        return (Tick(start), min(Tick(next), segment.next))
+    }
+
+    private func lattice(_ tick: Double, camera: EditorCamera, fine: Bool)
+        -> (anchor: UInt64, stride: UInt64, limit: UInt64, tiesUp: Bool) {
+        if fine || selection == .clock {
+            return (0, UInt64(fineGridTicks(camera: camera)), UInt64(TimeDefaults.maxTick), true)
+        }
+        let position = TimeDefaults.tick(from: tick)
+        let segment = axis.segmentAt(position)
+        return (UInt64(segment.start), UInt64(snapTicksAt(position, camera: camera)),
+                min(UInt64(segment.next), UInt64(TimeDefaults.maxTick)), false)
+    }
+
+    private func floor(_ tick: Double, lattice: (anchor: UInt64, stride: UInt64,
+                        limit: UInt64, tiesUp: Bool)) -> Tick {
+        let position = min(max(tick, Double(lattice.anchor)), Double(lattice.limit))
+        return TimeDefaults.tick(from: min(Double(lattice.limit),
+            Double(lattice.anchor) + ((position - Double(lattice.anchor))
+                / Double(lattice.stride)).rounded(.down) * Double(lattice.stride)))
+    }
+
+    private func ceil(_ tick: Double, lattice: (anchor: UInt64, stride: UInt64,
+                       limit: UInt64, tiesUp: Bool)) -> Tick {
+        let low = floor(tick, lattice: lattice)
+        return Double(low) >= tick ? low
+            : Tick(min(UInt64(low) + lattice.stride, lattice.limit))
+    }
+
+    func snapTickDown(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+        floor(max(0, tick), lattice: lattice(tick, camera: camera, fine: fine))
+    }
+
+    func snapTickUp(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+        ceil(max(0, tick), lattice: lattice(tick, camera: camera, fine: fine))
+    }
+
+    func snapTick(_ tick: Double, camera: EditorCamera, fine: Bool = false) -> Tick {
+        let lattice = lattice(tick, camera: camera, fine: fine)
+        let low = floor(max(0, tick), lattice: lattice)
+        let high = ceil(max(0, tick), lattice: lattice)
+        let below = tick - Double(low)
+        let above = Double(high) - tick
+        return (lattice.tiesUp ? below < above : below <= above) ? low : high
+    }
+
+    func nextSubdivisionTickAfter(_ tick: Tick, camera: EditorCamera) -> Tick {
+        let segment = axis.segmentAt(tick)
+        let stride = UInt64(gridTicksAt(tick, camera: camera))
+        let anchor = UInt64(subGridAnchorIn(segment))
+        let next = anchor + ((UInt64(tick) - anchor) / stride + 1) * stride
+        let limit = selection == .clock ? UInt64(TimeDefaults.maxTick)
+            : min(UInt64(segment.next), UInt64(TimeDefaults.maxTick))
+        return Tick(min(next, limit))
+    }
+
+    func nextSnapTickAfter(_ tick: Tick, camera: EditorCamera, fine: Bool = false) -> Tick {
+        if fine || selection == .clock {
+            let stride = UInt64(fineGridTicks(camera: camera))
+            let next = (UInt64(tick) / stride + 1) * stride
+            return Tick(min(next, UInt64(TimeDefaults.maxTick)))
+        }
+        let segment = axis.segmentAt(tick)
+        let stride = UInt64(snapTicksAt(tick, camera: camera))
+        let anchor = UInt64(segment.start)
+        let next = anchor + ((UInt64(tick) - anchor) / stride + 1) * stride
+        return Tick(min(next, UInt64(segment.next), UInt64(TimeDefaults.maxTick)))
+    }
+
+    func forEachSubdivision(from begin: Tick, to end: Tick, camera: EditorCamera,
+                            _ visit: (Tick, Int) -> Void) {
+        var start = begin
+        while start < end {
+            let segment = axis.segmentAt(start)
+            let stop = min(end, segment.next)
+            let beat = UInt64(segment.beatTicks)
+            let stride = UInt64(gridTicksAt(start, camera: camera))
+            if stride < beat && drawsSubGridIn(segment, camera: camera) {
+                let anchor = UInt64(subGridAnchorIn(segment))
+                let relative = UInt64(start) - anchor
+                var tick = anchor + (relative / stride + (relative % stride == 0 ? 0 : 1)) * stride
+                while tick < UInt64(stop) {
+                    let beatRelative = (tick - UInt64(segment.start)) % beat
+                    if beatRelative != 0 {
+                        let level: Int
+                        if beatRelative % max(1, beat / (feel == .triplet ? 3 : 2)) == 0 {
+                            level = 1
+                        } else if beatRelative % max(1, beat / (feel == .triplet ? 6 : 4)) == 0 {
+                            level = 2
+                        } else {
+                            level = 3
+                        }
+                        visit(Tick(tick), level)
+                    }
+                    tick += stride
+                }
+            }
+            start = stop
+        }
+    }
+}
+
 struct GridMetrics {
     var baseFontPx: Double = 13
     var dpr: Double = 1
@@ -54,8 +360,6 @@ struct GridMetrics {
     var detailMinPxPerBeat: Double = 11
     let gridLineStroke: Double
     var autoGridMinCell: Double = 17
-    var snapScale: Int = 0
-    var tripletGrid = false
 
     var rulerBeatLabelZoomFactor: Double = 3.0
     var spaceHalf: Double = 2
@@ -91,97 +395,6 @@ struct GridMetrics {
         pixel = physicalPixel(dpr)
     }
 
-    private func gridLadderStep(beatTicks: Int, pixelsPerTick: Double) -> Int {
-        var step = Self.gridLadder.count - 1
-        for i in 0..<Self.gridLadder.count
-        where Double(beatTicks) * pixelsPerTick / Double(Self.gridLadder[i]) >= autoGridMinCell {
-            step = i
-            break
-        }
-        return step
-    }
-
-    private static let gridLadder = [32, 16, 8, 4, 2, 1]
-
-    func visibleGridTicks(camera: EditorCamera) -> Int {
-        visibleGridTicks(in: timeAxis.segmentAt(0), camera: camera)
-    }
-
-    func visibleGridTicks(in segment: GridSegment, camera: EditorCamera) -> Int {
-        let beat = Int(segment.beatTicks)
-        return max(1, beat / Self.gridLadder[
-            gridLadderStep(beatTicks: beat, pixelsPerTick: camera.snapshot.pixelsPerTick)])
-    }
-
-
-    func forEachSubdivision(from begin: Tick, to end: Tick, camera: EditorCamera,
-                            _ visit: (Tick, Int) -> Void) {
-        var start = begin
-        while start < end {
-            let segment = timeAxis.segmentAt(start)
-            let stop = min(end, segment.next)
-            let beat = UInt64(segment.beatTicks)
-            let stride = UInt64(visibleGridTicks(in: segment, camera: camera))
-            let anchor = UInt64(segment.start)
-            let offset = UInt64(start) - anchor
-            var tick = anchor + ((offset + stride - 1) / stride) * stride
-            while tick < UInt64(stop) {
-                let relative = (tick - anchor) % beat
-                if relative != 0 {
-                    let level = (relative * 2) % beat == 0 ? 1
-                        : ((relative * 4) % beat == 0 ? 2 : 3)
-                    visit(Tick(tick), level)
-                }
-                tick += stride
-            }
-            start = stop
-        }
-    }
-
-    func snapTicks(camera: EditorCamera) -> Int {
-        let beat = Int(timeAxis.segmentAt(0).beatTicks)
-        let step = gridLadderStep(
-            beatTicks: beat, pixelsPerTick: camera.snapshot.pixelsPerTick)
-        let visible = max(1, beat / Self.gridLadder[step])
-        let fine = step > 0 ? max(1, beat / Self.gridLadder[step - 1]) : visible
-        func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
-        var result = max(1, gcd(visible, fine))
-        if snapScale < 0 {
-            for _ in snapScale..<0 { result = max(1, result / 2) }
-        } else if snapScale > 0 {
-            for _ in 0..<snapScale {
-                result = min(Int(TimeDefaults.maxTick), result * 2)
-            }
-        }
-        if tripletGrid { result = max(1, result * 2 / 3) }
-        return result
-    }
-
-    private func latticeFloor(_ tick: Double, camera: EditorCamera) -> Int {
-        let stride = snapTicks(camera: camera)
-        let position = max(0.0, tick)
-        return Int((position / Double(stride)).rounded(.down)) * stride
-    }
-
-    private func latticeCeil(_ tick: Double, camera: EditorCamera) -> Int {
-        let lo = latticeFloor(tick, camera: camera)
-        return Double(lo) >= tick ? lo : lo + snapTicks(camera: camera)
-    }
-
-    func snapTick(_ tick: Double, camera: EditorCamera) -> Int {
-        let t = max(0.0, tick)
-        let lo = latticeFloor(t, camera: camera)
-        let hi = latticeCeil(t, camera: camera)
-        return (t - Double(lo)) <= (Double(hi) - t) ? lo : hi
-    }
-
-    func snapTickDown(_ tick: Double, camera: EditorCamera) -> Int {
-        latticeFloor(max(0.0, tick), camera: camera)
-    }
-
-    func snapTickUp(_ tick: Double, camera: EditorCamera) -> Int {
-        latticeCeil(max(0.0, tick), camera: camera)
-    }
 
     func noteRect(camera: EditorCamera, x0: Double, x1: Double, pitch: Int) ->
         (x: Double, y: Double, w: Double, h: Double) {

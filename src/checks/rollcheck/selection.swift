@@ -408,12 +408,30 @@ private func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSe
     let aX = seed.rects[0].x + seed.rects[0].width / 2
     let aY = seed.rects[0].y + seed.rects[0].height / 2
     session.setSelectedNotes(seed.ids)
+    var noteAuditions: [(pitch: Int, velocity: Int)] = []
+    grid.onAudition = { _, pitch, velocity in
+        noteAuditions.append((pitch, velocity))
+    }
+    let platformSlop = grid.dragDistance
+    grid.dragDistance = 15 + grid.drawThreshold
     grid.beginPointer(x: aX, y: aY, modifiers: control)
     report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
                   message: "Ctrl press on a grouped anchor preserves the selection")
     report.expect(session.document.note(seed.ids[0]).map { grid.hoverKey == Int($0.pitch) } == true,
                   cppID: id, message: "the modifier press pins the hover mark to the anchor row")
+    report.expect(noteAuditions.first.map {
+        $0.pitch == (session.document.note(seed.ids[0]).map { Int($0.pitch) } ?? -1)
+            && $0.velocity == 93
+    } == true
+                  && grid.lastVelocity == 93, cppID: id,
+                  message: "Ctrl note press auditions its own velocity and latches the drawing velocity")
     let preCount = session.document.history.undoCount
+    grid.updatePointer(x: aX, y: aY + 15)
+    report.expect(grid.previewVelocity(seed.ids[0]) == nil, cppID: id,
+                  message: "Ctrl jitter below the published platform slop remains a selection click")
+    grid.updatePointer(x: aX, y: aY + grid.dragDistance)
+    report.expect(grid.previewVelocity(seed.ids[0]) != nil, cppID: id,
+                  message: "Ctrl vertical travel at the published platform slop starts velocity")
     grid.updatePointer(x: aX, y: aY + 15)
     report.expect(grid.previewVelocity(seed.ids[0]) == 78, cppID: id,
                   message: "the drag previews 78 before release")
@@ -422,8 +440,12 @@ private func checkGroupedVelocityDrag(_ report: CheckReport, session: DocumentSe
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 93, cppID: id,
                   message: "the velocity preview commits nothing before release")
     grid.endPointer(x: aX, y: aY + 15)
+    grid.dragDistance = platformSlop
     report.expect(session.document.note(seed.ids[0]).map { Int($0.velocity) } == 78, cppID: id,
                   message: "a 15px modifier drag lands the anchor at 78 from 93")
+    report.expect(noteAuditions.last.map { $0.velocity == 0 } == true
+                  && grid.lastVelocity == 78, cppID: id,
+                  message: "velocity release stops the note audition and latches the committed anchor velocity")
     report.expect(session.document.note(seed.ids[1]).map { Int($0.velocity) } == 85, cppID: id,
                   message: "the grouped drag applies the same delta to the other selected note")
     report.expect(Set(session.selectedNoteOrder) == Set(seed.ids), cppID: id,
@@ -496,12 +518,15 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
     let oldCamera = session.camera
     let grid = makeCameraGrid(session: session)
     _ = session.mutateCamera { _ = $0.setTimeZoom(140) }
-    grid.refreshCamera()
-    for _ in 0..<3 {
-        if grid.snapTicks >= 12 { break }
-        grid.performCommand(command: EditCommand.gridWiden.rawValue)
+    let oldGridSelection = session.grid.selection
+    grid.openGridMenu(kind: 1)
+    grid.activateGridMenuRow(actionId: 8)
+    defer {
+        grid.openGridMenu(kind: 1)
+        grid.activateGridMenuRow(actionId: oldGridSelection.toMenuId())
+        session.mutateCamera { $0 = oldCamera }
     }
-    defer { session.mutateCamera { $0 = oldCamera } }
+    grid.refreshCamera()
     guard let baseline = try? session.document.captureSave() else {
         report.fail(id, "could not capture the pre-draw MIDI bytes")
         return
@@ -513,7 +538,7 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
     }
     let snap = grid.snapTicks
     guard snap >= 8 else {
-        report.fail(id, "the widened grid never reaches a drawable snap (snap=\(snap))")
+        report.fail(id, "the fixed eighth grid is not drawable (snap=\(snap))")
         return
     }
     guard let cell = selectionFreeCell(session: session, grid: grid, span: snap) else {
@@ -530,8 +555,48 @@ private func checkThresholdDrawCell(_ report: CheckReport, session: DocumentSess
         report.fail(id, "the threshold drag escapes its snap cell at this zoom")
         return
     }
+    var timeSelection: AutomationTimeSelection? = AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(cell.tick), endTick: Tick(cell.tick + snap)),
+        scope: .tracks([grid.trackIndex]))
+    grid.timeSelectionSource = { timeSelection }
+    grid.onClearTimeSelection = { timeSelection = nil }
+    var auditions: [(pitch: Int, velocity: Int)] = []
+    grid.onAudition = { _, pitch, velocity in
+        auditions.append((pitch, velocity))
+    }
+    let beforeClick = session.document.history.undoCount
+    let beforeNotes = session.document.notes(in: grid.trackIndex)
+    if let selected = beforeNotes.first?.id {
+        session.setSelectedNotes([selected])
+    }
+    grid.beginPointer(x: pressX, y: cell.y, modifiers: 0x0400_0000)
+    report.expect(session.selectedNoteOrder.isEmpty
+                  && auditions.first.map { $0.pitch == cell.pitch && $0.velocity == grid.lastVelocity } == true,
+                  cppID: id, message: "empty Ctrl press clears note selection and auditions its row")
+    let otherY = cell.y + grid.rowHeight
+    grid.updatePointer(x: pressX, y: otherY)
+    grid.updatePointer(x: pressX + grid.drawThreshold - 0.5, y: cell.y)
+    report.expect(auditions.count == 5 && auditions[1].velocity == 0
+                  && auditions[2].pitch != cell.pitch && auditions[2].velocity > 0
+                  && auditions[3].velocity == 0 && auditions[4].pitch == cell.pitch,
+                  cppID: id, message: "pending-draw row changes glissando before horizontal draw slop")
+    grid.endPointer(x: pressX + grid.drawThreshold - 0.5, y: cell.y)
+    report.expect(session.document.notes(in: grid.trackIndex).map(\.id) == beforeNotes.map(\.id)
+                  && session.document.history.undoCount == beforeClick
+                  && session.document.history.currentIdentity == baseline.identity,
+                  cppID: id, message: "below the font-derived draw slop a click adds no note or undo entry")
+    report.expect(session.editCursor == Tick(session.grid.snapTick(
+        session.camera.tickAtContentX(pressX), camera: session.camera))
+        && auditions.last.map { $0.pitch == cell.pitch && $0.velocity == 0 } == true,
+        cppID: id, message: "within-slop release parks the nearest snapped edit cursor and stops audition")
+    report.expect(timeSelection == nil,
+                  cppID: "swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts",
+                  message: "A056 clicking inside the primary time selection clears its active span")
+    auditions.removeAll()
     grid.beginPointer(x: pressX, y: cell.y, modifiers: 0)
     grid.updatePointer(x: dragX, y: cell.y)
+    report.expect(auditions.count == 1 && auditions[0].velocity == grid.lastVelocity,
+                  cppID: id, message: "crossing draw slop does not re-attack the sounding press key")
     report.expect(grid.statusText.contains("Drawing"), cppID: id,
                   message: "crossing the draw threshold enters the draw gesture")
     grid.endPointer(x: dragX, y: cell.y)

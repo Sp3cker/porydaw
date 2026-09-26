@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -87,13 +87,19 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     func containsAB() -> Bool {
         session.selectedNotes.contains(seeded[0]) && session.selectedNotes.contains(seeded[1])
     }
+    var timeSelection: AutomationTimeSelection?
+    grid.timeSelectionSource = { timeSelection }
+    grid.onClearTimeSelection = { timeSelection = nil }
+    var committedTicks: [Tick] = []
+    grid.onCommitCursor = { committedTicks.append($0) }
     func clearSelection() {
         session.clearSelectedNotes()
-        // PianoGrid has no time-selection state to clear.
-        // The original A003/A005 time-selection conjuncts remain unproven.
     }
 
     clearSelection()
+    timeSelection = AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
+        scope: .tracks([grid.trackIndex]))
     do {
         let before = snapshot()
         grid.beginPointer(x: ax, y: ay, modifiers: 0)
@@ -101,23 +107,28 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.beginRightPointer(x: 1, y: 0)
         grid.updateRightPointer(x: bandX, y: bandY)
         grid.endRightPointer(x: bandX, y: bandY)
-        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
-                      cppID: id, message: "A003 blocked right click resolves as empty space")
+        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
+                      && timeSelection == nil,
+                      cppID: id, message: "A003 blocked right click clears notes and time selection")
         grid.endPointer(x: bandX, y: bandY)
         report.expect(unchanged(before), cppID: id,
                       message: "A004 aborted left Move preserves MIDI bytes and undo history")
     }
 
     clearSelection()
+    timeSelection = AutomationTimeSelection(
+        range: TimeRange(startTick: Tick(aTick), endTick: Tick(aTick + duration)),
+        scope: .tracks([grid.trackIndex]))
     do {
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
-        grid.updateRightPointer(x: 12, y: 0)
+        grid.updateRightPointer(x: grid.dragDistance + 2, y: 0)
         grid.beginPointer(x: ax, y: ay, modifiers: 0)
         grid.updatePointer(x: beyondBX, y: by + 4)
         grid.endRightPointer(x: beyondBX, y: by + 4)
-        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive,
-                      cppID: id, message: "A005 demoted right Band resolves as a plain clear")
+        report.expect(session.selectedNoteOrder.isEmpty && !grid.interactionActive
+                      && timeSelection == nil,
+                      cppID: id, message: "A005 demoted right Band clears notes and time selection")
         grid.endPointer(x: beyondBX, y: by + 4)
         report.expect(unchanged(before), cppID: id,
                       message: "A006 demoted Band preserves MIDI bytes and undo history")
@@ -135,6 +146,10 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         grid.endPointer(x: freeX, y: ay)
         report.expect(containsAB(), cppID: id,
                       message: "A008 parked PendingDraw release retains A and B")
+        report.expect(committedTicks.last == session.grid.snapTick(
+            camera.tickAtContentX(freeX), camera: camera)
+            && committedTicks.last == session.editCursor,
+            cppID: id, message: "A008 PendingDraw parks the cursor after the right band ends")
         report.expect(unchanged(before), cppID: id,
                       message: "A009 PendingDraw interlock preserves MIDI bytes and undo history")
     }
@@ -143,7 +158,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
     do {
         let before = snapshot()
         grid.beginRightPointer(x: 1, y: 0)
-        grid.updateRightPointer(x: 12, y: 0)
+        grid.updateRightPointer(x: grid.dragDistance + 2, y: 0)
         grid.beginPointer(x: bx, y: by, modifiers: 0x0400_0000)
         grid.endPointer(x: bx, y: by)
         report.expect(session.selectedNoteOrder == [seeded[1]], cppID: id,
@@ -171,7 +186,7 @@ private func checkGestureInterlock(_ report: CheckReport, session: DocumentSessi
         let before = snapshot()
         for attempt in 0..<2 {
             grid.beginPointer(x: bx, y: by, modifiers: 0x0400_0000)
-            grid.updatePointer(x: bx, y: by - 11)
+            grid.updatePointer(x: bx, y: by - grid.dragDistance - 1)
             report.expect(grid.previewVelocity(seeded[1]) != nil, cppID: id,
                           message: attempt == 0 ? "A014 Ctrl velocity drag stages a preview" :
                               "A016 later Ctrl velocity drag stages a preview")

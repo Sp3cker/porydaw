@@ -10,6 +10,13 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
 projectSession suite executed runNoteCommandChecks and the S001-S056 predicates.
+Command: deno task verify --filter swiftcore --verbose (task-34b grid-cutover handoff, locked at /tmp/porydaw-build.lock)
+Result: PASS — implementer-reported 12/37 ok on the frozen tree. The only change to this
+counterpart is fixture construction: withNoteCommandFixture now selects the fixed eighth
+denomination through the production menu path (openGridMenu(kind: 1) +
+activateGridMenuRow(actionId: 8)) and restores the previous selection afterwards, replacing
+the deleted gridWiden loop; every predicate and message cited below is unchanged and still
+resolves. This bookkeeping pass ran no lane.
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no note-command site
 depends on the roll QML lane.

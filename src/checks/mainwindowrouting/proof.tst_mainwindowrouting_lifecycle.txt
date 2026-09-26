@@ -227,7 +227,7 @@ Original expression:
 
 A016 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:102
 Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt grid/time-signature seed observation in SongView ViewState; no Swift predicate observes Qt grid selection. Verified: neighboring presentation/camera suites observe header/camera types, not SongView grid state; not cited.
+Mapping/reason: GAP awaiting a Swift ViewState store: the C++ site reads the grid selection back out of a full SongView::ViewState after applyViewState(requested). Swift now owns the real grid selection on DocumentSession.grid, and the reload-retention predicate in src/checks/editorqml/tst_ShellTabs.qml asserts the landed gridSelectionMenuId equals the seeded identity across an in-place reload, but no Swift predicate applies a requested ViewState and re-reads the grid-selection field, so this seeded-value observation stays unproved.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -235,7 +235,7 @@ Original expression:
 
 A017 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:103
 Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt grid/time-signature seed observation in SongView ViewState; no Swift predicate observes Qt grid selection. Verified: neighboring presentation/camera suites observe header/camera types, not SongView grid state; not cited.
+Mapping/reason: GAP awaiting a Swift ViewState store: the C++ site reads the grid feel back out of a full SongView::ViewState after applyViewState(requested). Swift now owns the real grid feel on DocumentSession.grid, and the reload-retention predicate in src/checks/editorqml/tst_ShellTabs.qml asserts tripletGrid survives an in-place reload, but no Swift predicate applies a requested ViewState and re-reads the feel field, so this seeded-value observation stays unproved.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:

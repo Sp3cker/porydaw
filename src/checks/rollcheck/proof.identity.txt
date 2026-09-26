@@ -187,7 +187,7 @@ Original expression:
 
 A013 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:218
 Disposition: GAP
-Mapping/reason: Feature not yet ported: applyViewState normalization and clamping over the whole ViewState has no Swift counterpart; EditorCamera exposes setHScroll/setVScroll/updateViewport with its own reclamp and no predicate asserts a full apply-viewstate retention.
+Mapping/reason: Feature not yet ported: the whole-ViewState apply/normalize compare has no Swift counterpart, and a full retention assertion over the perturbed fields (pxPerBeat, keyHeight, scrollPx, scrollY, selectedTrack, editCursorTick, eventList) plus the grid fields is absent. The grid half is no longer the blocker: gridSelection/gridTriplet now live on the shared DocumentSession.grid (menu-id identity and feel predicates exist in the eventviews and host grid ledgers), while no predicate applies a perturbed ViewState and re-reads every other field; EditorCamera exposes setHScroll/setVScroll/updateViewport with its own reclamp only.
 Source context since previous assertion:
       }
       if (!sameViewState(applied, expected))

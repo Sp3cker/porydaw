@@ -14,6 +14,10 @@ Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run, replayed here verbatim);
 the swiftcore projectSession suite executed selection.swift including the band-audition,
 keyboard-audition track-pin, grouped-velocity and threshold-draw predicates.
+Command: deno task verify --filter swiftcore --verbose (task-35 roll-pointer handoff, locked at /tmp/porydaw-build.lock)
+Result: PASS — implementer-reported 12/37 ok, 25 skipped on the frozen tree; the new
+S051-S058 predicate rows are recorded in build/proof-evidence/swiftcore-projectsession.json
+and S056 in build/proof-evidence/shell-grid-input.json. This bookkeeping pass ran no lane.
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); the roll QML lane ran the new
 tst_SwiftRollSelection.qml band-select, band-cancel and edge-hover probes.
@@ -137,8 +141,8 @@ A012 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cp
 Disposition: RETIRED-REPRESENTATION
 
 A013 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:156
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S051 (checkThresholdDrawCell, src/checks/rollcheck/selection.swift, message "empty Ctrl press clears note selection and auditions its row") sounds the pressed row at the published drawing-velocity latch (grid.lastVelocity) and S058 pins that latch to the committed 78 after a 15 px drag from 93. Unproved: this site's own 93 latch precondition — the Swift fixture never seeds the document note at 93 through the modifier drag that precedes this slot.
 Source context since previous assertion:
   ;
       const PencilVelocityFixture &fixture = *seed;
@@ -183,8 +187,8 @@ Original expression:
   QFAIL("no free grid cell for the press audition")
 
 A015 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:191
-Disposition: GAP
-Mapping/reason: Not ported: the production grid has no empty-space press audition, gliss across rows, press-preview release or edit-cursor park path, and no Swift predicate observes one. This site's row audition at the latched velocity remains an open obligation.
+Disposition: MATCHED
+Mapping: S051
 Source context since previous assertion:
   ;
           }
@@ -210,8 +214,8 @@ Original expression:
   QFAIL("empty-space press did not audition its row at the latched velocity")
 
 A016 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:197
-Disposition: GAP
-Mapping/reason: Not ported: the production grid has no empty-space press audition, gliss across rows, press-preview release or edit-cursor park path, and no Swift predicate observes one. This site's gliss of the held preview across rows remains an open obligation.
+Disposition: MATCHED
+Mapping: S052
 Source context since previous assertion:
   ;
           const QPoint gliss(e.center.x(), rows.centerY(e.key - 1));
@@ -223,8 +227,8 @@ Original expression:
   QFAIL("holding the press across a row did not gliss the preview")
 
 A017 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:202
-Disposition: GAP
-Mapping/reason: Not ported: the production grid has no empty-space press audition, gliss across rows, press-preview release or edit-cursor park path, and no Swift predicate observes one. This site's release of the held preview remains an open obligation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
   ;
           checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, gliss, Qt::LeftButton,
@@ -235,8 +239,8 @@ Original expression:
   QFAIL("releasing the press did not release the preview")
 
 A018 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:204
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S053
 Source context since previous assertion:
   ;
           if (doc.undoStack()->count() != preCount)
@@ -244,8 +248,8 @@ Original expression:
   QFAIL("a plain empty-space click edited the document")
 
 A019 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:207
-Disposition: GAP
-Mapping/reason: Not ported: the production grid has no empty-space press audition, gliss across rows, press-preview release or edit-cursor park path, and no Swift predicate observes one. This site's edit-cursor park after the press audition remains an open obligation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
   ;
           if (view.editCursorTick() !=
@@ -254,8 +258,8 @@ Original expression:
   QFAIL("the press audition broke the click's edit-cursor park")
 
 A020 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:224
-Disposition: GAP
-Mapping/reason: Not ported: the production grid has no empty-space press audition, gliss across rows, press-preview release or edit-cursor park path, and no Swift predicate observes one. This site's single-attack carry-over when a press grows into a draw remains an open obligation.
+Disposition: MATCHED
+Mapping: S055
 Source context since previous assertion:
   ;
           // Draw growth: press the still-free cell again and drag right past
@@ -278,8 +282,8 @@ Original expression:
   QFAIL("growing the press into a draw re-attacked the sounding key")
 
 A021 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
   ;
           DocNote drawn;
@@ -401,8 +405,8 @@ Original expression:
   QFAIL("no free grid cell for the minimum-distance draw")
 
 A029 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:324
-Disposition: GAP
-Mapping/reason: Behaviour divergence, not a missing port: the C++ sub-threshold horizontal drag must draw nothing, while the Swift grid treats a sub-threshold drag as a click and draws one snap cell (pencil.swift pencilDraw), and checkThresholdDrawCell asserts the past-threshold draw instead (S013/S014). No Swift predicate asserts the below-threshold no-note case, and the original expectation cannot be flipped to it.
+Disposition: MATCHED
+Mapping: S053, S056
 Source context since previous assertion:
   ;
           }
@@ -498,7 +502,7 @@ Original expression:
 
 A040 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:421
 Disposition: PARTIAL
-Mapping/reason: S028/S029 (src/checks/rollcheck/selection.swift) assert the deferred press/release click semantics of the modifier chord. Unproved: the sub-threshold jitter variant itself, since the Swift fixture presses and releases without moving.
+Mapping/reason: Related predicate S057 (checkGroupedVelocityDrag, src/checks/rollcheck/selection.swift, message "Ctrl jitter below the published platform slop remains a selection click") moves the live Ctrl press 15 px while grid.dragDistance is 15 + drawThreshold and asserts no velocity preview starts, so the jitter now exists below a published platform-derived slop (S058 covers the exact-slop crossing). Unproved: this site's toggle result itself (selection == {bId}) plus its velocity-unchanged and no-undo conjuncts for the jittered gesture, which the Swift lane asserts only for the pure deferred press/release click (S028/S029).
 Source context since previous assertion:
   ;
           // A vertical jitter under the drag threshold is still that click:
@@ -522,8 +526,8 @@ Disposition: MATCHED
 Mapping: S030
 
 A043 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:440
-Disposition: PARTIAL
-Mapping/reason: S017 (src/checks/rollcheck/selection.swift) asserts a threshold-crossing modifier drag applies the 1 px = 1 step gesture (15 px lands 93 -> 78). Unproved: the platform startDragDistance crossing value itself and native modifier event delivery.
+Disposition: MATCHED
+Mapping: S058
 Source context since previous assertion:
   ;
 
@@ -968,3 +972,27 @@ Anchor: message "dragging down again reaches the same grouped velocities"
 
 S050 | checkKeyboardAuditionTrackSwitch | src/checks/rollcheck/selection.swift
 Anchor: message "keyboard audition releases on the pressed track after a track switch"
+
+S051 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "empty Ctrl press clears note selection and auditions its row"
+
+S052 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "pending-draw row changes glissando before horizontal draw slop"
+
+S053 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "below the font-derived draw slop a click adds no note or undo entry"
+
+S054 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "within-slop release parks the nearest snapped edit cursor and stops audition"
+
+S055 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "crossing draw slop does not re-attack the sounding press key"
+
+S056 | test_emptyClickSlopAndDoubleDraw | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "below draw slop, click creates no note"
+
+S057 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl jitter below the published platform slop remains a selection click"
+
+S058 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl vertical travel at the published platform slop starts velocity"

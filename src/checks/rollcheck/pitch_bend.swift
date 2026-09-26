@@ -72,6 +72,7 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                   + geometry.canvasHeight) == 0,
                   cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
                   message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
+    pitchBendSharedGridPredicates(report, session: session)
     pitchBendReadoutPredicates(report, session: session)
     pitchBendDocumentPredicates(report, session: session)
 }
@@ -115,6 +116,25 @@ private func pitchBendCheckScene(_ report: CheckReport, cppID: String,
     }
     return PitchBendCheckScene(presenter: presenter, note: host.note,
                              noteEnd: Tick(noteEnd))
+}
+
+@MainActor
+private func pitchBendSharedGridPredicates(_ report: CheckReport, session: DocumentSession) {
+    let gridID = "swiftcore/PitchBendEditingTest::sharedGridSnap"
+    let previous = session.grid.selection
+    session.grid.setSelection(.clock)
+    defer { session.grid.setSelection(previous) }
+    guard let scene = pitchBendCheckScene(report, cppID: gridID, session: session) else { return }
+    defer { scene.presenter.cancelAndClose() }
+    var kernel = scene.presenter.pitchGraph().kernel
+    let interiorTick = Int(scene.note.tick) + 1
+    kernel.begin(x: kernel.x(at: interiorTick), y: kernel.y(at: 4096), line: false)
+    kernel.finish()
+    report.expect(kernel.points[interiorTick] != nil
+                  && kernel.snapTicks == Int(session.grid.snapTicksAt(scene.note.tick,
+                                                                       camera: session.camera)),
+                  cppID: gridID,
+                  message: "clock grid selection permits a pitch-bend point one tick inside the selected note")
 }
 
 @MainActor

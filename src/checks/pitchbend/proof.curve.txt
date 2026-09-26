@@ -1411,3 +1411,10 @@ Anchor: message "pitch drag inputs use the published body font face"
 
 S063 | pitchBendReadoutPredicates | src/checks/rollcheck/pitch_bend.swift
 Anchor: message "resizing the pitch popup republishes the title, caption, readout, and input roles"
+
+Unindexed by design: pitchBendSharedGridPredicates (cppID
+swiftcore/PitchBendEditingTest::sharedGridSnap, message "clock grid selection permits a
+pitch-bend point one tick inside the selected note") is task 34a's wiring tripwire for the
+shared DocumentSession.grid: it selects the clock ladder, edits a point one tick inside the
+selected note and compares kernel.snapTicks with grid.snapTicksAt(note.tick, camera:). It
+proves no curve.cpp site, so it carries no S entry and no A row maps to it.

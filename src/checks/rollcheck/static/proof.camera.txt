@@ -18,7 +18,10 @@ Command: deno task verify:qml-roll --verbose
 Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit changes no QML source).
 Command: deno task verify:shell --verbose
 Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
-Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
+Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808 (src/checks/rollcheck/static/camera.swift, unchanged by the grid cutover)
+Verified grid-lattice Swift SHA-256: e590e90549b02454a5cd92907aa30df5ab9e2503e82f4fee140ed9ce1511540b (src/checks/rollcheck/EditorGridCameraChecks.swift, re-pinned for the task-34a fractional-lattice rewrite: S067-S074 now assert the positive stride, viewport-culled walk, coarse lattice, segment-anchored subdivisions, tie rounding and signature-seam restart)
+Command: deno task verify --filter swiftcore --verbose (task-34a handoff run, locked at /tmp/porydaw-build.lock)
+Result: PASS — implementer-reported 12/37 ok, PASS; seven fractional-camera predicate passes recorded in build/proof-evidence/swiftcore-eventedits.json. This bookkeeping pass ran no lane.
 Verified QML SHA-256: 7a11ea7ca9a6f0450bdc2db5ef318ffedd325c4d527d488a4dded0349dfd5397 (src/checks/rollqml/tst_TimelinePan.qml, last recorded hash); b5d3e154b76f6c4a523667124d7d46c08a5dff9d62f5b30d918d674596c1118d (src/checks/rollqml/tst_SwiftRollPlots.qml, re-pinned for the task-27 other-events band revision: the canonical band layout now subtracts the mounted other-events band height)
 Command: deno task verify:qml-roll --verbose (task-27 other-events band revision)
 Result: PASS; 1/1 ok. Lane-owner observation on the revision now pinned; this bookkeeping pass ran no lane. The roll lane runs tst_SwiftRollPlots.qml test_rollBandGeometryAndLifecycle, recorded in build/proof-evidence/swiftroll-window.json.
@@ -242,7 +245,7 @@ Original expression:
 
 A018 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:106
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: at pxPerBeat 384 the automatic-grid segment at tick 96 starts at or before 96.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, src/checks/rollcheck/EditorGridCameraChecks.swift, message "visible auto sub-grid is culled to the viewport and skips beats") walks the automatic grid at zoom 384 over 96..289 and requires every emitted tick inside that window. Unproved: the direct TimeAxis.segmentAt(96).start boundary at or before 96.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -257,15 +260,15 @@ Original expression:
 
 A019 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:107
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: that segment next boundary is at or beyond 289.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") keeps every walked tick below 289 on the same automatic grid. Unproved: the direct TimeAxis.segmentAt(96).next boundary at or beyond 289.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(segment.next >= 289)
 
 A020 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:109
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the segment lattice stride is positive.
+Disposition: MATCHED
+Mapping: S067
 Source context since previous assertion:
   ;
       const Tick lattice = view.grid().gridTicksAt(96);
@@ -273,8 +276,8 @@ Original expression:
   QVERIFY(lattice > 0)
 
 A021 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:110
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the lattice stride stays below the segment beat width.
+Disposition: MATCHED
+Mapping: S067
 Source context since previous assertion:
   ;
 Original expression:
@@ -282,7 +285,7 @@ Original expression:
 
 A022 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:129
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the fractional walk over 96.75..289.25 equals the independent membership expectation for 96..289.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") asserts the walk is non-empty, every tick lies in [96,289), advances on the grid stride and skips beat positions. Unproved: equality with an independently enumerated per-segment membership list, and the fractional 96.75/289.25 window.
 Source context since previous assertion:
   ;
       const auto walk = [&view](double begin, double end) {
@@ -308,15 +311,15 @@ Original expression:
 
 A023 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:130
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the walk over a NaN begin is empty.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") brackets the walked range on the same grid. Unproved: the NaN-begin window, because the ported forEachSubdivision takes integral Tick bounds, so the deleted double tickRange ingress has no callable Swift surface.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(walk(std::numeric_limits<double>::quiet_NaN(), 100.0).empty())
 
 A024 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the musical-16 coarse lattice stride exceeds one tick.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
       // A coarser lattice keeps both drawn and snap strides above the clock floor.
@@ -331,31 +334,31 @@ Original expression:
 
 A025 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:139
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the coarse lattice stride stays below the segment beat width.
+Mapping/reason: Related predicate S069 (checkFractionalGridLattice, message "coarse lattice divides the beat") pins the musical-16 snap stride at three or more and the drawn stride above one tick at zoom 192. Unproved: the drawn coarse stride staying below the segment beat width, which S069 never bounds.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(latticeG < segment.beatTicks)
 
 A026 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:140
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: tick 96 is a multiple of the coarse lattice stride.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(96 % latticeG == 0)
 
 A027 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:141
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the coarse snap stride is at least three ticks.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(snapG >= 3)
 
 A028 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:142
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the segment beat width is a multiple of the coarse snap stride.
+Disposition: MATCHED
+Mapping: S069
 Source context since previous assertion:
   ;
 Original expression:
@@ -363,7 +366,7 @@ Original expression:
 
 A029 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:144
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the coarse lattice steps at least twice below the segment end.
+Mapping/reason: Related predicate S070 (checkFractionalGridLattice, message "subdivision restarts at the segment anchor") proves nextSubdivisionTickAfter(96) and nextSubdivisionTickAfter(97) both land on 96 plus the drawn stride. Unproved: that the segment leaves room for at least two lattice steps below segment.next.
 Source context since previous assertion:
   ;
       // Aligned and interior ticks advance to the same next subdivision.
@@ -372,16 +375,16 @@ Original expression:
                "lattice must step at least twice below the segment end")
 
 A030 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:146
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: nextSubdivisionTickAfter(96) is 96 plus latticeG.
+Disposition: MATCHED
+Mapping: S070
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(96)), Tick(96 + latticeG))
 
 A031 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:147
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: nextSubdivisionTickAfter(97) is 96 plus latticeG.
+Disposition: MATCHED
+Mapping: S070
 Source context since previous assertion:
   ;
 Original expression:
@@ -389,7 +392,7 @@ Original expression:
 
 A032 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:151
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: a walk starting one tick after the last aligned candidate is empty.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") requires every walked tick to stay inside the requested window. Unproved: the separate 97..98 window whose first aligned candidate lies past its end, which no Swift predicate walks.
 Source context since previous assertion:
   ;
       // The first ceiling-aligned candidate (96 + latticeG) already lies at
@@ -400,7 +403,7 @@ Original expression:
 
 A033 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:154
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the walk over 95..110 equals its membership expectation.
+Mapping/reason: Related predicate S068 (checkFractionalGridLattice, message "visible auto sub-grid is culled to the viewport and skips beats") asserts the beat line is omitted from the walked output on the automatic grid. Unproved: the 95..110 membership equality against the independent per-segment expectation.
 Source context since previous assertion:
   ;
       // The first candidate is the beat line at 96: only its callback is
@@ -409,8 +412,8 @@ Original expression:
   QCOMPARE(walk(95, 110), expectedLines(95, 110))
 
 A034 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:157
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTick at the exact midpoint 96 + snapG/2 returns 96 (lower candidate wins the tie).
+Disposition: MATCHED
+Mapping: S071
 Source context since previous assertion:
   ;
       // Fractional nearest tie on either side of the midpoint: the lower
@@ -419,32 +422,32 @@ Original expression:
   QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0), Tick(96))
 
 A035 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:158
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTick a quarter tick below the midpoint returns 96.
+Disposition: MATCHED
+Mapping: S071
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 - 0.25), Tick(96))
 
 A036 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:159
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTick a quarter tick above the midpoint returns 96 + snapG.
+Disposition: MATCHED
+Mapping: S071
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 + 0.25), Tick(96 + snapG))
 
 A037 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:160
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTickDown a quarter tick above the midpoint returns 96.
+Disposition: MATCHED
+Mapping: S072
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().snapTickDown(96.0 + snapG / 2.0 + 0.25), Tick(96))
 
 A038 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:161
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTickUp a quarter tick below the midpoint returns 96 + snapG.
+Disposition: MATCHED
+Mapping: S073
 Source context since previous assertion:
   ;
 Original expression:
@@ -452,7 +455,7 @@ Original expression:
 
 A039 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:167
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the mid-cell 3/4 signature at tick 102 re-anchors segmentAt(102).start to 102.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, src/checks/rollcheck/EditorGridCameraChecks.swift, message "sub-grid restarts at the signature seam") installs the same mid-cell 5/8 signature at tick 102 and pins the post-seam lattice there. Unproved: the direct segmentAt(102).start boundary the C++ QTRY_VERIFY reads.
 Source context since previous assertion:
   ;
       // A mid-cell signature change re-anchors the lattice: the first
@@ -465,7 +468,7 @@ Original expression:
 
 A040 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:168
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: segmentAt(101).next is 102 at the signature seam.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") shows the walk from 101 stops at 102. Unproved: the direct segmentAt(101).next boundary at the seam.
 Source context since previous assertion:
   ;
 Original expression:
@@ -473,7 +476,7 @@ Original expression:
 
 A041 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:169
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the walk over 95..130 after the signature change equals its membership expectation.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") exercises the post-seam lattice through snap and next-subdivision calls. Unproved: the 95..130 walk equality against the independent membership expectation across the seam.
 Source context since previous assertion:
   ;
 Original expression:
@@ -481,31 +484,31 @@ Original expression:
 
 A042 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:170
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: the walk over 100..110 after the signature change equals its membership expectation.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") exercises the post-seam lattice through snap and next-subdivision calls. Unproved: the 100..110 walk equality against the independent membership expectation.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(walk(100, 110), expectedLines(100, 110))
 
 A043 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:171
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTickDown(103.5) returns 102 on the post-seam lattice.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().snapTickDown(103.5), Tick(102))
 
 A044 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:172
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTickUp(101.5) returns 102 on the post-seam lattice.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.grid().snapTickUp(101.5), Tick(102))
 
 A045 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:175
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: nextSubdivisionTickAfter(101) stops at the signature seam 102.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
       // Stop at the signature seam, then restart on its new lattice.
@@ -514,8 +517,8 @@ Original expression:
   QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(101)), Tick(102))
 
 A046 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:176
-Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: nextSubdivisionTickAfter(102) restarts at 102 plus latticeSeam.
+Disposition: MATCHED
+Mapping: S074
 Source context since previous assertion:
   ;
 Original expression:
@@ -523,7 +526,7 @@ Original expression:
 
 A047 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:177
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTick(103.5) returns 102.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") asserts the post-seam snap-down and snap-up values. Unproved: the nearest-snap variant at 103.5, which the Swift seam predicate never calls.
 Source context since previous assertion:
   ;
 Original expression:
@@ -531,7 +534,7 @@ Original expression:
 
 A048 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:178
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: snapTick(103.5 + snapG) returns 102 + snapG.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") asserts the post-seam snap-down and snap-up values. Unproved: the nearest-snap value one full snap stride past the seam (103.5 + snapG), which the Swift seam predicate never calls.
 Source context since previous assertion:
   ;
 Original expression:
@@ -539,7 +542,7 @@ Original expression:
 
 A049 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:180
 Disposition: PARTIAL
-Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift (Right nudges one snap cell), note_commands.swift (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml). Unproved: deleting the 3/4 signature restores segmentAt(102).start to the original segment start.
+Mapping/reason: Related predicate S074 (checkFractionalGridLattice, message "sub-grid restarts at the signature seam") covers the lattice after a seam appears. Unproved: the signature-removal path; no executed predicate deletes a time signature and re-reads the segment start.
 Source context since previous assertion:
   ;
       fixture.tab()->document().deleteTimeSig(102);
@@ -1172,3 +1175,27 @@ Anchor: message "opposite quarter-notches restore scale and offset"
 
 S066 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift
 Anchor: message "fractional time scale and offset restore exactly"
+
+S067 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "segment lattice stride is positive"
+
+S068 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "visible auto sub-grid is culled to the viewport and skips beats"
+
+S069 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "coarse lattice divides the beat"
+
+S070 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "subdivision restarts at the segment anchor"
+
+S071 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "auto tie rounds down"
+
+S072 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "tie down is floor"
+
+S073 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "tie up is ceil"
+
+S074 | checkFractionalGridLattice | src/checks/rollcheck/EditorGridCameraChecks.swift
+Anchor: message "sub-grid restarts at the signature seam"

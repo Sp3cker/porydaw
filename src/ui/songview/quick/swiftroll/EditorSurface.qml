@@ -408,6 +408,8 @@ Item {
                         property bool timeMenuPressHandled: false
                         property bool rightSweepActive: false
 
+                        Component.onCompleted:
+                            root.gridModel.dragDistance = Qt.styleHints.startDragDistance
                         cursorShape: {
                             switch (root.gridModel.cursorKind) {
                             case 4: return Qt.ClosedHandCursor
@@ -474,10 +476,8 @@ Item {
                         }
                         onExited: {
                             rollMoves.flush()
-                            if (pressedButtons === Qt.NoButton) {
+                            if (pressedButtons === Qt.NoButton)
                                 root.gridModel.clearKeyboardHover()
-                                root.applicationSession.playheadGuidesPresenter().clearHover()
-                            }
                         }
                         MoveCoalescer {
                             id: rollMoves
@@ -492,10 +492,8 @@ Item {
                                 }
                                 else if (buttons & Qt.LeftButton)
                                     root.gridModel.updatePointer(x, y)
-                                else {
+                                else
                                     root.gridModel.updateHover(x, y)
-                                    root.applicationSession.playheadGuidesPresenter().updateHover(x)
-                                }
                             }
                         }
                     }
@@ -580,6 +578,18 @@ Item {
                 required property string controlText
                 required property int menuKind
                 readonly property bool controlPressed: gridArea.pressed
+                activeFocusOnTab: true
+                Keys.onReturnPressed: openMenu()
+                Keys.onEnterPressed: openMenu()
+
+                function openMenu() {
+                    root.gridMenuPosition = mapToItem(root, width / 2, height)
+                    root.gridModel.openGridMenu(menuKind)
+                    Qt.callLater(function() {
+                        if (gridMenuLoader.item)
+                            gridMenuLoader.item.forceActiveFocus(Qt.PopupFocusReason)
+                    })
+                }
 
                 Rectangle {
                     id: gridControlBackground
@@ -625,10 +635,7 @@ Item {
                     id: gridArea
                     anchors.fill: parent
                     hoverEnabled: true
-                    onClicked: {
-                        root.gridMenuPosition = mapToItem(root, width / 2, height)
-                        root.gridModel.openGridMenu(gridControl.menuKind)
-                    }
+                    onClicked: gridControl.openMenu()
                 }
             }
 

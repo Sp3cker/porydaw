@@ -256,10 +256,9 @@ public final class PitchBendPresenter {
         points[noteEnd] = ending
         return PitchBendKernel(lane: graphLane, geometry: geometry,
                                startTick: Int(note.tick), endTick: noteEnd,
-                               snapTicks: grid.snapTicks,
-                               fineTicks: Int(TimelineSnapPolicy.clockTicks(
-                                   division: session.document.ticksPerBeat,
-                                   extendedClocks: session.document.state.config.extendedClocks)),
+                               snapTicks: Int(session.grid.snapTicksAt(note.tick,
+                                                                       camera: session.camera)),
+                               fineTicks: Int(session.grid.fineGridTicks(camera: session.camera)),
                                points: points, endValue: ending)
     }
 

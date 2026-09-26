@@ -70,42 +70,22 @@ public struct AutomationPlotBounds: Equatable, Sendable {
 /// The snapping lattice: the shared visible grid for a coarse pointer position,
 /// and the shared document clock lattice for a fine (Alt) one.
 public struct AutomationSnapPolicy {
-    private let metrics: GridMetrics
+    private let grid: RollGrid
     public let clockTicks: Tick
 
-    init(baseFontPx: Double, devicePixelRatio: Double, timeAxis: TimeAxis,
-         clockTicks: Tick) {
-        metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: 0, height: 0,
-                              timeAxis: timeAxis)
+    init(grid: RollGrid, clockTicks: Tick) {
+        self.grid = grid
         self.clockTicks = max(1, clockTicks)
-    }
-
-    @MainActor
-    public init(document: SongDocument, timeline: PlaybackTimeline, baseFontPx: Double,
-                devicePixelRatio: Double) {
-        self.init(baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
-                  timeAxis: TimeAxis(map: TimeMap(
-                      ticksPerBeat: UInt32(max(1, document.ticksPerBeat)),
-                      lengthTicks: timeline.lengthTicks,
-                      loopStartTick: timeline.loopStartTick,
-                      loopEndTick: timeline.loopEndTick,
-                      timeSigs: document.timeSignatures.map {
-                          TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
-                                       denomPow2: $0.denominatorPower)
-                      })),
-                  clockTicks: TimelineSnapPolicy.clockTicks(
-                      division: document.ticksPerBeat,
-                      extendedClocks: document.state.config.extendedClocks))
     }
 
     public func snap(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
         fine ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
-             : Tick(metrics.snapTick(tick, camera: camera))
+             : grid.snapTick(tick, camera: camera)
     }
 
     public func snapDown(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
         let position = max(0, tick)
-        guard fine else { return Tick(metrics.snapTickDown(position, camera: camera)) }
+        guard fine else { return grid.snapTickDown(position, camera: camera) }
         let limit = Double(TimeDefaults.maxTick)
         let clamped = min(position, limit)
         return Tick(min(limit, (clamped / Double(clockTicks)).rounded(.down) * Double(clockTicks)))
@@ -118,8 +98,7 @@ public struct AutomationSnapPolicy {
             let next = (UInt64(tick) / UInt64(clockTicks) + 1) * UInt64(clockTicks)
             return min(limit, Tick(min(next, UInt64(TimeDefaults.maxTick))))
         }
-        let candidate = metrics.snapTickUp(Double(tick) + 1, camera: camera)
-        return min(limit, Tick(max(Int(tick) + 1, candidate)))
+        return min(limit, grid.nextSnapTickAfter(tick, camera: camera))
     }
 }
 

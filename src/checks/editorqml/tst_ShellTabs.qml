@@ -1414,13 +1414,13 @@ TestCase {
         grid.setCameraHScroll(20)
         grid.setEditCursorTick(96)
         grid.openGridMenu(1)
-        grid.activateGridMenuRow(2)
+        grid.activateGridMenuRow(8)
         grid.openGridMenu(2)
         grid.activateGridMenuRow(1)
         var prior = {
             beat: grid.beatWidth, height: grid.rowHeight, x: grid.cameraScrollX,
             y: grid.cameraScrollY, track: grid.trackIndex, cursor: grid.editCursorTick,
-            division: grid.gridDivisionControlText, triplet: grid.tripletGrid
+            division: grid.gridSelectionMenuId, triplet: grid.tripletGrid
         }
         tabs().setSelectedTabEventsVisible(true)
         prior.events = tabs().selectedTabShowsEvents
@@ -1448,8 +1448,8 @@ TestCase {
                      "reload retains the seeded vertical scroll")
         compare(landed.trackIndex, prior.track, "reload retains the selected track")
         compare(landed.editCursorTick, prior.cursor, "reload retains the edit cursor")
-        compare(landed.gridDivisionControlText, prior.division,
-                "reload retains the selected grid division")
+        compare(landed.gridSelectionMenuId, prior.division,
+                "reload retains the selected grid division identity")
         compare(landed.tripletGrid, prior.triplet, "reload retains triplet grid feel")
         compare(tabs().selectedTabShowsEvents, prior.events,
                 "reload retains event list visibility")

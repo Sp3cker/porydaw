@@ -11,12 +11,13 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify:shell --filter shell-grid-menu
 Result: PASS 1/12 ok (post-merge fc39ba34, quoted; lanes not re-run during reconciliation). Proof structural validation: deno task proof check (structure, entry IDs, metadata, tallies only; not execution or parity).
 
+Command: deno task verify:shell --filter shell-grid-menu (task-34b fork grid-ladder rewrite, locked at /tmp/porydaw-build.lock)
+Result: PASS — implementer-reported 1/26 ok, 25 skipped on the frozen tree (RED before the production switch: rowCount failed at tst_ShellGridMenu.qml:142, actual 9 versus expected 6). Execution evidence: build/proof-evidence/shell-grid-menu.json lists ::ShellGridMenu::test_gridDivisionAndFeelMenusDispatchAndDismiss, ::ShellGridMenu::test_gridShortcutsWalkDenominationsAndFeel, ::ShellGridMenu::test_gridControlsShowComboboxAffordance and ::ShellGridMenu::test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen. This bookkeeping pass ran no lane.
 
 Command: deno task verify:shell --filter shell-grid-menu (task 25b affordance predicate added)
 Result: PASS (task 25b implementer run on the frozen tree, quoted from the handoff without a recorded count; the ledger agent did not re-run the lane). Execution evidence: build/proof-evidence/shell-grid-menu.json lists ::ShellGridMenu::test_gridControlsShowComboboxAffordance.
 
-
-Swift sequence: the shell lane opens mus_route101 in a ShellWindow, drives division (kind 1, nine snapScale rows -4..4) and feel (kind 2, rows 0/1) menus through real mouseClick/keyClick, then drives timeSig (one row, actionId 9) and header (five rows, actionIds 1..5) menus; waits use tryCompare/tryVerify plus the native pump (waitForNative). test_gridControlsShowComboboxAffordance (task 25b) drives no menu: it reads the mounted timelineRulerDivisionControl and timelineRulerFeelControl GridRowControls and asserts each child gridControlBackground Rectangle is bordered in palette.outline on palette.buttonHoverBackground, the gridControlArrow Text reads "▾" in palette.buttonText, the gridControlLabel Text equals the bound gridModel control text in palette.buttonText, and timelineRulerGridLabel reads "Grid" in palette.primaryText.
+Swift sequence: the shell lane opens mus_route101 in a ShellWindow, drives the division (kind 1, six ladder rows with ids -1/4/8/16/32/0) and feel (kind 2, rows 0/1) menus through real mouseClick/keyClick, then drives the timeSig and header menus; waits use tryCompare/tryVerify plus the native pump (waitForNative). test_gridControlsShowComboboxAffordance (task 25b) drives no menu: it reads the mounted timelineRulerDivisionControl and timelineRulerFeelControl GridRowControls and asserts each child gridControlBackground Rectangle is bordered in palette.outline on palette.buttonHoverBackground, the gridControlArrow Text reads "▾" in palette.buttonText, the gridControlLabel Text equals the bound gridModel control text in palette.buttonText, and timelineRulerGridLabel reads "Grid" in palette.primaryText.
 
 A001 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:130
 Disposition: RETIRED-REPRESENTATION
@@ -43,8 +44,8 @@ A008 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/ch
 Disposition: RETIRED-REPRESENTATION
 
 A009 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:148
-Disposition: GAP
-Mapping/reason: GAP: division rowCount 6 for old denominator ids (-1, 4, 8, 16, 32, 0) - Swift division rows are nine snapScale ids -4..4 (tst_ShellGridMenu.qml,168); the old-id count has no Swift equivalent. Open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
         static constexpr std::array<int, 6> divisionIds{-1, 4, 8, 16, 32, 0};
 Original expression:
@@ -52,10 +53,11 @@ QCOMPARE(divisionMenu.model->rowCount(), int(divisionIds.size()));
 
 A010 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:152
 Disposition: MATCHED
+Mapping: S002
 
 A011 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:153
-Disposition: GAP
-Mapping/reason: GAP: per-row id equals old denominator literals - Swift per-row actionId compares run against snapScale ids -4..4 (tst_ShellGridMenu.qml,168); the old-id-to-new-row difference leaves this literal unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S001
 Source context since previous assertion:
   ;
 Original expression:
@@ -63,16 +65,19 @@ QCOMPARE(item->id, divisionIds[std::size_t(row)]);
 
 A012 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:154
 Disposition: MATCHED
+Mapping: S003
 
 A013 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:155
 Disposition: MATCHED
+Mapping: S003
 
 A014 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:158
 Disposition: MATCHED
+Mapping: S004
 
 A015 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:161
-Disposition: GAP
-Mapping/reason: GAP: current grid denominator found via GridSelection::toMenuId row lookup - Swift locates the checked row by snapScale value (tst_ShellGridMenu.qml,168); the old toMenuId mapping has no Swift equivalent. Open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
         const int currentDivisionRow =
             divisionMenu.model->rowForId(initial.gridSelection.toMenuId());
@@ -81,18 +86,19 @@ QVERIFY2(currentDivisionRow >= 0, "the division menu omitted the current grid de
 
 A016 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:164
 Disposition: MATCHED
+Mapping: S005
 
 A017 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:165
-Disposition: GAP
-Mapping/reason: GAP: current division row text equals control text - S10 (test_gridControlsShowComboboxAffordance, tst_ShellGridMenu.qml:216-241) executes the control half on the mounted surface: the gridControlLabel Text equals gridModel.gridDivisionControlText. Unproved, and currently contradicted: the Swift row text is "Adaptive"/"Adaptive ÷8" (PianoGrid.swift refreshGridMenuPresentation) against the control text "Auto"/"÷8", and no Swift or QML predicate reads the rendered row text of these ruler grid menus (QuickMenuPanel.qml binds itemData.text; the automation-drawer row-text predicates are a different surface). Open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(currentDivision->text, surface.division->property("controlText").toString());
 
 A018 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:168
-Disposition: GAP
-Mapping/reason: GAP: alternate denominator from checks::support::alternateGridMenuId present - Swift picks snapScale row 1 from -4..4 rows (tst_ShellGridMenu.qml) with no alternateGridMenuId; the old-id difference leaves this unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
         const int targetDivision = checks::support::alternateGridMenuId(initial.gridSelection);
         const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
@@ -100,8 +106,8 @@ Original expression:
 QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
 
 A019 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:171
-Disposition: GAP
-Mapping/reason: GAP: alternate-denominator row item from the old-id lookup - follows A018; no Swift equivalent for the old denominator row. Open obligation.
+Disposition: MATCHED
+Mapping: S002
 Source context since previous assertion:
         const songview::QuickMenuItem *const targetDivisionItem =
             divisionMenu.model->itemAt(targetDivisionRow);
@@ -113,13 +119,14 @@ Disposition: RETIRED-REPRESENTATION
 
 A021 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:176
 Disposition: MATCHED
+Mapping: S008
 
 A022 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:177
 Disposition: RETIRED-REPRESENTATION
 
 A023 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:178
-Disposition: GAP
-Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after pick - Swift asserts snapTicks decrease plus control text (tst_ShellGridMenu.qml) but has no GridSelection::musical value; the old identity has no Swift equivalent. Open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
 Original expression:
@@ -127,8 +134,8 @@ QCOMPARE(view.viewState().gridSelection,
                  songview::GridSelection::musical(uint32_t(targetDivision)));
 
 A024 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:180
-Disposition: GAP
-Mapping/reason: GAP: division control text equals the picked row text - S02 asserts gridDivisionControlText "Auto" on open and "÷8" after the row-1 pick (tst_ShellGridMenu.qml:167,170) and S10 (tst_ShellGridMenu.qml:216-241) executes the control half on the mounted surface: the gridControlLabel Text equals gridModel.gridDivisionControlText. Unproved, and currently contradicted: the picked row text is "Adaptive ÷8" (PianoGrid.swift refreshGridMenuPresentation) against the control text "÷8", and no predicate reads the rendered row text of these ruler grid menus. Open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 Original expression:
@@ -139,9 +146,11 @@ Disposition: RETIRED-REPRESENTATION
 
 A026 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:186
 Disposition: MATCHED
+Mapping: S002
 
 A027 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:187
 Disposition: MATCHED
+Mapping: S004
 
 A028 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:191
 Disposition: RETIRED-REPRESENTATION
@@ -157,31 +166,39 @@ Disposition: RETIRED-REPRESENTATION
 
 A032 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:201
 Disposition: MATCHED
+Mapping: S013
 
 A033 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:205
 Disposition: MATCHED
+Mapping: S002
 
 A034 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:206
 Disposition: MATCHED
+Mapping: S013
 
 A035 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:207
 Disposition: MATCHED
+Mapping: S003
 
 A036 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:208
 Disposition: MATCHED
+Mapping: S003
 
 A037 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:211
 Disposition: MATCHED
+Mapping: S004
 
 A038 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:214
 Disposition: MATCHED
+Mapping: S005
 
 A039 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:216
 Disposition: MATCHED
+Mapping: S005
 
 A040 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:217
-Disposition: GAP
-Mapping/reason: GAP: current feel row text equals control text - S04 asserts gridFeelControlText "Straight" on open (tst_ShellGridMenu.qml:182) and S10 (tst_ShellGridMenu.qml:216-241) executes the control half on the mounted surface: the gridControlLabel Text equals gridModel.gridFeelControlText. Unproved: no Swift or QML predicate reads the rendered row text of these ruler grid menus (QuickMenuPanel.qml binds itemData.text), so the row-text/control-text equality stays open. Open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 Original expression:
@@ -189,30 +206,34 @@ QCOMPARE(currentFeel->text, surface.feel->property("controlText").toString());
 
 A041 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:221
 Disposition: MATCHED
+Mapping: S014
 
 A042 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:223
 Disposition: MATCHED
+Mapping: S002
 
 A043 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:225
 Disposition: RETIRED-REPRESENTATION
 
 A044 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:228
 Disposition: MATCHED
+Mapping: S014
 
 A045 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:229
 Disposition: MATCHED
+Mapping: S014
 
 A046 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:230
-Disposition: GAP
-Mapping/reason: GAP: TimeRuler::feelText equals the picked row text - retired TimeRuler API plus row-text coupling with no Swift predicate; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(surface.ruler->feelText(), targetFeelText);
 
 A047 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:231
-Disposition: GAP
-Mapping/reason: GAP: feel control text equals the picked row text - S04 asserts gridFeelControlText "Triplet" after the row-1 pick (tst_ShellGridMenu.qml:186) and S10 (tst_ShellGridMenu.qml:216-241) executes the control half on the mounted surface: the gridControlLabel Text equals gridModel.gridFeelControlText. Unproved: no predicate reads the rendered row text of these ruler grid menus, including the picked row ("Triplet", PianoGrid.swift refreshGridMenuPresentation). Open obligation.
+Disposition: MATCHED
+Mapping: S006
 Source context since previous assertion:
   ;
 Original expression:
@@ -223,9 +244,11 @@ Disposition: RETIRED-REPRESENTATION
 
 A049 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:237
 Disposition: MATCHED
+Mapping: S002
 
 A050 | RulerGridMenuTest::rulerGridMenusOpenAsQuickRowsAndDispatchPicks | src/checks/host/tst_rulergridmenu.cpp:238
 Disposition: MATCHED
+Mapping: S004
 
 A051 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:246
 Disposition: RETIRED-REPRESENTATION
@@ -237,8 +260,8 @@ A053 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/chec
 Disposition: RETIRED-REPRESENTATION
 
 A054 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:257
-Disposition: GAP
-Mapping/reason: GAP: checked division row found via toMenuId - Swift checked-noop clicks the assertRows-checked snapScale row (tst_ShellGridMenu.qml,178) with no toMenuId lookup; the old-id difference leaves this unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
         const int checkedRow = opened.model->rowForId(before.gridSelection.toMenuId());
 Original expression:
@@ -249,21 +272,23 @@ Disposition: RETIRED-REPRESENTATION
 
 A056 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:261
 Disposition: MATCHED
+Mapping: S009
 
 A057 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:262
 Disposition: MATCHED
+Mapping: S009
 
 A058 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:263
-Disposition: GAP
-Mapping/reason: GAP: gridTriplet unchanged by the division checked-noop - Swift asserts snapTicks unchanged (tst_ShellGridMenu.qml) but no triplet predicate surrounds the division noop. Open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
 A059 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:264
-Disposition: GAP
-Mapping/reason: GAP: division control text unchanged by the checked-noop - Swift asserts no control-text predicate around the noop click (tst_ShellGridMenu.qml); unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
   ;
 Original expression:
@@ -273,8 +298,8 @@ A060 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/chec
 Disposition: RETIRED-REPRESENTATION
 
 A061 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:273
-Disposition: GAP
-Mapping/reason: GAP: Return key on the focused division control reopens its menu - Swift has no keyboard-reopen predicate (keyboard coverage is outside-click and Escape dismissal only); unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
         QTest::keyClick(opened.session->window(), Qt::Key_Return);
         const RulerGridMenu keyboardReopened = awaitRulerGridMenu(
@@ -283,16 +308,16 @@ Original expression:
 QVERIFY2(keyboardReopened.session, qUtf8Printable(keyboardReopened.diagnostic));
 
 A062 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:274
-Disposition: GAP
-Mapping/reason: GAP: keyboard-reopened division rowCount 6 - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml,168); the old-count difference leaves this unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(keyboardReopened.model->rowCount(), 6);
 
 A063 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:277
-Disposition: GAP
-Mapping/reason: GAP: keyboard-reopened checked row via toMenuId - no Swift keyboard-reopen and no toMenuId mapping; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
         const int reopenedCheckedRow =
             keyboardReopened.model->rowForId(before.gridSelection.toMenuId());
@@ -300,8 +325,8 @@ Original expression:
 QVERIFY(reopenedCheckedRow >= 0);
 
 A064 | RulerGridMenuTest::rulerGridCheckedRowClickClosesWithoutChange | src/checks/host/tst_rulergridmenu.cpp:280
-Disposition: GAP
-Mapping/reason: GAP: keyboard-reopened row checked - follows A063; no Swift equivalent. Open obligation.
+Disposition: MATCHED
+Mapping: S004
 Source context since previous assertion:
         const songview::QuickMenuItem *const reopenedChecked =
             keyboardReopened.model->itemAt(reopenedCheckedRow);
@@ -337,15 +362,19 @@ Disposition: RETIRED-REPRESENTATION
 
 A074 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:339
 Disposition: MATCHED
+Mapping: S011
 
 A075 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:341
 Disposition: MATCHED
+Mapping: S011
 
 A076 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:342
 Disposition: MATCHED
+Mapping: S011
 
 A077 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:343
 Disposition: MATCHED
+Mapping: S011
 
 A078 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:344
 Disposition: RETIRED-REPRESENTATION
@@ -361,16 +390,19 @@ Disposition: RETIRED-REPRESENTATION
 
 A082 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:353
 Disposition: MATCHED
+Mapping: S012
 
 A083 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:354
 Disposition: MATCHED
+Mapping: S012
 
 A084 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:355
 Disposition: MATCHED
+Mapping: S012
 
 A085 | RulerGridMenuTest::rulerGridMenuDismissalSwallowsOutsideClickAndEscape | src/checks/host/tst_rulergridmenu.cpp:356
-Disposition: GAP
-Mapping/reason: GAP: edit cursor tick preserved across Escape dismissal - Swift asserts cursor preservation only for outside-click (tst_ShellGridMenu.qml); no cursor predicate surrounds the Escape dismissal (211-215). Open obligation.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
   ;
 Original expression:
@@ -395,8 +427,8 @@ A091 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/c
 Disposition: RETIRED-REPRESENTATION
 
 A092 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:400
-Disposition: GAP
-Mapping/reason: GAP: alternate denominator present after selection and cursor changes - old-id lookup with no Swift equivalent (Swift has no survival probe); unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S007
 Source context since previous assertion:
         const int targetDivision =
             checks::support::alternateGridMenuId(view.viewState().gridSelection);
@@ -409,10 +441,11 @@ Disposition: RETIRED-REPRESENTATION
 
 A094 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:404
 Disposition: MATCHED
+Mapping: S008
 
 A095 | RulerGridMenuTest::rulerGridMenusSurviveSelectionAndCursorChanges | src/checks/host/tst_rulergridmenu.cpp:405
-Disposition: GAP
-Mapping/reason: GAP: GridSelection::musical(targetDivision) identity after the survival-probe pick - no GridSelection value exists in Swift; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S008
 Source context since previous assertion:
   ;
 Original expression:
@@ -438,16 +471,16 @@ A101 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src
 Disposition: RETIRED-REPRESENTATION
 
 A102 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:428
-Disposition: GAP
-Mapping/reason: GAP: gridSelection preserved across closePopups - Swift has no closePopups predicate; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A103 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:429
-Disposition: GAP
-Mapping/reason: GAP: gridTriplet preserved across closePopups - Swift has no closePopups predicate; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
   ;
 Original expression:
@@ -505,16 +538,16 @@ A111 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src
 Disposition: RETIRED-REPRESENTATION
 
 A112 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:486
-Disposition: GAP
-Mapping/reason: GAP: reopened grid rowCount 6 after foreign takeover - Swift division rows are nine snapScale ids (tst_ShellGridMenu.qml,168); the old-count difference leaves this unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(reopenedGrid.model->rowCount(), 6);
 
 A113 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:488
-Disposition: GAP
-Mapping/reason: GAP: reopened checked row via toMenuId after foreign takeover - old-id mapping with no Swift equivalent; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
         const int reusedCheckedRow = reopenedGrid.model->rowForId(before.gridSelection.toMenuId());
 Original expression:
@@ -522,18 +555,19 @@ QVERIFY(reusedCheckedRow >= 0);
 
 A114 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:489
 Disposition: MATCHED
+Mapping: S004
 
 A115 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:490
-Disposition: GAP
-Mapping/reason: GAP: gridSelection preserved across the foreign-popup probe - Swift never opens a foreign menu; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 Original expression:
 QCOMPARE(view.viewState().gridSelection, before.gridSelection);
 
 A116 | RulerGridMenuTest::rulerGridClosePopupsCancelsOwnedNotForeignPopups | src/checks/host/tst_rulergridmenu.cpp:491
-Disposition: GAP
-Mapping/reason: GAP: gridTriplet preserved across the foreign-popup probe - Swift never opens a foreign menu; unproved. Open obligation.
+Disposition: MATCHED
+Mapping: S016
 Source context since previous assertion:
   ;
 Original expression:
@@ -586,15 +620,18 @@ Disposition: RETIRED-REPRESENTATION
 
 A132 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:551
 Disposition: MATCHED
+Mapping: S017
 
 A133 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:553
 Disposition: MATCHED
+Mapping: S017
 
 A134 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:554
 Disposition: RETIRED-REPRESENTATION
 
 A135 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:555
 Disposition: MATCHED
+Mapping: S017
 
 A136 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:556
 Disposition: RETIRED-REPRESENTATION
@@ -640,9 +677,11 @@ Disposition: RETIRED-REPRESENTATION
 
 A150 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:607
 Disposition: MATCHED
+Mapping: S018
 
 A151 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:608
 Disposition: MATCHED
+Mapping: S018
 
 A152 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src/checks/host/tst_rulergridmenu.cpp:619
 Disposition: RETIRED-REPRESENTATION
@@ -690,7 +729,87 @@ A166 | RulerGridMenuTest::actionBackedQuickRowsCloseBeforeTriggerAndRetire | src
 Disposition: RETIRED-REPRESENTATION
 
 Swift assertion predicates
-The 38 MATCHED mappings cite tst_ShellGridMenu.qml line predicates directly: S01 assertRows(menu, ids, checkedId) (143-157): rowCount, per-row actionId/enabled/checkable/checked, exactly-one-checked. S02 division dispatch (167-173): open kind 1, Auto text, pick row 1 closes, picked text, snapTicks decreases. S03 division reopen + checked-noop (175-180): re-check -3, checked click closes, snapTicks unchanged. S04 feel dispatch (182-188): open kind 2, Straight text, pick row 1 closes, tripletGrid true, Triplet text. S05 feel reopen + checked-noop (189-193): re-check 1, checked click closes, tripletGrid stays true. S06 outside-click dismissal (198-209): off-frame point verified, click closes, triplet/cursor/snapTicks unchanged. S07 Escape dismissal (211-215): Escape closes, division text and triplet preserved. S10 grid-control affordance (216-241; next free ID, S01-S09 keep their original numbers, listed here in source order): test_gridControlsShowComboboxAffordance drives no menu - for the mounted timelineRulerDivisionControl (gridModel.gridDivisionControlText) and timelineRulerFeelControl (gridModel.gridFeelControlText) it asserts the child gridControlBackground Rectangle exists with border.width > 0 in palette.outline on fill palette.buttonHoverBackground, the gridControlArrow Text reads "▾" in palette.buttonText, the gridControlLabel Text equals the bound gridModel control text in palette.buttonText, and timelineRulerGridLabel reads "Grid" in palette.primaryText. S08 timeSig close-before-prompt (248-260): one row actionId 9, click closes menu, prompt opens exactly once with menuClosedBeforePrompt true. S09 header dispatch + disabled stays open (265-301): five rows actionIds 1..5, duplicate dispatch closes with count+1, disabled row keeps menu open with no revision change, Escape closes. S10 is cited only by the four GAP rows coupling a menu row text to a control controlText (A017, A024, A040, A047); no MATCHED mapping cites it.
+QML predicates execute through the shell-grid-menu lane (build/proof-evidence/shell-grid-menu.json records functions, not rows). Predicate bodies live in the helpers assertRows (:141-155), rowTextEqualsControlText (:157-166), openGrid (:134-139) and the test bodies below.
+
+S001 | test_gridDivisionAndFeelMenusDispatchAndDismiss (openGrid + assertRows division ladder) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "1/4"
+  :180 opens the division menu (kind 1) from timelineRulerDivisionControl; ids = [-1, 4, 8, 16, 32, 0] (:181); assertRows(divisionMenu, ids, grid.gridSelectionMenuId) at :181, :201, :214, :233, :289 requires tryCompare(menu, "rowCount", ids.length) (:142) and per-row compare(row.itemData.actionId, ids[index]) (:147).
+
+S002 | test_gridDivisionAndFeelMenusDispatchAndDismiss (assertRows row presence) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "1/32"
+  assertRows reads every row through menu.rowItem(index) guarded by tryVerify(function() { return menu.rowItem(index) !== null }, 3000) (:145), so each compared row item exists before any field is read.
+
+S003 | test_gridDivisionAndFeelMenusDispatchAndDismiss (assertRows per-row enabled and checkable) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Clock"
+  assertRows requires compare(row.itemData.enabled, true) (:148) and compare(row.itemData.checkable, true) (:149) for every row of the division and feel menus.
+
+S004 | test_gridDivisionAndFeelMenusDispatchAndDismiss (assertRows checked flag and exactly one checked) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Auto" #1
+  assertRows requires compare(row.itemData.checked, ids[index] === checkedId) (:150), counts the checked rows and compares the count with 1 (:154).
+
+S005 | test_gridDivisionAndFeelMenusDispatchAndDismiss (checked row is the live selection row) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Auto" #2
+  every assertRows call passes checkedId = grid.gridSelectionMenuId (:181, :201, :214, :233, :289), so the single checked row is the row whose actionId equals the live toMenuId; :185 and :186 pin that live value to -1 and gridDivisionControlText to "Auto" on the first open.
+
+S006 | test_gridDivisionAndFeelMenusDispatchAndDismiss (checked row text equals the bound control text) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "1/8" #1
+  rowTextEqualsControlText(menu, controlText) (:157-166) requires the single checked row's itemData.text to equal the control text, and fails with "the menu has no checked row" otherwise; called for the division control at :188, :202, :234 and for the feel control at :240, :245.
+
+S007 | test_gridDivisionAndFeelMenusDispatchAndDismiss (alternate denominator row located by actionId) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "1/8" #2
+  pickedId = alternateGridMenuId(grid.gridSelectionMenuId) (8 <-> 16, :168-170), pickedRow = ids.indexOf(pickedId) and pickedText = divisionMenu.rowItem(pickedRow).itemData.text; the row must exist and read "1/8" (:189-191) and later "1/16" (:224-225).
+
+S008 | test_gridDivisionAndFeelMenusDispatchAndDismiss (division pick effects) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridSelectionMenuId" #1
+  clickRow(divisionMenu, pickedRow) then tryCompare(grid, "gridMenuKind", 0) (:193), tryCompare(grid, "gridSelectionMenuId", pickedId) (:194), compare(grid.gridDivisionControlText, pickedText) (:195) and verify(grid.snapTicks !== initialSnap) (:196).
+
+S009 | test_gridDivisionAndFeelMenusDispatchAndDismiss (checked-row click is a no-op) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "timelineRulerDivisionControl" #3
+  the second open at :198 re-checks the same picked row: clickRow(:203) then gridMenuKind stays 0, gridSelectionMenuId stays pickedId (:205), gridDivisionControlText stays settledText (:206), tripletGrid stays false (:207) and snapTicks stays settledSnap (:208).
+
+S010 | test_gridDivisionAndFeelMenusDispatchAndDismiss (Return on the focused control reopens) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridMenuKind" #3
+  division.forceActiveFocus() + keyClick(Qt.Key_Return) (:210-211) then tryCompare(grid, "gridMenuKind", 1) (:212), assertRows(divisionMenu, ids, grid.gridSelectionMenuId) (:214), rowTextEqualsControlText (:215) and tryCompare(divisionMenu.parent, "activeFocus", true) (:216).
+
+S011 | test_gridDivisionAndFeelMenusDispatchAndDismiss (outside click dismisses) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "quickMenuFrame"
+  the feel menu is opened, quickMenuFrame bounds are checked to exclude the probe point (:255-260), mouseClick on the ruler at 85%/75% (:261) then gridMenuKind 0 (:262) with tripletGrid true (:263), editCursorTick == beforeCursor (:264) and snapTicks == beforeSnap (:265).
+
+S012 | test_gridDivisionAndFeelMenusDispatchAndDismiss (Escape dismissal pins) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridMenuKind" #9
+  openGrid + keyClick(Qt.Key_Escape) (:267-268) then gridMenuKind 0 (:269), gridSelectionMenuId 16 (:270), editCursorTick == beforeCursor (:271), snapTicks == beforeSnap (:272), gridDivisionControlText "1/16" (:273) and tripletGrid true (:274).
+
+S013 | test_gridDivisionAndFeelMenusDispatchAndDismiss (feel menu ladder and live feel) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Straight"
+  assertRows(feelMenu, [0, 1], 0) (:237-239) requires two feel rows with ids 0/1, enabled/checkable/checked flags and exactly one checked row, and pins gridFeelControlText "Straight" (:238) with rowTextEqualsControlText (:240).
+
+S014 | test_gridDivisionAndFeelMenusDispatchAndDismiss (feel pick effects) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Triplet"
+  clickRow(feelMenu, 1) then gridMenuKind 0 (:248), tryCompare(grid, "tripletGrid", true) (:242/:249) and compare(grid.gridFeelControlText, "Triplet") (:243); the reopen at :244-246 re-checks row 1 and ends with a checked-row click that keeps tripletGrid true (:249) and the menu closed (:248).
+
+S015 | test_gridDivisionAndFeelMenusDispatchAndDismiss (dismissGridMenu keeps the grid state) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridMenuKind" #10
+  openGrid(:276) + grid.dismissGridMenu() (:277) then gridMenuKind 0, tryVerify that quickMenuPanelRoot is gone (:279), gridSelectionMenuId 16 (:280), tripletGrid true (:281) and gridDivisionControlText "1/16" (:282).
+
+S016 | test_gridDivisionAndFeelMenusDispatchAndDismiss (timeSig-menu takeover and reopen) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridMenuKind" #11
+  a ruler right-click opens the timeSig menu (:283-284) with gridSelectionMenuId 16 and tripletGrid true (:285-286); after closeTimeSigMenu (:287-288) the reopened division menu still asserts the six rows and the checked row (:289-292) with tripletGrid true (:290) and control text "1/16" (:292).
+
+S017 | test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen (action row closes the menu before the prompt) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "timeSigPromptOpen" #1
+  clickRow(timeMenu, 7) on the actionId-9 row then tryCompare(session, "timeSigMenuOpen", false) (:356), tryCompare(session, "timeSigPromptOpen", true) (:357), tryCompare(testCase, "promptOpenCount", 1) (:358) and compare(menuClosedBeforePrompt, true) (:359), where menuClosedBeforePrompt is sampled as !target.timeSigMenuOpen when the prompt opens (:39).
+
+S018 | test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen (disabled row keeps its menu open and triggers nothing) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "menuOpen" #5
+  once the duplicate header row reports enabled false (:390, :396) a clickRow on it (:398) still satisfies tryCompare(headers, "menuOpen", true) (:399) and compare(surface().appliedRevisionText, beforeRevision) (:400).
+
+S019 | test_gridControlsShowComboboxAffordance (mounted grid-control affordance) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridControlBackground"
+  for timelineRulerDivisionControl and timelineRulerFeelControl (:318-319) the child gridControlBackground has border.width > 0 in palette.outline on palette.buttonHoverBackground, gridControlArrow reads "▾" in palette.buttonText, gridControlLabel equals the bound gridModel control text and timelineRulerGridLabel reads "Grid" in palette.primaryText (:337-340).
+
+S020 | test_gridShortcutsWalkDenominationsAndFeel (Ctrl+1/2/3 ladder walk) | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "gridSelectionMenuId" #1
+  :304-309 walks gridSelectionMenuId -1 -> 4 -> 8 -> 4 through Ctrl+1 and Ctrl+2, then Ctrl+3 sets tripletGrid true (:311) with gridFeelControlText "Triplet" (:312).
 
 Remaining original source (closing sequence and helper bodies):
         session->cancel();

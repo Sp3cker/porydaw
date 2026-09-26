@@ -34,7 +34,7 @@ private struct NoteCommandFixture {
     let originalCursor: Tick
     let originalCamera: EditorCamera.Snapshot
 
-    init?(session: DocumentSession) {
+    init?(session: DocumentSession, grid: PianoGrid) {
         let document = session.document
         guard let originalBytes = try? document.state.file.encoded(),
               document.engineTracks.usedTrackCount > 0 else { return nil }
@@ -45,13 +45,7 @@ private struct NoteCommandFixture {
         originalTrack = session.selectedTrack
         originalCursor = session.editCursor
         originalCamera = session.camera.snapshot
-        grid = PianoGrid(session: session)
-        // The C++ split uses drawn grid boundaries; widen the snap lattice to
-        // the same subdivision before sending commands through the real grid.
-        for _ in 0..<4 where grid.snapTicks < grid.visibleGridTicks {
-            grid.performCommand(command: EditCommand.gridWiden.rawValue)
-        }
-        guard grid.snapTicks == grid.visibleGridTicks else { return nil }
+        self.grid = grid
         let cellStep = Tick(grid.visibleGridTicks)
         step = cellStep
         let track = grid.trackIndex
@@ -129,11 +123,21 @@ private func withNoteCommandFixture(
     _ report: CheckReport, session: DocumentSession, id: String,
     _ body: (NoteCommandFixture) -> Void
 ) {
-    guard let fixture = NoteCommandFixture(session: session) else {
+    let picker = PianoGrid(session: session)
+    let previousGridSelection = session.grid.selection
+    picker.openGridMenu(kind: 1)
+    picker.activateGridMenuRow(actionId: 8)
+    guard let fixture = NoteCommandFixture(session: session, grid: picker) else {
+        picker.openGridMenu(kind: 1)
+        picker.activateGridMenuRow(actionId: previousGridSelection.toMenuId())
         report.fail(id, "could not seed a free grid-aligned note")
         return
     }
-    defer { fixture.restore(report, id: id) }
+    defer {
+        fixture.restore(report, id: id)
+        picker.openGridMenu(kind: 1)
+        picker.activateGridMenuRow(actionId: previousGridSelection.toMenuId())
+    }
     body(fixture)
 }
 

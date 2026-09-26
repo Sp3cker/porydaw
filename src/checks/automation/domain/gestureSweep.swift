@@ -16,9 +16,7 @@ func drawerAutomationSweepSteppingAndRampFinish(_ report: CheckReport, suite: Do
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     report.expectEqual(expected: Tick(1), actual: projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepStepsID,
                        what: "a 24-tick document's clock lattice steps one tick")
@@ -107,9 +105,7 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: fixture.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     report.expectEqual(expected: Tick(24), actual: projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepTailID,
                        what: "the lattice step of this document is 24 ticks")
@@ -155,9 +151,7 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
         camera: endFixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: endFixture.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: endFixture.document,
-                                         timeline: endFixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: endFixture.session, font: 13, dpr: 1),
         songEndTick: endFixture.songEndTick)
     var endSweep = AutomationSweepTransaction(
         facts: endFixture.facts(endFixture.panLane), mode: .drag,
@@ -180,9 +174,7 @@ func drawerAutomationSweepFinishRestoresTrailingHeldValue(_ report: CheckReport,
         camera: committed.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: committed.page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: committed.document,
-                                         timeline: committed.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: committed.session, font: 13, dpr: 1),
         songEndTick: committed.songEndTick)
     var live = AutomationSweepTransaction(facts: committedFacts, mode: .drag,
                                           mapped: AutomationLanePoint(tick: 48, value: 85),

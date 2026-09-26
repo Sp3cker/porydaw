@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawBankLease
 
@@ -218,8 +218,7 @@ struct drawerAutomationAutomationFixture {
             camera: session.camera,
             bounds: AutomationPlotBounds(width: width, height: height, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationSnapPolicy(document: document, timeline: session.timeline,
-                                             baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.project(facts.snapshot, selection: selection,
                                   usedTracks: Set(0..<document.engineTracks.usedTrackCount))
@@ -238,8 +237,7 @@ struct drawerAutomationAutomationFixture {
             camera: session.camera,
             bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
             geometry: page.geometry,
-            snapPolicy: AutomationSnapPolicy(document: document, timeline: session.timeline,
-                                             baseFontPx: page.baseFontPx, devicePixelRatio: 1),
+            snapPolicy: AutomationProjectionCache().snapPolicy(session: session, font: page.baseFontPx, dpr: 1),
             songEndTick: songEndTick)
         return projection.y(value, metadata: AutomationParameterMetadata(parameter: parameter))
     }

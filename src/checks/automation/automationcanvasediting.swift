@@ -83,8 +83,7 @@ func drawerAutomationCancellationAndNoOps(_ report: CheckReport, suite: Document
                   message: "a press that never travelled commits nothing")
     report.expectEqual(expected: emptyBefore, actual: empty.snapshot, cppID: drawerAutomationCancelID,
                        what: "the parked press leaves the document alone")
-    let policy = AutomationSnapPolicy(document: empty.document, timeline: empty.session.timeline,
-                                      baseFontPx: 13, devicePixelRatio: 1)
+    let policy = AutomationProjectionCache().snapPolicy(session: empty.session, font: 13, dpr: 1)
     let snapped = policy.snap(min(max(0, empty.session.camera.tickAtContentX(pressX)),
                                   Double(empty.songEndTick)),
                               fine: false, camera: empty.session.camera)
@@ -507,9 +506,7 @@ func drawerAutomationHoverResidual(_ report: CheckReport, suite: DocumentSession
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
         geometry: page.geometry,
-        snapPolicy: AutomationSnapPolicy(document: fixture.document,
-                                         timeline: fixture.session.timeline,
-                                         baseFontPx: 13, devicePixelRatio: 1),
+        snapPolicy: AutomationProjectionCache().snapPolicy(session: fixture.session, font: 13, dpr: 1),
         songEndTick: fixture.songEndTick)
     var ramp = AutomationSweepTransaction(facts: facts, mode: .ramp,
                                           mapped: AutomationLanePoint(tick: 72, value: 60),

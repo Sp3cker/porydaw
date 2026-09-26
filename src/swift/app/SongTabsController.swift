@@ -137,8 +137,7 @@ internal struct ReloadedTab {
     let editCursor: UInt32
     let baseFontPx: Double
     let devicePixelRatio: Double
-    let snapScale: Int
-    let tripletGrid: Bool
+    let grid: RollGrid
     let showsEvents: Bool
 
     init(_ tab: SongTabSession) {
@@ -148,8 +147,7 @@ internal struct ReloadedTab {
         editCursor = tab.workspace.session.editCursor
         baseFontPx = tab.workspace.grid.baseFontPx
         devicePixelRatio = tab.workspace.grid.devicePixelRatio
-        snapScale = tab.workspace.grid.metrics.snapScale
-        tripletGrid = tab.workspace.grid.metrics.tripletGrid
+        grid = tab.workspace.session.grid
         showsEvents = tab.showsEvents
     }
 }

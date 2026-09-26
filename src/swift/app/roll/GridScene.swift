@@ -96,6 +96,7 @@ private func sceneTextDictSignature(_ dict: [String: QVariantSettable]) -> Strin
 @MainActor
 struct GridSceneInput {
     var metrics: GridMetrics
+    var grid: RollGrid = RollGrid()
     var palette: GridPalette
     var camera: EditorCamera
     var contentEndTick: Int
@@ -419,7 +420,7 @@ public final class GridScene {
                     fillColor: p.preRollMask))
         }
         let range = visibleTicks(input)
-        m.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
+        input.grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
             let color = level == 1 ? p.gridLineSub1
                 : level == 2 ? p.gridLineSub2 : p.gridLineSub3
@@ -428,12 +429,12 @@ public final class GridScene {
                 width: m.gridLineStroke, height: gridH, fillColor: color))
         }
         var segment = m.timeAxis.segmentAt(range.begin)
-        var finest = m.visibleGridTicks(in: segment, camera: camera) == 1
+        var finest = input.grid.gridTicksAt(range.begin, camera: camera) == 1
         m.timeAxis.forEachGridLine(from: range.begin, to: range.end) { tick, isBar, _, _ in
             let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
             if tick >= segment.next {
                 segment = m.timeAxis.segmentAt(tick)
-                finest = m.visibleGridTicks(in: segment, camera: camera) == 1
+                finest = input.grid.gridTicksAt(tick, camera: camera) == 1
             }
             time.append(SceneRect(
                 x: x - m.gridLineStroke / 2, y: 0,
@@ -523,7 +524,7 @@ public final class GridScene {
         var marks: [SceneRect] = []
         var labels: [SceneText] = []
         let range = visibleTicks(input)
-        m.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
+        input.grid.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let h = level == 1 ? m.spaceHalf : 1.0
             let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
             marks.append(SceneRect(

@@ -53,7 +53,6 @@ public final class PianoGrid {
     private var rightGesture: GridGesture?
     private var rightBandDemoted = false
     private var suppressedLeftRelease = false
-    private var pendingDrawInterrupted = false
     private var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
     private var pendingControlToggle: NoteID?
     private var pendingVelocityReanchor: NoteID?
@@ -70,6 +69,8 @@ public final class PianoGrid {
     private var keyboardAuditionTrack: Int?
     /// Receives roll auditions as (track, pitch, velocity), including band entrants.
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
+    @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
+    @QtIgnored public var onClearTimeSelection: (() -> Void)?
     private var didApplyInitialHome = false
     private var contentEndTick = GridMetrics.songLengthTicks
     private var staticSceneDirty = true
@@ -118,12 +119,15 @@ public final class PianoGrid {
     @QtTracked public var lastCancelReason = -1
     @QtTracked public var pencilMode = false
     @QtTracked public var tripletGrid = false
+    @QtTracked public var gridSelectionMenuId = -1
     public var gridMenuRows: QListModel<GridSubdivisionMenuItem> = QListModel()
     @QtTracked public var gridMenuKind = 0
     @QtTracked public var gridDivisionControlText = "Auto"
     @QtTracked public var gridFeelControlText = "Straight"
     @QtTracked public var editCursorTick = 0
     @QtTracked public var lastVelocity = 100
+    @QtTracked public var dragDistance = 10.0
+    @QtTracked public var drawThreshold = 3.0
     @QtTracked public var hoverKey = -1
     /// View menu display modes, mirrored from ApplicationSession (which owns
     /// the app-wide state and pushes it to every tab). Plain Swift state, set
@@ -217,7 +221,7 @@ public final class PianoGrid {
             let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
             session.selectedTrack = valid
             if trackIndex != valid { trackIndex = valid }
-            let snap = max(1, Tick(metrics.snapTicks(camera: session.camera)))
+            let snap = session.grid.snapTicksAt(session.editCursor, camera: session.camera)
             var projected: [GridNote] = []
             var noteCount = 0
             for track in 0..<count { noteCount += session.document.notes(in: track).count }
@@ -239,19 +243,20 @@ public final class PianoGrid {
         let cursorTick = Int(session.editCursor)
         if editCursorTick != cursorTick { editCursorTick = cursorTick }
         updateTimeAxis()
+        refreshGridMenuPresentation()
         staticSceneDirty = true
         refreshNotes()
     }
     @QtIgnored
     public func snapTickDown(_ tick: Double) -> Int {
-        metrics.snapTickDown(tick, camera: session.camera)
+        Int(session.grid.snapTickDown(tick, camera: session.camera))
     }
 
     @QtIgnored
     public func gridCell(at tick: Int) -> (start: Int, duration: Int) {
-        let segment = metrics.timeAxis.segmentAt(Tick(tick))
-        return (Int(segment.start),
-                metrics.visibleGridTicks(in: segment, camera: session.camera))
+        let cell = session.grid.visibleGridCellContaining(
+            Tick(max(0, tick)), camera: session.camera)
+        return (Int(cell.start), Int(cell.end - cell.start))
     }
 
     @QtIgnored
@@ -308,6 +313,7 @@ public final class PianoGrid {
     }
 
     @QtIgnored public var timeSelectionSource: (() -> AutomationTimeSelection?)?
+
     @QtIgnored
     public func refreshTimeSelectionHighlight() {
         refreshNotes()
@@ -321,15 +327,13 @@ public final class PianoGrid {
         if nextBase != roleTypography.baseFontPx {
             roleTypography = Typography(baseFontPx: nextBase)
         }
-        let preservedScale = metrics.snapScale
-        let preservedTriplet = metrics.tripletGrid
         metrics = GridMetrics(
             baseFontPx: newFont, dpr: max(0.1, dpr),
             width: max(0, width), height: max(0, height),
             timeAxis: metrics.timeAxis)
-        metrics.snapScale = preservedScale
-        metrics.tripletGrid = preservedTriplet
+        session.grid.metrics = metrics
         baseFontPx = metrics.baseFontPx
+        drawThreshold = metrics.drawThreshold
         devicePixelRatio = metrics.dpr
 
         let oldLimits = GridCameraPolicy.limits(baseFontPx: oldFont)
@@ -475,26 +479,25 @@ public final class PianoGrid {
         case .pencilMode:
             pencilMode.toggle()
         case .gridNarrow:
-            metrics.snapScale = max(-4, metrics.snapScale - 1)
+            guard session.grid.narrow() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         case .gridWiden:
-            metrics.snapScale = min(4, metrics.snapScale + 1)
+            guard session.grid.widen() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         case .gridTriplet:
-            metrics.tripletGrid.toggle()
-            tripletGrid = metrics.tripletGrid
+            guard session.grid.toggleFeel() else { return }
             refreshGridMenuPresentation()
             refreshFromSession()
         default:
-            let grid = UInt32(max(1, metrics.snapTicks(camera: session.camera)))
+            let position = TimeDefaults.tick(from: Double(editCursorTick))
+            let grid = session.grid.snapTicksAt(position, camera: session.camera)
             let didEdit = commands.execute(
-                command, snapTicks: Tick(grid),
-                editCursor: TimeDefaults.tick(from: Double(editCursorTick)),
+                command, snapTicks: grid,
+                editCursor: position,
                 nextSubdivision: { tick in
-                    TimeDefaults.shiftTickClamped(
-                        tick, by: Int64(grid - tick % grid))
+                    session.grid.nextSubdivisionTickAfter(tick, camera: session.camera)
                 })
             guard didEdit else { return }
             switch command {
@@ -549,40 +552,43 @@ public final class PianoGrid {
 
     public func activateGridMenuRow(actionId: Int) {
         let kind = gridMenuKind
-        guard (kind == 1 && (-4...4).contains(actionId))
+        guard (kind == 1 && session.grid.selections.contains { $0.toMenuId() == actionId })
             || (kind == 2 && (0...1).contains(actionId)) else { return }
         dismissGridMenu()
-        if kind == 1 {
-            guard metrics.snapScale != actionId else { return }
-            metrics.snapScale = actionId
-        } else {
-            guard metrics.tripletGrid != (actionId == 1) else { return }
-            metrics.tripletGrid = actionId == 1
-            tripletGrid = metrics.tripletGrid
-        }
+        let changed = kind == 1
+            ? session.grid.setSelection(GridSelection.fromMenuId(actionId))
+            : session.grid.setFeel(actionId == 1 ? .triplet : .straight)
+        guard changed else { return }
         refreshGridMenuPresentation()
         refreshFromSession()
     }
 
+    private func gridDivisionText(_ selection: GridSelection) -> String {
+        switch selection {
+        case .auto: "Auto"
+        case .musical(let denominator): "1/\(denominator)"
+        case .clock: "Clock"
+        }
+    }
+
     private func refreshGridMenuPresentation() {
-        let scale = metrics.snapScale
-        gridDivisionControlText = scale == 0 ? "Auto"
-            : scale < 0 ? "÷\(1 << -scale)" : "×\(1 << scale)"
-        gridFeelControlText = metrics.tripletGrid ? "Triplet" : "Straight"
+        let selection = session.grid.selection
+        gridSelectionMenuId = selection.toMenuId()
+        gridDivisionControlText = gridDivisionText(selection)
+        tripletGrid = session.grid.feel == .triplet
+        gridFeelControlText = tripletGrid ? "Triplet" : "Straight"
         if gridMenuKind == 1 {
-            gridMenuRows.reset(to: (-4...4).map { value in
-                let text = value == 0 ? "Adaptive"
-                    : value < 0 ? "Adaptive ÷\(1 << -value)"
-                    : "Adaptive ×\(1 << value)"
-                return GridSubdivisionMenuItem(actionId: value, text: text,
-                                               checked: value == scale)
+            gridMenuRows.reset(to: session.grid.selections.map { item in
+                let text = gridDivisionText(item)
+                return GridSubdivisionMenuItem(actionId: item.toMenuId(), text: text,
+                                               checked: item == selection)
             })
         } else if gridMenuKind == 2 {
             gridMenuRows.reset(to: [
                 GridSubdivisionMenuItem(actionId: 0, text: "Straight",
-                                        checked: !metrics.tripletGrid),
+                                        checked: !tripletGrid),
                 GridSubdivisionMenuItem(actionId: 1, text: "Triplet",
-                                        checked: metrics.tripletGrid),
+                                        checked: tripletGrid),
             ])
         }
     }
@@ -590,7 +596,7 @@ public final class PianoGrid {
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
         suppressedLeftRelease = false
-        pendingDrawInterrupted = false
+        stopAudition()
         pendingVelocityReanchor = nil
         let pressTick = session.camera.tickAtContentX(x)
         let pressKey = pitch(atY: y)
@@ -601,6 +607,10 @@ public final class PianoGrid {
             pendingControlToggle = control && session.selectedNotes.contains(note.noteId)
                 ? note.noteId : nil
             activeNoteId = note.noteId.rawValue
+            lastVelocity = note.velocity
+            keyboardAuditionKey = note.pitch
+            keyboardAuditionTrack = trackIndex
+            onAudition?(trackIndex, note.pitch, note.velocity)
             if control && hit.zone == .body {
                 gesture = .velocity(GridGesture.Velocity(
                     noteId: note.noteId, pressY: y, original: note.velocity))
@@ -633,11 +643,12 @@ public final class PianoGrid {
         } else {
             guard !session.scaleProjection.fold || session.scaleProjection.contains(pressKey)
             else { return }
-            if modifiers & (QtFact.shiftModifier | QtFact.controlModifier) == 0 {
-                session.clearSelectedNotes()
-            }
+            session.clearSelectedNotes()
             gesture = .pendingDraw(GridGesture.PendingDraw(
                 pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
+            keyboardAuditionKey = pressKey
+            keyboardAuditionTrack = trackIndex
+            onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
         }
         refreshNotes()
     }
@@ -654,8 +665,8 @@ public final class PianoGrid {
     public func updatePan(x: Double, y: Double) {
         guard let gesture, case .pan = gesture else { return }
         let updated = gesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera,
-            scale: session.scaleProjection)
+            x: x, y: y, metrics: metrics, grid: session.grid,
+            camera: session.camera, scale: session.scaleProjection)
         guard case .pan(let state) = updated else { return }
         if state.deltaX != 0 || state.deltaY != 0 {
             session.mutateCamera { camera in
@@ -677,11 +688,21 @@ public final class PianoGrid {
 
     public func updatePointer(x: Double, y: Double) {
         guard let gesture, !gesture.isRight else { return }
-        if case .velocity(let state) = gesture,
-           abs(y - state.pressY) < 10 { return }
+        if case .velocity(let state) = gesture, state.preview == nil,
+           abs(y - state.pressY) < dragDistance { return }
+        if case .pendingDraw = gesture {
+            let key = pitch(atY: y)
+            if key >= 0, (!session.scaleProjection.fold || session.scaleProjection.contains(key)),
+               key != keyboardAuditionKey {
+                stopAudition()
+                keyboardAuditionKey = key
+                keyboardAuditionTrack = trackIndex
+                onAudition?(trackIndex, key, min(127, max(1, lastVelocity)))
+            }
+        }
         self.gesture = gesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera,
-            scale: session.scaleProjection)
+            x: x, y: y, metrics: metrics, grid: session.grid,
+            camera: session.camera, scale: session.scaleProjection)
         if case .velocity(let state) = self.gesture {
             if let reanchor = pendingVelocityReanchor {
                 pendingVelocityReanchor = nil
@@ -698,17 +719,34 @@ public final class PianoGrid {
         defer { suppressedLeftRelease = false }
         guard let gesture, !gesture.isRight else { return }
         if case .pendingDraw(let state) = gesture {
-            if !pendingDrawInterrupted {
-                addNote(
-                    tick: metrics.snapTickDown(state.pressTick, camera: session.camera),
-                    duration: metrics.snapTicks(camera: session.camera), pitch: state.pressKey)
+            if abs(x - state.pressX) >= drawThreshold {
+                self.gesture = gesture.updated(
+                    x: x, y: y, metrics: metrics, grid: session.grid,
+                    camera: session.camera, scale: session.scaleProjection)
+                if !suppressedLeftRelease { commitGesture() }
+                stopAudition()
+            } else {
+                if case .band = rightGesture {
+                    stopAudition()
+                } else {
+                    if let selection = timeSelectionSource?(), selection.isActive,
+                       case let .tracks(scope) = selection.scope, scope.contains(trackIndex),
+                       selection.contains(Tick(max(0, Int(session.camera.tickAtContentX(x))))) {
+                        onClearTimeSelection?()
+                    }
+                    let tick = session.grid.snapTick(state.pressTick, camera: session.camera)
+                    session.editCursor = Tick(tick)
+                    editCursorTick = Int(tick)
+                    stopAudition()
+                    onCommitCursor?(Tick(tick))
+                }
             }
         } else if case .velocity(let state) = gesture, state.preview == nil {
             // A stationary modifier press is a deferred selection click.
         } else {
             self.gesture = gesture.updated(
-                x: x, y: y, metrics: metrics, camera: session.camera,
-                scale: session.scaleProjection)
+                x: x, y: y, metrics: metrics, grid: session.grid,
+                camera: session.camera, scale: session.scaleProjection)
             if !suppressedLeftRelease { commitGesture() }
         }
         if let pendingControlToggle, !suppressedLeftRelease {
@@ -729,6 +767,7 @@ public final class PianoGrid {
         pendingControlToggle = nil
         pendingVelocityReanchor = nil
         self.gesture = nil
+        stopAudition()
         activeNoteId = 0
         refreshFromSession()
     }
@@ -736,7 +775,6 @@ public final class PianoGrid {
     public func beginRightPointer(x: Double, y: Double) {
         guard rightGesture == nil else { return }
         if case .pan = gesture { return }
-        if case .pendingDraw = gesture { pendingDrawInterrupted = true }
         selectionAtRightPress = session.selectedNoteOrder
         rightBandDemoted = false
         releaseBandAudition()
@@ -748,7 +786,7 @@ public final class PianoGrid {
         default: blockedByLeft = true
         }
         rightGesture = .pendingMenu(GridGesture.PendingMenu(
-            pressX: x, pressY: y, threshold: blockedByLeft ? .infinity : 10,
+            pressX: x, pressY: y, threshold: blockedByLeft ? .infinity : dragDistance,
             hitNoteId: hit.map { notes[$0.index].noteId } ?? NoteID()))
         publishOutputs()
     }
@@ -764,8 +802,8 @@ public final class PianoGrid {
             }
             if leftAllowsBand {
                 self.rightGesture = rightGesture.updated(
-                    x: x, y: y, metrics: metrics, camera: session.camera,
-                    scale: session.scaleProjection)
+                    x: x, y: y, metrics: metrics, grid: session.grid,
+                    camera: session.camera, scale: session.scaleProjection)
             }
         }
         if case .band = self.rightGesture, !rightBandDemoted {
@@ -785,8 +823,8 @@ public final class PianoGrid {
             pendingVelocityReanchor = nil
         }
         let updated = rightBandDemoted ? rightGesture : rightGesture.updated(
-            x: x, y: y, metrics: metrics, camera: session.camera,
-            scale: session.scaleProjection)
+            x: x, y: y, metrics: metrics, grid: session.grid,
+            camera: session.camera, scale: session.scaleProjection)
         self.rightGesture = updated
         if case .band = updated, !rightBandDemoted {
             applyBandSelection()
@@ -795,6 +833,7 @@ public final class PianoGrid {
                 contextMenuRequested(x: x, y: y)
             } else {
                 session.clearSelectedNotes()
+                onClearTimeSelection?()
             }
         }
         self.rightGesture = nil
@@ -807,11 +846,26 @@ public final class PianoGrid {
     }
 
     public func doublePointer(x: Double, y: Double) {
-        guard let hit = hitNote(x: x, y: y) else { return }
-        let id = notes[hit.index].noteId
-        let ids = session.selectedNotes.contains(id) ? session.selectedNoteOrder : [id]
-        session.document.deleteNotes(ids)
-        refreshFromSession()
+        stopAudition()
+        if let hit = hitNote(x: x, y: y) {
+            gesture = nil
+            let id = notes[hit.index].noteId
+            let ids = session.selectedNotes.contains(id) ? session.selectedNoteOrder : [id]
+            session.document.deleteNotes(ids)
+            session.clearSelectedNotes()
+            refreshFromSession()
+            return
+        }
+        let key = pitch(atY: y)
+        guard key >= 0, !session.scaleProjection.fold || session.scaleProjection.contains(key)
+        else { return }
+        session.clearSelectedNotes()
+        let tick = session.grid.snapTickDown(session.camera.tickAtContentX(x),
+                                             camera: session.camera)
+        gesture = .draw(GridGesture.Draw(
+            anchorTick: Int(tick), tick: Int(tick),
+            duration: Int(session.grid.snapTicksAt(tick, camera: session.camera)), key: key))
+        refreshNotes()
     }
 
     public func updateHover(x: Double, y: Double) {
@@ -898,7 +952,6 @@ public final class PianoGrid {
         pendingVelocityReanchor = nil
         gesture = nil
         rightGesture = nil
-        pendingDrawInterrupted = false
         suppressedLeftRelease = false
         activeNoteId = 0
         clearKeyboardHover()
@@ -966,8 +1019,10 @@ public final class PianoGrid {
                     changes.append(NoteVelocity(
                         noteID: state.noteId, velocity: state.original + state.delta))
                 }
-                _ = session.document.setVelocities(
-                    changes, expectedRevision: session.document.revision)
+                if session.document.setVelocities(
+                    changes, expectedRevision: session.document.revision) != nil {
+                    lastVelocity = min(127, max(1, state.original + state.delta))
+                }
             }
         case .move(let state):
             if session.scaleProjection.fold && state.dKey != 0 {
@@ -1056,12 +1111,13 @@ public final class PianoGrid {
     @QtIgnored
     private func updateTimeAxis() {
         metrics.timeAxis = session.projectionCache.timeAxis
+        session.grid.axis = metrics.timeAxis
     }
 
     @QtIgnored
     private func sceneInput() -> GridSceneInput {
         GridSceneInput(
-            metrics: metrics, palette: palette, camera: session.camera,
+            metrics: metrics, grid: session.grid, palette: palette, camera: session.camera,
             contentEndTick: contentEndTick, scale: session.scaleProjection,
             rulerHeight: rulerHeight,
             typography: typography, fontSpec: { self.fontSpec($0) }, notes: notes,
@@ -1177,9 +1233,9 @@ public final class PianoGrid {
         if trackHeaderWidth != headerWidth { trackHeaderWidth = headerWidth }
         let tpb = Int(max(1, session.document.ticksPerBeat))
         if ticksPerBeat != tpb { ticksPerBeat = tpb }
-        let snap = metrics.snapTicks(camera: session.camera)
+        let snap = Int(session.grid.snapTicksAt(session.editCursor, camera: session.camera))
         if snapTicks != snap { snapTicks = snap }
-        let gridTicks = metrics.visibleGridTicks(camera: session.camera)
+        let gridTicks = Int(session.grid.gridTicksAt(session.editCursor, camera: session.camera))
         if visibleGridTicks != gridTicks { visibleGridTicks = gridTicks }
     }
 
@@ -1278,7 +1334,7 @@ public final class PianoGrid {
         if let gesture {
             switch gesture {
             case .pendingDraw(let state):
-                return "Pending draw at tick \(metrics.snapTick(state.pressTick, camera: session.camera))"
+                return "Pending draw at tick \(session.grid.snapTick(state.pressTick, camera: session.camera))"
             case .draw(let state):
                 return "Drawing — tick \(state.tick), duration \(state.duration), pitch \(state.key)"
             case .velocity:
