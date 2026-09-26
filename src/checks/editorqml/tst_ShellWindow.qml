@@ -1972,6 +1972,7 @@ TestCase {
         verify(waitForNative(function() { return !presenter.windowModified }, 5000),
                "saving clears the title modified state")
         var firstId = session.songTabs.selectedId
+        var firstPage = session.songTabs.selectedPage
         session.openSong("mus_littleroot_test")
         verify(waitForNative(function() {
             return session.songTabs.tabCount === 2 && session.songTabs.selectedId !== firstId
@@ -1980,6 +1981,34 @@ TestCase {
             return shell.title === "mus_littleroot_test — " + projectName + " — porydaw"
         }, 5000), "the window title follows the newly selected song")
         var secondId = session.songTabs.selectedId
+        var secondPage = session.songTabs.selectedPage
+        var selectedHeaders = secondPage.trackHeadersPresenter()
+        var selectedEditor = selectedSurface()
+        verify(selectedEditor && selectedEditor.visible,
+               "the selected song mounts the production editor")
+        var headerRows = findChild(selectedEditor, "timelineTrackHeaderRows")
+        var headerInput = findChild(selectedEditor, "timelineTrackHeadersInput")
+        verify(headerRows !== null && headerInput !== null,
+               "the selected tab mounts its header input and rows")
+        var firstHeaderRow = headerRows.itemAt(0)
+        mouseClick(headerInput, firstHeaderRow.titleRect.x + firstHeaderRow.titleRect.width / 2,
+                   firstHeaderRow.titleRect.y + firstHeaderRow.titleRect.height / 2,
+                   Qt.RightButton)
+        tryCompare(selectedHeaders, "menuOpen", true, 5000,
+                   "the selected tab opens its header menu through the mounted input")
+        firstPage.trackHeadersPresenter().activateAddTrack()
+        compare(session.headerVoicePickerOpen, false,
+                "a hidden tab's add request does not open the selected window's picker")
+        compare(secondPage.headerVoicePickerModel().pickerOpen, false,
+                "a hidden tab's add request leaves the selected tab's picker closed")
+        compare(selectedHeaders.menuOpen, true,
+                "a hidden tab's add request leaves the selected header menu open")
+        compare(session.songTabs.selectedId, secondId,
+                "a hidden tab's add request does not switch the selected tab")
+        compare(session.documentDirty, false,
+                "a hidden tab's add request does not mutate the selected song")
+        firstPage.headerVoicePickerModel().cancelPicker()
+        selectedHeaders.dismissHeaderMenu()
         session.songTabs.selectTab(firstId)
         verify(waitForNative(function() {
             return shell.title === "mus_route101 — " + projectName + " — porydaw"

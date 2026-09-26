@@ -87,6 +87,45 @@ final class VoicePickerProjectionCache {
     private var selectedIndex: Int?
     private(set) var programs: [Int] = []
     private(set) var indices: [Int: Int] = [:]
+    private var soundingProgram: UInt8?
+
+    func initialProgram(_ desired: Int) -> Int {
+        programs.contains(desired) ? desired : (programs.first ?? -1)
+    }
+
+    func filteredProgram(_ text: String) -> Int {
+        resolve(filter: String(text.prefix(64)))
+        return programs.first ?? -1
+    }
+
+    func program(at index: Int) -> Int {
+        programs.indices.contains(index) ? programs[index] : -1
+    }
+
+    func movedProgram(from program: Int, delta: Int) -> Int? {
+        guard !programs.isEmpty else { return nil }
+        guard let current = indices[program] else { return programs[0] }
+        return programs[min(max(current + delta, 0), programs.count - 1)]
+    }
+
+    func hold(program: Int, audition: ((UInt8, UInt8, UInt8) -> Void)?) {
+        guard let audition, let voice = UInt8(exactly: program), voice < 128 else { return }
+        release(audition: audition)
+        soundingProgram = voice
+        audition(voice, 60, 112)
+    }
+
+    func release(audition: ((UInt8, UInt8, UInt8) -> Void)?) {
+        guard let program = soundingProgram else { return }
+        soundingProgram = nil
+        audition?(program, 60, 0)
+    }
+
+    func releaseIfFilteredOut(audition: ((UInt8, UInt8, UInt8) -> Void)?) {
+        if let soundingProgram, indices[Int(soundingProgram)] == nil {
+            release(audition: audition)
+        }
+    }
 
     func refresh(slots: [BankSlotView]) {
         guard self.slots != slots else { return }
@@ -505,6 +544,19 @@ enum VoiceChangesProjection {
     static func syncPickerRows(_ model: QListModel<VoicePickerRowHandle>,
                                _ values: [VoicePickerRowHandle]) {
         syncModel(model, values, matches: { $0.matches($1) })
+    }
+
+    static func publishPickerRows(_ model: QListModel<VoicePickerRowHandle>,
+                                  snapshots: inout [VoicePickerRowHandle],
+                                  values: [VoicePickerRowHandle]) {
+        let samePrograms = snapshots.count == values.count
+            && zip(snapshots, values).allSatisfy { $0.program == $1.program }
+        snapshots = values
+        if samePrograms {
+            syncPickerRows(model, values)
+        } else {
+            model.reset(to: values)
+        }
     }
 
     static func syncMenuRows(_ model: QListModel<VoiceMenuRowHandle>,

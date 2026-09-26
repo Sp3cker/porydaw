@@ -167,7 +167,6 @@ public final class VoiceChangesPage: EditorDrawerPage {
             auditionDiagnostic = auditionAvailable ? "" : "Voice audition is unavailable."
         }
     }
-    @QtIgnored var soundingProgram: UInt8?
 
     // MARK: Published models
 

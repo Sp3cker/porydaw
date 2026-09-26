@@ -17,6 +17,8 @@ internal func runTrackHeadersInputChecks(_ report: CheckReport, session: Documen
     renameCommitsAndRebuildsHeader(report, suite: session, service: service)
     reorderCommitsAndRebuildsHeader(report, suite: session, service: service)
     addTrackOpensPickerAndRebuildsHeader(report, suite: session, service: service)
+    firstTickDuplicateVoiceAcceptsLastDuplicate(report, suite: session, service: service)
+    voiceAcceptInsertsWhenNoTarget(report, suite: session, service: service)
     headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(report, suite: session, service: service)
     headerMenuTargetRowResolvesByTrack(report, suite: session, service: service)
     headerMenuChangeVoiceOpensPickerAfterMenuCloses(report, suite: session, service: service)

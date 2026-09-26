@@ -23,6 +23,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var songOpen = false
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
+    @QtTracked public var headerVoicePickerOpen = false
 
     @QtTracked public var timeSigPromptOpen = false
     @QtTracked public var timeSigMenuOpen = false
@@ -420,6 +421,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         return workspace.trackHeaders
     }
+    public func headerVoicePickerModel() -> HeaderVoicePicker {
+        guard let workspace else {
+            preconditionFailure("Header voice picker requested without an open song")
+        }
+        return workspace.headerVoicePicker
+    }
+
 
     public func rulerMenuPresenter() -> RulerMenuPresenter {
         guard let workspace else {
@@ -572,11 +580,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtSignal public func allTabsClosed()
     @QtSignal public func closeCancelled()
     @QtSignal public func changeTrackVoiceRequested(track: Int)
+    @QtSignal public func addTrackVoiceRequested()
 
-    /// The host's existing picker returns a program, or -1 on cancellation.
-    /// The presenter rechecks the captured document identity and revision.
     public func completeTrackHeaderVoiceRequest(program: Int) {
-        workspace?.trackHeaders.completeVoiceRequest(program: program)
+        workspace?.headerVoicePicker.complete(program)
     }
 
     /// The host removed the scene, which is what releases the presentation. The
@@ -731,6 +738,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// and the surface read.
     @QtIgnored
     func tabsDidChange() {
+        headerVoicePickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
         polyphony.setContext(session: workspace?.session)
         transportBar.refresh()
         refreshDocumentState()
@@ -1104,12 +1112,27 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     private func makeCallbacks(for session: DocumentSession) -> DocumentWorkspace.Callbacks {
         DocumentWorkspace.Callbacks(
-            changeTrackVoiceRequested: { [weak self] track in
-                self?.changeTrackVoiceRequested(track: track)
+            addTrackVoiceRequested: { [weak self, weak session] in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.addTrackVoiceRequested()
+            },
+            changeTrackVoiceRequested: { [weak self, weak session] track in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.changeTrackVoiceRequested(track: track)
             },
             revealTrackVoiceRequested: { [weak self, weak session] track in
                 guard let self, let session, self.selectedDocument === session else { return }
                 self.voiceList.revealTrackVoice(track: track, session: session)
+            },
+            headerVoicePickerOpenChanged: { [weak self, weak session] open in
+                guard let self, let session else { return }
+                self.songTabs.tabs.first { $0.workspace.session === session }?
+                    .headerVoicePickerOpen = open
+                if self.selectedDocument === session { self.headerVoicePickerOpen = open }
+            },
+            headerVoicePickerCompleted: { [weak self, weak session] program in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.completeTrackHeaderVoiceRequest(program: program)
             },
             gridCommandAvailabilityChanged: { [weak self, weak session] in
                 guard let self, let session, self.selectedDocument === session else { return }

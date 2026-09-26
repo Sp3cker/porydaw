@@ -236,3 +236,73 @@ func addTrackOpensPickerAndRebuildsHeader(
     h.completeVoiceRequest(program: 127)
     remapped.expectUnchanged(report, fx.document, cppID: id, phase: "stale voice completion")
 }
+
+@MainActor
+func firstTickDuplicateVoiceAcceptsLastDuplicate(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::firstTickDuplicateVoiceAcceptsLastDuplicate"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let h = fx.headers
+    let document = fx.document
+    let tick = document.lanePoints(track: 0, lane: .voice).first?.tick ?? 0
+    document.writeLane(track: 0, lane: .voice, from: tick, through: tick,
+                       points: [LaneWrite(tick: tick, value: 31),
+                                LaneWrite(tick: tick, value: 37)])
+    let seeded = HeaderDocumentBaseline(document)
+    report.expectEqual(expected: [31, 37],
+                       actual: document.lanePoints(track: 0, lane: .voice)
+                           .filter { $0.tick == tick }.map(\.value),
+                       cppID: id, what: "first-tick duplicates retain input order")
+    let voice = fx.point(.voice)
+    report.expect(h.doublePointer(x: voice.x, y: voice.y, button: 1, modifiers: 0),
+                  cppID: id, message: "voice cell opens the first-tick picker")
+    h.completeVoiceRequest(program: 37)
+    report.expectEqual(expected: seeded.state, actual: document.state, cppID: id,
+                       what: "unchanged voice accepted: song unchanged")
+    report.expectEqual(expected: seeded.revision, actual: document.revision, cppID: id,
+                       what: "unchanged duplicate voice acceptance writes no revision")
+    report.expectEqual(expected: seeded.history, actual: document.history.currentIdentity,
+                       cppID: id, what: "unchanged duplicate voice acceptance keeps history identity")
+    _ = h.doublePointer(x: voice.x, y: voice.y, button: 1, modifiers: 0)
+    h.completeVoiceRequest(program: 127)
+    report.expectEqual(expected: [127],
+                       actual: document.lanePoints(track: 0, lane: .voice)
+                           .filter { $0.tick == tick }.map(\.value),
+                       cppID: id, what: "accept changes the audible last duplicate and resolves collisions")
+    report.expectEqual(expected: seeded.revision + 1, actual: document.revision,
+                       cppID: id, what: "changed voice writes one document revision")
+    report.expect(document.history.undoDocument(), cppID: id,
+                  message: "voice change undo restores both first-tick occurrences")
+    report.expectEqual(expected: seeded.state, actual: document.state, cppID: id,
+                       what: "undo restores both first-tick occurrences")
+    report.expectEqual(expected: seeded.history, actual: document.history.currentIdentity,
+                       cppID: id, what: "undo restores the original history identity")
+}
+
+@MainActor
+func voiceAcceptInsertsWhenNoTarget(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::voiceAcceptInsertsWhenNoTarget"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let document = fx.document
+    let lastTick = document.lanePoints(track: 0, lane: .voice).last?.tick ?? 0
+    document.writeLane(track: 0, lane: .voice, from: 0, through: lastTick, points: [])
+    report.expect(document.lanePoints(track: 0, lane: .voice).isEmpty, cppID: id,
+                  message: "the existing track has no voice changes")
+    let before = HeaderDocumentBaseline(document)
+    let point = fx.point(.voice)
+    report.expect(fx.headers.doublePointer(x: point.x, y: point.y, button: 1, modifiers: 0),
+                  cppID: id, message: "the empty voice cell opens the picker")
+    fx.headers.completeVoiceRequest(program: 0)
+    report.expectEqual(expected: [0],
+                       actual: document.lanePoints(track: 0, lane: .voice).map(\.value),
+                       cppID: id, what: "accepting the default voice inserts the missing lane point")
+    report.expectEqual(expected: before.revision + 1, actual: document.revision,
+                       cppID: id, what: "the missing lane point is one undoable write")
+    report.expect(document.history.undoDocument(), cppID: id,
+                  message: "undo removes the inserted default voice")
+    report.expectEqual(expected: before.state, actual: document.state, cppID: id,
+                       what: "undo restores the empty voice lane")
+}

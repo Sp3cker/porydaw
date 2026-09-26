@@ -18,6 +18,7 @@ Item {
     readonly property int cancelReasonHidden: 2
     readonly property var gridModel: applicationSession.gridPresenter()
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
+    readonly property var headerPickerModel: applicationSession.headerVoicePickerModel()
     readonly property var drawerPresenter: applicationSession.drawerPresenter()
     readonly property var velocityModel: applicationSession.velocityPage()
     property bool velocityPromptRetainingRelease: false
@@ -793,8 +794,8 @@ Item {
             function onMenuOpenChanged() {
                 if (!root.headersModel.menuOpen)
                     Qt.callLater(function() {
-                        if (!root.headersModel.menuOpen && root.headersModel.renamingTrack < 0
-                            && trackHeaders.bandVisible)
+                        if (!root.headersModel.menuOpen && !root.applicationSession.headerVoicePickerOpen
+                            && root.headersModel.renamingTrack < 0 && trackHeaders.bandVisible)
                             trackHeaders.restoreHeaderFocus()
                     })
             }
@@ -968,6 +969,40 @@ Item {
                                              height - menuHeight)))
                 }
                 Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
+            }
+        }
+    }
+
+    Loader {
+        id: headerVoicePickerLoader
+        objectName: "headerVoicePickerLoader"
+        anchors.fill: parent
+        z: 14
+        active: root.applicationSession.headerVoicePickerOpen
+        Connections {
+            target: root.timeSigHost
+            function onAddTrackVoiceRequested() {
+                if (root.timeSigHost.songTabs.selectedId === root.applicationSession.tabId
+                        && root.headersModel.menuOpen)
+                    root.headersModel.dismissHeaderMenu()
+            }
+        }
+        Connections {
+            target: root.applicationSession
+            function onHeaderVoicePickerOpenChanged() {
+                if (!root.applicationSession.headerVoicePickerOpen)
+                    Qt.callLater(function() {
+                        if (!root.applicationSession.headerVoicePickerOpen && trackHeaders.bandVisible)
+                            trackHeaders.restoreHeaderFocus()
+                    })
+            }
+        }
+        sourceComponent: Component {
+            VoicePickerPrompt {
+                model: root.headerPickerModel
+                promptPalette: root.gridModel.palette
+                hintService: root.hintService
+                showing: true
             }
         }
     }

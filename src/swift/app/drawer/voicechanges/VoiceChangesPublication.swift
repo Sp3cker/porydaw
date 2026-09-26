@@ -282,9 +282,7 @@ extension VoiceChangesPage {
             return
         }
         pickerCache.resolve(filter: live.filter)
-        if let soundingProgram, pickerCache.indices[Int(soundingProgram)] == nil {
-            releasePickerAudition()
-        }
+        pickerCache.releaseIfFilteredOut(audition: onAuditionVoice)
         syncPickerRows(pickerCache.selectedRows(program: live.program))
         setPublished(&pickerFilter, live.filter)
         setPublished(&pickerIndex, pickerCache.indices[live.program] ?? -1)
@@ -301,10 +299,7 @@ extension VoiceChangesPage {
         releasePickerAudition()
         guard var live = picker else { return }
         pickerCache.resolve(filter: live.filter)
-        let visible = pickerCache.programs
-        if !visible.contains(live.program) {
-            live.program = visible.first ?? -1
-        }
+        live.program = pickerCache.initialProgram(live.program)
         picker = live
         setPublished(&pickerTitle, live.title)
         publishPicker()
@@ -348,18 +343,8 @@ extension VoiceChangesPage {
 
     @QtIgnored
     func syncPickerRows(_ values: [VoicePickerRowHandle]) {
-        let samePrograms = pickerRowSnapshots.count == values.count
-            && zip(pickerRowSnapshots, values).allSatisfy { pair in
-                pair.0.program == pair.1.program
-            }
-        pickerRowSnapshots = values
-        if samePrograms {
-            VoiceChangesProjection.syncPickerRows(pickerRows, values)
-        } else {
-            // VoicePickerModel::setFilter resets when the visible program set
-            // changes; row updates are reserved for selection/label changes.
-            pickerRows.reset(to: values)
-        }
+        VoiceChangesProjection.publishPickerRows(
+            pickerRows, snapshots: &pickerRowSnapshots, values: values)
     }
 
 

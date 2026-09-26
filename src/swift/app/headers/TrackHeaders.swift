@@ -369,21 +369,28 @@ public final class TrackHeadersPresenter {
 
     public func dismissHeaderMenu() { pendingMenu = nil; menuOpen = false }
 
-    /// Completion of the existing host's picker callback, guarded across edits
-    /// and document replacement. A negative program is the picker's cancellation.
     public func completeVoiceRequest(program: Int) {
         guard let target = pendingVoice else { return }
         pendingVoice = nil
         guard (0...127).contains(program), let session,
               target.matches(session.document) else { return }
         if target.track < 0 {
-            if let track = session.document.addTrack(voice: program) { selectTrack(track) }
+            if session.document.canAddTrack,
+               let track = session.document.addTrack(voice: program) { selectTrack(track) }
         } else if validTrack(target.track) {
             let points = session.document.lanePoints(track: target.track, lane: .voice)
-            let tick = points.first?.tick ?? 0
-            session.document.writeLane(track: target.track, lane: .voice,
-                                       from: tick, through: tick,
-                                       points: [LaneWrite(tick: tick, value: program)])
+            if let firstTick = points.first?.tick,
+               let firstChange = points.last(where: { $0.tick == firstTick }) {
+                if program != firstChange.value {
+                    session.document.moveLanePoints(
+                        track: target.track, lane: .voice,
+                        moves: [LanePointMove(point: firstChange, tick: firstTick, value: program)])
+                }
+            } else {
+                session.document.writeLane(track: target.track, lane: .voice,
+                                           from: 0, through: 0,
+                                           points: [LaneWrite(tick: 0, value: program)])
+            }
         }
         refreshFromDocument()
     }
@@ -402,6 +409,14 @@ public final class TrackHeadersPresenter {
         session.selectPrimaryTrack(track)
         onTrackSelected?(track)
         refreshFromDocument()
+    }
+
+    @QtIgnored
+    func firstVoiceProgram(track: Int) -> Int {
+        guard let session, validTrack(track) else { return 0 }
+        let points = session.document.lanePoints(track: track, lane: .voice)
+        guard let firstTick = points.first?.tick else { return 0 }
+        return points.last { $0.tick == firstTick }?.value ?? 0
     }
 
     @QtIgnored

@@ -193,8 +193,7 @@ extension VoiceChangesPage {
         let filter = String(text.prefix(64))
         guard filter != live.filter else { return }
         live.filter = filter
-        pickerCache.resolve(filter: filter)
-        live.program = pickerCache.programs.first ?? -1
+        live.program = pickerCache.filteredProgram(filter)
         picker = live
         publishPicker()
     }
@@ -203,8 +202,7 @@ extension VoiceChangesPage {
     func dispatchSelectPickerRow(index: Int) {
         guard let live = picker else { return }
         pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        selectPickerProgram(programs.indices.contains(index) ? programs[index] : -1)
+        selectPickerProgram(pickerCache.program(at: index))
     }
 
 
@@ -220,29 +218,19 @@ extension VoiceChangesPage {
         }
         let program = pickerRowSnapshots[index].program
         selectPickerProgram(program)
-        guard let audition = onAuditionVoice, let voice = UInt8(exactly: program),
-              voice < 128 else { return }
-        releasePickerAudition()
-        soundingProgram = voice
-        audition(voice, 60, 112)
+        pickerCache.hold(program: program, audition: onAuditionVoice)
     }
 
     func dispatchReleasePickerAudition() {
-        guard let program = soundingProgram else { return }
-        soundingProgram = nil
-        onAuditionVoice?(program, 60, 0)
+        pickerCache.release(audition: onAuditionVoice)
     }
     /// Arrow navigation over the filtered rows.
     func dispatchMovePickerSelection(delta: Int) {
         guard let live = picker else { return }
         pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        guard !programs.isEmpty else { return }
-        guard let current = pickerCache.indices[live.program] else {
-            selectPickerProgram(programs[0])
-            return
+        if let program = pickerCache.movedProgram(from: live.program, delta: delta) {
+            selectPickerProgram(program)
         }
-        selectPickerProgram(programs[min(max(current + delta, 0), programs.count - 1)])
     }
 
     /// Acceptance: one existing lane operation for the captured target — a value
@@ -407,11 +395,8 @@ extension VoiceChangesPage {
             ?? VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: target.tick,
                                     points: lanePoints())
         pickerCache.resolve(filter: filter)
-        let visible = pickerCache.programs
         picker = VoiceChangesTransactions.openPicker(
-            target: target,
-            filter: filter,
-            program: visible.contains(initial) ? initial : (visible.first ?? -1))
+            target: target, filter: filter, program: pickerCache.initialProgram(initial))
         pickerOpen = true
         pickerTitle = picker?.title ?? ""
         pickerFilter = filter

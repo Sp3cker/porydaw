@@ -205,6 +205,8 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     private var releasedGrid: PianoGrid?
     private weak var releasingTab: SongTabSession?
     private var releasingTabId = -1
+    private var headerAuditionEvents: [String] = []
+    private var headerAuditionForward: ((UInt8, UInt8, UInt8) -> Void)?
 
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
@@ -407,6 +409,10 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     public func undoTimeSignature() -> Bool {
         document?.document.history.undoDocument() ?? false
     }
+    public func redoTimeSignature() -> Bool {
+        document?.document.history.redoDocument() ?? false
+    }
+
 
     public func setTimeSigCursor(tick: Double) -> Bool {
         guard let document, tick.isFinite, tick >= 0 else { return false }
@@ -594,6 +600,46 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         pushTrackActivity(presenter: session.trackHeadersPresenter(), track: track,
                           left: left, right: right, elapsed: 60, playing: playing)
         return true
+    }
+
+    public func observeHeaderVoiceAudition() -> Bool {
+        guard let picker = session?.headerVoicePickerModel() else { return false }
+        if headerAuditionForward == nil {
+            let forward = picker.onAuditionVoice
+            headerAuditionForward = forward
+            picker.onAuditionVoice = { [weak self] program, key, velocity in
+                self?.headerAuditionEvents.append("\(program):\(key):\(velocity)")
+                forward?(program, key, velocity)
+            }
+        }
+        headerAuditionEvents.removeAll(keepingCapacity: true)
+        return true
+    }
+
+    public func headerVoiceAuditionEvents() -> String {
+        headerAuditionEvents.joined(separator: ",")
+    }
+
+    public func stopObservingHeaderVoiceAudition() {
+        guard let forward = headerAuditionForward else { return }
+        session?.headerVoicePickerModel().onAuditionVoice = forward
+        headerAuditionForward = nil
+    }
+
+    public func seedDuplicateInitialVoice(track: Int, first: Int, last: Int) -> Bool {
+        guard let document, (0...127).contains(first), (0...127).contains(last),
+              (0..<document.document.engineTracks.usedTrackCount).contains(track)
+        else { return false }
+        let tick = document.document.lanePoints(track: track, lane: .voice).first?.tick ?? 0
+        document.document.writeLane(track: track, lane: .voice, from: tick, through: tick,
+                                    points: [LaneWrite(tick: tick, value: first),
+                                             LaneWrite(tick: tick, value: last)])
+        return true
+    }
+
+    public func moveHeaderTrack(from: Int, to: Int) -> Bool {
+        guard let document else { return false }
+        return document.document.moveTrack(from, to: to)
     }
 
     @QtIgnored

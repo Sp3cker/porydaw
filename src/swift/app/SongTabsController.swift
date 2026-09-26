@@ -39,6 +39,7 @@ public final class SongTabSession {
     @QtTracked public var timeSigHost: ApplicationSession
     @QtTracked public var timeSigPromptOpen = false
     @QtTracked public var timeSigMenuOpen = false
+    @QtTracked public var headerVoicePickerOpen = false
 
     /// The workspace this tab presents: one document plus every presenter bound
     /// to it. The tab owns it for as long as the tab is live; the application
@@ -80,6 +81,7 @@ public final class SongTabSession {
     public func pitchBendPresenter() -> PitchBendPresenter { workspace.pitchBend }
 
     public func trackHeadersPresenter() -> TrackHeadersPresenter { workspace.trackHeaders }
+    public func headerVoicePickerModel() -> HeaderVoicePicker { workspace.headerVoicePicker }
 
     public func drawerPresenter() -> EditorDrawerPresenter { workspace.drawer }
     public func otherEventsBand() -> OtherEventsBandPresenter { workspace.otherEventsBand }

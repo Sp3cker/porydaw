@@ -9,21 +9,30 @@ import PorydawAppCommands
 @MainActor
 public final class DocumentWorkspace {
     public struct Callbacks {
+        public var addTrackVoiceRequested: () -> Void
         public var changeTrackVoiceRequested: (Int) -> Void
+        public var headerVoicePickerOpenChanged: (Bool) -> Void
+        public var headerVoicePickerCompleted: ((Int) -> Void)?
         public var revealTrackVoiceRequested: (Int) -> Void
         public var gridCommandAvailabilityChanged: () -> Void
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
 
-        public init(changeTrackVoiceRequested: @escaping (Int) -> Void,
+        public init(addTrackVoiceRequested: @escaping () -> Void = {},
+                    changeTrackVoiceRequested: @escaping (Int) -> Void,
                     revealTrackVoiceRequested: @escaping (Int) -> Void,
+                    headerVoicePickerOpenChanged: @escaping (Bool) -> Void = { _ in },
+                    headerVoicePickerCompleted: ((Int) -> Void)? = nil,
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
                     publicationFailed: @escaping (String) -> Void,
                     timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
+            self.addTrackVoiceRequested = addTrackVoiceRequested
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
+            self.headerVoicePickerOpenChanged = headerVoicePickerOpenChanged
+            self.headerVoicePickerCompleted = headerVoicePickerCompleted
             self.revealTrackVoiceRequested = revealTrackVoiceRequested
             self.gridCommandAvailabilityChanged = gridCommandAvailabilityChanged
             self.sessionStateChanged = sessionStateChanged
@@ -35,6 +44,7 @@ public final class DocumentWorkspace {
     public let grid: PianoGrid
     public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
+    public let headerVoicePicker: HeaderVoicePicker
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
@@ -90,6 +100,13 @@ public final class DocumentWorkspace {
         let headers = TrackHeadersPresenter(typography: typography)
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
+        let headerVoicePicker = HeaderVoicePicker(headers: headers, typography: typography)
+        self.headerVoicePicker = headerVoicePicker
+        headerVoicePicker.onOpenChanged = callbacks.headerVoicePickerOpenChanged
+        headerVoicePicker.onComplete = callbacks.headerVoicePickerCompleted
+        headerVoicePicker.onAuditionVoice = { [weak audio] program, key, velocity in
+            audio?.previewVoice(program: program, key: key, velocity: velocity)
+        }
         let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))
         velocityPage.attach(session: session, palette: grid.palette)
         self.velocityPage = velocityPage
@@ -120,7 +137,14 @@ public final class DocumentWorkspace {
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)
         }
-        headers.onChangeTrackVoiceRequested = callbacks.changeTrackVoiceRequested
+        headers.onAddTrackRequested = { [weak headerVoicePicker] in
+            callbacks.addTrackVoiceRequested()
+            headerVoicePicker?.open(track: -1)
+        }
+        headers.onChangeTrackVoiceRequested = { [weak headerVoicePicker] track in
+            callbacks.changeTrackVoiceRequested(track)
+            headerVoicePicker?.open(track: track)
+        }
         headers.onRevealTrackVoiceRequested = callbacks.revealTrackVoiceRequested
         grid.onAudition = { [weak audio] track, key, velocity in
             guard let audio, (0...15).contains(track), (0...127).contains(key),
@@ -208,6 +232,7 @@ public final class DocumentWorkspace {
         rulerMenu.cancelSweep()
         grid.inputCancelled(reason: reason)
         trackHeaders.inputCancelled(reason: reason)
+        if reason == GridCancelReason.hidden.rawValue { headerVoicePicker.cancelPicker() }
         voiceChangesPage.cancelSectionInteraction()
         drawer.inputCancelled(reason: reason)
         otherEventsBand.inputCancelled()
@@ -280,6 +305,9 @@ public final class DocumentWorkspace {
         session.onCameraChange = nil
         session.onCameraChangeDetailed = nil
         voiceChangesPage.detach()
+        headerVoicePicker.cancelPicker()
+        headerVoicePicker.onOpenChanged = nil
+        headerVoicePicker.onAuditionVoice = nil
         voiceChangesPage.onAuditionVoice = nil
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil
@@ -350,6 +378,9 @@ public final class DocumentWorkspace {
             if isActive { playhead.refreshImmediate() }
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()
+        }
+        if documentChanged || change.domains.contains(.bank) {
+            headerVoicePicker.refresh()
         }
 
         if documentChanged || !change.domains.intersection([.selection, .scale]).isEmpty {

@@ -89,6 +89,7 @@ add_library(PorydawApp STATIC
     drawer/automation/AutomationLifecycle.swift
     drawer/automation/AutomationPage.swift
     headers/TrackHeaders.swift
+    headers/HeaderVoicePicker.swift
     headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
