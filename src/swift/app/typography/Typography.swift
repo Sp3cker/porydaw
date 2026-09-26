@@ -64,6 +64,11 @@ public struct Typography {
                      letterSpacing: 0)
     }
 
+    var captionMinimum: GridFontSpec {
+        GridFontSpec(family: gridBodyFamily, pixelSize: fontPx(2.0 / 3.0), weight: 400,
+                     letterSpacing: 0)
+    }
+
     var captionBold: GridFontSpec {
         GridFontSpec(family: gridBodyFamily, pixelSize: baseFontPx, weight: 600,
                      letterSpacing: 0)

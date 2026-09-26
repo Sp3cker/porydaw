@@ -36,12 +36,10 @@ FocusScope {
     readonly property bool navigationEnabled: controller && controller.visible && navigationInputActive
                                              && !editing && !controller.menuOpen
 
-    readonly property font bodyFont: appearanceValue("bodyFont", controlFont)
-    readonly property font tableFont: appearanceValue("tableFont", Qt.font({
-        family: "monospace", pixelSize: bodyFont.pixelSize
-    }))
-    readonly property font headerFont: appearanceValue("headerFont", bodyFont)
-    readonly property font controlFont: appearanceValue("controlFont", Qt.application.font)
+    readonly property font bodyFont: Qt.font(appearanceValue("bodyFont", ({})))
+    readonly property font tableFont: Qt.font(appearanceValue("tableFont", ({})))
+    readonly property font headerFont: Qt.font(appearanceValue("headerFont", ({})))
+    readonly property font controlFont: Qt.font(appearanceValue("controlFont", ({})))
 
     readonly property color tableBackground: appearanceValue("tableBackground", "transparent")
     readonly property color tableAlternateBackground: appearanceValue("tableAlternateBackground",
@@ -312,6 +310,7 @@ FocusScope {
 
         Text {
             id: buttonText
+            objectName: control.objectName + "Text"
 
             anchors.left: parent.left
             anchors.leftMargin: page.headerHorizontalPadding
@@ -321,6 +320,7 @@ FocusScope {
             anchors.verticalCenter: parent.verticalCenter
             clip: true
             color: control.pressed ? page.buttonPressedText : page.buttonText
+            font: page.controlFont
             text: control.label
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -331,12 +331,14 @@ FocusScope {
 
         Text {
             id: buttonArrow
+            objectName: control.objectName + "Arrow"
 
             anchors.right: parent.right
             anchors.rightMargin: page.headerHorizontalPadding
             anchors.verticalCenter: parent.verticalCenter
             visible: control.showArrow
             color: control.pressed ? page.buttonPressedText : page.buttonText
+            font: page.controlFont
             text: "\u25be"
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
@@ -459,6 +461,7 @@ FocusScope {
         }
 
         Text {
+            objectName: "eventListCell_" + cell.row + "_" + cell.column
             anchors.fill: parent
             anchors.leftMargin: page.cellHorizontalPadding
             anchors.rightMargin: page.cellHorizontalPadding
@@ -900,6 +903,12 @@ FocusScope {
 
         Item {
             id: rowHeader
+            readonly property int firstVisibleRow: Math.max(
+                0, Math.floor(eventTable.contentY / page.rowHeight))
+            readonly property int visibleRowCount: Math.max(0, Math.min(
+                eventTable.rows - firstVisibleRow,
+                Math.ceil((eventTable.contentY + eventTable.height) / page.rowHeight)
+                    - firstVisibleRow))
 
             width: page.rowHeaderWidth
             height: eventTable.height
@@ -913,11 +922,10 @@ FocusScope {
             }
 
             Repeater {
-                model: eventTable.topRow >= 0 && eventTable.bottomRow >= eventTable.topRow
-                       ? eventTable.bottomRow - eventTable.topRow + 1 : 0
+                model: rowHeader.visibleRowCount
 
                 delegate: Item {
-                    property int headerRow: eventTable.topRow + index
+                    property int headerRow: rowHeader.firstVisibleRow + index
                     y: headerRow * page.rowHeight - eventTable.contentY
                     width: rowHeader.width
                     height: page.rowHeight
@@ -939,6 +947,7 @@ FocusScope {
                     }
 
                     Text {
+                        objectName: "eventListRowHeaderLabel"
                         anchors.fill: parent
                         anchors.leftMargin: page.headerHorizontalPadding
                         anchors.rightMargin: page.headerHorizontalPadding

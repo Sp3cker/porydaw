@@ -5,11 +5,16 @@ Original: src/checks/automation/automationtaptempo.cpp
 Original SHA-256: 0b180392f9c46d3eb011e0ba238a1fddeb96d0f2833b3fd84aff06f5fb52077d
 Swift counterpart: src/checks/automation/automationtaptempo.swift
 QML lane counterpart: src/checks/editorqml/tst_EditorDrawer.qml :: test_productionAutomationTapTempoThroughInput
-QML SHA-256: a5a52e38f5e121df8e3e8c6ad4d633e6b4ab97105e24908e7d4cf75818e129d9
+QML SHA-256: 526c1550f2cd6dc4abc8c56ae3bfbd67bed40fd1628e3d281c60d1c46daa0277
 Task 29 note: this hash was re-pinned after the shared drawer lane's profile
 bootstrap moved to session.configureTypography(profileFontPx);
 test_productionAutomationTapTempoThroughInput and the predicates cited below are
 unchanged.
+Task 33 note: re-pinned again for the drawer typography binding. The tap-tempo
+predicates cited below (S001-S076) are unchanged and still resolve; the new Tap
+label and live BPM draft font assertions in
+test_productionAutomationTapTempoThroughInput are indexed here as S077-S082. No
+disposition changed.
 
 
 
@@ -905,3 +910,21 @@ Anchor: message "a lone tap's idle window commits nothing"
 
 S076 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "Return on the focused Tap control registered a tap"
+
+S077 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "Tap uses the caption face"
+
+S078 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "Tap uses the caption size"
+
+S079 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "Tap uses caption weight"
+
+S080 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "live BPM draft uses the minimum caption face"
+
+S081 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "live BPM draft uses the minimum caption size"
+
+S082 | test_productionAutomationTapTempoThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "live BPM draft uses the minimum caption weight"

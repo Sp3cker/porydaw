@@ -46,6 +46,7 @@ public enum QtScrollPhase: Int {
 @QtBridgeable
 public final class PianoGrid {
     private let session: DocumentSession
+    private var roleTypography: Typography
     private let commands: NoteCommands
     private(set) var notes: [GridNote] = []
     private var gesture: GridGesture?
@@ -169,19 +170,19 @@ public final class PianoGrid {
     ///   passes the session's one instance so every tab shares it, and a
     ///   standalone grid — checks, fixtures — keeps a palette of its own.
     public init(session: DocumentSession, palette: GridPalette? = nil,
-                typography: Typography? = nil) {
+                typography: Typography = Typography(baseFontPx: 13)) {
         self.session = session
+        roleTypography = typography
+        scene.hoverChipFont = typography.caption.map
         // Set before the first bake below: the roll's static layer reads the
         // palette, so a later assignment would leave that layer with defaults.
         self.palette = palette ?? GridPalette()
         commands = NoteCommands(session: session)
-        if let typography {
-            let base = Double(typography.baseFontPx)
-            baseFontPx = base
-            metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
-            keyboardWidth = metrics.keyboardWidth
-            trackHeaderWidth = fontPx(base, 17.5)
-        }
+        let base = Double(typography.baseFontPx)
+        baseFontPx = base
+        metrics = GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0)
+        keyboardWidth = metrics.keyboardWidth
+        trackHeaderWidth = fontPx(base, 17.5)
         // The existing Set Velocity row asks its owner for the prompt instead of
         // committing a value; the owner is the document-bound page the
         // application session installs after this presenter exists.
@@ -316,6 +317,10 @@ public final class PianoGrid {
                                   fontPx: Double, dpr: Double) {
         let oldFont = metrics.baseFontPx
         let newFont = max(1, fontPx)
+        let nextBase = Int(newFont.rounded())
+        if nextBase != roleTypography.baseFontPx {
+            roleTypography = Typography(baseFontPx: nextBase)
+        }
         let preservedScale = metrics.snapScale
         let preservedTriplet = metrics.tripletGrid
         metrics = GridMetrics(
@@ -326,7 +331,6 @@ public final class PianoGrid {
         metrics.tripletGrid = preservedTriplet
         baseFontPx = metrics.baseFontPx
         devicePixelRatio = metrics.dpr
-        _ = updateTypography()
 
         let oldLimits = GridCameraPolicy.limits(baseFontPx: oldFont)
         let newLimits = GridCameraPolicy.limits(baseFontPx: newFont)
@@ -1085,7 +1089,8 @@ public final class PianoGrid {
     @QtIgnored
     private func refreshNotes() {
         recomputeContentEndTick()
-        if updateTypography() { staticSceneDirty = true }
+        let typographyChanged = updateTypography()
+        if typographyChanged { staticSceneDirty = true }
         if staticInputsChanged() { staticSceneDirty = true }
         let input = sceneInput()
         if staticSceneDirty {
@@ -1094,6 +1099,7 @@ public final class PianoGrid {
             staticSceneDirty = false
         }
         scene.rebuildNotes(input)
+        if typographyChanged { scene.rebuildHover(input) }
         publishOutputs()
     }
 
@@ -1140,7 +1146,8 @@ public final class PianoGrid {
         if let current = typographyKey,
            current.fontPx == key.fontPx && current.dpr == key.dpr
             && current.rowHeight == key.rowHeight { return false }
-        measurementFonts = GridTypography.fonts(metrics: metrics)
+        measurementFonts = GridTypography.fonts(
+            metrics: metrics, typography: roleTypography)
         let measured = GridTypography(fonts: measurementFonts, rowHeight: cameraRowHeight)
         typography = measured
         typographyKey = key

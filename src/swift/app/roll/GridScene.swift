@@ -206,12 +206,11 @@ public final class GridScene {
     public var hoverChipText: String = ""
     public var hoverChipFill: String = "#E6303030"
     public var hoverChipTextColor: String = "#FFFFFF"
-    public var hoverChipFont: [String: QVariantSettable] = [:]
+    @QtTracked public var hoverChipFont = [String: QVariantSettable]()
     public var hoverChipRadius: Double = 0
 
-    public init() {
-        let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 0, height: 0)
-        hoverChipFont = GridTypography.fonts(metrics: metrics)[.chip]!.map
+    public init(typography: Typography = Typography(baseFontPx: 13)) {
+        hoverChipFont = typography.caption.map
     }
 
     private func sync(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
@@ -619,7 +618,7 @@ public final class GridScene {
                                    height: markerHeight - 1, fillColor: p.primaryText,
                                    primitiveName: name))
             labels.append(SceneText(
-                rect: (x + m.spaceHalf, 0, t.signatureAdvance(glyph), markerHeight),
+                rect: (x + m.spaceHalf, 0, t.boldAdvance(glyph), markerHeight),
                 text: glyph, color: p.primaryText, font: input.fontSpec(.bold)))
         }
         appendLoopMarker(m.timeAxis.loopStartTick, glyph: "[", name: "loopStartMarker")

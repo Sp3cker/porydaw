@@ -20,8 +20,22 @@ TestCase {
     ShellQmlBootstrap { id: bootstrap }
     Component { id: bodyTextComponent; Text { text: "probe" } }
     Component { id: shellComponent; ShellWindow { visible: true } }
+    Component { id: capturedSessionComponent; ApplicationSession {} }
+    Component {
+        id: captionObserverComponent
+        Text {
+            required property QtObject observedSession
+            font: Qt.font(observedSession.typographyFonts.caption)
+            leftPadding: observedSession.layoutSpaces.two
+            text: "caption"
+        }
+    }
     FontMetrics { id: normalTitleCheck }
     FontMetrics { id: boldTitleCheck }
+    FontMetrics {
+        id: editorBodyMetrics
+        font: shell ? Qt.font(shell.shellPresenter.session.typographyFonts.body) : normalTitleCheck.font
+    }
 
     function initTestCase() {
         Qt.application.name = bootstrap.settingsApplicationName
@@ -89,6 +103,25 @@ TestCase {
         return Math.abs(first.x - second.x) < 0.01 && Math.abs(first.y - second.y) < 0.01
     }
 
+    function test_captureNotifiesPublishedFontsAndSpaces() {
+        var captured = capturedSessionComponent.createObject(testCase)
+        verify(captured, "the real application session exposes font maps")
+        var observer = captionObserverComponent.createObject(testCase,
+                                                              {observedSession: captured})
+        verify(observer, "a mounted text label observes the session caption role")
+        compare(observer.font.pixelSize, 13, "the default caption starts at the seed base")
+        captured.configureTypography(12)
+        tryCompare(observer.font, "pixelSize", 12, 3000)
+        compare(observer.font.family, captured.typographyFonts.caption.family,
+                "the observed caption keeps the bundled face after capture")
+        compare(observer.font.weight, captured.typographyFonts.caption.weight,
+                "the observed caption keeps Regular weight after capture")
+        tryCompare(observer, "leftPadding", captured.layoutSpaces.two, 3000)
+        compare(observer.leftPadding, 6,
+                "the observed two-space inset follows the captured base")
+        observer.destroy()
+        captured.destroy()
+    }
     function test_bodyFontAndMetrics() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
@@ -126,10 +159,10 @@ TestCase {
                 "the separate Settings window resolves the session body family")
         compare(about.font.family, body.family,
                 "the About popup resolves the session body family")
-        compare(shell.width, shell.bodyFontPx * 72,
-                "window width threads the body size into geometry")
-        compare(shell.height, shell.bodyFontPx * 48,
-                "window height threads the body size into geometry")
+        compare(shell.width, session.baseFontPx * 92,
+                "window width follows the captured base geometry")
+        compare(shell.height, session.baseFontPx * 57,
+                "window height follows the captured base geometry")
         var label = bodyTextComponent.createObject(shell.contentItem)
         verify(label !== null, "a body-text probe mounts in the real window")
         label.font = shell.font
@@ -188,5 +221,159 @@ TestCase {
         compare(rendered.font.hintingPreference, Font.PreferNoHinting,
                 "the rendered title carries the unhinted preference")
         rendered.destroy()
+    }
+    function test_mountedEditorFontAndMenuGeometry() {
+        openOneSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var body = session.typographyFonts.body
+        var caption = session.typographyFonts.caption
+        var space = session.layoutSpaces
+        var gridLabel = findChild(surface, "timelineRulerGridLabel")
+        var control = findChild(surface, "timelineRulerDivisionControl")
+        var hint = findChild(surface, "mouseHintStatusText")
+        verify(gridLabel && control && hint, "the ruler controls and status hint are mounted")
+        compare(gridLabel.font.family, body.family, "the ruler control resolves the body face")
+        compare(gridLabel.font.pixelSize, body.pixelSize, "the ruler control resolves the body size")
+        compare(gridLabel.font.weight, body.weight, "the ruler control keeps Regular weight")
+        compare(hint.font.family, caption.family, "the mouse hint resolves the caption face")
+        compare(hint.font.pixelSize, caption.pixelSize, "the mouse hint resolves the caption size")
+        compare(hint.font.weight, caption.weight, "the mouse hint keeps Regular weight")
+        var headerBand = findChild(surface, "timelineQuickTrackHeaders")
+        var headerRows = findChild(surface, "timelineTrackHeaderRows")
+        verify(headerBand && headerRows && headerRows.count > 0,
+               "the active track header band and rows are mounted")
+        var insetEdge = headerBand.width - surface.headersModel.scrollbarWidth - space.one
+        for (var headerIndex = 0; headerIndex < headerRows.count; ++headerIndex) {
+            var headerRow = headerRows.itemAt(headerIndex)
+            if (!headerRow || headerRow.isAddTrack)
+                continue
+            for (var label of ["Mute", "Solo"]) {
+                var toggle = findChild(headerRow,
+                                       "timelineHeader" + label + "_" + headerRow.track)
+                verify(toggle && toggle.visible, label + " toggle is painted on track "
+                       + headerRow.track)
+                var right = toggle.mapToItem(headerBand, toggle.width, 0).x
+                verify(right <= insetEdge + 0.01,
+                       label + " right border clears the keyboard and scrollbar with fork inset")
+                compare(toggle.width, Math.round(session.baseFontPx * 1.5),
+                        label + " extent follows the captured base")
+                var ink = toggle.children.filter(function(child) {
+                    return child.text === (label === "Mute" ? "M" : "S")
+                })[0]
+                verify(ink, label + " paints its letter within the toggle")
+                compare(ink.font.family, body.family, label + " uses the body family")
+                compare(ink.font.pixelSize, body.pixelSize, label + " uses the body size")
+                compare(ink.font.weight, body.weight, label + " keeps Regular weight")
+            }
+            verify(headerRow.titleRect.x + headerRow.titleRect.width <=
+                   surface.headersModel.muteButtonRect.x,
+                   "the title ends before the mute column")
+            verify(headerRow.subtitleRect.x + headerRow.subtitleRect.width <=
+                   surface.headersModel.soloButtonRect.x,
+                   "the subtitle ends before the solo column")
+        }
+
+        surface.gridModel.openGridMenu(1)
+        tryVerify(function() {
+            var menu = findChild(surface, "quickMenuPanelRoot")
+            return menu && menu.rowCount > 0
+        }, 5000, "the real grid-division menu paints its typed rows")
+        var menu = findChild(surface, "quickMenuPanelRoot")
+        var widest = 0
+        for (var i = 0; i < menu.rowCount; ++i) {
+            var row = menu.rowItem(i)
+            verify(row, "grid menu row " + i + " is rendered")
+            widest = Math.max(widest, editorBodyMetrics.advanceWidth(row.itemData.text))
+        }
+        compare(menu.menuFont.family, body.family, "grid menu rows resolve the body family")
+        compare(menu.menuFont.pixelSize, body.pixelSize, "grid menu rows resolve the body size")
+        compare(menu.menuFont.weight, body.weight, "grid menu rows keep Regular weight")
+        compare(menu.rowHeight, Math.round(editorBodyMetrics.height) + 2 * space.half,
+                "grid menu row height follows body metrics and half-space padding")
+        compare(menu.checkX, space.two, "the check begins at the two-space token")
+        compare(menu.checkWidth, Math.floor(menu.rowHeight / 2),
+                "the check width follows the row height")
+        compare(menu.textX, space.two + menu.checkWidth + space.one,
+                "grid menu text clears the check and one-space gap")
+        compare(menu.menuWidth, 2 + menu.textX + Math.ceil(widest) + space.two,
+                "grid menu width fits the longest rendered row and frame")
+        compare(menu.menuHeight, 2 + menu.rowCount * menu.rowHeight,
+                "grid menu height fits the rendered rows and frame")
+        surface.gridModel.dismissGridMenu()
+        session.openTimeSigPromptAtCursor()
+        tryVerify(function() {
+            return findChild(surface, "timeSignaturePrompt") !== null
+        }, 5000, "the real time-signature prompt is mounted")
+        var prompt = findChild(surface, "timeSignaturePrompt")
+        function findPromptTitle(item) {
+            if (item.text === session.timeSigPromptTitle)
+                return item
+            for (var child of item.children) {
+                var found = findPromptTitle(child)
+                if (found)
+                    return found
+            }
+            return null
+        }
+        var promptTitle = findPromptTitle(prompt)
+        verify(promptTitle, "the time-signature prompt paints its title")
+        compare(promptTitle.font.family, body.family, "prompt text uses the body family")
+        compare(promptTitle.font.pixelSize, body.pixelSize, "prompt text uses the body size")
+        compare(promptTitle.font.weight, body.weight, "prompt text keeps Regular weight")
+        session.cancelTimeSigPrompt()
+    }
+    function test_mountedPitchPopupFontRoles() {
+        openOneSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var plot = findChild(surface, "timelineQuickRollPlot")
+        var input = findChild(surface, "swiftRollInput")
+        verify(plot && input, "the active roll input and plot are mounted")
+        grid.setTrack(0)
+        var notes = JSON.parse(grid.noteSummary)
+        var note = notes.filter(function(candidate) {
+            return candidate.track === 0 && candidate.duration >= 3
+        })[0]
+        verify(note, "the staged song contains an editable note")
+        var horizontal = (note.tick + note.duration / 2)
+                         * grid.beatWidth / grid.ticksPerBeat
+        var vertical = (127 - note.pitch + 0.5) * grid.rowHeight
+        grid.setCameraHScroll(Math.max(0, horizontal - plot.width / 2))
+        grid.setCameraVScroll(Math.max(0, vertical - plot.height / 2))
+        tryVerify(function() {
+            var face = findChild(surface, "gridNote_" + note.id)
+            return face && face.visible && face.width > 0 && face.height > 0
+        }, 5000, "the selected note face appears in the roll")
+        var face = findChild(surface, "gridNote_" + note.id)
+        var point = face.mapToItem(input, face.width / 2, face.height / 2)
+        mouseClick(input, point.x, point.y, Qt.LeftButton)
+        grid.performCommand(6)
+        tryVerify(function() {
+            return findChild(surface, "pitchBendPopup") !== null
+        }, 5000, "the selected note opens the real pitch popup")
+        var popup = findChild(surface, "pitchBendPopup")
+        var session = shell.shellPresenter.session
+        var roles = session.typographyFonts
+        var title = findChild(popup, "pitchBendTitle")
+        var description = findChild(popup, "pitchBendDescription")
+        var readout = findChild(popup, "pitchBendLiveValue")
+        var spin = findChild(popup, "bendRangeSpin")
+        verify(title && description && readout && spin,
+               "the pitch title, caption, mono readout, and editable field are painted")
+        for (var pair of [[title, roles.bodyBold, "pitch title"],
+                         [description, roles.caption, "pitch description"],
+                         [readout, roles.bodyMono, "pitch mono readout"]]) {
+            compare(pair[0].font.family, pair[1].family, pair[2] + " uses its published family")
+            compare(pair[0].font.pixelSize, pair[1].pixelSize, pair[2] + " uses its published size")
+            compare(pair[0].font.weight, pair[1].weight, pair[2] + " uses its bundled weight")
+        }
+        var field = spin.children.filter(function(child) {
+            return child.font !== undefined && child.text !== undefined
+        })[0]
+        verify(field, "the pitch drag input renders its numeric field")
+        compare(field.font.family, roles.body.family, "drag input uses the body family")
+        compare(field.font.pixelSize, roles.body.pixelSize, "drag input uses the body size")
+        compare(field.font.weight, roles.body.weight, "drag input keeps Regular weight")
     }
 }

@@ -106,9 +106,7 @@ struct VelocityScenePalette: Sendable {
 
 /// Everything one static scene build reads: the document facts, the page's
 /// frozen interaction snapshot, the drawn geometry, the palette colours as
-/// values, and the page's reuse decision for the handle rows. The page's label
-/// typography and its previous handle rows are `@MainActor` objects and travel
-/// as explicit build parameters, so this input stays a plain Sendable value.
+/// values, and the page's reuse decision for handle rows.
 struct VelocitySceneInput: Sendable {
     /// The shared camera at the page's device pixel ratio, or `nil` while the
     /// page has no session: camera-derived rows are then empty and x reads zero.
@@ -162,12 +160,10 @@ struct VelocitySceneSnapshot {
 
     /// The full static build: the value axis for the presented context, the note
     /// handle rows, the ruler rows and labels, the time grid and the PSG bands.
-    /// `typography` and `previousHandles` are the page's `@MainActor` objects,
-    /// which is why they are parameters here and not input fields.
     @MainActor
-    static func build(_ input: VelocitySceneInput, typography: GridTypography?,
+    static func build(_ input: VelocitySceneInput,
                       previousHandles: [NoteID: VelocityHandle]) -> Self {
-        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        let parts = axisAndHandles(input, previousHandles: previousHandles)
         return Self(
             axis: parts.axis,
             handles: parts.handles,
@@ -183,10 +179,10 @@ struct VelocitySceneSnapshot {
     /// the same axis, handle rows and ruler rows a full build derives, without
     /// the grid subdivision walk or the PSG band walk a content rebuild performs.
     @MainActor
-    static func buildAxisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+    static func buildAxisAndHandles(_ input: VelocitySceneInput,
                                     previousHandles: [NoteID: VelocityHandle])
         -> VelocityAxisAndHandles {
-        let parts = axisAndHandles(input, typography: typography, previousHandles: previousHandles)
+        let parts = axisAndHandles(input, previousHandles: previousHandles)
         return VelocityAxisAndHandles(axis: parts.axis, handles: parts.handles, rows: parts.rows)
     }
 
@@ -194,7 +190,7 @@ struct VelocitySceneSnapshot {
     /// drawn against, the note handle rows and the ruler rows one interaction
     /// state produces.
     @MainActor
-    private static func axisAndHandles(_ input: VelocitySceneInput, typography: GridTypography?,
+    private static func axisAndHandles(_ input: VelocitySceneInput,
                                        previousHandles: [NoteID: VelocityHandle])
         -> (axis: VelocityAxisModel, projection: VelocityProjection, handles: [VelocityHandle],
             rows: VelocityAxisRows) {
@@ -205,8 +201,7 @@ struct VelocitySceneSnapshot {
                                  previousHandles: previousHandles)
         let relativeGesture = input.interaction.relativeActivated
             || handles.filter(\.selected).count > 1 || input.interaction.hovered != nil
-        let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture,
-                                          typography: typography)
+        let rows = VelocityScene.axisRows(input, axis: axis, relativeGesture: relativeGesture)
         return (axis, projection, handles, rows)
     }
 

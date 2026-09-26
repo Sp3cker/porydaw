@@ -1263,3 +1263,36 @@ Anchor: message "the selected occupied lane stays included after switching to an
 
 S128 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the inclusion bar uses the pressed automation tab color"
+
+S129 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message " face"
+
+S130 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message " size"
+
+S131 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message " weight"
+
+S132 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab caption face"
+
+S133 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab caption size"
+
+S134 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab caption weight"
+
+S135 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab fit stops at the caption minimum"
+
+S136 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab shrinks to fit"
+
+S137 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "badge uses minimum"
+
+S138 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation value-axis captions use the session caption"
+
+S139 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "tab inset follows session spacing"

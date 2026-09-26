@@ -57,8 +57,6 @@ struct GridMetrics {
     var snapScale: Int = 0
     var tripletGrid = false
 
-    var rulerMinFontPx: Double = 11
-    var rulerLetterSpacing: Double = -0.54
     var rulerBeatLabelZoomFactor: Double = 3.0
     var spaceHalf: Double = 2
     var spaceTwo: Double = 7
@@ -88,8 +86,6 @@ struct GridMetrics {
         detailMinPxPerBeat = fontPx(b, 5.0 / 6.0)
         gridLineStroke = gridLineThickness(baseFontPx: baseFontPx, devicePixelRatio: dpr)
         autoGridMinCell = fontPx(b, 4.0 / 3.0)
-        rulerMinFontPx = fontPx(b, 5.0 / 6.0)
-        rulerLetterSpacing = fontPxF(b, -1.0 / 24.0)
         spaceHalf = fontPx(b, 0.125)
         spaceTwo = fontPx(b, 0.5)
         pixel = physicalPixel(dpr)

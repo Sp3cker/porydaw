@@ -10,7 +10,6 @@ FocusScope {
     property var pageItem: null
     property bool showing: false
     readonly property bool confirming: model.promptKind === 1
-    readonly property real baseFontPx: model.baseFontPx
     readonly property var promptPalette: root.pageItem ? root.pageItem.gridPalette : null
     QtObject {
         id: promptAppearance
@@ -18,15 +17,18 @@ FocusScope {
         readonly property color text: root.promptPalette ? root.promptPalette.windowText : "transparent"
         readonly property color outline: root.promptPalette ? root.promptPalette.outline : "transparent"
         readonly property color focus: root.promptPalette ? root.promptPalette.focusOutline : "transparent"
-        readonly property real borderWidth: 1
-        readonly property real radius: 4
-        readonly property real dialogPadding: root.baseFontPx / 2
-        readonly property real spacing: root.baseFontPx / 3
-        readonly property real buttonPadding: root.baseFontPx / 3
+        readonly property real borderWidth: root.model.promptAppearance.borderWidth
+        readonly property real radius: root.model.promptAppearance.radius
+        readonly property real dialogPadding: root.model.promptAppearance.dialogPadding
+        readonly property real spacing: root.model.promptAppearance.spacing
+        readonly property real buttonPadding: root.model.promptAppearance.buttonPadding
+        readonly property real horizontalPadding: root.model.promptAppearance.horizontalPadding
+        readonly property real verticalPadding: root.model.promptAppearance.verticalPadding
+        readonly property real dragThreshold: root.model.promptAppearance.dragThreshold
         readonly property color buttonBackground: root.promptPalette ? root.promptPalette.buttonBackground : "transparent"
         readonly property color pressedBackground: root.promptPalette ? root.promptPalette.buttonPressedBackground : "transparent"
         readonly property color buttonText: root.promptPalette ? root.promptPalette.buttonText : "transparent"
-        readonly property font font: Qt.font(root.model.captionFont)
+        readonly property font font: Qt.font(root.model.promptFont)
     }
     signal closed()
     anchors.fill: parent
@@ -75,7 +77,6 @@ FocusScope {
         width: implicitWidth
         height: implicitHeight
         appearance: promptAppearance
-        minimumWidth: root.baseFontPx * 18
         Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape) root.cancelDraft()
@@ -109,17 +110,13 @@ FocusScope {
             id: field
 
             visible: !root.confirming
-            width: root.baseFontPx * 16
-            height: root.baseFontPx * 2
+            width: root.model ? root.model.promptInputWidth : 0
+            height: implicitHeight
             adjustmentsEnabled: false
             inputObjectName: "automationPromptInput"
             accessibleName: root.model.promptLabel
             appearance: Object.assign({}, promptAppearance, {
-                background: promptAppearance.buttonBackground,
-                radius: 0,
-                horizontalPadding: 5,
-                verticalPadding: -1,
-                dragThreshold: 0
+                background: promptAppearance.buttonBackground
             })
             value: Number(root.model.promptDraft)
             minimumValue: root.model.promptMinimum

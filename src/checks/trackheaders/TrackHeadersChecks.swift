@@ -1,12 +1,68 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppCommands
 import PorydawCore
+import QtBridge
 
 @MainActor
 internal func runTrackHeadersChecks(_ report: CheckReport, session: DocumentSession,
                                    service: ProjectService) {
     runTrackActivityChecks(report)
+    let fontFixture = TrackHeadersFixture(suite: session, service: service)
+    let roles = Typography(baseFontPx: 13)
+    let headers = fontFixture.headers
+    let roleID = "swiftcore/TrackHeaders::publishedTypographyRoles"
+    func matches(_ map: [String: QVariantSettable], _ role: GridFontSpec) -> Bool {
+        map["family"] as? String == role.family &&
+            map["pixelSize"] as? Int == role.pixelSize &&
+            map["weight"] as? Int == role.weight
+    }
+    report.expect(matches(headers.controlFont, roles.body) &&
+                  matches(headers.normalTitleFont, roles.body) &&
+                  matches(headers.boldTitleFont, roles.bodyBold) &&
+                  matches(headers.subtitleFont, roles.caption),
+                  cppID: roleID,
+                  message: "header controls, regular and selected titles, and subtitles publish body, bold body, and caption roles")
+    report.expect(fontFixture.trackRows.contains {
+        $0.titleBold && matches($0.titleFont, roles.bodyBold) &&
+            matches($0.subtitleFont, roles.caption)
+    }, cppID: roleID,
+    message: "the selected header row paints a bold body title and caption subtitle")
+    headers.configureViewport(width: 440, height: 240, fontPx: 26, dpr: 1)
+    let resized = Typography(baseFontPx: 26)
+    report.expect(matches(headers.controlFont, resized.body) &&
+                  matches(headers.boldTitleFont, resized.bodyBold) &&
+                  matches(headers.subtitleFont, resized.caption) &&
+                  fontFixture.trackRows.contains {
+                      $0.titleBold && matches($0.titleFont, resized.bodyBold) &&
+                          matches($0.subtitleFont, resized.caption)
+                  },
+                  cppID: roleID,
+                  message: "resizing the header repaints its controls and selected row with the new published roles")
+    headers.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
+    report.expect(matches(headers.controlFont, roles.body) &&
+                  matches(headers.boldTitleFont, roles.bodyBold) &&
+                  matches(headers.subtitleFont, roles.caption),
+                  cppID: roleID,
+                  message: "restoring the captured base restores the header font roles")
+    let geometryID = "swiftcore/TrackHeaders::visibleHeaderColumn"
+    for base in [12, 13, 16] {
+        let geometry = TrackHeadersGeometry(base: Double(base))
+        let contentWidth = geometry.bandWidth - Double(geometry.scrollbarWidth)
+        let mute = geometry.muteRect(width: contentWidth)
+        let solo = geometry.soloRect(width: contentWidth)
+        let text = geometry.textRects(width: contentWidth,
+                                     metrics: HeaderTextMetrics(title: base, bold: base,
+                                                                subtitle: base))
+        report.expect(mute.x + mute.width <= contentWidth - Double(geometry.spaceOne) &&
+                      solo.x + solo.width <= contentWidth - Double(geometry.spaceOne) &&
+                      mute.width == Double(geometry.buttonExtent) &&
+                      solo.width == Double(geometry.buttonExtent) &&
+                      text.0.x + text.0.width <= mute.x &&
+                      text.1.x + text.1.width <= solo.x,
+                      cppID: geometryID,
+                      message: "at base \(base), both toggle borders and text fit within the header content column")
+    }
     unattachedModelPublishesSafeZeroGeometry(report, suite: session, service: service)
     reorderSlotsResolveInsertionTargetsAndUndoRestores(report, suite: session, service: service)
     headerReconciliationUnchanged(report, suite: session, service: service)

@@ -12,6 +12,20 @@ Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 Converted-window command: deno task verify:qml --verbose
 
+Task 32 (song-view typography) re-derived the header presenter from the published
+Typography roles. The fix round added the predicates indexed as S015-S019 under
+cppIDs swiftcore/TrackHeaders::publishedTypographyRoles and
+swiftcore/TrackHeaders::visibleHeaderColumn, executed by runTrackHeadersChecks in
+the swiftcore projectSession suite and recorded in
+build/proof-evidence/swiftcore-projectsession.json (implementer-run on the frozen
+tree under the shared build lock: `deno task verify --filter swiftcore --verbose`
+12/37 ok, 25 skipped). They prove no A site of this deleted native lane - the
+original TrackHeadersTest asserted input, focus and row obligations - so the header
+font-role and toggle-column geometry coverage is recorded here as the surface's
+current predicate index. This bookkeeping pass re-ran only `deno task proof check`
+and `deno task proof check --executed`; no lane was re-run and no parser result is a
+semantic-parity claim.
+
 A001 | TrackHeadersTest::init | src/checks/trackheaders/tst_trackheaders.cpp:18
 Disposition: RETIRED-REPRESENTATION
 
@@ -90,3 +104,18 @@ Anchor: message "\(phase): no document write"
 
 S014 | expectUnchanged | src/checks/trackheaders/headerinputfixture.swift
 Anchor: message "\(phase): history unchanged"
+
+S015 | runTrackHeadersChecks | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "header controls, regular and selected titles, and subtitles publish body, bold body, and caption roles"
+
+S016 | runTrackHeadersChecks | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "the selected header row paints a bold body title and caption subtitle"
+
+S017 | runTrackHeadersChecks | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "resizing the header repaints its controls and selected row with the new published roles"
+
+S018 | runTrackHeadersChecks | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "restoring the captured base restores the header font roles"
+
+S019 | runTrackHeadersChecks | src/checks/trackheaders/TrackHeadersChecks.swift
+Anchor: message "at base \(base), both toggle borders and text fit within the header content column"

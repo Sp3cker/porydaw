@@ -1060,3 +1060,15 @@ Anchor: message "128 shared-playhead presentations rebuilt no velocity content"
 
 S108 | drawerVelocityPsgIntrinsicRows | src/checks/drawerpresentation/velocity.swift
 Anchor: message "Noise publishes sixteen volume levels"
+
+S109 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "axis uses the note-name face"
+
+S110 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "axis uses note-name size"
+
+S111 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "axis uses note-name weight"
+
+S112 | test_drawerTypographyFromMountedSession | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "hovered velocity marker paints the bold note-name face"

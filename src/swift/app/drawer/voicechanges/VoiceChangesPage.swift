@@ -112,6 +112,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var promptFont: [String: QVariantSettable] = [:]
     public var captionFont: [String: QVariantSettable] = [:]
     public var titleFont: [String: QVariantSettable] = [:]
+    public var noteNameFont: [String: QVariantSettable] = [:]
     /// `false` while no track is presented: the plot draws its own message then
     /// and the gutter carries the title alone.
     public var trackAvailable: Bool = false
@@ -268,7 +269,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         bodyPolicy = EditorDrawerBodyPolicy(maximumBodyHeight: maximum) { _, _ in minimum }
         self.baseFontPx = base
         promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(base: base)
+        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
         publishTypography()
     }
 
@@ -332,7 +333,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         if fontChanged {
             self.baseFontPx = nextFont
             promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(base: nextFont)
+            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
             publishTypography()
         }
         if changed { rebuildContent() }

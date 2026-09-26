@@ -221,7 +221,8 @@ public final class RulerMenuPresenter {
                          segment.beatTicks, segment.beatsPerBar)
         insertTimePromptMaximumBeats = Int(segment.beatsPerBar - 1)
         var appearance = PromptAppearance.metrics(base: grid.baseFontPx)
-        insertTimePromptFont = PromptAppearance.font(base: grid.baseFontPx)
+        insertTimePromptFont = PromptAppearance.font(
+            typography: Typography(baseFontPx: Int(grid.baseFontPx.rounded())))
         let palette = grid.palette
         appearance["background"] = palette.chromeBackground
         appearance["text"] = palette.primaryText

@@ -74,12 +74,13 @@ public final class DocumentWorkspace {
                                   baseFontPx: Double(typography.baseFontPx), appFontLineSpacing: 0,
                                   plotWidth: session.camera.snapshot.viewportWidth)
         self.otherEventsBand = otherEventsBand
-        let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+        let pitchBend = PitchBendPresenter(
+            session: session, grid: grid, palette: grid.palette, typography: typography)
         self.pitchBend = pitchBend
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
         }
-        let headers = TrackHeadersPresenter(baseFontPx: Double(typography.baseFontPx))
+        let headers = TrackHeadersPresenter(typography: typography)
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
         let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))

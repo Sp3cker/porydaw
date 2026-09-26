@@ -6,13 +6,13 @@ Rectangle {
     objectName: "mouseHintStatus"
     required property QtObject presenter
     required property QtObject statusPalette
-    property font applicationFont: Application.font
+    required property font captionFont
     color: statusPalette.windowBackground
     implicitHeight: Math.ceil(metrics.height + metrics.height / 2)
 
     FontMetrics {
         id: metrics
-        font: root.applicationFont
+        font: root.captionFont
     }
 
     Text {
@@ -20,7 +20,7 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: metrics.height / 2
         anchors.rightMargin: metrics.height / 2
-        font: root.applicationFont
+        font: root.captionFont
         color: root.statusPalette.windowText
         text: root.presenter.text
         textFormat: Text.PlainText

@@ -148,20 +148,15 @@ public final class VoiceMenuRowHandle {
 final class VoiceCaption {
     let fontMap: [String: QVariantSettable]
     let height: Double
-    private let session: OpaquePointer
+    private let metrics: NativeFontMetrics
 
-    init(pixelSize: Int, weight: Int) {
-        let family = VoiceChangesPage.fontFamily
-        fontMap = ["family": family, "pixelSize": pixelSize, "weight": weight,
-                   "letterSpacing": 0.0, "features": ["tnum": 1],
-                   "hintingPreference": fontPreferNoHinting]
-        session = family.withCString { sgf_create($0, Int32(pixelSize), Int32(weight), 0)! }
-        height = sgf_extents(session).height
+    init(font: GridFontSpec) {
+        fontMap = font.map
+        metrics = NativeFontMetrics(font)
+        height = metrics.extents.height
     }
 
-    isolated deinit { sgf_destroy(session) }
-
-    func advance(_ text: String) -> Double { text.withCString { sgf_advance(session, $0) } }
+    func advance(_ text: String) -> Double { metrics.advance(text) }
 
     func elided(_ text: String, toWidth width: Double) -> String {
         guard width > 0, advance(text) > width else { return text }

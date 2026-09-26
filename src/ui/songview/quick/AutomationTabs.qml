@@ -12,9 +12,9 @@ Item {
     property var hintService: null
     property bool hintScopeAllowed: true
     required property var pagePalette
-    readonly property real baseFontPx: pageModel.baseFontPx
-    readonly property real inset: Math.round(baseFontPx / 3)
-    readonly property real stroke: Math.max(1, Math.round(baseFontPx / 13))
+    readonly property real inset: (sceneRoot.applicationSession.timeSigHost
+                                    || sceneRoot.applicationSession).layoutSpaces.one
+    readonly property real stroke: 1
     Flickable {
         id: scroller
         objectName: "automationTabsScroller"
@@ -37,12 +37,12 @@ Item {
                     readonly property bool tempoParameter: model.tempo
                     objectName: "automationParameterTab" + model.index
                     text: model.label
-                    font: Qt.font(root.pageModel.titleFont)
+                    font: Qt.font(root.pageModel.captionFont)
                     padding: root.inset
                     rightPadding: tempoParameter ? root.inset + tapControl.width : root.inset
                     Layout.fillWidth: true
                     Layout.preferredWidth: tempoParameter ? scroller.width : scroller.width / 2
-                    Layout.minimumHeight: root.baseFontPx * 4 / 3
+                    Layout.minimumHeight: root.pageModel.minimumCellHeight
                     Layout.columnSpan: tempoParameter ? 2 : 1
                     Layout.topMargin: root.stroke
                     Layout.bottomMargin: root.stroke
@@ -93,7 +93,7 @@ Item {
                         objectName: tab.tempoParameter ? "automationTempoTapButton" : ""
                         visible: tab.tempoParameter
                         width: tapLabel.implicitWidth + 2 * root.inset
-                        height: tab.height - 2 * root.stroke
+                        height: root.pageModel.minimumCellHeight
                         anchors.right: parent.right
                         anchors.rightMargin: root.inset
                         anchors.verticalCenter: parent.verticalCenter
@@ -106,6 +106,7 @@ Item {
                         }
                         Text {
                             id: tapLabel
+                            objectName: "automationTempoTapLabel"
                             anchors.centerIn: parent
                             text: qsTr("Tap")
                             font: Qt.font(root.pageModel.captionFont)
@@ -146,7 +147,7 @@ Item {
                         spacing: root.inset
                         Rectangle {
                             opacity: tab.model.eventCount > 0 ? 1 : 0
-                            Layout.preferredWidth: root.baseFontPx / 2
+                            Layout.preferredWidth: root.pageModel.pipExtent
                             Layout.preferredHeight: width
                             radius: width / 2
                             color: root.pagePalette.automationNodeInk
@@ -157,7 +158,7 @@ Item {
                             textFormat: Text.PlainText
                             font: tab.font
                             fontSizeMode: Text.HorizontalFit
-                            minimumPixelSize: Math.round(root.pageModel.baseFontPx / 2)
+                            minimumPixelSize: root.pageModel.minimumFont.pixelSize
                             elide: Text.ElideNone
                             Layout.fillWidth: true
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
@@ -167,7 +168,7 @@ Item {
                             opacity: tab.checked && tab.model.eventCount > 0 ? 1 : 0
                             text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
                             textFormat: Text.PlainText
-                            font: Qt.font(root.pageModel.captionFont)
+                            font: Qt.font(root.pageModel.minimumFont)
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                         Text {
@@ -175,7 +176,7 @@ Item {
                             visible: tab.tempoParameter && root.pageModel.tapTempoTapCount > 0
                             text: root.pageModel.tapTempoTapCount >= 2 ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
                             textFormat: Text.PlainText
-                            font: Qt.font(root.pageModel.captionFont)
+                            font: Qt.font(root.pageModel.minimumFont)
                             color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                     }
@@ -197,7 +198,7 @@ Item {
                             visible: tab.model.included && !tab.checked
                             anchors.top: parent.top; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
-                            width: root.baseFontPx / 2
+                            width: root.pageModel.pipExtent
                             color: root.pagePalette.tabPressedBackground
                         }
                         Rectangle {

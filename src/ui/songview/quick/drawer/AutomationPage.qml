@@ -118,10 +118,17 @@ FocusScope {
         readonly property double dragDistance: 10
         readonly property var captionFont: ({})
         readonly property var titleFont: ({})
+        readonly property var noteNameFont: ({})
+        readonly property var minimumFont: ({})
+        readonly property real pipExtent: 0
+        readonly property real minimumCellHeight: 0
         readonly property bool menuOpen: false
         readonly property double menuX: 0
         readonly property double menuY: 0
         readonly property bool promptOpen: false
+        readonly property var promptAppearance: ({})
+        readonly property var promptFont: ({})
+        readonly property int promptInputWidth: 0
         readonly property int promptKind: 0
         readonly property string promptTitle: ""
         readonly property string promptLabel: ""
@@ -170,11 +177,6 @@ FocusScope {
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
                                                       : page.seedBaseFontPx
 
-    /// The production selector's font-relative metrics.
-    readonly property real tabStroke: Math.max(1, Math.round(page.baseFontPx / 12))
-    readonly property real tabRowHeight: Math.max(1, Math.round(page.baseFontPx * 4 / 3))
-    readonly property real tabInset: Math.max(1, Math.round(page.baseFontPx / 3))
-    readonly property real tabPip: Math.max(2, Math.round(page.baseFontPx / 2))
     readonly property int selectorTabCount: page.pageModel.tabCount
 
     function pushBodyFacts() {
@@ -432,7 +434,7 @@ FocusScope {
             height: page.pageModel.hoverDisplay.height
             text: page.pageModel.hoverDisplay.text
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft
@@ -452,7 +454,7 @@ FocusScope {
             height: (page.pageModel ? page.pageModel.previewLabelRect.height : 0)
             text: (page.pageModel ? page.pageModel.previewLabelText : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft

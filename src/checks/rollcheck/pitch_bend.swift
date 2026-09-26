@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import QtBridge
 
@@ -161,13 +161,40 @@ private func pitchBendReadoutPredicates(_ report: CheckReport, session: Document
     let readoutID = "swiftcore/PitchBendEditingTest::liveValueReadout"
     if let scene = pitchBendCheckScene(report, cppID: readoutID, session: session) {
         defer { scene.presenter.cancelAndClose() }
-        let monoFont = scene.presenter.appearance["monospaceFont"]
-            as? [String: QVariantSettable]
-        report.expectEqual(expected: "Atkinson Hyperlegible Mono",
-                           actual: monoFont?["family"] as? String ?? "",
-                           cppID: readoutID,
-                           what: "the monospaceFont appearance entry carries the bundled "
-                               + "mono family")
+        let roles = Typography(baseFontPx: 13)
+        func matches(_ key: String, _ expected: [String: QVariantSettable]) -> Bool {
+            guard let map = scene.presenter.appearance[key] as? [String: QVariantSettable] else {
+                return false
+            }
+            return map["family"] as? String == expected["family"] as? String &&
+                map["pixelSize"] as? Int == expected["pixelSize"] as? Int &&
+                map["weight"] as? Int == expected["weight"] as? Int
+        }
+        report.expect(matches("titleFont", roles.bodyBold.map) &&
+                      matches("captionFont", roles.caption.map) &&
+                      matches("monospaceFont", roles.bodyMono.map),
+                      cppID: readoutID,
+                      message: "the popup title, caption, and readout publish bold body, caption, and body mono faces")
+        let drag = scene.presenter.appearance["dragInput"] as? [String: QVariantSettable]
+        let dragFont = drag?["font"] as? [String: QVariantSettable]
+        report.expect(dragFont?["family"] as? String == roles.body.family &&
+                      dragFont?["pixelSize"] as? Int == roles.body.pixelSize &&
+                      dragFont?["weight"] as? Int == roles.body.weight,
+                      cppID: readoutID,
+                      message: "pitch drag inputs use the published body font face")
+        let resized = Typography(baseFontPx: 26)
+        scene.presenter.configure(fontPx: 26, lineSpacing: 29, dpr: 2)
+        let resizedDrag = scene.presenter.appearance["dragInput"] as? [String: QVariantSettable]
+        let resizedFont = resizedDrag?["font"] as? [String: QVariantSettable]
+        report.expect(matches("titleFont", resized.bodyBold.map) &&
+                      matches("captionFont", resized.caption.map) &&
+                      matches("monospaceFont", resized.bodyMono.map) &&
+                      resizedFont?["family"] as? String == resized.body.family &&
+                      resizedFont?["pixelSize"] as? Int == resized.body.pixelSize &&
+                      resizedDrag?["horizontalPadding"] as? Double == Double(resized.space(.one)),
+                      cppID: readoutID,
+                      message: "resizing the pitch popup republishes the title, caption, readout, and input roles")
+        scene.presenter.configure(fontPx: 13, lineSpacing: 13, dpr: 2)
         report.expectEqual(expected: "0 st", actual: scene.presenter.pitchGraph().liveValueText,
                            cppID: readoutID,
                            what: "the pitch readout at rest is 0 st")

@@ -97,6 +97,7 @@ Item {
         required property bool hovered
         required property bool pressed
         required property bool solo
+        objectName: "timelineHeader" + (solo ? "Solo" : "Mute") + "_" + track
 
         x: controlRect.x
         y: controlRect.y

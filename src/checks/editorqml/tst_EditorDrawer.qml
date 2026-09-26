@@ -1888,6 +1888,66 @@ TestCase {
                   1000, "the drawn segment agrees with the published visibility")
     }
 
+    function test_drawerTypographyFromMountedSession() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        const fonts = session.typographyFonts
+        testCase.mountProductionVelocity(bootstrap.preferencesUrl("velocity-typography"))
+        const labels = testCase.collectVisibleTexts(testCase.velocityRuler(), []).filter(
+            function(text) { return text.text.length > 0 })
+        verify(labels.length > 0, "the mounted velocity axis renders a graduation")
+        const labelFont = labels[0].font
+        compare(labelFont.family, fonts.noteName.family, "axis uses the note-name face")
+        compare(labelFont.pixelSize, fonts.noteName.pixelSize, "axis uses note-name size")
+        compare(labelFont.weight, fonts.noteName.weight, "axis uses note-name weight")
+        const velocityNode = testCase.velocityNodes()[0]
+        const velocityInput = testCase.velocityPlotInput()
+        verify(velocityNode && velocityInput, "a mounted node accepts hover")
+        const hover = velocityNode.mapToItem(
+            velocityInput, velocityNode.width / 2, velocityNode.height / 2)
+        mouseMove(velocityInput, hover.x, hover.y)
+        tryVerify(function() {
+            return testCase.collectVisibleTexts(testCase.velocityRuler(), []).some(
+                function(text) {
+                    return text.text.length > 0
+                        && text.font.family === fonts.captionBold.family
+                        && text.font.pixelSize === fonts.captionBold.pixelSize
+                        && text.font.weight === fonts.captionBold.weight
+                })
+        }, 1000, "hovered velocity marker paints the bold note-name face")
+        testCase.mountProductionVoice(bootstrap.preferencesUrl("voice-typography"))
+        const voiceHover = findChild(testCase.voicePageItem(), "voiceHoverLabel")
+        verify(voiceHover, "the mounted voice hover text exists")
+        compare(voiceHover.font.family, fonts.noteName.family, "voice hover face")
+        compare(voiceHover.font.pixelSize, fonts.noteName.pixelSize, "voice hover size")
+        compare(voiceHover.font.weight, fonts.noteName.weight, "voice hover weight")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-typography"))
+        const automation = testCase.automationModel()
+        const automationPage = testCase.automationPageItem()
+        for (const name of ["automationHoverLabel", "automationPreviewLabel"]) {
+            const text = findChild(automationPage, name)
+            verify(text, name + " is mounted")
+            compare(text.font.family, fonts.noteName.family, name + " face")
+            compare(text.font.pixelSize, fonts.noteName.pixelSize, name + " size")
+            compare(text.font.weight, fonts.noteName.weight, name + " weight")
+        }
+        const tab = testCase.automationTab(0)
+        verify(tab, "a production parameter tab is mounted")
+        const tabText = findChild(tab, "automationParameterTabText")
+        const badge = findChild(tab, "automationParameterEventCount")
+        verify(tabText && badge, "the label and badge are mounted")
+        compare(tabText.font.family, fonts.caption.family, "tab caption face")
+        compare(tabText.font.pixelSize, fonts.caption.pixelSize, "tab caption size")
+        compare(tabText.font.weight, fonts.caption.weight, "tab caption weight")
+        compare(tabText.minimumPixelSize, automation.minimumFont.pixelSize,
+                "tab fit stops at the caption minimum")
+        compare(tabText.fontSizeMode, Text.HorizontalFit, "tab shrinks to fit")
+        compare(badge.font.pixelSize, automation.minimumFont.pixelSize, "badge uses minimum")
+        compare(automationPage.pageModel.captionFont.pixelSize, fonts.caption.pixelSize,
+                "automation value-axis captions use the session caption")
+        compare(findChild(testCase.automationGutter(), "automationTabsScroller").parent.inset,
+                session.layoutSpaces.one, "tab inset follows session spacing")
+    }
+
     // ---- the production Velocity page ---------------------------------------
 
     // Every named descendant, in tree order: the page publishes one node group
@@ -2871,11 +2931,11 @@ TestCase {
         var velocityCard = findChild(testCase.surface, "velocityPromptCard")
         verify(velocityCard, "the prompt composed its card")
         var base = model.baseFontPx
-        compare(velocityCard.appearance.font.pixelSize, Math.round(base),
-                "the original velocity prompt follows application typography")
-        compare(velocityCard.appearance.dialogPadding, Math.max(1, Math.round(base * 0.25)))
-        compare(velocityCard.appearance.verticalPadding, Math.max(1, Math.round(base * 0.125)))
-        compare(velocityCard.appearance.radius, Math.max(1, Math.round(base * 0.125)))
+        compare(velocityCard.appearance.font.pixelSize, session.typographyFonts.body.pixelSize,
+                "velocity prompt follows the session body role")
+        compare(velocityCard.appearance.dialogPadding, session.layoutSpaces.one)
+        compare(velocityCard.appearance.verticalPadding, session.layoutSpaces.half)
+        compare(velocityCard.appearance.radius, session.layoutSpaces.half)
         compare(velocityCard.appearance.dragThreshold, base)
         compare(velocityCard.appearance.background, testCase.velocityPageItem().gridPalette.windowBackground,
                 "the original prompt binds the live window theme role")
@@ -5074,6 +5134,23 @@ TestCase {
         var autoPrompt = findChild(testCase.surface, "automationPrompt")
         verify(autoPrompt, "the prompt composed its production surface")
         testCase.auditVisibleTextInk(autoPrompt, "automation prompt")
+        var promptCard = findChild(autoPrompt, "automationPromptCard")
+        var promptTitle = findChild(autoPrompt, "automationPromptTitle")
+        verify(promptCard && promptTitle, "the mounted automation prompt draws a title and card")
+        compare(promptTitle.font.family, session.typographyFonts.body.family,
+                "automation prompt uses the session body face")
+        compare(promptTitle.font.pixelSize, session.typographyFonts.body.pixelSize,
+                "automation prompt uses the session body size")
+        compare(promptTitle.font.weight, session.typographyFonts.body.weight,
+                "automation prompt uses the session body weight")
+        compare(promptCard.appearance.dialogPadding, session.layoutSpaces.one,
+                "automation prompt card uses one space of padding")
+        compare(promptCard.appearance.buttonPadding, session.layoutSpaces.one,
+                "automation prompt buttons use one space of padding")
+        compare(promptCard.appearance.radius, session.layoutSpaces.half,
+                "automation prompt radius uses half space")
+        compare(field.parent.appearance.horizontalPadding, session.layoutSpaces.one,
+                "automation prompt input uses one space of horizontal padding")
 
         // A typed draft commits exactly one transaction.
         field.selectAll()
@@ -5854,6 +5931,14 @@ TestCase {
         verify(tempoTab, "the Tempo row is drawn in the selector")
         var tapControl = findChild(tempoTab, "automationTempoTapButton")
         verify(tapControl, "the Tempo row composed its Tap control")
+        const tapText = findChild(tapControl, "automationTempoTapLabel")
+        verify(tapText, "the mounted Tap label is present")
+        compare(tapText.font.family, session.typographyFonts.caption.family,
+                "Tap uses the caption face")
+        compare(tapText.font.pixelSize, session.typographyFonts.caption.pixelSize,
+                "Tap uses the caption size")
+        compare(tapText.font.weight, session.typographyFonts.caption.weight,
+                "Tap uses caption weight")
         var tempoBefore = bootstrap.automationTempoBpm()
         verify(tempoBefore > 0, "the staged song names a tick-zero tempo (" + tempoBefore + ")")
         var revisionBefore = bootstrap.automationDocumentRevision()
@@ -5936,6 +6021,12 @@ TestCase {
                   "the live cadence is drawn inside the Tempo tab")
         tryCompare(inlineDraft, "text", "120 BPM", 1000,
                    "the original inline readout shows the tapped tempo")
+        compare(inlineDraft.font.family, model.minimumFont.family,
+                "live BPM draft uses the minimum caption face")
+        compare(inlineDraft.font.pixelSize, model.minimumFont.pixelSize,
+                "live BPM draft uses the minimum caption size")
+        compare(inlineDraft.font.weight, model.minimumFont.weight,
+                "live BPM draft uses the minimum caption weight")
         compare(bootstrap.automationTempoBpm(), expectedDraft,
                 "a live session writes nothing until its idle window")
         testCase.resetAutomationTap()

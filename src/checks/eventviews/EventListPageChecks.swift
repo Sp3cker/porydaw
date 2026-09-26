@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import QtBridge
 import PorydawCore
 import PorydawAppEventList
@@ -126,51 +126,43 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
 @MainActor
 private func eventListTypographyParity(_ report: CheckReport) {
     let palette = GridPalette()
-    let presenter = EventListPresenter(palette: palette)
-    let body = presenter.appearance["bodyFont"] as? [String: QVariantSettable]
-    let control = presenter.appearance["controlFont"] as? [String: QVariantSettable]
-    let table = presenter.appearance["tableFont"] as? [String: QVariantSettable]
-    let header = presenter.appearance["headerFont"] as? [String: QVariantSettable]
-    report.expect((body?["family"] as? String) == "Atkinson Hyperlegible Next"
-                  && (body?["pixelSize"] as? Int) == 15,
-                  cppID: pageID, message: "seed body font is Atkinson Next at 15px")
-    report.expect((control?["family"] as? String) == "Atkinson Hyperlegible Next"
-                  && (control?["pixelSize"] as? Int) == 15,
-                  cppID: pageID, message: "seed control font matches the body face and size")
-    report.expect((table?["family"] as? String) == "Atkinson Hyperlegible Mono"
-                  && (table?["pixelSize"] as? Int) == 15,
-                  cppID: pageID, message: "seed table font uses Atkinson Mono at body size")
-    report.expect((table?["letterSpacing"] as? Double) == -0.5
-                  && (table?["features"] as? [String: QVariantSettable])?["tnum"] as? Int == 1
-                  && (table?["hintingPreference"] as? Int) == 1,
-                  cppID: pageID, message: "table numerals use negative tracking and no hinting")
-    report.expect((header?["family"] as? String) == "Atkinson Hyperlegible Next"
-                  && (header?["pixelSize"] as? Int) == 13,
-                  cppID: pageID, message: "caption uses the proportional base-size face")
+    let seed = Typography(baseFontPx: 13)
+    let presenter = EventListPresenter(palette: palette, typography: seed)
+    func expectRoles(_ typography: Typography) {
+        let roles: [(String, GridFontSpec)] = [
+            ("bodyFont", typography.body), ("controlFont", typography.body),
+            ("tableFont", typography.tableMono), ("headerFont", typography.caption),
+        ]
+        for (name, spec) in roles {
+            let map = presenter.appearance[name] as? [String: QVariantSettable]
+            report.expect((map?["family"] as? String) == spec.family
+                          && (map?["pixelSize"] as? Int) == spec.pixelSize
+                          && (map?["weight"] as? Int) == spec.weight
+                          && (map?["letterSpacing"] as? Double) == spec.letterSpacing,
+                          cppID: pageID, message: "\(name) follows the captured typography role")
+        }
+    }
+    expectRoles(seed)
     let defaults = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     for column in defaults.indices {
         report.expect(presenter.savedColumnWidth(column: column) == defaults[column],
                       cppID: pageID, message: "seed column \(column) follows the fork fraction")
     }
-    presenter.configureTypography(baseFontPx: 26)
-    let doubled = presenter.appearance["tableFont"] as? [String: QVariantSettable]
-    let doubledHeader = presenter.appearance["headerFont"] as? [String: QVariantSettable]
-    report.expect((doubled?["pixelSize"] as? Int) == 29
-                  && (doubledHeader?["pixelSize"] as? Int) == 26
-                  && (doubled?["letterSpacing"] as? Double) == -1,
-                  cppID: pageID, message: "base 26 scales body caption and mono tracking")
+    let doubledTypography = Typography(baseFontPx: 26)
+    presenter.configureTypography(typography: doubledTypography)
+    expectRoles(doubledTypography)
     for column in defaults.indices {
         report.expect(presenter.savedColumnWidth(column: column) == defaults[column] * 2,
                       cppID: pageID, message: "base 26 doubles default column \(column)")
     }
-    presenter.configureTypography(baseFontPx: 10)
+    presenter.configureTypography(typography: Typography(baseFontPx: 10))
     for column in defaults.indices {
         report.expect(presenter.savedColumnWidth(column: column)
-                      == (10 * defaults[column] / 13).rounded(),
+                      == Double(Typography(baseFontPx: 10).fontPx(defaults[column] / 13)),
                       cppID: pageID, message: "base 10 rounds default column \(column)")
     }
     presenter.resizeColumn(column: 1, width: 200)
-    presenter.configureTypography(baseFontPx: 26)
+    presenter.configureTypography(typography: doubledTypography)
     report.expect(presenter.savedColumnWidth(column: 1) == 200,
                   cppID: pageID, message: "user-resized Type column survives font changes")
     report.expect(presenter.savedColumnWidth(column: 0) == 140
@@ -178,10 +170,7 @@ private func eventListTypographyParity(_ report: CheckReport) {
                   cppID: pageID, message: "untouched columns rederive after Type resize")
     ShellAppearance.apply(to: palette, mode: "dark-neutral-high", contrast: 50)
     presenter.refreshAppearance()
-    let refreshed = presenter.appearance["tableFont"] as? [String: QVariantSettable]
-    report.expect((refreshed?["pixelSize"] as? Int) == 29
-                  && (refreshed?["letterSpacing"] as? Double) == -1,
-                  cppID: pageID, message: "theme refresh retains the configured typography base")
+    expectRoles(doubledTypography)
 }
 
 @MainActor

@@ -44,7 +44,7 @@ struct TrackHeadersFixture {
                                   dirty: false, loadName: suite.bankLoadName,
                                   sampleRate: 48_000)
         session.selectedTrack = 0
-        let headers = TrackHeadersPresenter(baseFontPx: 13)
+        let headers = TrackHeadersPresenter()
         self.headers = headers
         headers.attach(session: session, palette: GridPalette())
         session.onChange = { [weak headers] change in headers?.documentDidChange(change) }

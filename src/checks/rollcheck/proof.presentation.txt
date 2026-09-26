@@ -9,7 +9,15 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
-projectSession suite executed runPresentationChecks and the S001-S024 predicates.
+projectSession suite executed runPresentationChecks and the S001-S027 predicates.
+Task 32's fix round added the presenter-metrics predicates S025-S027 (metric
+republish after a font change, and the roll hover-chip caption at base 26 and back
+at base 13), executed by checkPresenterMetrics in the same suite on the frozen tree
+(`deno task verify --filter swiftcore --verbose` 12/37 ok, 25 skipped; evidence
+build/proof-evidence/swiftcore-projectsession.json). They prove no A site here: the
+original presentation.cpp carries no hover-chip or metric-republish assertion, so
+the new coverage is indexed without changing a disposition.
+
 Command: deno task verify:qml-roll --verbose
 Result: PASS — 1/1 ok (controller-recorded post-change run); no presentation site
 depends on the roll QML lane.
@@ -415,3 +423,12 @@ Anchor: message "mute and solo role updates never reset header rows"
 
 S024 | checkHeaderKeyboardMuteSolo | src/checks/rollcheck/presentation.swift
 Anchor: message "keyboard toggles do not touch MIDI or the undo stack"
+
+S025 | checkPresenterMetrics | src/checks/rollcheck/presentation.swift
+Anchor: message "metric scale republish tracks the requested font and camera bounds"
+
+S026 | checkPresenterMetrics | src/checks/rollcheck/presentation.swift
+Anchor: message "a larger viewport base repaints the roll hover chip with its caption role"
+
+S027 | checkPresenterMetrics | src/checks/rollcheck/presentation.swift
+Anchor: message "restoring the viewport base restores the roll hover chip caption"

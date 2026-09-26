@@ -6,11 +6,30 @@ Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70
 Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
+QML SHA-256: c31733e82178d3a0dbcbc97c4f5e48551ee3379b6c0228ed41a0b5dbf9f8649a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shell-event-list --verbose
 Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level). Task 28 (event-list typography and Summary geometry) carries implementer-reported lane results: `deno task verify --filter swiftcore --verbose` PASS (12/37 ok, 25 skipped) and `deno task verify:shell --filter shell-event-list --verbose` PASS (1/26 ok, 25 skipped); this ledger pass re-ran only `deno task proof check`.
+
+Task 33 note (ledger pass, no lane re-run): the Event List typography now reads the one session authority. EventListPageChecks.swift
+eventListTypographyParity asserts each published role map (bodyFont/controlFont/tableFont/headerFont) equal to Typography(baseFontPx: 13)
+on family, pixelSize, weight and letterSpacing, re-runs that loop at base 26 and after a theme refresh, and tst_ShellEventList.qml
+test_filterAndEditOnMountedPage now reads the mounted button, arrow, column-header, row-header and cell item fonts. The five
+literal-font predicates (S003-S007), the base-26 scaling predicate (S009) and the refresh predicate (S014) no longer exist in any
+form; this pass retired those ids, re-anchored S003 to the single role-equality loop that supersedes them, and indexed the new
+mounted predicates as S032-S036. No disposition changed and no clause was promoted: the touched rows (A012, A013, A014, A016,
+A017, A018) keep their previous MATCHED/PARTIAL status and their unproved conditions. Still unproved: the model Qt::FontRole font
+path, the last row and columns 2-4 of the original cell scan, the QFontInfo resolution step, the absolute spacing mode, and the
+rendered editor item's own font (EventListPage.qml:503). A023's real Type-handle drag also stays unproved; its cited handle range
+is now EventListPage.qml:847-884.
+Evidence: implementer-reported `deno task build:checks` PASS (17.10s), `deno task verify --filter swiftcore --verbose` PASS
+(12/37 ok, 25 skipped) and `deno task verify:shell --filter shell-event-list --verbose` PASS (1/26 ok, 25 skipped) on the task-33
+tree, with build/proof-evidence/swiftcore-projectsession.json and build/proof-evidence/shell-event-list.json carrying those runs;
+that evidence is what classifies S003 and S032-S036 executed. This bookkeeping pass ran no lane, no build, no formatter and no
+project check: it ran `deno task proof check` and `deno task proof check --executed` only. No semantic parity is claimed from
+parser success.
 
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
 Disposition: RETIRED-REPRESENTATION
@@ -111,7 +130,7 @@ QVERIFY(widgets)
 
 A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
 Disposition: PARTIAL
-Mapping/reason: S005 pins the fork mono family and body size in the published map and S016 pins that family on the mounted page font the numeric cell delegates bind (cellFont = page.tableFont for Tick, Ch, Data 1 and Data 2, EventListPage.qml:1012-1013, rendered at 471). Unproved: the instantiated cell font and its QFontInfo-resolved family are not read by any predicate.
+Mapping/reason: S003 pins the published tableFont map (family, pixelSize, weight, letterSpacing) equal to Typography(baseFontPx: 13).tableMono and S032 pins the instantiated numeric cell item's own font family to the session tableMono role the delegate binds (tst_ShellEventList.qml:443, cellFont = page.tableFont for column 0 and columns 2-4 at EventListPage.qml:1021-1022, rendered at 474). Unproved: the original reads the model's Qt::FontRole font for rows {0, last} x columns {0, 2, 3, 4} and resolves it through QFontInfo; no predicate reads a model font role, the last row or columns 2-4, and the mounted read takes the item's font value rather than a QFontInfo resolution.
 Source context since previous assertion:
 ;
 
@@ -129,7 +148,7 @@ QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
 
 A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
 Disposition: PARTIAL
-Mapping/reason: S006 and S020 pin the seed letter spacing and the mounted table tracking, but the absolute spacing mode has no Swift observable and no predicate: the QML font value type documents letterSpacing in pixels with no spacing-mode property, so nothing distinguishes absolute from percentage spacing. Unproved: the spacing-mode clause itself.
+Mapping/reason: S003 and S020 pin the seed letter spacing and the mounted table tracking, but the absolute spacing mode has no Swift observable and no predicate: the QML font value type documents letterSpacing in pixels with no spacing-mode property, so nothing distinguishes absolute from percentage spacing. Unproved: the spacing-mode clause itself.
 Source context since previous assertion:
 ;
 
@@ -138,7 +157,7 @@ QCOMPARE(cell.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A014 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:118
 Disposition: MATCHED
-Mapping: S006, S020 (the seed map pins letterSpacing -0.5 exactly and the mounted table font tracks at -base/26 within Qt's 1/64 px quantization; the numeric cells bind those fonts, EventListPage.qml:471, 1012-1013)
+Mapping: S003, S020 (the seed map pins letterSpacing equal to Typography(baseFontPx: 13).tableMono.letterSpacing, -0.5 exactly, and the mounted table font tracks at -base/26 within Qt's 1/64 px quantization; the numeric cells bind those fonts, EventListPage.qml:474, 1021-1022)
 
 A015 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:124
 Disposition: PARTIAL
@@ -157,7 +176,7 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, 0, eventlist::EventTableMode
 
 A016 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:127
 Disposition: PARTIAL
-Mapping/reason: S005 pins the fork mono family and body size in the published map and S016 pins that family on the mounted page font the tick editor binds (font: cell.cellFont, EventListPage.qml:500, with cellFont = page.tableFont for column 0 at 1012-1013). Unproved: the instantiated editor item's own font property, which the original read as editor->property("font"), and its resolved family.
+Mapping/reason: S003 pins the fork mono family and body size in the published map and S016 pins that family on the mounted page font the tick editor binds (font: cell.cellFont, EventListPage.qml:503, with cellFont = page.tableFont for column 0 at 1021-1022). Unproved: the instantiated editor item's own font property, which the original read as editor->property("font"), and its resolved family.
 Source context since previous assertion:
 ;
     const QFont editorFont = editor->property("font").value<QFont>();
@@ -167,7 +186,7 @@ QCOMPARE(QFontInfo(editorFont).family(), expectedInfo.family())
 
 A017 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:128
 Disposition: PARTIAL
-Mapping/reason: S006 pins the seed tracking value on the editor font source, but no predicate reads the rendered editor item's spacing mode and the QML font value type exposes none (letterSpacing is documented in pixels). Unproved: the editor's absolute spacing clause.
+Mapping/reason: S003 pins the seed tracking value on the editor font source, but no predicate reads the rendered editor item's spacing mode and the QML font value type exposes none (letterSpacing is documented in pixels). Unproved: the editor's absolute spacing clause.
 Source context since previous assertion:
 ;
 
@@ -176,7 +195,7 @@ QCOMPARE(editorFont.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A018 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:129
 Disposition: PARTIAL
-Mapping/reason: S006 and S020 pin the -0.5 seed tracking on the font the tick editor binds (EventListPage.qml:500, 1012-1013). Unproved: the rendered editor item's own font property, which the original read after a real double-click.
+Mapping/reason: S003 and S020 pin the -0.5 seed tracking on the font the tick editor binds (EventListPage.qml:503, 1021-1022). Unproved: the rendered editor item's own font property, which the original read after a real double-click.
 Source context since previous assertion:
 ;
 
@@ -225,7 +244,7 @@ QVERIFY(initial.size() >= 2)
 
 A023 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:160
 Disposition: PARTIAL
-Mapping/reason: S012 proves the resize entry point persists a Type width of 200 (above its 70px default) through the padded six-entry store and a later typography change, and S013 proves the untouched columns keep their derived widths. Unproved: a real mounted drag on the Type handle - EventListPage.qml:844-876 exposes eventListColumnResizeHandle1 and routes drag updates to controller.resizeColumn, but no predicate drives it.
+Mapping/reason: S012 proves the resize entry point persists a Type width of 200 (above its 70px default) through the padded six-entry store and a later typography change, and S013 proves the untouched columns keep their derived widths. Unproved: a real mounted drag on the Type handle - EventListPage.qml:847-884 exposes the per-column resize handle (objectName "eventListColumnResizeHandle" + section.sectionColumn at :850) and routes drag updates to controller.resizeColumn, but no predicate drives it.
 Source context since previous assertion:
 ;
 
@@ -1456,25 +1475,10 @@ S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChe
 Anchor: message "shape \(index) EOT tick mirrors the chunk end"
 
 S003 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "seed body font is Atkinson Next at 15px"
-
-S004 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "seed control font matches the body face and size"
-
-S005 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "seed table font uses Atkinson Mono at body size"
-
-S006 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "table numerals use negative tracking and no hinting"
-
-S007 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "caption uses the proportional base-size face"
+Anchor: message "\(name) follows the captured typography role"
 
 S008 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "seed column \(column) follows the fork fraction"
-
-S009 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "base 26 scales body caption and mono tracking"
 
 S010 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "base 26 doubles default column \(column)"
@@ -1487,9 +1491,6 @@ Anchor: message "user-resized Type column survives font changes"
 
 S013 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "untouched columns rederive after Type resize"
-
-S014 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
-Anchor: message "theme refresh retains the configured typography base"
 
 S015 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
 Anchor: message "mounted caption follows the current presenter typography"
@@ -1541,3 +1542,18 @@ Anchor: message "restoring the window removes horizontal overflow"
 
 S031 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
 Anchor: message "the tick editor takes text focus"
+
+S032 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message " family"
+
+S033 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message " pixel size"
+
+S034 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message " weight"
+
+S035 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "row headers follow the first visible event after vertical scrolling"
+
+S036 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "returning to the first row restores its header"

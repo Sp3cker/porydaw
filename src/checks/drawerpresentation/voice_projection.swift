@@ -214,7 +214,7 @@ func drawerVoiceSlotLabels(_ report: CheckReport, session: DocumentSession,
     let toneSession = DocumentSession(document: toneDocument, service: toneService,
                                       lease: session.bankLease, slots: headerSlots,
                                       dirty: false, loadName: session.bankLoadName)
-    let headers = TrackHeadersPresenter(baseFontPx: 13)
+    let headers = TrackHeadersPresenter(typography: Typography(baseFontPx: 13))
     headers.attach(session: toneSession, palette: GridPalette())
     report.expectEqual(expected: "000 missing_cry_sample (Sample)",
                        actual: headers.rows[0].subtitle,

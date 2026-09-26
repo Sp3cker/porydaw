@@ -40,8 +40,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// into it once; the strip and every page read their roles from it.
     @QtTracked public var palette: GridPalette
     public private(set) var typography = Typography(baseFontPx: 13)
-    public var typographyFonts: [String: QVariantSettable] = [:]
-    public var layoutSpaces: [String: QVariantSettable] = [:]
+    @QtTracked public var typographyFonts = [String: QVariantSettable]()
+    @QtTracked public var layoutSpaces = [String: QVariantSettable]()
     @QtTracked public var baseFontPx = 0
     @QtTracked public var bodyFontPx = 0
     private var hasCapturedTypography = false
@@ -113,10 +113,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     public required init() {
         let palette = GridPalette()
         self.palette = palette
-        baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
         typographyFonts = Self.fontMaps(for: typography)
         layoutSpaces = Self.spaceMap(for: typography)
+        baseFontPx = typography.baseFontPx
+        bodyFontPx = typography.bodyFontPx
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
         emptyOtherEventsBand = OtherEventsBandPresenter()
@@ -249,10 +249,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
         guard !hasCapturedTypography else { return }
         hasCapturedTypography = true
         typography = Typography(baseFontPx: baseFontPx)
-        self.baseFontPx = typography.baseFontPx
-        bodyFontPx = typography.bodyFontPx
         typographyFonts = Self.fontMaps(for: typography)
         layoutSpaces = Self.spaceMap(for: typography)
+        self.baseFontPx = typography.baseFontPx
+        bodyFontPx = typography.bodyFontPx
+        eventList.configureTypography(typography: typography)
     }
 
     public func componentComplete() {}
@@ -289,7 +290,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         timeSigPromptInitialNumerator = min(32, max(1, signature.numerator))
         timeSigPromptInitialDenominatorPow2 = min(5, max(0, signature.denomPow2))
         var appearance = PromptAppearance.metrics(base: workspace.grid.baseFontPx)
-        timeSigPromptFont = PromptAppearance.font(base: workspace.grid.baseFontPx)
+        timeSigPromptFont = PromptAppearance.font(typography: typography)
         appearance["background"] = palette.chromeBackground
         appearance["text"] = palette.primaryText
         appearance["buttonText"] = palette.primaryText

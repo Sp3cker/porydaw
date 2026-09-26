@@ -12,7 +12,7 @@ Rectangle {
 
     required property var bridge
 
-    property font fallbackFont
+    required property font fallbackFont
 
     readonly property var metrics: bridge ? bridge.metrics : null
     readonly property var appearance: bridge ? bridge.appearance : null
@@ -115,6 +115,8 @@ Rectangle {
 
         Text {
             id: liveValue
+            objectName: labels.graph && labels.graph === pitchGraph
+                        ? "pitchBendLiveValue" : "modWheelLiveValue"
 
             x: labels.canvas.x
             y: 0
@@ -443,6 +445,7 @@ Rectangle {
 
     Text {
         id: titleText
+        objectName: "pitchBendTitle"
 
         x: root.outerInset
         y: 0
@@ -459,6 +462,7 @@ Rectangle {
 
     Text {
         id: subtitleText
+        objectName: "pitchBendDescription"
 
         x: root.outerInset
         y: root.titleHeight

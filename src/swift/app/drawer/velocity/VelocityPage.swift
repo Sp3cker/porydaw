@@ -249,7 +249,6 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
     @QtIgnored var lastContextKey: VelocityContextKey?
-    @QtIgnored var typographyCache: (key: TypographyKey, value: GridTypography)?
     @QtIgnored var metricsCache: (key: MetricsKey, value: GridMetrics)?
     @QtIgnored var handlesByID: [NoteID: VelocityHandle] = [:]
     @QtIgnored var paintCandidates: [Note] = []
@@ -270,12 +269,6 @@ public final class VelocityPage: EditorDrawerPage {
         var height: Double
     }
 
-
-    struct TypographyKey: Equatable {
-        var baseFontPx: Double
-        var rowHeight: Double
-    }
-
     public init(baseFontPx: Double = VelocityPagePolicy.seedBaseFontPx) {
         let base = baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx
@@ -288,7 +281,7 @@ public final class VelocityPage: EditorDrawerPage {
         }
         geometry = VelocityNodeGeometry(baseFontPx: base, devicePixelRatio: 1)
         promptAppearance = PromptAppearance.metrics(base: base)
-        promptFont = PromptAppearance.font(base: base)
+        promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(base.rounded())))
     }
 
     /// Installs the document and palette owners. Called before the container
@@ -344,7 +337,7 @@ public final class VelocityPage: EditorDrawerPage {
         if self.baseFontPx != nextFont {
             self.baseFontPx = nextFont
             promptAppearance = PromptAppearance.metrics(base: nextFont)
-            promptFont = PromptAppearance.font(base: nextFont)
+            promptFont = PromptAppearance.font(typography: Typography(baseFontPx: Int(nextFont.rounded())))
         }
         if changed { rebuildContent() }
     }

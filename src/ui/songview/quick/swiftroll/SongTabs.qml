@@ -7,7 +7,7 @@ Item {
     id: root
 
     required property QtObject controller
-    property font applicationFont: Application.font
+    property var layoutSpaces: null
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
     function focusOwnsLocalKeys() {
@@ -61,25 +61,18 @@ Item {
         return "";
     }
 
-    // Production layout.cpp spacing and Fusion's fixed style metrics.
-    readonly property int tabMargin: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.125))
-    readonly property int tabPadding: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.5))
+    readonly property int tabMargin: layoutSpaces
+                                     ? layoutSpaces.half : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.125))
+    readonly property int tabPadding: layoutSpaces
+                                      ? layoutSpaces.two : Math.max(1, Math.round(bodyMetrics.font.pixelSize * 0.5))
     readonly property int closeExtent: 20
     readonly property int scrollExtent: 16
-    readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height)) + 3 * tabMargin + 2
-    readonly property font bodyFont: Qt.font({
-        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
-        weight: Font.Normal, styleName: "", hintingPreference: Font.PreferNoHinting,
-        features: { "tnum": 1 }
-    })
-    readonly property font tabFont: Qt.font({
-        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
-        weight: Font.DemiBold, styleName: "", hintingPreference: Font.PreferNoHinting,
-        features: { "tnum": 1 }
-    })
+    readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height))
+                                     + 2 * tabMargin + 2
     FontMetrics {
         id: bodyMetrics
-        font: root.bodyFont
+        font: root.Window.window ? root.Window.window.font
+                                 : Qt.font({family: "Atkinson Hyperlegible Next"})
     }
 
     function revealSelectedTab() {
@@ -101,12 +94,11 @@ Item {
 
     component StripButton: Button {
         id: button
-        font: root.applicationFont
         focusPolicy: Qt.NoFocus
         palette.button: down ? root.controller.palette.tabPressedBackground : hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.chromeBackground
         implicitWidth: caption.implicitWidth + leftPadding + rightPadding
-        implicitHeight: Math.round(root.applicationFont.pixelSize * 2)
-        padding: Math.round(root.applicationFont.pixelSize * 0.5)
+        implicitHeight: Math.round(button.font.pixelSize * 2)
+        padding: root.tabPadding
         contentItem: Text {
             id: caption
             text: button.text
@@ -194,7 +186,6 @@ Item {
                         text: session.dirty ? qsTr("%1*").arg(session.title) : session.title
                         Accessible.name: session.dirty ? qsTr("%1, modified").arg(session.title) : session.title
                         checked: root.controller.selectedId === tabId
-                        font: root.tabFont
                         focusPolicy: Qt.NoFocus
                         padding: 0
                         width: Math.round(titleMetrics.advanceWidth) + 2 * (root.tabPadding + 1) + root.closeExtent + 4
@@ -203,7 +194,7 @@ Item {
 
                         TextMetrics {
                             id: titleMetrics
-                            font: root.bodyFont
+                            font: selectButton.font
                             text: selectButton.text
                         }
                         contentItem: Item {
@@ -328,7 +319,6 @@ Item {
                 objectName: "songTab_" + model.display.tabId
                 anchors.fill: parent
                 session: model.display
-                applicationFont: root.applicationFont
                 shellRouter: root.shellRouter
                 onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
                 controller: root.controller
@@ -344,23 +334,27 @@ Item {
         id: closeDialog
         objectName: "songTabCloseDialog"
         parent: Overlay.overlay
+        implicitWidth: Math.max(closeMessage.implicitWidth,
+                                saveButton.implicitWidth + discardButton.implicitWidth
+                                + cancelButton.implicitWidth + 2 * closeButtons.spacing)
+                       + leftPadding + rightPadding
         anchors.centerIn: parent
         title: qsTr("Unsaved Changes")
-        font: root.applicationFont
         modal: true
         focus: true
         visible: root.controller.pendingCloseId >= 0 || root.controller.pendingCloseBankTitle.length > 0
         closePolicy: Popup.CloseOnEscape
         onRejected: root.controller.cancelClose()
         Label {
+            id: closeMessage
             text: qsTr("%1 has unsaved changes. Save them?").arg(root.pendingCloseTitle)
-            font: root.applicationFont
         }
         footer: DialogButtonBox {
             id: closeButtons
             // Fusion's contentItem plus currentIndex -1: stock highlight animates frames while hidden.
             contentItem: ListView {
-                implicitWidth: contentWidth
+                implicitWidth: saveButton.implicitWidth + discardButton.implicitWidth
+                               + cancelButton.implicitWidth + 2 * closeButtons.spacing
                 model: closeButtons.contentModel
                 spacing: closeButtons.spacing
                 orientation: ListView.Horizontal
@@ -369,6 +363,7 @@ Item {
                 currentIndex: -1
             }
             StripButton {
+                id: saveButton
                 objectName: "songTabSave"
                 text: qsTr("Save")
                 focusPolicy: Qt.StrongFocus
@@ -378,6 +373,7 @@ Item {
             }
             StripButton {
                 objectName: "songTabDiscard"
+                id: discardButton
                 text: qsTr("Discard")
                 focusPolicy: Qt.StrongFocus
                 DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
@@ -385,6 +381,7 @@ Item {
             }
             StripButton {
                 objectName: "songTabCancel"
+                id: cancelButton
                 text: qsTr("Cancel")
                 focusPolicy: Qt.StrongFocus
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole

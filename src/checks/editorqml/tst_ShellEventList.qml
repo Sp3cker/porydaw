@@ -316,6 +316,20 @@ TestCase {
         tryVerify(function() {
             return page.headerFont.pixelSize === presenter.appearance.headerFont.pixelSize
         }, 3000, "mounted caption follows the current presenter typography")
+        function matchesFont(text, role, label) {
+            verify(text, label + " is mounted")
+            compare(text.font.family, role.family, label + " family")
+            compare(text.font.pixelSize, role.pixelSize, label + " pixel size")
+            compare(text.font.weight, role.weight, label + " weight")
+        }
+        const fonts = session.typographyFonts
+        for (const button of ["eventListChunk", "eventListFilter",
+                               "eventListAdd", "eventListRemove"])
+            matchesFont(findChild(page, button + "Text"), fonts.body, button + " text")
+        for (const button of ["eventListChunk", "eventListFilter"])
+            matchesFont(findChild(page, button + "Arrow"), fonts.body, button + " arrow")
+        matchesFont(findChild(page, "eventListColumnHeaderLabel0"), fonts.caption,
+                    "column header")
         compare(page.tableFont.family, "Atkinson Hyperlegible Mono",
                 "mounted table uses the fork mono face")
         compare(page.controlFont.family, "Atkinson Hyperlegible Next",
@@ -418,6 +432,30 @@ TestCase {
         compare(table.columns, 7)
         tryVerify(function() { return table.rows === presenter.rowCount }, 3000,
                   "the seven-column table syncs to the published rows")
+        table.forceLayout()
+        tryVerify(function() {
+            return findChild(page, "eventListRowHeaderLabel") !== null
+                && findChild(page, "eventListCell_0_0") !== null
+                && findChild(page, "eventListCell_0_1") !== null
+        }, 3000, "the visible row header and numeric/text cells are instantiated")
+        matchesFont(findChild(page, "eventListRowHeaderLabel"), fonts.caption,
+                    "row header")
+        matchesFont(findChild(page, "eventListCell_0_0"), fonts.tableMono,
+                    "numeric table cell")
+        matchesFont(findChild(page, "eventListCell_0_1"), fonts.body,
+                    "text table cell")
+        table.positionViewAtRow(20, TableView.AlignTop)
+        table.forceLayout()
+        tryVerify(function() {
+            const label = findChild(page, "eventListRowHeaderLabel")
+            return table.topRow > 0 && label && Number(label.text) === table.topRow + 1
+        }, 3000, "row headers follow the first visible event after vertical scrolling")
+        table.positionViewAtRow(0, TableView.AlignTop)
+        table.forceLayout()
+        tryVerify(function() {
+            const label = findChild(page, "eventListRowHeaderLabel")
+            return table.topRow === 0 && label && Number(label.text) === 1
+        }, 3000, "returning to the first row restores its header")
         const horizontalScroll = findChild(page, "eventListHorizontalScrollBar")
         const summaryLabel = findChild(page, "eventListColumnHeaderLabel6")
         verify(horizontalScroll && summaryLabel,

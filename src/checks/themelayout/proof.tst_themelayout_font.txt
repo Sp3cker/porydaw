@@ -5,7 +5,7 @@ Original: src/checks/themelayout/tst_themelayout_font.cpp
 Original SHA-256: aa416bc26d730a3c4625e5861bcd80df4ee1cdad299db685d4ef851e2ac893b8
 Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
 Swift counterpart: src/checks/editorqml/tst_Typography.qml
-QML SHA-256: c01c07228a1a54fb4c4c17ba8e1a31804892250c6286e9492ab1b82dbb9e4ae7
+QML SHA-256: 7b5815d5eddc7ca0f078b8c5d207f7d17a2c807519d20d3a6564c16399c8907b
 
 
 Command: deno task verify --filter swiftcore --verbose
@@ -27,7 +27,36 @@ build/proof-evidence/shell-typography.json (controller-observed verify:shell 26/
 This bookkeeping pass re-ran only `deno task proof check` and
 `deno task proof check --executed`; no lane was re-run and no parser result is a
 semantic-parity claim.
-
+Task 32 (song-view typography) re-derived the grid faces from the captured
+Typography roles and re-pinned the face-contract anchors: S006 now names the
+signature advance against the published bodyBold role, S007 the caption-size grid
+face against the published caption role (the role's own Next/base/Regular values
+stay pinned by the role-table predicate S046), S009 the beat face one pixel under
+the ruler, S010 the loop marker in the bundled Mono Regular weight, and S011 the
+key-label face fitted from body to caption; S012/S013 are unchanged. S049 indexes
+the new bold-ruler advance predicate for the painted loop-start bracket, and S050
+the new per-role installed-face predicate, cited by A017, A019 and A044 for the
+bodyMono family, bodyMono weight and noteName family clauses that previously cited
+the ruler/beat/key-label face predicates. S029/S030 were re-pinned to the reworded
+mounted body-geometry messages, and the QML counterpart hash above is the final
+tst_Typography.qml. Implementer-run lanes on this frozen tree (shared build lock;
+QML SHA-256 above is the pinned counterpart): `deno task verify --filter swiftcore
+--verbose` 12/37 ok, 25 skipped, and `deno task verify:shell --filter
+shell-typography --verbose` 1/26 ok, 25 skipped, recorded in
+build/proof-evidence/swiftcore-projectsession.json and shell-typography.json. This
+bookkeeping pass re-ran only `deno task proof check` and `deno task proof check
+--executed`; no lane was re-run and no parser result is a semantic-parity claim.
+The task-32 fix round then gave the header presenter its published Typography roles
+and added the role-loop predicates indexed below as S051-S053 (prompt body role,
+per-grid-face installed font file, header role bundled face), all executed in the
+regenerated swiftcore evidence (build/proof-evidence/swiftcore-projectsession.json).
+They prove no A site of this ledger: the original ThemeLayoutFontTest asserted the
+theme faces, not the header or prompt role maps, so they are indexed as the
+surface's current predicate set. S037 was re-pinned from "the fallback label map
+pins the unhinted preference" to the note-name role map message at
+TypographyLayoutChecks.swift:310, a line owned by the drawer/velocity work rather
+than task 32; the evidence recorded above predates that rename, so its execution is
+unrecorded here and the swiftcore lane must run again before the entry is cited.
 
 No data rows: each case runs once per lane. typographyAndLayoutInitialization
 expands A004 and A009 over the same 8-entry spaces table (Zero/0.0 through
@@ -107,7 +136,7 @@ Disposition: MATCHED
 
 A017 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:74
 Disposition: MATCHED
-Mapping: S008
+Mapping: S050
 
 A018 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:75
 Disposition: MATCHED
@@ -115,7 +144,7 @@ Mapping: S046
 
 A019 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:76
 Disposition: MATCHED
-Mapping: S008, S009
+Mapping: S050
 
 A020 | ThemeLayoutFontTest::typographyFaceContracts | src/checks/themelayout/tst_themelayout_font.cpp:77
 Disposition: MATCHED
@@ -244,7 +273,7 @@ Mapping: S047
 
 A044 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:140
 Disposition: MATCHED
-Mapping: S011
+Mapping: S050
 
 A045 | ThemeLayoutFontTest::fittedTypographyContracts | src/checks/themelayout/tst_themelayout_font.cpp:141
 Disposition: MATCHED
@@ -338,22 +367,22 @@ S005 | typographyLayoutCheckBasePropagation | src/checks/themelayout/TypographyL
 Anchor: message "a degenerate page base falls back to the seed"
 
 S006 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the body-size face stays Next at base \(Int(base)) times 1.125"
+Anchor: message "the signature advance uses the published bodyBold role at base \(Int(base))"
 
 S007 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the caption-size face stays Next at the base size with Normal weight"
+Anchor: message "the roll hover chip uses the published caption role at base \(Int(base))"
 
 S008 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
 Anchor: message "the ruler mono face stays Mono at the derived size with Normal weight"
 
 S009 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the beat mono face stays Mono at the base size with Normal weight"
+Anchor: message "the beat mono face is one pixel smaller than the ruler at base \(Int(base))"
 
 S010 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the bold face keeps the ruler size with DemiBold weight"
+Anchor: message "the loop-marker face keeps the ruler size in the bundled Mono Regular weight"
 
 S011 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the key-label face stays Next at the base size with Normal weight"
+Anchor: message "the key-label face fits body to caption at base \(Int(base))"
 
 S012 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
 Anchor: message "ruler spacing keeps the negative thirty-second scale at base \(Int(base))"
@@ -407,10 +436,10 @@ S028 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
 Anchor: message "the base font enables tabular figures"
 
 S029 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
-Anchor: message "window width threads the body size into geometry"
+Anchor: message "window width follows the captured base geometry"
 
 S030 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
-Anchor: message "window height threads the body size into geometry"
+Anchor: message "window height follows the captured base geometry"
 
 S031 | test_bodyFontAndMetrics | src/checks/editorqml/tst_Typography.qml
 Anchor: message "body text shows the restored Next family"
@@ -431,7 +460,7 @@ S036 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLay
 Anchor: message "the published face map pins the unhinted preference"
 
 S037 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
-Anchor: message "the fallback label map pins the unhinted preference"
+Anchor: message "the note-name role map pins the unhinted preference"
 
 S038 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
 Anchor: message "the automation caption map pins the unhinted preference"
@@ -465,3 +494,18 @@ Anchor: message "zero available height rejects the body font at base \(base)"
 
 S048 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
 Anchor: message "the body font fits down to caption height at base \(base)"
+
+S049 | typographyLayoutCheckFaceContracts | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the painted loop-start bracket measures its bold ruler face at base \(Int(base))"
+
+S050 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "\(name) at base \(base) resolves to an installed font face"
+
+S051 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "time and insert prompts publish the body role at base \(base)"
+
+S052 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "the \(kind) face at base \(base) resolves to an installed font file"
+
+S053 | typographyLayoutCheckRoles | src/checks/themelayout/TypographyLayoutChecks.swift
+Anchor: message "\(name) at base \(base) publishes a bundled font face"

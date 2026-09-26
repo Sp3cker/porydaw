@@ -14,6 +14,17 @@ Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS, the existing lane is unaffected.
 Command: deno task proof check
 Result: PASS.
+Task 32 (song-view typography) deleted the tab-local font map and captured scale
+table from SongTabs.qml: A030's label pixel-size clause now resolves through the
+published body role at the same mounted site, A031 (the DemiBold weight pin) is GAP
+because the fork QTabBar inherits the body font, and the strip/tab heights asserted
+by A025/A026 derive from the body metrics plus the half-space token. No other row's
+clause changed; the gesture, selection, roster and persistence rows below are
+untouched. Implementer-run on this frozen tree (shared build lock): `deno task
+verify:shell --filter shell-tabs --verbose` 1/26 ok, 25 skipped, recorded in
+build/proof-evidence/shell-tabs.json. This bookkeeping pass re-ran only `deno task
+proof check` and `deno task proof check --executed`; no lane was re-run and no parser
+result is a semantic-parity claim.
 
 A001 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:48
 Disposition: MATCHED
@@ -136,8 +147,19 @@ Disposition: MATCHED
 Mapping: S011
 
 A031 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:113
-Disposition: MATCHED
-Mapping: S011
+Disposition: GAP
+Mapping/reason: The DemiBold weight clause has no counterpart: the tab strip is
+QStyle-owned chrome whose fork QTabBar inherits the app body font
+(workspaceui.cpp:146-152), so task 32 deleted SongTabs.qml's tab-local DemiBold
+map and the mounted predicate (S011) now asserts the tab title weight equals the
+published body role (Next Regular). No Swift/QML predicate asserts DemiBold, and
+the captured tab-local font scale this clause keyed on was deleted with that map.
+The sibling pixel-size clause A030 keeps its counterpart through the same
+published-role comparison.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tabFont.weight() == QFont::DemiBold);
 
 A032 | SwiftRollGatedTest::songTabsGeometryAndSelection | src/checks/swiftrollgated/tabchecks.cpp:115
 Disposition: MATCHED

@@ -17,8 +17,9 @@ FocusScope {
     visible: showing
     enabled: showing
     readonly property real baseFontPx: model ? model.baseFontPx : 13
-    readonly property font bodyFont: ApplicationWindow.window
-        ? ApplicationWindow.window.font : Application.font
+    readonly property font bodyFont: menuRoot.pageItem
+        ? Qt.font((menuRoot.pageItem.applicationSession.timeSigHost
+                   || menuRoot.pageItem.applicationSession).typographyFonts.body) : Qt.font({})
     readonly property var menuColors: menuRoot.pageItem ? menuRoot.pageItem.gridPalette : null
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)

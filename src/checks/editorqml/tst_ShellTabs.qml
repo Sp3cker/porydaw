@@ -23,6 +23,11 @@ TestCase {
 
     Component { id: settingsComponent; Settings {} }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
+    FontMetrics {
+        id: tabBodyMetrics
+        font: shell ? Qt.font(shell.shellPresenter.session.typographyFonts.body)
+                    : Qt.font({family: "Atkinson Hyperlegible Next"})
+    }
 
     function initTestCase() {
         Qt.application.name = bootstrap.settingsApplicationName
@@ -286,8 +291,10 @@ TestCase {
         var pixelsPerTick = grid.beatWidth / grid.ticksPerBeat
         var firstTick = Math.ceil(((grid.cameraScrollX + 24.0) / pixelsPerTick) / snap) * snap
         var lastTick = Math.floor(((grid.cameraScrollX + plot.width - 24.0) / pixelsPerTick) / snap) * snap
-        var firstRow = Math.max(0, Math.min(127, Math.ceil(grid.cameraScrollY / grid.rowHeight) + 2))
-        var lastRow = Math.max(0, Math.min(127, Math.floor((grid.cameraScrollY + plot.height) / grid.rowHeight) - 2))
+        var firstRow = Math.max(0, Math.min(127,
+            Math.ceil(grid.cameraScrollY / grid.rowHeight - 0.5)))
+        var lastRow = Math.max(0, Math.min(127,
+            Math.floor((grid.cameraScrollY + plot.height) / grid.rowHeight - 0.5)))
         var tick = -1
         var pitch = -1
         for (var row = firstRow; row <= lastRow && tick < 0; ++row) {
@@ -306,7 +313,11 @@ TestCase {
                 }
             }
         }
-        verify(tick >= 0, "tab " + tabId + " has a visible empty lane to draw in")
+        verify(tick >= 0, "tab " + tabId + " has a visible empty lane to draw in"
+               + " (plot=" + plot.width + "x" + plot.height
+               + ", snap=" + snap + ", beatWidth=" + grid.beatWidth
+               + ", ticks=" + firstTick + ".." + lastTick
+               + ", rows=" + firstRow + ".." + lastRow + ")")
         var inset = Math.max(1, snap / 4)
         var start = pointFor(tabId, tick + inset, pitch)
         var finish = pointFor(tabId, tick + 2 * snap - inset, pitch)
@@ -445,16 +456,22 @@ TestCase {
         fuzzyCompare(pagesItem.width, root.width, 1.0,
                      "the page stack spans the surface width")
 
-        var tabMetrics = { 14: { strip: 22, tab: 28 }, 15: { strip: 23, tab: 28 },
-                           18: { strip: 27, tab: 28 } }
-        var metrics = tabMetrics[button.font.pixelSize]
-        verify(metrics !== undefined,
-               "the tab label font resolves to a captured production scale")
-        compare(button.font.weight, Font.DemiBold, "the tab caption keeps DemiBold weight")
-        compare(Math.round(stripItem.height), metrics.strip,
-                "the strip keeps its production height")
-        compare(Math.round(button.height), metrics.tab,
-                "the tab body keeps its production height")
+        var role = session().typographyFonts.body
+        var spaces = session().layoutSpaces
+        compare(button.font.family, role.family,
+                "the tab title inherits the published body family")
+        compare(button.font.pixelSize, role.pixelSize,
+                "the tab title inherits the published body size")
+        compare(button.font.weight, role.weight,
+                "the tab title inherits the published Regular body weight")
+        compare(root.tabMargin, spaces.half, "tab outer margin uses the half-space token")
+        compare(root.tabPadding, spaces.two, "tab inset uses the two-space token")
+        compare(Math.round(stripItem.height),
+                Math.max(Math.round(tabBodyMetrics.lineSpacing), root.scrollExtent)
+                + 2 * spaces.half + 2, "the strip follows the published body metrics")
+        compare(Math.round(button.height),
+                Math.max(root.closeExtent, Math.round(tabBodyMetrics.height))
+                + 2 * spaces.half + 2, "the tab body follows the published body metrics")
         compare(close.width, 20, "the close control keeps its production extent")
         compare(close.height, 20, "the close control keeps its production extent")
         compare(Math.round(close.x), Math.round(button.width) - 21,

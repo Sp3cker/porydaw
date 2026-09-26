@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml.Models
 import Porydaw.Ui
 
 Item {
@@ -9,7 +10,8 @@ Item {
     readonly property int baseFontPx: applicationSession.timeSigHost
                                       ? applicationSession.timeSigHost.baseFontPx
                                       : applicationSession.baseFontPx
-    property font applicationFont: Application.font
+    readonly property font bodyFont: Qt.font(applicationSession.timeSigHost.typographyFonts.body)
+    readonly property font captionFont: Qt.font(applicationSession.timeSigHost.typographyFonts.caption)
     property var shellRouter: null
     signal contextMenuAt(real x, real y)
     property url drawerPreferenceLocation: ""
@@ -48,6 +50,41 @@ Item {
     property point timeSelectionMenuPosition: Qt.point(0, 0)
     property bool timeMenuFocus: false
     property bool insertPromptHadFocus: false
+    readonly property int menuHorizontalPadding: applicationSession.timeSigHost.layoutSpaces.two
+    readonly property int menuVerticalPadding: applicationSession.timeSigHost.layoutSpaces.half
+    readonly property int menuGap: applicationSession.timeSigHost.layoutSpaces.one
+
+    component MenuMeasure: Item {
+        required property var items
+        readonly property real widestText: {
+            let width = 0
+            for (let i = 0; i < entries.count; ++i) {
+                const row = entries.objectAt(i)
+                if (row && !row.separator)
+                    width = Math.max(width, row.advance)
+            }
+            return Math.ceil(width)
+        }
+        readonly property int separatorCount: {
+            let count = 0
+            for (let i = 0; i < entries.count; ++i) {
+                const row = entries.objectAt(i)
+                if (row && row.separator)
+                    ++count
+            }
+            return count
+        }
+        Instantiator {
+            id: entries
+            model: items
+            delegate: QtObject {
+                required property var model
+                readonly property var itemData: model.modelData ?? model
+                readonly property bool separator: itemData.separator ?? false
+                readonly property real advance: bodyFontMetrics.advanceWidth(itemData.text ?? "")
+            }
+        }
+    }
 
     function hoverRow(panel, row) { panel.highlightedRow = row }
     function activateRow(panel, row) {
@@ -112,17 +149,10 @@ Item {
     }
     readonly property string appliedRevisionText: gridModel.appliedRevisionText
 
-    // The drawer's bar row is measured in the application font, as production's
-    // chromeRowHeight() measures its dock and tab rows.
     FontMetrics {
-        id: applicationFontMetrics
-        font: root.applicationFont
+        id: bodyFontMetrics
+        font: root.bodyFont
     }
-    onApplicationFontChanged: {
-        if (root.eventListPresenter)
-            root.eventListPresenter.configureTypography(root.baseFontPx)
-    }
-
 
     onWidthChanged: configureViewport()
     onHeightChanged: configureViewport()
@@ -179,6 +209,8 @@ Item {
             y: root.gridModel.rulerHeight
             width: root.headersModel.trackHeaderWidth
             height: Math.max(parent.height - y, 0)
+            onWidthChanged: root.configureViewport()
+            onHeightChanged: root.configureViewport()
             bandRect: Qt.rect(0, 0, width, height)
             bandVisible: rollBandContent.visible
             model: root.headersModel
@@ -505,8 +537,6 @@ Item {
                 active: false
                 onLoaded: {
                     if (root.eventListPresenter) {
-                        root.eventListPresenter.configureTypography(
-                            root.baseFontPx)
                         root.eventListPresenter.setVisible(root.showEvents)
                     }
                     if (root.showEvents && root.visible)
@@ -531,17 +561,12 @@ Item {
                 + root.gridModel.keyboardWidth
             height: root.gridModel.rulerHeight
             clip: true
-            readonly property real controlsInset:
-                Math.max(1, Math.round(root.gridModel.baseFontPx * 0.6))
-            readonly property real controlsGap:
-                Math.max(1, Math.round(root.gridModel.baseFontPx * 0.3))
+            readonly property real controlsInset: 8
+            readonly property real controlsGap: 4
             readonly property real controlsStroke:
                 1 / (root.gridModel.devicePixelRatio > 0
                      ? root.gridModel.devicePixelRatio : 1)
-            readonly property font controlsFont: Qt.font({
-                family: root.applicationFont.family,
-                pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
-                hintingPreference: Font.PreferNoHinting })
+            readonly property font controlsFont: root.bodyFont
             readonly property real gridLabelWidth:
                 Math.min(gridLabel.implicitWidth,
                          Math.max(0, width - controlsInset))
@@ -723,6 +748,10 @@ Item {
                     anchors.fill: parent
                     onPressed: root.headersModel.dismissHeaderMenu()
                 }
+                MenuMeasure {
+                    id: headerMeasure
+                    items: root.headersModel.menuItems
+                }
                 QuickMenuPanel {
                     anchors.fill: parent
                     host: root
@@ -736,13 +765,14 @@ Item {
                         hoverBackground: root.gridModel.palette.hoverChipFill,
                         hoverText: root.gridModel.palette.hoverChipText,
                         disabledText: root.gridModel.palette.disabledText,
-                        font: root.applicationFont
+                        font: root.bodyFont
                     })
-                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
-                    textX: Math.round(root.gridModel.baseFontPx * 0.9)
-                    textRight: menuWidth - textX
-                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 18))
-                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    rowHeight: Math.round(bodyFontMetrics.height) + 2 * root.menuVerticalPadding
+                    textX: root.menuHorizontalPadding
+                    textRight: menuWidth - 1 - root.menuHorizontalPadding
+                    menuWidth: Math.min(parent.width, 2 + textX
+                                        + headerMeasure.widestText + root.menuHorizontalPadding)
+                    menuHeight: Math.min(parent.height, 2 + rowCount * rowHeight)
                     menuOrigin: Qt.point(
                         Math.max(0, Math.min(root.headerMenuPosition.x, width - menuWidth)),
                         Math.max(0, Math.min(root.headerMenuPosition.y, height - menuHeight)))
@@ -769,6 +799,10 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     onPressed: root.gridModel.dismissGridMenu()
                 }
+                MenuMeasure {
+                    id: gridMeasure
+                    items: root.gridModel.gridMenuRows
+                }
                 QuickMenuPanel {
                     anchors.fill: parent
                     host: root
@@ -782,15 +816,16 @@ Item {
                         hoverBackground: root.gridModel.palette.hoverChipFill,
                         hoverText: root.gridModel.palette.hoverChipText,
                         disabledText: root.gridModel.palette.disabledText,
-                        font: root.applicationFont
+                        font: root.bodyFont
                     })
-                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
-                    checkX: Math.round(root.gridModel.baseFontPx * 0.4)
-                    checkWidth: Math.round(root.gridModel.baseFontPx * 0.8)
-                    textX: Math.round(root.gridModel.baseFontPx * 1.5)
-                    textRight: menuWidth - Math.round(root.gridModel.baseFontPx * 0.5)
-                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 16))
-                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    rowHeight: Math.round(bodyFontMetrics.height) + 2 * root.menuVerticalPadding
+                    checkX: root.menuHorizontalPadding
+                    checkWidth: Math.floor(rowHeight / 2)
+                    textX: root.menuHorizontalPadding + checkWidth + root.menuGap
+                    textRight: menuWidth - 1 - root.menuHorizontalPadding
+                    menuWidth: Math.min(parent.width, 2 + textX
+                                        + gridMeasure.widestText + root.menuHorizontalPadding)
+                    menuHeight: Math.min(parent.height, 2 + rowCount * rowHeight)
                     menuOrigin: Qt.point(
                         Math.max(0, Math.min(root.gridMenuPosition.x, width - menuWidth)),
                         Math.max(0, Math.min(root.gridMenuPosition.y, height - menuHeight)))
@@ -816,6 +851,10 @@ Item {
                     anchors.fill: parent
                     onPressed: root.timeSigHost.closeTimeSigMenu()
                 }
+                MenuMeasure {
+                    id: rulerMeasure
+                    items: root.rulerMenu.rows
+                }
                 QuickMenuPanel {
                     anchors.fill: parent
                     host: root
@@ -829,14 +868,17 @@ Item {
                         hoverBackground: root.gridModel.palette.hoverChipFill,
                         hoverText: root.gridModel.palette.hoverChipText,
                         disabledText: root.gridModel.palette.disabledText,
-                        font: root.applicationFont
+                        font: root.bodyFont
                     })
-                    rowHeight: Math.round(root.gridModel.baseFontPx * 1.8)
+                    rowHeight: Math.round(bodyFontMetrics.height) + 2 * root.menuVerticalPadding
                     separatorHeight: 1
-                    textX: Math.round(root.gridModel.baseFontPx * 0.9)
-                    textRight: menuWidth - Math.round(root.gridModel.baseFontPx * 0.5)
-                    menuWidth: Math.min(parent.width, Math.round(root.gridModel.baseFontPx * 18))
-                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    textX: root.menuHorizontalPadding
+                    textRight: menuWidth - 1 - root.menuHorizontalPadding
+                    menuWidth: Math.min(parent.width, 2 + textX
+                                        + rulerMeasure.widestText + root.menuHorizontalPadding)
+                    menuHeight: Math.min(parent.height, 2
+                                         + (rowCount - rulerMeasure.separatorCount) * rowHeight
+                                         + rulerMeasure.separatorCount)
                     menuOrigin: Qt.point(
                         Math.max(0, Math.min(root.rulerMenu.menuKind === 2
                                              ? root.timeSelectionMenuPosition.x : root.timeSigMenuPosition.x,
@@ -910,7 +952,7 @@ Item {
                 PitchBendPopup {
                     id: pitchBendPopup
                     bridge: root.pitchBendPresenter
-                    fallbackFont: root.applicationFont
+                    fallbackFont: root.bodyFont
                     width: implicitWidth
                     height: implicitHeight
                     x: Math.max(0, Math.min(
@@ -921,10 +963,10 @@ Item {
                         const below = root.gridModel.rulerHeight
                             + root.pitchBendPresenter.anchorY
                             + root.pitchBendPresenter.anchorHeight
-                            + applicationFontMetrics.height / 3
+                            + bodyFontMetrics.height / 3
                         const above = root.gridModel.rulerHeight
                             + root.pitchBendPresenter.anchorY - height
-                            - applicationFontMetrics.height / 3
+                            - bodyFontMetrics.height / 3
                         return Math.max(0, Math.min(
                             below + height <= editorDrawer.y ? below : above,
                             parent.height - height))
@@ -932,13 +974,13 @@ Item {
                     Component.onCompleted: {
                         root.pitchBendPresenter.configure(
                             root.baseFontPx,
-                            applicationFontMetrics.lineSpacing,
+                            bodyFontMetrics.lineSpacing,
                             root.gridModel.devicePixelRatio)
                         pitchBendPopup.focusInitialGraph()
                     }
                     onFallbackFontChanged: root.pitchBendPresenter.configure(
                         root.baseFontPx,
-                        applicationFontMetrics.lineSpacing,
+                        bodyFontMetrics.lineSpacing,
                         root.gridModel.devicePixelRatio)
                 }
                 Keys.onEscapePressed: (event) => {
@@ -979,7 +1021,7 @@ Item {
         overlayRoot: root
         timelineSplitX: root.timelineSplitX
         plotWidth: rollPlot.width
-        applicationFont: root.applicationFont
+        applicationFont: root.bodyFont
         onHeightChanged: root.configureViewport()
     }
 
@@ -990,7 +1032,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: implicitHeight
-        applicationFont: root.applicationFont
+        captionFont: root.captionFont
         presenter: root.hintService
         statusPalette: root.gridModel.palette
         onHeightChanged: root.configureViewport()
@@ -1025,8 +1067,9 @@ Item {
         root.gridModel.configureViewport(Math.max(rollPlot.width, 1.0),
                                          Math.max(rollPlot.height, 1.0),
                                          root.baseFontPx, dpr)
-        root.headersModel.configureViewport(trackHeaders.width, trackHeaders.height,
-                                            root.baseFontPx, dpr)
+        root.headersModel.configureViewport(
+            Math.max(0, trackHeaders.width - root.headersModel.scrollbarWidth),
+            trackHeaders.height, root.baseFontPx, dpr)
         // Drawer plots share the roll viewport, not the scrollbar strips;
         // the container still spans the full surface behind that chrome.
         root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
@@ -1034,10 +1077,10 @@ Item {
                                                       - root.scrollbarBreadth - otherEventsBand.height),
                                              root.timelineSplitX,
                                              root.baseFontPx,
-                                             applicationFontMetrics.lineSpacing)
+                                             bodyFontMetrics.lineSpacing)
         root.otherEventsPresenter.configureViewport(
             Math.max(0, rollPlot.width), root.baseFontPx,
-            applicationFontMetrics.lineSpacing)
+            bodyFontMetrics.lineSpacing)
     }
 
     function deliverWheel(event, overGutter) {

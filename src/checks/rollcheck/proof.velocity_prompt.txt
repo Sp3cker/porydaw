@@ -766,3 +766,6 @@ Anchor: function
 
 S062 | test_productionVelocityPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: function
+
+S063 | test_productionVelocityPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "velocity prompt follows the session body role"

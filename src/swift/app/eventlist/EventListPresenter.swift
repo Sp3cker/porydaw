@@ -86,20 +86,21 @@ public final class EventListPresenter {
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
     private var appearancePalette: GridPalette
-    private var baseFontPx = 13.0
+    private var typography: Typography
 
-    public init(palette: GridPalette = GridPalette()) {
+    public init(palette: GridPalette = GridPalette(),
+                typography: Typography = Typography(baseFontPx: 13)) {
         appearancePalette = palette
-        appearance = EventListAppearance.roles(palette: palette, baseFontPx: baseFontPx)
+        self.typography = typography
+        appearance = EventListAppearance.roles(palette: palette, typography: typography)
     }
 
     public func refreshAppearance() {
-        appearance = EventListAppearance.roles(palette: appearancePalette, baseFontPx: baseFontPx)
+        appearance = EventListAppearance.roles(palette: appearancePalette, typography: typography)
     }
-    public func configureTypography(baseFontPx: Double) {
-        let resolved = max(1, baseFontPx)
-        guard self.baseFontPx != resolved else { return }
-        self.baseFontPx = resolved
+    public func configureTypography(typography: Typography) {
+        guard self.typography.baseFontPx != typography.baseFontPx else { return }
+        self.typography = typography
         refreshAppearance()
         columnWidthsRevision &+= 1
     }
@@ -312,7 +313,7 @@ public final class EventListPresenter {
     }
     func defaultColumnWidth(column: Int) -> Double {
         guard Self.defaultWidthSeeds.indices.contains(column) else { return 0 }
-        return fontPx(baseFontPx, Self.defaultWidthSeeds[column] / 13.0)
+        return Double(typography.fontPx(Self.defaultWidthSeeds[column] / 13.0))
     }
     public func savedColumnWidth(column: Int) -> Double {
         resizedColumns.contains(column) && columnWidths.indices.contains(column)

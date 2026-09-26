@@ -59,7 +59,7 @@ extension VoiceChangesPage {
         return VoiceChangesScene.markerHit(
             at: x, points: lanePoints(), camera: session.camera,
             devicePixelRatio: devicePixelRatio,
-            hitRadius: fontPx(VoiceChangesPagePolicy.markerHitRadiusFactor))
+            hitRadius: fontPx(baseFontPx, VoiceChangesPagePolicy.markerHitRadiusFactor))
     }
 
     @QtIgnored
@@ -116,7 +116,7 @@ extension VoiceChangesPage {
     private func sceneInput(_ session: DocumentSession,
                             entries: [VoiceProjectionEntry]) -> VoiceChangesSceneInput {
         let track = currentTrack(session)
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+        let pad = fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor)
         return VoiceChangesSceneInput(
             points: lanePoints(),
             entries: entries,
@@ -132,8 +132,8 @@ extension VoiceChangesPage {
             plotHeight: plotHeight,
             devicePixelRatio: devicePixelRatio,
             pad: pad,
-            gap: max(fontPx(VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
-            stairLimit: fontPx(VoiceChangesPagePolicy.spaceFourFactor),
+            gap: max(fontPx(baseFontPx, VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
+            stairLimit: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceFourFactor),
             camera: session.camera,
             metrics: gridMetrics(session),
             division: session.document.ticksPerBeat,
@@ -148,16 +148,16 @@ extension VoiceChangesPage {
                                  selectedIdentity: selectedIdentity)
     }
 
-
     @QtIgnored
     func publishTypography() {
-        let pixelSize = max(1, Int(baseFontPx.rounded()))
-        let caption = VoiceCaption(pixelSize: pixelSize, weight: 400)
-        let title = VoiceCaption(pixelSize: pixelSize, weight: 600)
+        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        let caption = VoiceCaption(font: typography.caption)
+        let title = VoiceCaption(font: typography.captionBold)
         self.caption = caption
         self.title = title
-        setPublishedFont(&captionFont, caption.fontMap)
-        setPublishedFont(&titleFont, title.fontMap)
+        setPublishedFont(&captionFont, typography.caption.map)
+        setPublishedFont(&titleFont, typography.captionBold.map)
+        setPublishedFont(&noteNameFont, typography.noteName.map)
     }
 
     /// Applies the scene's gutter lines: the title, then the change summary the
@@ -239,14 +239,14 @@ extension VoiceChangesPage {
             tick: effectiveContextTick(),
             points: lanePoints(),
             slots: slotViews(),
-            pad: fontPx(VoiceChangesPagePolicy.spaceOneFactor),
+            pad: fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor),
             plotWidth: plotWidth,
             plotHeight: plotHeight))
     }
     /// Re-publishes a retained context without resolving the voice lane again.
     @QtIgnored
     func publishReadout(forSlot slot: Int) {
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+        let pad = fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor)
         let slots = slotViews()
         let view = slots.indices.contains(slot) ? slots[slot] : nil
         publishReadout(VoiceReadoutValues(
@@ -390,10 +390,6 @@ extension VoiceChangesPage {
 
     // MARK: Internals: shared metrics
 
-    @QtIgnored
-    func fontPx(_ multiplier: Double) -> Double {
-        multiplier == 0 ? 0 : max(1, (baseFontPx * multiplier).rounded())
-    }
 
     private func gridMetrics(_ session: DocumentSession) -> GridMetrics {
         let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
@@ -407,5 +403,4 @@ extension VoiceChangesPage {
         return metrics
     }
 
-    static let fontFamily = "Atkinson Hyperlegible Next"
 }

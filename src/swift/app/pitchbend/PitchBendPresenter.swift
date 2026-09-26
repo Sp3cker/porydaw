@@ -21,6 +21,7 @@ public final class PitchBendPresenter {
     private let session: DocumentSession
     private let grid: PianoGrid
     private let palette: GridPalette
+    private var typography: Typography
     private var geometry: PitchBendGeometry
     private var note: Note?
     private var noteEnd = 0
@@ -29,10 +30,12 @@ public final class PitchBendPresenter {
     private var currentPitch: PitchBendLane?
     private var currentMod: PitchBendLane?
 
-    public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette) {
+    public init(session: DocumentSession, grid: PianoGrid, palette: GridPalette,
+                typography: Typography = Typography(baseFontPx: 13)) {
         self.session = session
         self.grid = grid
         self.palette = palette
+        self.typography = typography
         geometry = PitchBendGeometry(fontPx: grid.baseFontPx,
                                      lineSpacing: grid.baseFontPx, dpr: 1)
         configure(fontPx: grid.baseFontPx, lineSpacing: grid.baseFontPx, dpr: 1)
@@ -47,9 +50,12 @@ public final class PitchBendPresenter {
         return currentMod
     }
 
-    /// Recalculate from the actual popup's application font and Quick window DPR.
     public func configure(fontPx: Double, lineSpacing: Double, dpr: Double) {
         guard fontPx > 0, lineSpacing > 0 else { return }
+        let nextBase = Int(fontPx.rounded())
+        if nextBase != typography.baseFontPx {
+            typography = Typography(baseFontPx: nextBase)
+        }
         geometry = PitchBendGeometry(fontPx: fontPx, lineSpacing: lineSpacing, dpr: dpr)
         metrics = geometry.metrics
         appearance = [
@@ -58,10 +64,9 @@ public final class PitchBendPresenter {
             "secondaryText": palette.secondaryText,
             "outline": palette.outline,
             "trackColor": palette.noteFill(track: note?.track ?? 0, velocity: 127),
-            "titleFont": ["pixelSize": fontPx, "bold": true] as [String: QVariantSettable],
-            "captionFont": ["pixelSize": fontPx * 0.85] as [String: QVariantSettable],
-            "monospaceFont": ["family": gridMonoFamily,
-                              "pixelSize": fontPx] as [String: QVariantSettable],
+            "titleFont": typography.bodyBold.map,
+            "captionFont": typography.caption.map,
+            "monospaceFont": typography.bodyMono.map,
             "dragInput": [
                 "background": palette.buttonBackground,
                 "text": palette.buttonText,
@@ -69,11 +74,11 @@ public final class PitchBendPresenter {
                 "focus": palette.focusOutline,
                 "selection": palette.tabSelectedBackground,
                 "selectionText": palette.selectionText,
-                "font": ["pixelSize": fontPx] as [String: QVariantSettable],
-                "radius": geometry.hairline,
+                "font": typography.body.map,
+                "radius": Double(typography.space(.one)),
                 "borderWidth": geometry.hairline,
-                "horizontalPadding": fontPx / 4,
-                "verticalPadding": fontPx / 8,
+                "horizontalPadding": Double(typography.space(.one)),
+                "verticalPadding": Double(typography.space(.half)),
                 "dragThreshold": geometry.scrubThreshold,
             ] as [String: QVariantSettable],
         ]

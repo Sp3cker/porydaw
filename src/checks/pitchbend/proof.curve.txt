@@ -35,6 +35,14 @@ Verification: the native predicates execute on the swiftcore-projectsession lane
 predicates on the shell-pitch-bend lane; this bookkeeping pass read the recorded
 evidence at build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane.
+Task 32's fix round added the popup-face predicates S061-S063 (popup title, caption
+and readout faces against the published roles; the drag-input body face; and the
+13->26->13 republish round trip), executed by pitchBendReadoutPredicates under
+cppID swiftcore/PitchBendEditingTest::liveValueReadout and recorded in the
+regenerated swiftcore evidence (implementer-run `deno task verify --filter
+swiftcore --verbose` 12/37 ok, 25 skipped). They prove no A site of curve.cpp: its
+popup rows assert graph editing and readout text, not the appearance font maps, so
+they are indexed as additional predicate coverage without a disposition change.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -1394,3 +1402,12 @@ Anchor: message "stacked undos keep the editor open"
 
 S060 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
 Anchor: message "stacked undos keep the same mounted popup"
+
+S061 | pitchBendReadoutPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the popup title, caption, and readout publish bold body, caption, and body mono faces"
+
+S062 | pitchBendReadoutPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "pitch drag inputs use the published body font face"
+
+S063 | pitchBendReadoutPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "resizing the pitch popup republishes the title, caption, readout, and input roles"

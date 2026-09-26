@@ -44,9 +44,6 @@ public enum AutomationPagePolicy {
 public final class AutomationPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
     public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/AutomationPage.qml"
-    /// The application's proportional family, the same one the grid and the
-    /// sibling pages measure their captions with.
-    static let fontFamily = "Atkinson Hyperlegible Next"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .automation
     @QtIgnored public var contentUrl: String { Self.contentUrl }
@@ -126,6 +123,10 @@ public final class AutomationPage: EditorDrawerPage {
 
     public var captionFont: [String: QVariantSettable] = [:]
     public var titleFont: [String: QVariantSettable] = [:]
+    public var noteNameFont: [String: QVariantSettable] = [:]
+    public var minimumFont: [String: QVariantSettable] = [:]
+    public var pipExtent: Double = 0
+    public var minimumCellHeight: Double = 0
     /// One published selector tab per catalog parameter, in selector order, and
     /// the count a QML surface needs for its own grid: a list model is read as a
     /// model, not as a JavaScript array, so the length is published beside it.
@@ -184,6 +185,9 @@ public final class AutomationPage: EditorDrawerPage {
     public var menuRowCount: Int = 0
     public var menuChildRowCount: Int = 0
     public var promptOpen: Bool = false
+    public var promptAppearance: [String: QVariantSettable] = [:]
+    public var promptFont: [String: QVariantSettable] = [:]
+    public var promptInputWidth: Int = 0
     public var promptKind: Int = 0
     public var promptTitle: String = ""
     public var promptLabel: String = ""
@@ -412,6 +416,7 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var lastBodyDragDistance: Double = AutomationPagePolicy.dragDistance
     @QtIgnored var captionMetrics: AutomationCaption?
     @QtIgnored var titleMetrics: AutomationCaption?
+    @QtIgnored var noteNameMetrics: AutomationCaption?
 
     // Owned-state application moved to AutomationLifecycle.swift.
 

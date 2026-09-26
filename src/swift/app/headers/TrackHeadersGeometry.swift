@@ -128,14 +128,6 @@ struct TrackHeadersGeometry {
                                   width: Double(textWidth), height: Double(metrics.subtitle))
         return (title, subtitle)
     }
-    static func titleFont(baseFontPx: Double, bold: Bool = false) -> GridFontSpec {
-        GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: Int(fontPx(baseFontPx, 1.125)),
-                     weight: bold ? 600 : 400, letterSpacing: 0)
-    }
-    static func subtitleFont(baseFontPx: Double) -> GridFontSpec {
-        GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: Int(fontPx(baseFontPx, 1)),
-                     weight: 400, letterSpacing: 0)
-    }
 
     @MainActor
     static func appearance(palette: GridPalette) -> [String: QVariantSettable] {
@@ -161,22 +153,25 @@ struct TrackHeadersGeometry {
 extension TrackHeadersPresenter {
     func configureGeometry(width: Double, height: Double, base: Double, dpr: Double) {
         guard width.isFinite, height.isFinite, base.isFinite, dpr.isFinite else { return }
-        let nextBase = max(1, base)
+        let requestedBase = Int(max(1, base).rounded())
+        let nextBase = Double(requestedBase)
         let nextWidth = max(0, width)
         let nextHeight = max(0, height)
         let nextDpr = max(0.1, dpr)
         guard rowHeight == 0 || nextWidth != viewportWidth || nextHeight != viewportHeight
                 || nextBase != baseFontPx || nextDpr != devicePixelRatio else { return }
         if nextBase != baseFontPx { textMetrics = nil }
-        baseFontPx = nextBase
+        if requestedBase != fontRoles.baseFontPx {
+            fontRoles = Typography(baseFontPx: requestedBase)
+        }
         devicePixelRatio = nextDpr
         viewportWidth = nextWidth
         viewportHeight = nextHeight
         geometry = TrackHeadersGeometry(base: nextBase)
-        controlFont = TrackHeadersGeometry.titleFont(baseFontPx: nextBase).map
-        normalTitleFont = controlFont
-        boldTitleFont = TrackHeadersGeometry.titleFont(baseFontPx: nextBase, bold: true).map
-        subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: nextBase).map
+        controlFont = fontRoles.body.map
+        normalTitleFont = fontRoles.body.map
+        boldTitleFont = fontRoles.bodyBold.map
+        subtitleFont = fontRoles.caption.map
         publishGeometry()
         refreshFromDocument()
     }
@@ -231,8 +226,8 @@ extension TrackHeadersPresenter {
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
         var row = TrackHeaderSnapshot(
             track: track, title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)",
-            titleFont: TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx, bold: primary),
-            subtitleFont: TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx))
+            titleFont: primary ? fontRoles.bodyBold : fontRoles.body,
+            subtitleFont: fontRoles.caption)
         row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1

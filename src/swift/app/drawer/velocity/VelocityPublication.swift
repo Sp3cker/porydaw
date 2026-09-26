@@ -66,7 +66,7 @@ extension VelocityPage {
     @QtIgnored func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
         let built = snapshot.map { VelocityAxisAndHandles($0) }
             ?? VelocitySceneSnapshot.buildAxisAndHandles(
-                sceneInput(reuseGeometry: handleReuseGeometry()), typography: typography,
+                sceneInput(reuseGeometry: handleReuseGeometry()),
                 previousHandles: handlesByID)
         rebuildAxis(built.axis)
         publishHandles(built.handles)
@@ -89,7 +89,7 @@ extension VelocityPage {
     /// the page's `@MainActor` objects, so they travel as build parameters.
     func buildScene() -> VelocitySceneSnapshot {
         VelocitySceneSnapshot.build(sceneInput(reuseGeometry: handleReuseGeometry()),
-                                    typography: typography, previousHandles: handlesByID)
+                                    previousHandles: handlesByID)
     }
 
     /// The primary track's note rows, projected against the published axis: the
@@ -224,17 +224,6 @@ extension VelocityPage {
         syncRects(axisGraduations, rows.graduations)
         syncRects(axisMarkers, rows.markers)
         syncTexts(axisLabels, rows.labels)
-    }
-
-    private var typography: GridTypography? {
-        guard let session else { return nil }
-        let key = TypographyKey(baseFontPx: baseFontPx,
-                               rowHeight: session.camera.snapshot.keyHeight)
-        if let typographyCache, typographyCache.key == key { return typographyCache.value }
-        let value = VelocityScene.typography(metrics: gridMetrics(session),
-                                             rowHeight: key.rowHeight)
-        typographyCache = (key, value)
-        return value
     }
 
     private func gridMetrics(_ session: DocumentSession) -> GridMetrics {

@@ -75,7 +75,8 @@ public final class TrackHeadersPresenter {
     /// not need to rescan the document lane.
     @QtIgnored var resolvedProgramStarts: [Tick] = []
     @QtIgnored var resolvedProgramEnds: [Tick] = []
-    @QtIgnored var baseFontPx: Double
+    @QtIgnored var fontRoles: Typography
+    @QtIgnored var baseFontPx: Double { Double(fontRoles.baseFontPx) }
     @QtIgnored var viewportWidth: Double = 0
     @QtIgnored var devicePixelRatio: Double = 1
     @QtIgnored var textMetrics: HeaderTextMetrics?
@@ -90,12 +91,12 @@ public final class TrackHeadersPresenter {
     @QtIgnored var activity = TrackActivity()
     @QtIgnored var activityPlaying = false
 
-    public init(baseFontPx: Double = 13) {
-        self.baseFontPx = max(1, baseFontPx)
-        controlFont = TrackHeadersGeometry.titleFont(baseFontPx: self.baseFontPx).map
-        normalTitleFont = controlFont
-        boldTitleFont = TrackHeadersGeometry.titleFont(baseFontPx: self.baseFontPx, bold: true).map
-        subtitleFont = TrackHeadersGeometry.subtitleFont(baseFontPx: self.baseFontPx).map
+    public init(typography: Typography = Typography(baseFontPx: 13)) {
+        fontRoles = typography
+        controlFont = typography.body.map
+        normalTitleFont = typography.body.map
+        boldTitleFont = typography.bodyBold.map
+        subtitleFont = typography.caption.map
         appearance = TrackHeadersGeometry.appearance(palette: palette)
     }
 
@@ -176,8 +177,8 @@ public final class TrackHeadersPresenter {
         if hasAdd {
             next.append(TrackHeaderSnapshot(
                 isAddTrack: true, title: "+ Add track",
-                titleFont: TrackHeadersGeometry.titleFont(baseFontPx: baseFontPx),
-                subtitleFont: TrackHeadersGeometry.subtitleFont(baseFontPx: baseFontPx)))
+                titleFont: fontRoles.body,
+                subtitleFont: fontRoles.caption))
         }
         if structural {
             snapshots = next

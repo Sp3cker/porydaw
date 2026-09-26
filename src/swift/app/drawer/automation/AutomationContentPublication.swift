@@ -206,15 +206,16 @@ extension AutomationPage {
     /// left edge and curve-true height.
     func publishValueAxis(_ lane: AutomationLaneProjection) {
         let stroke = max(1, fontPxF(baseFontPx, 1.0 / 12.0))
-        let height = captionMetrics?.height ?? fontPx(1)
-        let pad = max(1, (baseFontPx / 4).rounded())
+        let height = captionMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = Typography(baseFontPx: Int(baseFontPx.rounded())).space(.one)
         var lines: [SceneRect] = []
         var labels: [SceneText] = []
         for label in lane.scaleLabels {
             lines.append(SceneRect(x: 0, y: (label.y - stroke / 2).rounded(), width: plotWidth,
                                    height: stroke, fillColor: palette.gridLineSub2,
                                    primitiveName: "automationValueRule"))
-            let width = max(fontPx(2), (captionMetrics?.advance(label.text) ?? 0).rounded())
+            let width = max(fontPx(baseFontPx, 2),
+                            (captionMetrics?.advance(label.text) ?? 0).rounded())
             let y = min(max(0, label.y - height / 2), max(0, plotHeight - height))
             labels.append(SceneText(rect: (Double(pad), y.rounded(), width, height),
                                     text: label.text, color: palette.primaryText,

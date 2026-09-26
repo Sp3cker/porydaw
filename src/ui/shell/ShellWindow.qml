@@ -546,7 +546,7 @@ ThemedWindow {
             sourceComponent: SongTabs {
                 objectName: "shellSongTabs"
                 controller: shell.session.songTabs
-                applicationFont: Qt.font(shell.session.typographyFonts.body)
+                layoutSpaces: shell.session.layoutSpaces
                 shellRouter: shell
                 onContextMenuAt: (x, y) => {
                     root.actionRevision++

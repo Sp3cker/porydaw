@@ -10,7 +10,6 @@ FocusScope {
 
     required property QtObject session
     required property QtObject controller
-    property font applicationFont: Application.font
     property var shellRouter: null
     readonly property bool showEvents: session.showsEvents
     signal contextMenuAt(real x, real y)
@@ -22,7 +21,6 @@ FocusScope {
         sourceComponent: Component {
             EditorSurface {
                 applicationSession: root.session
-                applicationFont: root.applicationFont
                 shellRouter: root.shellRouter
                 onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
             }

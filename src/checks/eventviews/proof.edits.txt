@@ -14,10 +14,12 @@ Production SHA-256: b57268432916d1edba50c9facc7527915156d719fe210565126f296d3905
 Event-list production counterpart: src/swift/app/eventlist/EventListEditing.swift
 Event-list production SHA-256: c11bec00c9401b164b3b64d5a8ea1622c8c50a825f83f366416194c188686f7f
 Event-list production counterpart: src/swift/app/eventlist/EventListPresenter.swift
-Event-list production SHA-256: 1875ea4728d9cc567817a2579f722794a95c38e8054f2635a67a0368a25eb1fe
+Event-list production SHA-256: 210df589920d25bf22771b9e02da9be001549ec966f8ff831d3dfcdf11ea0777
 Event-list production counterpart: src/ui/songview/quick/EventListPage.qml
-Event-list production SHA-256: dd7cb007262a0df1c0107c8ae622e488501202cc0ffeae99fb8dba71d9cbf80a
+Event-list production SHA-256: 620094dc762138baded25063a2e932c3679d9b44d7828c7e4cac8c2f4e52634b
 Note: the event-list production hash lines were re-pinned for the frozen task-28 write set; task-28's event-list rows and Swift predicate index live in src/checks/eventviews/proof.chrome.txt.
+Task 33 note: EventListPresenter.swift and EventListPage.qml are re-pinned again for the session-role typography re-source (EventListAppearance reads session.typography; the toolbar binds page.controlFont; the QML application-font/monospace fallbacks are gone), and the mounted QML counterpart src/checks/editorqml/tst_ShellEventList.qml is pinned at the hash below. The rows and citations below are unchanged: no A row in this ledger asserts a font face or size.
+QML SHA-256: c31733e82178d3a0dbcbc97c4f5e48551ee3379b6c0228ed41a0b5dbf9f8649a
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 

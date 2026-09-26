@@ -9,13 +9,31 @@ Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: a5a52e38f5e121df8e3e8c6ad4d633e6b4ab97105e24908e7d4cf75818e129d9
+QML SHA-256: 526c1550f2cd6dc4abc8c56ae3bfbd67bed40fd1628e3d281c60d1c46daa0277
 Task 29 note: this hash was re-pinned after the shared drawer lane's profile
 bootstrap moved to session.configureTypography(profileFontPx) and dropped the
 direct gridModel.baseFontPx/configureViewport push, so the grid reads the
 captured session base; the predicate bodies and messages cited below are
 unchanged and the base each cited geometry predicate derives from is still the
 profile font pixel size.
+Task 33 note: the hash is re-pinned again for the drawer typography binding
+(session role fonts for the velocity axis and markers, voice gutter/hover labels,
+automation tabs/hover/value-axis captions, prompts) and the new mounted
+predicates test_drawerTypographyFromMountedSession plus the automation prompt
+body/geometry assertions in test_productionAutomationPromptTransaction. The S
+entries cited below resolve unchanged and no disposition changed; the new
+predicates are indexed in this ledger as S115-S126, and the same predicates'
+surface-specific halves are indexed in this proof family's area ledgers
+(src/checks/drawerpresentation/proof.velocity.txt S109-S112, proof.voice.txt
+S320-S322, src/checks/automation/presentation/proof.painting.txt S129-S139,
+src/checks/automation/proof.automationtaptempo.txt S077-S082,
+src/checks/rollcheck/proof.velocity_prompt.txt S063).
+Evidence: implementer-reported `deno task build:checks`, `deno task verify --filter
+swiftcore --verbose`, `deno task verify:shell --filter shell-drawer-parity --verbose`
+and `deno task verify:qml --verbose` PASS on the task-33 tree;
+build/proof-evidence/editorqml-drawer.json and
+build/proof-evidence/swiftcore-projectsession.json carry those runs. This
+bookkeeping pass ran no lane.
 
 
 
@@ -1265,3 +1283,39 @@ Anchor: message "the other-events band starts at the drawer bottom"
 
 S114 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the band remains mounted when every drawer section is collapsed"
+
+S115 | drawerTypographyRoles | src/checks/drawerpresentation/EditorDrawerChecks.swift
+Anchor: message "\(label) follows the typography role at \(base)"
+
+S116 | drawerTypographyRoles | src/checks/drawerpresentation/EditorDrawerChecks.swift
+Anchor: message "minimum caption uses the caption face and floor"
+
+S117 | drawerTypographyRoles | src/checks/drawerpresentation/EditorDrawerChecks.swift
+Anchor: message "tab pip and minimum height follow the base font"
+
+S118 | drawerTypographyRoles | src/checks/drawerpresentation/EditorDrawerChecks.swift
+Anchor: message "prompt geometry follows session layout tokens"
+
+S119 | drawerTypographyRoles | src/checks/drawerpresentation/EditorDrawerChecks.swift
+Anchor: message "automation prompt publishes font-relative padding and width"
+
+S120 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt uses the session body face"
+
+S121 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt uses the session body size"
+
+S122 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt uses the session body weight"
+
+S123 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt card uses one space of padding"
+
+S124 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt buttons use one space of padding"
+
+S125 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt radius uses half space"
+
+S126 | test_productionAutomationPromptTransaction | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "automation prompt input uses one space of horizontal padding"

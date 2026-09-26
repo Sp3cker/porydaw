@@ -124,9 +124,9 @@ extension AutomationPage {
     /// works in, and clamped into the plot.
     func labelRect(text: String, tick: Tick, x: Double,
                            valueY: Double?) -> [String: QVariantSettable] {
-        let height = captionMetrics?.height ?? fontPx(1)
-        let width = max(fontPx(2), (captionMetrics?.advance(text) ?? 0).rounded())
-        let gap = fontPx(1)
+        let height = noteNameMetrics?.height ?? fontPx(baseFontPx, 1)
+        let width = max(fontPx(baseFontPx, 2), (noteNameMetrics?.advance(text) ?? 0).rounded())
+        let gap = fontPx(baseFontPx, 1)
         let anchor = isPencilMode ? x + gap : xForTick(tick) + gap
         let originX = min(max(0, anchor), max(0, plotWidth - width))
         let centerY = valueY ?? plotHeight / 2
@@ -137,10 +137,10 @@ extension AutomationPage {
     /// The readout's own rectangle: the parameter title's width at the plot's
     /// top-right corner.
     func publishReadoutGeometry() {
-        let height = titleMetrics?.height ?? fontPx(1)
-        let pad = fontPx(0.5)
+        let height = titleMetrics?.height ?? fontPx(baseFontPx, 1)
+        let pad = fontPx(baseFontPx, 0.5)
         let width = min(max(0, plotWidth - 2 * pad),
-                        max(fontPx(4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
+                        max(fontPx(baseFontPx, 4), (titleMetrics?.advance(readoutText) ?? 0).rounded()))
         readoutRect = Self.rect(max(0, plotWidth - width - pad).rounded(), pad.rounded(),
                                 width, height)
     }
@@ -205,15 +205,20 @@ extension AutomationPage {
         tapTempoReady = tapSession.readyToCommit
     }
 
-
     func publishTypography() {
-        let pixelSize = max(1, Int(baseFontPx.rounded()))
-        let caption = AutomationCaption(pixelSize: pixelSize, weight: 400)
-        let title = AutomationCaption(pixelSize: pixelSize, weight: 600)
-        captionMetrics = caption
-        titleMetrics = title
-        setFont(&captionFont, caption.fontMap)
-        setFont(&titleFont, title.fontMap)
+        let typography = Typography(baseFontPx: Int(baseFontPx.rounded()))
+        captionMetrics = AutomationCaption(font: typography.caption)
+        titleMetrics = AutomationCaption(font: typography.captionBold)
+        noteNameMetrics = AutomationCaption(font: typography.noteName)
+        setFont(&captionFont, typography.caption.map)
+        setFont(&titleFont, typography.captionBold.map)
+        setFont(&noteNameFont, typography.noteName.map)
+        setFont(&minimumFont, typography.captionMinimum.map)
+        promptAppearance = PromptAppearance.metrics(base: baseFontPx)
+        setFont(&promptFont, PromptAppearance.font(typography: typography))
+        promptInputWidth = typography.fontPx(16)
+        pipExtent = Double(typography.fontPx(0.5))
+        minimumCellHeight = typography.fontPxF(4.0 / 3.0)
     }
 
     func setFont(_ storage: inout [String: QVariantSettable],
@@ -231,9 +236,6 @@ extension AutomationPage {
 
     // MARK: Internals: shared metrics
 
-    func fontPx(_ multiplier: Double) -> Double {
-        multiplier == 0 ? 0 : max(1, (baseFontPx * multiplier).rounded())
-    }
 
     func gridMetrics(_ session: DocumentSession) -> GridMetrics {
         GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio, width: plotWidth,
@@ -343,22 +345,13 @@ extension AutomationPage {
 /// native font-metrics seam the grid and the sibling pages use.
 @MainActor
 final class AutomationCaption {
-    let fontMap: [String: QVariantSettable]
     let height: Double
-    private let session: OpaquePointer
+    private let metrics: NativeFontMetrics
 
-    init(pixelSize: Int, weight: Int) {
-        let family = AutomationPage.fontFamily
-        fontMap = ["family": family, "pixelSize": pixelSize, "weight": weight,
-                   "letterSpacing": 0.0, "features": ["tnum": 1],
-                   "hintingPreference": fontPreferNoHinting]
-        session = family.withCString { sgf_create($0, Int32(pixelSize), Int32(weight), 0)! }
-        height = sgf_extents(session).height
+    init(font: GridFontSpec) {
+        metrics = NativeFontMetrics(font)
+        height = metrics.extents.height
     }
 
-    isolated deinit { sgf_destroy(session) }
-
-    func advance(_ text: String) -> Double {
-        text.withCString { sgf_advance(session, $0) }
-    }
+    func advance(_ text: String) -> Double { metrics.advance(text) }
 }

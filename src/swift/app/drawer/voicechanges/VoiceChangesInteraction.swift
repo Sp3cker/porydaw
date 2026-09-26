@@ -440,7 +440,7 @@ extension VoiceChangesPage {
         }
         let hit = markerHit(at: x)
         publishHoverHintProfile(marker: hit != nil)
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+        let pad = fontPx(baseFontPx, VoiceChangesPagePolicy.spaceOneFactor)
         if let hit {
             let identity = VoiceOccurrence(hit).text
             let lineX = xForTick(hit.tick)

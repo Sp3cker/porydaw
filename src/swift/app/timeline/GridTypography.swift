@@ -42,6 +42,7 @@ struct GridTypography {
     let noteNameOccupiedHeight: Double
     private let rulerMetrics: NativeFontMetrics
     private let beatMetrics: NativeFontMetrics
+    private let boldMetrics: NativeFontMetrics
     private let signatureMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let noteNameWidths: [Double]
@@ -63,6 +64,7 @@ struct GridTypography {
         chipHeight = chip.extents.height
         rulerMetrics = ruler
         beatMetrics = beat
+        boldMetrics = bold
         signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
@@ -86,6 +88,9 @@ struct GridTypography {
         beatMetrics.advance(Self.beatLabel(bar, beat))
     }
 
+    func boldAdvance(_ label: String) -> Double {
+        boldMetrics.advance(label)
+    }
     func signatureAdvance(_ label: String) -> Double {
         signatureMetrics.advance(label)
     }
@@ -98,30 +103,24 @@ struct GridTypography {
 
     func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
 
-    static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
-        let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
-        let next = gridBodyFamily
-        let mono = gridMonoFamily
-        func spec(_ family: String, _ px: Double, _ weight: Int, _ spacing: Double = 0)
-            -> GridFontSpec
-        {
-            GridFontSpec(
-                family: family, pixelSize: Int(px), weight: weight, letterSpacing: spacing)
+    static func fonts(metrics _: GridMetrics, typography: Typography) -> [GridFontKind: GridFontSpec] {
+        let rulerPx = max(typography.fontPx(1.0 / 12.0),
+                          typography.caption.pixelSize - 1)
+        let beatPx = max(typography.fontPx(1.0 / 12.0), rulerPx - 1)
+        let spacing = typography.fontPxF(-1.0 / 24.0)
+        let noteNamePx = max(1, typography.noteName.pixelSize - 2)
+        func derived(_ role: GridFontSpec, px: Int, spacing: Double? = nil) -> GridFontSpec {
+            GridFontSpec(family: role.family, pixelSize: px, weight: role.weight,
+                         letterSpacing: spacing ?? role.letterSpacing)
         }
-        let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
-        // The note-name face is the caption-weight Next face at two device
-        // pixels below the base size: typography::noteName(app font) with
-        // pixelSize() - 2 * singlePixel() (pianoroll.cpp). Unlike keyLabel it
-        // never shrinks to the row — it hides instead (NoteNameLabels gate).
-        let noteNamePx = max(1.0, m.baseFontPx.rounded() - 2.0)
         return [
-            .ruler: spec(mono, rulerPx, 400, m.rulerLetterSpacing),
-            .beat: spec(mono, max(m.rulerMinFontPx, rulerPx - 1), 400, m.rulerLetterSpacing),
-            .bold: spec(mono, rulerPx, 600, m.rulerLetterSpacing),
-            .sig: spec(next, bodyPx, 600),
-            .chip: spec(next, m.baseFontPx, 400),
-            .keyLabel: spec(next, min(bodyPx, m.baseFontPx), 400),
-            .noteName: spec(next, noteNamePx, 400),
+            .ruler: derived(typography.bodyMono, px: rulerPx, spacing: spacing),
+            .beat: derived(typography.bodyMono, px: beatPx, spacing: spacing),
+            .bold: derived(typography.bodyMono, px: rulerPx, spacing: spacing),
+            .sig: typography.bodyBold,
+            .chip: typography.caption,
+            .keyLabel: derived(typography.body, px: typography.caption.pixelSize),
+            .noteName: derived(typography.noteName, px: noteNamePx),
         ]
     }
 }

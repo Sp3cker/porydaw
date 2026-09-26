@@ -84,24 +84,6 @@ enum VelocityScene {
         session.projectionCache.timeAxis
     }
 
-    /// The label typography the ruler draws with.
-    static func typography(metrics: GridMetrics, rowHeight: Double) -> GridTypography {
-        GridTypography(fonts: GridTypography.fonts(metrics: metrics), rowHeight: rowHeight)
-    }
-
-    /// The ruler label font: the page's typography, or the seed literal while
-    /// the page has no session.
-    static func fontMap(emphasized: Bool, typography: GridTypography?,
-                        baseFontPx: Double) -> [String: QVariantSettable] {
-        guard let typography else {
-            return ["family": "Atkinson Hyperlegible Next",
-                    "pixelSize": Int(baseFontPx),
-                    "weight": emphasized ? 600 : 400,
-                    "letterSpacing": 0.0, "features": ["tnum": 1],
-                    "hintingPreference": fontPreferNoHinting]
-        }
-        return typography.fontMap(emphasized ? .bold : .keyLabel)
-    }
 
     /// The value axis: the presented context's map, the active set's markers and
     /// the font-relative ruler geometry. A hovered note takes its own tick's map
@@ -124,7 +106,8 @@ enum VelocityScene {
         axisGeometry.labelWidth = max(0, input.rulerWidth - input.geometry.pixel)
         axisGeometry.labelSideInset = input.geometry.labelSideInset
         axisGeometry.labelColumnGap = input.geometry.labelColumnGap
-        axisGeometry.labelHeight = max(input.geometry.densityD1, input.plotHeight / 8)
+        axisGeometry.labelHeight = NativeFontMetrics(
+            Typography(baseFontPx: Int(input.baseFontPx.rounded())).noteName).extents.height
         axisGeometry.continuousDensityD1 = input.geometry.densityD1
         axisGeometry.continuousDensityD2 = input.geometry.densityD2
         axisGeometry.continuousDensityD3 = input.geometry.densityD3
@@ -135,11 +118,9 @@ enum VelocityScene {
     /// The ruler's rows and labels: the intrinsic graduations with their
     /// density-thinned labels, or the continuous ladder with its ticks, markers
     /// and active-value labels. The label column's own geometry is part of the
-    /// value, exactly as `rebuildQuickAxis` derives it. `typography` is the
-    /// page's `@MainActor` label typography, or `nil` while it has no session.
+    /// value, exactly as `rebuildQuickAxis` derives it.
     static func axisRows(_ input: VelocitySceneInput, axis: VelocityAxisModel,
-                         relativeGesture: Bool,
-                         typography: GridTypography?) -> VelocityAxisRows {
+                         relativeGesture: Bool) -> VelocityAxisRows {
         let separatorX = max(0, input.rulerWidth - input.geometry.pixel)
         // The ruler spans the whole gutter (track headers plus the keyboard
         // column); the label column keeps its keyboard-column width, anchored
@@ -152,6 +133,9 @@ enum VelocityScene {
         let labelHeight = max(0, axis.geometry.labelHeight)
         let labelColor = input.palette.primaryText
         let selectedColor = input.palette.selectionRing
+        let typography = Typography(baseFontPx: Int(input.baseFontPx.rounded()))
+        let noteNameFont = typography.noteName.map
+        let markerFont = typography.captionBold.map
         var rows = VelocityAxisRows()
         if axis.mode == .intrinsic && input.interaction.detentsEnabled {
             for graduation in axis.graduations {
@@ -169,8 +153,7 @@ enum VelocityScene {
                 rows.labels.append(SceneText(
                     rect: (labelLeft, graduation.y - labelHeight / 2, labelWidth, labelHeight),
                     text: graduation.text, color: labelColor,
-                    font: fontMap(emphasized: emphasized, typography: typography,
-                                  baseFontPx: input.baseFontPx), horizontal: 0x2))
+                    font: emphasized ? markerFont : noteNameFont, horizontal: 0x2))
             }
         } else {
             for tick in axis.ticks {
@@ -186,8 +169,7 @@ enum VelocityScene {
                     rows.labels.append(SceneText(
                         rect: (labelLeft, label.y - labelHeight / 2, labelWidth, labelHeight),
                         text: label.text, color: labelColor,
-                        font: fontMap(emphasized: false, typography: typography,
-                                      baseFontPx: input.baseFontPx), horizontal: 0x2))
+                        font: noteNameFont, horizontal: 0x2))
                 }
             }
             for marker in axis.markers {
@@ -199,8 +181,7 @@ enum VelocityScene {
                 rows.labels.append(SceneText(
                     rect: (labelLeft, marker.y - labelHeight / 2, labelWidth, labelHeight),
                     text: "\(marker.velocity)", color: labelColor,
-                    font: fontMap(emphasized: true, typography: typography,
-                                  baseFontPx: input.baseFontPx), horizontal: 0x2))
+                    font: markerFont, horizontal: 0x2))
             }
         }
         return rows

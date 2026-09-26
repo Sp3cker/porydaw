@@ -104,6 +104,7 @@ FocusScope {
         readonly property int hoverHintProfile: HintProfiles.HorizontalScroll
         readonly property var captionFont: ({})
         readonly property var titleFont: ({})
+        readonly property var noteNameFont: ({})
         readonly property double baseFontPx: 13
         readonly property int cursorKind: 0
         readonly property bool previewVisible: false
@@ -148,10 +149,6 @@ FocusScope {
     readonly property real seedBaseFontPx: 13
     readonly property real baseFontPx: page.gridModel ? page.gridModel.baseFontPx
                                                       : page.seedBaseFontPx
-    /// `layout::fontPx` in the page's own base font, for this file's chrome.
-    function fontPx(multiplier) {
-        return Math.max(1, Math.round(page.baseFontPx * multiplier))
-    }
 
     function pushBodyFacts() {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -371,7 +368,7 @@ FocusScope {
             height: (page.pageModel ? page.pageModel.hoverLabelRect.height : 0)
             text: (page.pageModel ? page.pageModel.hoverText : "")
             color: page.gridPalette.primaryText
-            font: Qt.font(page.pageModel ? page.pageModel.captionFont : {})
+            font: Qt.font(page.pageModel ? page.pageModel.noteNameFont : {})
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             horizontalAlignment: Text.AlignLeft
