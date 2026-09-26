@@ -202,11 +202,26 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
             let macros = root.appendingPathComponent("asm/macros/music_voice.inc")
             try FileManager.default.createDirectory(at: macros.deletingLastPathComponent(),
                                                     withIntermediateDirectories: true)
-            try Data(".macro set_synth_pulse a,b,c,d\n.endm\n".utf8).write(to: macros)
+            try Data("""
+            .macro set_synth_pulse a,b,c,d
+            .endm
+            .macro set_synth_saw
+            .endm
+            .macro set_synth_triangle
+            .endm
+            """.utf8).write(to: macros)
             let assembly = root.appendingPathComponent("data/sound_data.s")
             try FileManager.default.createDirectory(at: assembly.deletingLastPathComponent(),
                                                     withIntermediateDirectories: true)
             try Data(".include \"sound/direct_sound_data.inc\"\n".utf8).write(to: assembly)
+            let synthFile = root.appendingPathComponent("sound/direct_sound_synth_data.inc")
+            let stagedDefinition = Data("VgSaveCheckSaw::\n\tset_synth_saw\n".utf8)
+            try stagedDefinition.write(to: synthFile)
+            let published = VoicegroupSource.directSoundCatalog(root.path).synths
+            report.expect(published.find("VgSaveCheckSaw") == VgSynthDesc(waveform: 1)
+                          && published.macroWords.contains("set_synth_pulse"),
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "a staged synth macro reaches the published catalog")
             let store = ProjectStore(projectRoot: root)
             let opened = awaitValue { try await store.open() }
             let loaded = awaitValue { try await store.loadBank(voicegroupArg: "_fixture_rich") }
@@ -224,8 +239,9 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                          "mint failed: \(String(describing: minted))")
                 return
             }
-            let synthFile = root.appendingPathComponent("sound/direct_sound_synth_data.inc")
-            saveExpect("S07", symbol == same && !FileManager.default.fileExists(atPath: synthFile.path),
+            let originalSynthBytes = try Data(contentsOf: synthFile)
+            let originalBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            saveExpect("S07", symbol == same && originalSynthBytes == stagedDefinition,
                        report, "mint deduplicates in memory and writes no file before save")
             var voice = original
             voice.symbol = symbol
@@ -239,6 +255,17 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                          "minted voice cannot preview: \(String(describing: edit))")
                 return
             }
+            let unsavedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            let unsavedSynthBytes = try Data(contentsOf: synthFile)
+            report.expect(edited.dirty
+                          && edited.slotViews[0].voice?.symbol == symbol
+                          && unsavedBankBytes == originalBankBytes,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "synth activation stages a memory-only tone")
+            report.expect(unsavedSynthBytes == originalSynthBytes
+                          && !published.defs.contains(where: { $0.symbol == symbol }),
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "the unsaved synth leaves the synth file and combo unchanged")
             let saved = awaitValue { try await store.saveVoicegroup(lease: edited) }
             let freshStore = ProjectStore(projectRoot: root)
             let reopened = awaitValue { try await freshStore.open() }
@@ -260,6 +287,42 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
             saveExpect("S09", soundData.contains(".include \"sound/direct_sound_synth_data.inc\"") &&
                        soundData.components(separatedBy: "direct_sound_synth_data.inc").count == 2,
                        report, "synth definitions are assembled exactly once")
+            let savedSynth = try String(contentsOf: synthFile, encoding: .utf8)
+            report.expect(savedSynth.contains(symbol + "::")
+                          && savedSynth.contains("set_synth_pulse 0x55, 0x20, 0x40, 0x10")
+                          && soundData.contains("direct_sound_synth_data.inc"),
+                          cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                          message: "saving writes the synth symbol and its data wiring")
+            let savedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+            if case .success(let clean?) = saved {
+                var sawVoice = changed
+                sawVoice.symbol = "VgSaveCheckSaw"
+                let selectedSaw = sawVoice
+                let sawEdit = awaitValue {
+                    try await store.applyVoicegroupEdit(
+                        lease: clean, operation: .set(.init(slot: 0, value: selectedSaw, expected: changed)))
+                }
+                if case .success(.applied(let sawBank, _, _)) = sawEdit {
+                    let pulseEdit = awaitValue {
+                        try await store.applyVoicegroupEdit(
+                            lease: sawBank, operation: .set(.init(slot: 0, value: changed, expected: selectedSaw)))
+                    }
+                    if case .success(.applied(let pulseBank, _, _)) = pulseEdit {
+                        let unchangedBankBytes = try Data(contentsOf: URL(filePath: lease.sourcePath))
+                        report.expect(sawBank.slotViews[0].voice?.symbol == "VgSaveCheckSaw"
+                                      && pulseBank.slotViews[0].voice?.symbol == symbol
+                                      && catalog.find("VgSaveCheckSaw")?.waveform == 1
+                                      && !pulseBank.dirty
+                                      && unchangedBankBytes == savedBankBytes,
+                                      cppID: "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave",
+                                      message: "wave flips republish the tone")
+                    } else {
+                        saveFail(["S09"], report, "pulse wave flip failed: \(String(describing: pulseEdit))")
+                    }
+                } else {
+                    saveFail(["S09"], report, "saw wave flip failed: \(String(describing: sawEdit))")
+                }
+            }
         }
     } catch {
         saveFail(["S07", "S08", "S09"], report, "synth fixture setup failed: \(error)")

@@ -9,6 +9,7 @@ internal func runSaveCoreSuite(_ report: CheckReport) {
     saveCoreSectionRefusals(report)
     saveCoreSynthWriteGates(report)
     saveCoreFailedSaveRedirty(report)
+    saveCoreFailedRebind(report)
 }
 
 private func saveCoreBankRoundTrip(_ report: CheckReport) {
@@ -375,5 +376,41 @@ private func saveCoreFailedSaveRedirty(_ report: CheckReport) {
         }
     } catch {
         report.fail(cppID, "redirty fixture failed: \(error)")
+    }
+}
+
+private func saveCoreFailedRebind(_ report: CheckReport) {
+    let id = "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding"
+    do {
+        try withTempProjectCopy(prefix: "savecore-rebind") { root in
+            let store = ProjectStore(projectRoot: root)
+            guard case .success? = awaitValue({ try await store.open() }),
+                  case .success(let home)? = awaitValue({
+                      try await store.loadBank(voicegroupArg: "_fixture_rich")
+                  }) else {
+                report.fail(id, "home bank fixture could not load")
+                return
+            }
+            let missing = awaitValue {
+                try await store.loadBank(voicegroupArg: "_porydaw_missing_voicegroup")
+            }
+            let restored = awaitValue {
+                try await store.loadBank(voicegroupArg: "_fixture_rich")
+            }
+            report.expect({
+                guard case .failure(let error)? = missing,
+                      case .success(let retained)? = restored else { return false }
+                return String(describing: error).contains("_porydaw_missing_voicegroup")
+                    && retained.bankToken == home.bankToken
+                    && retained.slotViews.count == home.slotViews.count
+                    && zip(retained.slotViews, home.slotViews).allSatisfy {
+                        $0.kind == $1.kind && $0.voice == $1.voice
+                    }
+                    && !retained.dirty
+            }(), cppID: id,
+            message: "a failed voicegroup rebind keeps the home lease and publishes the missing arg")
+        }
+    } catch {
+        report.fail(id, "failed rebind fixture could not be staged: \(error)")
     }
 }

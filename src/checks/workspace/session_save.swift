@@ -3,13 +3,13 @@ import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawPlayback
-
-// MARK: - Session Save and Persistence
+import PorydawProject
 
 @MainActor
 internal func sessionSavePersistence(report: CheckReport, session: DocumentSession,
                                      service: ProjectService, projectDir: String) {
-    // Exercise persistence of an actual loop edit alongside the deleted note.
+    sessionSaveJourney(report: report, fixtureRoot: projectDir)
+    sessionSynthUndoTail(report: report, fixtureRoot: projectDir)
     session.document.setLoop(end: false, tick: 72)
     let midiCfgPath = projectDir + "/sound/songs/midi/midi.cfg"
     let otherSongCfgBefore = configLineBytes(at: midiCfgPath, label: "mus_session_test2")
@@ -182,6 +182,219 @@ internal func sessionSavePersistence(report: CheckReport, session: DocumentSessi
     } catch {
         report.fail("vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                     "lease reuse check failed: \(error)")
+    }
+}
+
+@MainActor
+private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
+    let id = "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank"
+    let root = stageTestProject(in: fixtureRoot, projectName: "save-journey")
+    let midiPath = root + "/sound/songs/midi/mus_session_test.mid"
+    let service = ProjectService()
+    do {
+        let session = try runBlocking {
+            try await service.open(root: root)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        let bankPath = root + "/" + session.bankLease.sourcePath
+        guard let midiBefore = bytes(at: midiPath), let bankBefore = bytes(at: bankPath),
+              let original = session.bankSlots[0].voice else {
+            report.fail(id, "save journey fixture is missing song or editable bank bytes")
+            return
+        }
+        let tick = (session.document.state.file.chunks.map(\.endTick).max() ?? 0) + 96
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: tick, pitch: 74, duration: 24, velocity: 90),
+        ])
+        var edited = original
+        edited.release = original.release == 7 ? 6 : original.release + 1
+        try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: edited, expected: original)
+            try await session.save()
+        }
+        let savedMidi = bytes(at: midiPath)
+        let savedBank = bytes(at: bankPath)
+        report.expect(!session.document.isDirty && !session.bankDirty
+                      && savedMidi != midiBefore && savedBank != bankBefore
+                      && savedMidi != nil && savedBank != nil,
+                      cppID: id, message: "one save persists the song edit and the bank edit")
+        let reopened = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        report.expect(reopened.bankSlots[0].voice == edited
+                      && reopened.document.state.file == session.document.state.file,
+                      cppID: id, message: "the saved song and bank reopen together")
+        _ = try runBlocking { try await session.undo() }
+        try runBlocking { try await session.save() }
+        report.expect(!session.bankDirty && bytes(at: bankPath) == bankBefore,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                      message: "undo after save round-trips the bank bytes")
+        let roundTrip = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        report.expect(roundTrip.bankSlots[0].voice == original,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                      message: "reopen after the restoring save loads the original voice")
+        let cleanMidi = bytes(at: midiPath)
+        let cleanBank = bytes(at: bankPath)
+        var publications = 0
+        session.onChange = { _ in publications += 1 }
+        try runBlocking { try await session.save() }
+        report.expect(publications == 0 && bytes(at: midiPath) == cleanMidi
+                      && bytes(at: bankPath) == cleanBank && !session.document.isDirty,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::cleanSaveEmitsNoReceipt",
+                      message: "a clean save emits no receipt")
+        var config = session.document.state.config
+        config.priority += 1
+        session.document.setConfig(config)
+        let snapshot = try session.document.captureSave()
+        let newerTick = (session.document.state.file.chunks.map(\.endTick).max() ?? 0) + 96
+        _ = try session.document.addNotes([
+            NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89),
+        ])
+        _ = try runBlocking { try await service.save(snapshot, bank: nil) }
+        session.document.didSave(snapshot)
+        report.expect(session.document.isDirty && bytes(at: midiPath) == Data(snapshot.bytes)
+                      && session.document.state.file != roundTrip.document.state.file,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
+                      message: "a stale snapshot leaves the newer document dirty")
+        try runBlocking { try await session.save() }
+        report.expect(!session.document.isDirty && bytes(at: midiPath) != Data(snapshot.bytes),
+                      cppID: "vgsavecheck/VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit",
+                      message: "retrying from the newer state cleans the session")
+    } catch {
+        report.fail(id, "save journey failed: \(error)")
+    }
+}
+
+@MainActor
+private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
+    let id = "vgsavecheck/VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave"
+    let stagedFixtures = URL(fileURLWithPath: fixtureRoot).deletingLastPathComponent().path
+    let root = stageTestProject(in: fixtureRoot, projectName: "synth-undo-journey")
+    do {
+        let rich = try String(contentsOfFile: stagedFixtures + "/sound/voicegroups/fixture_rich.inc",
+                              encoding: .utf8)
+        let richLines = rich.split(separator: "\n", omittingEmptySubsequences: false)
+        guard richLines.count > 2, richLines[2].contains("voice_directsound") else {
+            report.fail(id, "rich fixture does not expose the original DirectSound source voice")
+            return
+        }
+        try (richLines.prefix(3).joined(separator: "\n") + "\n")
+            .write(toFile: root + "/sound/voicegroups/fixture_rich.inc",
+                   atomically: true, encoding: .utf8)
+        try """
+        .include "sound/voicegroups/test_vg.inc"
+        .include "sound/voicegroups/fixture_rich.inc"
+        """.write(toFile: root + "/sound/voice_groups.inc",
+                   atomically: true, encoding: .utf8)
+        try FileManager.default.copyItem(
+            atPath: stagedFixtures + "/sound/direct_sound_data.inc",
+            toPath: root + "/sound/direct_sound_data.inc")
+        try FileManager.default.copyItem(
+            atPath: stagedFixtures + "/sound/direct_sound_samples",
+            toPath: root + "/sound/direct_sound_samples")
+        let macros = root + "/asm/macros/music_voice.inc"
+        try FileManager.default.createDirectory(
+            atPath: root + "/asm/macros", withIntermediateDirectories: true)
+        try """
+        .macro set_synth_pulse a,b,c,d
+        .endm
+        .macro set_synth_saw
+        .endm
+        .macro set_synth_triangle
+        .endm
+        """.write(toFile: macros, atomically: true, encoding: .utf8)
+        let synthPath = root + "/sound/direct_sound_synth_data.inc"
+        try "VgSaveCheckSaw::\n\tset_synth_saw\n"
+            .write(toFile: synthPath, atomically: true, encoding: .utf8)
+        let assembly = root + "/data/sound_data.s"
+        try FileManager.default.createDirectory(atPath: root + "/data", withIntermediateDirectories: true)
+        try ".include \"sound/direct_sound_data.inc\"\n"
+            .write(toFile: assembly, atomically: true, encoding: .utf8)
+        let service = ProjectService()
+        let session = try runBlocking {
+            try await service.open(root: root)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        try runBlocking { try await session.selectVoicegroup("_fixture_rich") }
+        let bankPath = root + "/" + session.bankLease.sourcePath
+        guard let original = session.bankSlots[0].voice, let originalBytes = bytes(at: bankPath) else {
+            report.fail(id, "synth journey fixture is missing the DirectSound voice")
+            return
+        }
+        let start = session.document.history.undoIndex
+        let descriptor = VgSynthDesc(baseDuty: 0x21, dutyStep: 0x43,
+                                     modDepth: 0x65, phase: 0x87)
+        let symbol = try runBlocking { try await session.mintSynth(descriptor) }
+        var edited = original
+        edited.symbol = symbol
+        let pulseVoice = edited
+        _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: pulseVoice, expected: original) }
+        let tone = session.bankLease.withVoices { voices -> (UInt32?, [UInt8]?) in
+            guard let wave = voices?.pointee.wav?.pointee,
+                  let data = wave.data else { return (nil, nil) }
+            return (wave.size, (1...5).map { UInt8(bitPattern: data[$0]) })
+        }
+        report.expect(session.bankSlots[0].voice?.symbol == symbol,
+                      cppID: id, message: "the synth edit stages the minted bank symbol")
+        report.expect(tone.0 == 0, cppID: id,
+                      message: "the staged synth wav has zero source size")
+        report.expect(tone.1 == [0, 0x21, 0x43, 0x65, 0x87], cppID: id,
+                      message: "the staged synth tone carries the packed descriptor bytes")
+        report.expect(bytes(at: bankPath) == originalBytes,
+                      cppID: id, message: "synth activation does not write bank source bytes")
+        try runBlocking { try await session.save() }
+        let savedSynth = bytes(at: synthPath)
+        let sawSymbol = try runBlocking { try await session.mintSynth(VgSynthDesc(waveform: 1)) }
+        var saw = edited
+        saw.symbol = sawSymbol
+        let selectedSaw = saw
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: selectedSaw, expected: pulseVoice)
+        }
+        report.expect(session.bankSlots[0].voice?.symbol == sawSymbol,
+                      cppID: id, message: "the saw wave edit publishes its synth symbol")
+        _ = try runBlocking {
+            try await session.applyBankEdit(slot: 0, value: pulseVoice, expected: selectedSaw)
+        }
+        report.expect(session.bankSlots[0].voice?.symbol == symbol,
+                      cppID: id, message: "the pulse wave edit restores its synth symbol")
+        let pulseTone = session.bankLease.withVoices { voices -> (UInt32?, [UInt8]?) in
+            guard let wave = voices?.pointee.wav?.pointee,
+                  let data = wave.data else { return (nil, nil) }
+            return (wave.size, (1...5).map { UInt8(bitPattern: data[$0]) })
+        }
+        report.expect(pulseTone.0 == 0, cppID: id,
+                      message: "the restored pulse wav has zero source size")
+        report.expect(pulseTone.1 == [0, 0x21, 0x43, 0x65, 0x87], cppID: id,
+                      message: "the pulse wave edit republishes its packed tone")
+        while session.document.history.undoIndex > start {
+            let before = session.document.history.undoIndex
+            let applied = try runBlocking { try await session.undo() }
+            guard applied else {
+                report.fail(id, "synth undo tail stopped before the original voice")
+                return
+            }
+            let advanced = session.document.history.undoIndex == before - 1
+            report.expect(advanced, cppID: id,
+                          message: "each synth undo consumes exactly one history command")
+            guard advanced else { return }
+        }
+        try runBlocking { try await session.save() }
+        report.expect(bytes(at: bankPath) == originalBytes,
+                      cppID: id, message: "the full synth undo tail restores the baseline bytes")
+        report.expect(session.bankSlots[0].voice == original,
+                      cppID: id, message: "full synth undo restores the original bank voice")
+        report.expect(bytes(at: synthPath) == savedSynth,
+                      cppID: id, message: "post-undo save preserves the saved synth file bytes")
+        report.expect(savedSynth.map {
+            $0 != Data("VgSaveCheckSaw::\n\tset_synth_saw\n".utf8)
+        } == true, cppID: id, message: "the first synth save writes a new definition")
+        report.expect(!session.bankDirty, cppID: id,
+                      message: "post-undo synth save settles the bank clean")
+    } catch {
+        report.fail(id, "synth undo journey failed: \(error)")
     }
 }
 

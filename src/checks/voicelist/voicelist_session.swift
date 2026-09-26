@@ -318,16 +318,24 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     message: "distinct families carry distinct glyphs")
     list.refresh(from: session)
 
-    // A -G selection changes both document history and the real loaded bank.
     let selectorID = "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit"
     let originalToken = session.bankLease.bankToken
-    do {
-        try runBlocking { try await session.selectVoicegroup("_other") }
-    } catch {
-        report.fail(selectorID, "-G bank rebind threw: \(error)")
-        return
+    list.setVoicegroupChoices(catalogArgs)
+    var selectionError: Error?
+    list.onVoicegroupChangeRequested = { arg in
+        do {
+            try runBlocking { try await session.selectVoicegroup(arg) }
+        } catch {
+            selectionError = error
+        }
+        list.refresh(from: session)
     }
-    list.refresh(from: session)
+    list.selectorText = "other"
+    list.commitVoicegroupSelection()
+    report.expect(selectionError == nil
+                  && session.document.state.config.voicegroupArgument == "_other",
+                  cppID: selectorID,
+                  message: "p: the selector commit resolves display text to the alternate arg")
     report.expect(list.rows[0] === originalRow
                   && list.rows[0].title == "000  Square 2",
                   cppID: bankViewID,
@@ -361,6 +369,14 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
                        what: "-G undo clears the song config dirty state")
     report.expectEqual(expected: original, actual: session.bankSlots[0].voice, cppID: selectorID,
                        what: "-G undo restores the original slot's instrument")
+    list.selectorText = "porydaw_missing_voicegroup"
+    list.commitVoicegroupSelection()
+    report.expect(selectionError != nil
+                  && session.document.state.config.voicegroupArgument != "_porydaw_missing_voicegroup"
+                  && list.selectorText == "test_vg"
+                  && session.bankLease.bankToken == originalToken
+                  && !session.document.isDirty,
+                  cppID: selectorID, message: "p: a failed switch leaves the home arg standing")
     let originID = "swiftcore/VoiceEditorController::queuedOriginSurvivesTabRebind"
     let second: DocumentSession
     do {

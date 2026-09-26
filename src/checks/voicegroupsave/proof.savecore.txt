@@ -11,10 +11,8 @@ Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Shared helper: none; saveCoreBankRoundTrip and saveCoreSourceSaveAndPreview are file-private in SaveCoreChecks.swift.
 
 
-Command: deno task verify --filter projectstore-checks --verbose;
-deno task verify --filter swiftcore --verbose;
-deno task verify:shell --filter shell-voicegroup --verbose.
-Result: PASS for all three focused runs; whole-project validation is separate.
+Command: deno task verify --filter projectstore-savecore --verbose; deno task verify --filter swiftcore-bankhistory --verbose; deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-voicegroup --verbose.
+Result: PASS for the focused runs at this freeze (build/proof-evidence/projectstore-savecore.json, swiftcore-bankhistory.json, swiftcore-projectsession.json; shell-voicegroup.json lists the executed mounted functions); retained native checks are not Swift parity evidence. The rerun covering the newest one-per-clause session/switch messages is pending a bridge preflight block, so rows that only those messages could cover stay GAP with the pending message named.
 
 VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the song/project
 fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h. That
@@ -25,8 +23,8 @@ fixtureRootKind DecompProject. runSaveCoreSuite calls saveCoreBankRoundTrip (a
 temporary root with sound/voicegroups/savecheck.inc loaded by
 VoicegroupStore(projectRoot:) under _savecheck, then a release edit, a save, a
 reversal and a second save) and saveCoreSourceSaveAndPreview (VoicegroupSource
-preview/shadow rows that do not pair with this ledger); A079/A051/A076 evaluate
-inside saveCoreBankRoundTrip.
+preview/shadow rows that do not pair with this ledger); A079 evaluates
+inside saveCoreBankRoundTrip, while A051/A076 now pair with the sessionSaveJourney unified/round-trip predicates (S017/S019), which persist both song and bank bytes.
 
 A001 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:50
 Disposition: GAP
@@ -98,8 +96,8 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(selector, "activated", Qt::DirectConnection, Q_ARG(int, 0)))
 
 A003 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:55
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S016 publishes the missing arg in the store error and retains the home lease (token, slots, clean); the original also publishes a cfg edit to the missing arg, which has no store-level counterpart.
 Source context since previous assertion:
 ;
 
@@ -120,7 +118,7 @@ QVERIFY(m_window->statusBar()->currentMessage().contains(missingArg))
 
 A005 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:60
 Disposition: PARTIAL
-Mapping/reason: S004 asserts a failed selection leaves the prior -G arg and bank lease unchanged, but the original inspects the C++ tab identity after a missing source.
+Mapping/reason: S016 retains the home bank token and slot voices over the missing-arg load and S004 leaves lease and history unchanged on a failed load; the original compares the C++ tab shared_ptr identity, which has no Swift counterpart.
 Source context since previous assertion:
 ;
 
@@ -129,7 +127,7 @@ QVERIFY(m_tab->voicegroupId() && *m_tab->voicegroupId() == *m_homeId)
 
 A006 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:61
 Disposition: PARTIAL
-Mapping/reason: S004 asserts failed -G load leaves the published bank token, config and undo index unchanged; the original compares the retained C++ shared_ptr address.
+Mapping/reason: S016 retains the home bank token and S004 leaves the published token, config and undo index unchanged; the original compares the retained C++ shared_ptr address.
 Source context since previous assertion:
 ;
 
@@ -173,8 +171,8 @@ Original expression:
 QVERIFY(m_browser->releaseSpinBox()->isEnabled())
 
 A011 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:66
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S016 retains every home slot voice across the missing-arg load; the rendered native row text itself is unproved.
 Source context since previous assertion:
 ;
 
@@ -182,8 +180,8 @@ Original expression:
 QCOMPARE(m_browser->slotRowText(m_dsSlot), retainedRow)
 
 A012 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:67
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins VoicegroupBrowserDriver::browserMinimumSizeHint (voicegroupbrowserdriver.h:69, defined voicegroupbrowserdriver.cpp:220 at Reference revision c1f165eb) — the native QWidget dock minimum-size representation with no Swift counterpart.
 Source context since previous assertion:
 ;
 
@@ -191,8 +189,8 @@ Original expression:
 QCOMPARE(m_browser->browserMinimumSizeHint(), retainedMinimum)
 
 A013 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:68
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pins VoicegroupBrowserDriver::dockGeometry (voicegroupbrowserdriver.h:70 at Reference revision c1f165eb) — the native QWidget dock geometry representation with no Swift counterpart.
 Source context since previous assertion:
 ;
 
@@ -200,8 +198,8 @@ Original expression:
 QCOMPARE(m_browser->dockGeometry(), retainedGeometry)
 
 A014 | VoicegroupSaveTest::failedRebindRetainsBinding | src/checks/voicegroupsave/savecore.cpp:71
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S027
 Source context since previous assertion:
 ;
 
@@ -392,8 +390,8 @@ QVERIFY2(waitForBankRelease(m_dsSlot, release, true),
              "release edit did not dirty the bank and converge in the engine")
 
 A030 | VoicegroupSaveTest::releaseEditDirtiesOnlyBank | src/checks/voicegroupsave/savecore.cpp:133
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S029
 Source context since previous assertion:
 ;
 
@@ -581,8 +579,8 @@ Original expression:
 QVERIFY(m_browser->releaseSpinBox())
 
 A047 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:187
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
     m_browser->releaseSpinBox()->setValue(edited);
@@ -603,8 +601,8 @@ Original expression:
 QVERIFY(m_window->isWindowModified())
 
 A049 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:193
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
     const int receiptsBefore = m_savedReceipts;
@@ -614,7 +612,7 @@ QVERIFY2(saveSelectedSong(), "unified save had no dirty state to submit")
 
 A050 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:194
 Disposition: PARTIAL
-Mapping/reason: S005 asserts session save clears both song and bank dirty state and refreshes the clean lease; S008 and S009 assert the completed bank stage publishes the saved voice and a clean bank to a second live document even when the later MIDI stage fails, and S011 (src/checks/editorqml/tst_ShellVoicegroup.qml test_zzzzSharedBankBetweenTwoLiveTabs) completes the mounted Save control and publishes the clean shared bank back to both tabs. Unproved: the native row also requires a counted MainWindow save receipt.
+Mapping/reason: S017 persists the song and bank edits to a clean session and S028 cleans the mounted dock; the counted MainWindow save receipt is unproved.
 Source context since previous assertion:
 ;
 
@@ -622,8 +620,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(receiptsBefore), "unified save did not publish a clean receipt")
 
 A051 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:195
-Disposition: PARTIAL
-Mapping/reason: S002 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts the bank-only half of unifiedSavePersistsSongAndBank: after the release edit and save the voicegroup file bytes differ from the original m_voicegroupBytes capture. unproved: the original stimulus also saves the SongDocument and writes MIDI through MainWindow (the paired readFileBytes(m_document->midPath()) obligation is A052, which keeps GAP), and no Swift predicate in this lane loads or saves the SongDocument/MIDI.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -631,8 +629,8 @@ Original expression:
 QCOMPARE(readFileBytes(m_voicegroupPath) == m_voicegroupBytes, false)
 
 A052 | VoicegroupSaveTest::unifiedSavePersistsSongAndBank | src/checks/voicegroupsave/savecore.cpp:196
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -665,8 +663,8 @@ Original expression:
 QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "setup voice edit did not settle")
 
 A055 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:224
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
 
@@ -712,8 +710,8 @@ Original expression:
 QVERIFY(!turn.completedInline)
 
 A058 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:229
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
 
@@ -721,8 +719,8 @@ Original expression:
 QCOMPARE(readFileBytes(m_document->midPath()), staleMidi)
 
 A059 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:230
-Disposition: PARTIAL
-Mapping/reason: S006 asserts that applying an older save snapshot cannot clean a newer document edit; the native sequence also queues and observes an actual save receipt.
+Disposition: MATCHED
+Mapping: S022
 Source context since previous assertion:
 ;
 
@@ -730,8 +728,8 @@ Original expression:
 QVERIFY(m_document->isDirty())
 
 A060 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:233
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S023
 Source context since previous assertion:
 ;
 
@@ -741,8 +739,8 @@ Original expression:
 QVERIFY2(saveSelectedSong(), "newer-state retry had no dirty state")
 
 A061 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:234
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S023 retries from the newer state to a clean document; the counted MainWindow retry receipt is unproved.
 Source context since previous assertion:
 ;
 
@@ -750,8 +748,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(retryReceipts), "newer-state retry did not clean the session")
 
 A062 | VoicegroupSaveTest::queuedSaveSnapshotPreservesNewerEdit | src/checks/voicegroupsave/savecore.cpp:235
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S023 retries from the newer state to a clean document with bytes differing from the stale snapshot; byte-for-byte equality with the newer MIDI is unproved.
 Source context since previous assertion:
 ;
 
@@ -829,8 +827,8 @@ Original expression:
 QVERIFY(m_browser->releaseSpinBox())
 
 A069 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:259
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
     m_browser->releaseSpinBox()->setValue(edited);
@@ -839,8 +837,8 @@ Original expression:
 QVERIFY2(waitForBankRelease(m_dsSlot, edited, true), "voice edit did not settle")
 
 A070 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:262
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
     m_document->addNote(m_track, appendTick(*m_document), 72, 24, 93);
@@ -850,8 +848,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A071 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:263
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -884,8 +882,8 @@ QVERIFY2(settle([this] {
              "undo past save point did not re-dirty both resources")
 
 A074 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:274
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
 ;
     const int secondSave = m_savedReceipts;
@@ -894,8 +892,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A075 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:275
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S019 re-saves past the save point to a clean bank with the original bytes; the clean document half of the receipt is unproved.
 Source context since previous assertion:
 ;
 
@@ -903,8 +901,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(secondSave), "round-trip save did not clean both resources")
 
 A076 | VoicegroupSaveTest::undoSaveRoundTripsBankBytes | src/checks/voicegroupsave/savecore.cpp:276
-Disposition: PARTIAL
-Mapping/reason: S003 (src/checks/projectstore/SaveCoreChecks.swift saveCoreBankRoundTrip) asserts the bank-only half of undoSaveRoundTripsBankBytes: reversing the edit through the public store operation and saving again restores the original voicegroup bytes. unproved: the original stimulus also undoes the voice edit through the MainWindow undo shortcut and re-saves the SongDocument/MIDI with it.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
 ;
 
@@ -912,8 +910,8 @@ Original expression:
 QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
 
 A077 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:282
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 ;
 }
@@ -939,8 +937,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A080 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:285
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: PARTIAL
+Mapping/reason: S021 saves the clean session with zero publications and unchanged bytes; the false return of the native no-op save is unproved.
 Source context since previous assertion:
 ;
 
@@ -948,8 +946,8 @@ Original expression:
 QVERIFY(!saveSelectedSong())
 
 A081 | VoicegroupSaveTest::cleanSaveEmitsNoReceipt | src/checks/voicegroupsave/savecore.cpp:287
-Disposition: GAP
-Mapping/reason: app-level behavior (widget/SongDocument stimulus); owned by the Swift session lane src/checks/workspace/session_*.swift, not the store API
+Disposition: MATCHED
+Mapping: S021
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -1012,3 +1010,45 @@ Anchor: message "S21: a missing source refuses save without recreating it"
 
 S015 | saveCoreSectionRefusals | src/checks/projectstore/SaveCoreChecks.swift
 Anchor: message "S22: save writes only the selected section into the sibling-changed image"
+
+S016 | saveCoreFailedRebind | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "a failed voicegroup rebind keeps the home lease and publishes the missing arg"
+
+S017 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "one save persists the song edit and the bank edit"
+
+S018 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "the saved song and bank reopen together"
+
+S019 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "undo after save round-trips the bank bytes"
+
+S020 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "reopen after the restoring save loads the original voice"
+
+S021 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "a clean save emits no receipt"
+
+S022 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "a stale snapshot leaves the newer document dirty"
+
+S023 | sessionSaveJourney | src/checks/workspace/session_save.swift
+Anchor: message "retrying from the newer state cleans the session"
+
+S024 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "p: the selector commit resolves display text to the alternate arg"
+
+S025 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "p: a failed switch leaves the home arg standing"
+
+S026 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "a missing -G names itself in the failure"
+
+S027 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "undo after a failed rebind restores the home voicegroup"
+
+S028 | test_editorSaveCommitsCleanBank | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "a unified save cleans the dock"
+
+S029 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a bank edit preserves song dirtiness while dirtying the bank"

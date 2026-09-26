@@ -6,13 +6,12 @@ Original SHA-256: f4a4c944efbb52d6f293323025ad3aba5a6c11bf586b10ebcb0ed3eb1290aa
 Swift counterpart: src/checks/workspace/bank_switching.swift
 
 
-Command: deno task verify --filter swiftcore --verbose.
-Result: PASS for the Swift session predicates; the retained native harness
-is not Swift parity evidence.
+Command: deno task verify --filter swiftcore-bankhistory --verbose; deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-voicegroup --verbose.
+Result: PASS for the focused runs at this freeze (build/proof-evidence/swiftcore-bankhistory.json, swiftcore-projectsession.json; shell-voicegroup.json lists the executed mounted functions); the retained native harness is not Swift parity evidence. Promoted on the fresh full-runner evidence (36/36 native incl. swiftcore-bankhistory, 26 shell lanes incl. shell-voicegroup): bank edits keep the song clean, so A022/A028 map their !isDirty half to S020.
 
 A001 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:26
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
 #include "checks/voicegroupsave/tst_voicegroupsave.h"
 
@@ -47,8 +46,8 @@ QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
              "sound/voicegroups/fixture_alt.inc")
 
 A002 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:34
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S010
 Source context since previous assertion:
 ;
     const QString homeArg = m_document->cfg().voicegroupArg;
@@ -69,8 +68,8 @@ Disposition: MATCHED
 Mapping: S002
 
 A005 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:48
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S010 replays the carried edit onto the home bank (voice, dirty); engine-voice parity is unproved.
 Source context since previous assertion:
 ;
 
@@ -87,15 +86,15 @@ QVERIFY2(settle([this, &edited] {
 
 A006 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:58
 Disposition: MATCHED
-Mapping: S005
+Mapping: S012
 
 A007 | VoicegroupSaveTest::switchCarriesUnsavedBankEdit | src/checks/voicegroupsave/switching.cpp:63
 Disposition: MATCHED
 Mapping: S006, S007, S008
 
 A008 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:69
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S009
 Source context since previous assertion:
 ;
 }
@@ -111,8 +110,8 @@ QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
              "sound/voicegroups/fixture_alt.inc")
 
 A009 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:75
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S019
 Source context since previous assertion:
 ;
     const QString homeArg = m_document->cfg().voicegroupArg;
@@ -122,8 +121,8 @@ Original expression:
 QVERIFY(selector)
 
 A010 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:77
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S018
 Source context since previous assertion:
 ;
     const QString shownHome = SongRegistry::voicegroupDisplayName(homeArg);
@@ -132,8 +131,8 @@ Original expression:
 QCOMPARE(selector->currentText(), shownHome)
 
 A011 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:78
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S017
 Source context since previous assertion:
 ;
 
@@ -160,8 +159,8 @@ Disposition: MATCHED
 Mapping: S002
 
 A015 | VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit | src/checks/voicegroupsave/switching.cpp:89
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S012
 Source context since previous assertion:
 ;
 
@@ -178,8 +177,8 @@ Original expression:
 QTRY_COMPARE(selector->currentText(), shownHome)
 
 A017 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:96
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 ;
 }
@@ -195,8 +194,8 @@ QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
              "sound/voicegroups/fixture_alt.inc")
 
 A018 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:123
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013
 Source context since previous assertion:
 ;
     const QString homeArg = m_document->cfg().voicegroupArg;
@@ -227,8 +226,8 @@ Original expression:
 QVERIFY2(waitForBankRelease(m_dsSlot, edited.release, true), "value command did not apply")
 
 A019 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:125
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
 ;
     const int firstSave = m_savedReceipts;
@@ -237,8 +236,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A020 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:126
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S005
 Source context since previous assertion:
 ;
 
@@ -255,8 +254,8 @@ Original expression:
 QVERIFY2(reopenCleanHome(), "clean -G round trip did not replace the home source")
 
 A022 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:131
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S013, S020
 Source context since previous assertion:
 ;
     const QByteArray refreshed = readFileBytes(m_voicegroupPath);
@@ -274,8 +273,8 @@ QVERIFY2(settle([this, &refreshed] {
              "executed value undo after rebind did not resolve current bytes")
 
 A023 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:140
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S014
 Source context since previous assertion:
 ;
     requestRedo();
@@ -291,8 +290,8 @@ QVERIFY2(settle([this, &edited, &refreshed] {
              "executed value redo after rebind did not resolve current bytes")
 
 A024 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:150
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 ;
 
@@ -305,8 +304,8 @@ QVERIFY2(settle([this] {
              "undo before redo-tail refresh did not apply")
 
 A025 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:155
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 ;
     const int restoreSave = m_savedReceipts;
@@ -315,8 +314,8 @@ Original expression:
 QVERIFY(saveSelectedSong())
 
 A026 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:156
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: S015 restores the baseline bank bytes to a clean bank; the clean document half of the receipt is unproved.
 Source context since previous assertion:
 ;
 
@@ -324,8 +323,8 @@ Original expression:
 QVERIFY2(waitForCleanSave(restoreSave), "baseline restoration save did not settle")
 
 A027 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:157
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S015
 Source context since previous assertion:
 ;
 
@@ -333,8 +332,8 @@ Original expression:
 QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
 
 A028 | VoicegroupSaveTest::valueCommandSurvivesSourceReplacement | src/checks/voicegroupsave/switching.cpp:159
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: MATCHED
+Mapping: S016, S020
 Source context since previous assertion:
 ;
     requestRedo();
@@ -622,3 +621,49 @@ Anchor: message "returning to dirty A does not write its source"
 
 S008 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
 Anchor: message "redoing B still does not write dirty A"
+
+S009 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the selector drives the undoable -G seam"
+
+S010 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "undo replays the carried edit onto the home bank"
+
+S011 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "selector undo restores the home binding and selector text"
+
+S012 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "a second undo restores the clean baseline without writing"
+
+S013 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "value undo and redo resolve against the refreshed canonical bytes"
+
+S014 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "value redo restores the saved canonical voice without writing"
+
+S015 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "a restoring save refreshes the baseline bytes"
+
+S016 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the redo tail re-applies after a restoring save"
+
+S017 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "p: the selector commit resolves display text to the alternate arg"
+
+S018 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "p: a failed switch leaves the home arg standing"
+
+S019 | test_zySelectorFailurePreservesBinding | src/checks/editorqml/tst_ShellVoicegroup.qml
+Anchor: message "selector switches to the staged alternate: "
+
+
+S020 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
+Anchor: message "a bank edit preserves song dirtiness while dirtying the bank"
+
+S021 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the alternate bank remains clean after selector commit"
+
+S022 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "selector commit loads the alternate bank lease"
+
+S023 | bankSwitchingParity | src/checks/workspace/bank_switching.swift
+Anchor: message "the -G switch records an undoable config edit"

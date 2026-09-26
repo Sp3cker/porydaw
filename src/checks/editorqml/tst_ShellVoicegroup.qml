@@ -433,6 +433,8 @@ TestCase {
         compare(controller.bankDirty, false)
         compare(save.enabled, false)
         compare(draft.release, initial === 7 ? 6 : initial + 1)
+        verify(!controller.bankDirty && !app.documentDirty && !save.enabled,
+               "a unified save cleans the dock")
     }
 
     function cleanup() {
@@ -647,6 +649,31 @@ TestCase {
         compare(draft.macro, 11, "keysplit symbol switches to keysplit macro")
     }
 
+    function test_zySelectorFailurePreservesBinding() {
+        const controller = app.voiceListController()
+        const selector = findChild(panel, "vgArgCombo")
+        selector.forceActiveFocus()
+        selector.editText = "fixture_alt"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_alt" || app.lastSaveError.length > 0
+        }, 15000), "selector switches to the staged alternate: " + app.lastSaveError)
+        compare(app.lastSaveError, "")
+        selector.editText = "_porydaw_missing_voicegroup"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            return app.lastSaveError.indexOf("_porydaw_missing_voicegroup") >= 0
+        }, 15000), "a missing -G names itself in the failure")
+        compare(controller.bankLoadName, "fixture_alt")
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich"
+                   && controller.selectorText === "fixture_rich"
+        }, 15000), "undo after a failed rebind restores the home voicegroup")
+    }
+
     function test_zzSynthMintAndMountedSave() {
         const controller = app.voiceListController()
         controller.selectSlot(0)
@@ -667,6 +694,9 @@ TestCase {
         verify(waitForNative(function() { return draft.baseDuty === 77 }, 15000),
                "duty LFO mints an edited pulse voice")
         const pulse = draft.symbol
+        verify(/^DirectSoundSynth_GoldenSun_4D[0-9A-F]{6}$/.test(pulse)
+               && !controller.synthCatalogChoices().includes(pulse),
+               "synth activation publishes the param-named symbol")
         const baseDuty = findChild(panel, "vgSynthBaseDutySpin")
         verify(baseDuty !== null && baseDuty.visible, "pulse parameters occupy the editor")
         compare(baseDuty.value, 77)
