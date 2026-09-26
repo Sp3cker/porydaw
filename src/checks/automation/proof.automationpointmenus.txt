@@ -8,10 +8,10 @@ Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 
 
 
-Verification: deno task verify:qml --verbose (editorqml-drawer) — run_checks PASS with all four drawer cases green (test_productionAutomationPointMenuDeleteAndDismiss, test_productionAutomationSetValuePromptFocusRoute, test_productionAutomationTempoPromptFocusRoute, test_productionAutomationSyntheticDefaultMenuRoute); deno task verify --filter swiftcore --verbose — PASS, runAutomationPageChecks -> runProjectSessionSuite (swiftcore-projectsession) covering the extended drawerAutomationPromptTransactions and drawerAutomationPointMenuDeleteAndStale; deno task verify:bridge — 0 findings. Recorded by the lane controller from the runs on the settled tree; this proof-only reconciliation did not re-run the build or the lane, and checked the ledger against the refreshed evidence in build/proof-evidence (all four drawer cases listed; the four new Swift messages present).
+Verification: deno task verify --filter swiftcore --verbose (runAutomationPageChecks -> runProjectSessionSuite, swiftcore-projectsession) — PASS, covering the new drawerAutomationSelectionInvalidation and drawerAutomationTrackSwitchInvalidation entries and the extended two-point tail of drawerAutomationDuplicatePromptAndParameterSwitch; deno task verify:qml --verbose (editorqml-drawer) — run_checks PASS with all four drawer production cases green (test_productionAutomationPointMenuDeleteAndDismiss, test_productionAutomationSetValuePromptFocusRoute, test_productionAutomationTempoPromptFocusRoute, test_productionAutomationSyntheticDefaultMenuRoute), including test_productionAutomationMenusAndLaneCommands' rendered Cancel leg and the unwritten-lane projection anchor. Recorded by the lane controller from the runs on the settled tree; this proof-only reconciliation did not re-run the build or the lanes, and checked the ledger against the refreshed evidence in build/proof-evidence (editorqml-drawer.json and swiftcore-projectsession.json, refreshed 2026-09-26 11:52/11:53, carrying every new predicate message as a passed row).
 Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart paths above are the files this reconciliation read, uncommitted lane edits included.
 Registered run path: src/checks/editorqml/tst_EditorDrawer.qml (EditorDrawerLane :: run_checks, the drawer lane) carries the rendered menu rows, enablement, accessible role and focus entries; src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10) carries the presenter and document entries; the Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
-Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. The drawer lane drives the production QML surface with real pointer and key delivery, so the rendered menu rows, enablement, accessible role, focus facts and the accepted prompt's own closure are cited from it; A131 stays PARTIAL because the stale journey is presenter-dispatched and renders no row of its own, alongside retired representation and the rows left GAP. Parser success is not semantic parity.
+Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. The drawer lane drives the production QML surface with real pointer and key delivery, so the rendered menu rows, enablement, accessible role, focus facts, the accepted prompt's own closure, the lane-delete confirmation's rendered Cancel click and the unwritten lane's projected node are cited from it; A131 stays PARTIAL because the stale journey is presenter-dispatched and renders no row of its own, alongside retired representation and the rows left GAP. Parser success is not semantic parity.
 
 A001 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:109
 Disposition: MATCHED
@@ -199,8 +199,8 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()))
 
 A041 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:221
-Disposition: PARTIAL
-Mapping/reason: No Swift scenario stages a second track in this family; the Swift switch scenario changes the parameter instead ([S046], [S047]).
+Disposition: MATCHED
+Mapping: S188 (the second track stages its own lane point: addTrack(voice: 0) == 1 and track 1's written pan point)
 Original expression:
   QCOMPARE(songTab.document().addTrack(0), 1)
 
@@ -233,38 +233,38 @@ Original expression:
   QVERIFY(automation_valueprompt::focusedTextInput(quickWindow()))
 
 A047 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:252
-Disposition: PARTIAL
-Mapping/reason: The Swift scenario switches the parameter directly ([S047]); the original prompt-changed callback that switches the track is not staged.
+Disposition: MATCHED
+Mapping: S189 (switching tracks closes the open CC prompt: the Swift journey switches the selected track directly and the open CC prompt drops)
 Original expression:
   QVERIFY(switched)
 
 A048 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:253
-Disposition: PARTIAL
-Mapping/reason: The second track is not staged in Swift; the Swift switch scenario keeps the single-track fixture ([S051]).
+Disposition: MATCHED
+Mapping: S190 (the switched page lists the second track's pan lane: catalogIndex of track 1's pan lane is at or past zero)
 Original expression:
   QVERIFY(findRow(trackB).valid())
 
 A049 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:254
-Disposition: PARTIAL
-Mapping/reason: The target track disappears in the original; the Swift switch scenario keeps one track and instead asserts the prompt drop ([S047]).
+Disposition: MATCHED
+Mapping: S191 (the switched page drops the first track's pan lane: catalogIndex of track 0's pan lane is -1)
 Original expression:
   QVERIFY(!findRow(trackA).valid())
 
 A050 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:255
 Disposition: MATCHED
-Mapping: S047
+Mapping: S047, S189 (the same clause in the track-switch journey: the open prompt is closed by the switch)
 
 A051 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:256
 Disposition: MATCHED
-Mapping: S051
+Mapping: S051, S192, S193 (the switched journey's late-acceptance refusal and its field-identical snapshot; the fork's byte-level SMF equality has no separate Swift predicate)
 
 A052 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:257
 Disposition: MATCHED
-Mapping: S047, S051, S052
+Mapping: S047, S051, S052, S192, S193 (the switched journey's no-write pair)
 
 A053 | AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch | src/checks/automation/automationpointmenus.cpp:258
 Disposition: MATCHED
-Mapping: S047, S051
+Mapping: S047, S051, S192, S193 (the switched journey's no-write pair)
 
 A054 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:264
 Disposition: MATCHED
@@ -363,15 +363,15 @@ Disposition: MATCHED
 Mapping: S028
 
 A073 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:351
-Disposition: PARTIAL
-Mapping/reason: The selection-change seam is not staged in Swift; the Swift stale scenario retires a pending point menu through a document write and the stale Delete refusal ([S037], [S038]).
+Disposition: MATCHED
+Mapping: S194 (a selection change dismisses the owned point menu: applyTimeSelection retires the open point menu)
 Original expression:
   QVERIFY2(!selectionInvalidated.session->isOpen(),
                "a selection change did not dismiss the owned point menu")
 
 A074 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:353
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session ownership and its replacement popup are retired native popup rendering.
+Disposition: MATCHED
+Mapping: S195 (the retired shared popup session is re-expressed as the page's own menu and prompt publication: neither stays open after the selection change)
 Original expression:
   QVERIFY2(!quick_popup::popupSession(songTab.view())->isOpen(),
                "point-menu invalidation left a replacement popup open")
@@ -404,8 +404,8 @@ Disposition: MATCHED
 Mapping: S001
 
 A081 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:372
-Disposition: PARTIAL
-Mapping/reason: The Swift parameter-switch predicate drops the prompt ([S047]); the selection-change seam that must spare the independent node-value prompt is not staged.
+Disposition: MATCHED
+Mapping: S196 (a selection change spares the open value prompt: the prompt survives applyTimeSelection)
 Original expression:
   QVERIFY2(automation_valueprompt::promptVisible(chrome),
                "a selection change cancelled the independent node-value prompt")
@@ -431,23 +431,23 @@ Disposition: MATCHED
 Mapping: S053, S055
 
 A087 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:391
-Disposition: PARTIAL
-Mapping/reason: The selection-change seam is not staged; the Swift predicates assert the confirmation content at open and through its own accept and cancel routes ([S055], [S065]).
+Disposition: MATCHED
+Mapping: S197 (a selection change spares the lane-delete confirmation: the confirmation stays open across applyTimeSelection)
 Original expression:
   QVERIFY2(laneDelete.session->isOpen(),
                "a selection change cancelled the independent lane-delete confirmation")
 
 A088 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:393
-Disposition: PARTIAL
-Mapping/reason: The selection-change seam is not staged; the Swift predicate asserts the confirmation prompt kind ([S055]) but not that the selection change spared it.
+Disposition: MATCHED
+Mapping: S198 (the spared confirmation keeps its delete content: promptKind equals AutomationPromptKind.confirmLaneDelete)
 Original expression:
   QVERIFY2(quick_popup::promptItem(*laneDelete.session, QLatin1String("ccDeleteConfirm")) !=
                    nullptr,
                "the selection change removed the lane-delete confirmation content")
 
 A089 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:396
-Disposition: PARTIAL
-Mapping/reason: The rendered Cancel button click is not exercised; the Swift presenter cancels through its own route ([S065]).
+Disposition: MATCHED
+Mapping: S202 (the drawer lane's real mouse click on the rendered automationPromptCancel closes the confirmation)
 Original expression:
   QVERIFY2(quick_popup::clickPromptButton(*laneDelete.session, QLatin1String("cancelButton")),
                "the confirmation Cancel button did not receive a real click")
@@ -480,8 +480,8 @@ Original expression:
           {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}))
 
 A096 | AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes | src/checks/automation/automationpointmenus.cpp:426
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered lane body is native rendering; the Swift predicate asserts the parameter stays in the catalogue ([S076]) but not its plot.
+Disposition: MATCHED
+Mapping: S203 (the unwritten lane projects its engine-default node: the drawer lane's drawn node items carry the projected flag before any menu interaction)
 Original expression:
   QTRY_VERIFY(!laneBody(volume).isEmpty())
 
@@ -809,13 +809,13 @@ Mapping: S079, S038
 
 A161 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:625
 Disposition: PARTIAL
-Mapping/reason: The Swift stale scenario has no prompt-visible predicate ([S037], [S038]).
+Mapping/reason: The earlier no-prompt-visible claim is obsolete: [S176] is exactly that guard in the Swift stale-target journey, whose no-write rows this test already cites ([S037], [S038]). It stays PARTIAL because no Swift predicate stages this foreign ruler division-menu takeover (A148-A155 remain GAP), so the late-prompt absence after that displacement is unproved.
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
 A162 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:626
 Disposition: PARTIAL
-Mapping/reason: The shared popup session state is not observed in Swift ([S037], [S038]).
+Mapping/reason: The shared popup session is retired native rendering; its Swift re-expression ([S175] dismisses the stale point menu, [S176] opens no prompt) covers the stale-target journey but not this test's foreign takeover, which still has no Swift ingress (A148-A155 remain GAP). PARTIAL stands for the takeover sequence.
 Original expression:
   QVERIFY(!quick_popup::popupSession(songTab.view())->isOpen())
 
@@ -908,7 +908,7 @@ Mapping: S038
 
 A181 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:712
 Disposition: PARTIAL
-Mapping/reason: The Swift stale scenario has no prompt-visible predicate ([S037], [S038]).
+Mapping/reason: The earlier no-prompt-visible claim is obsolete: [S176] is exactly that guard in the Swift stale-target journey, which the sibling no-write rows cite ([S037], [S038]). It stays PARTIAL because the foreign popup published during the open has no Swift predicate or ingress (A170-A177 remain GAP), so the late-prompt absence after it is unproved.
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
@@ -1085,8 +1085,8 @@ Disposition: MATCHED
 Mapping: S049, S050
 
 A216 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:821
-Disposition: PARTIAL
-Mapping/reason: The Swift switch fixture stages one CC point and asserts it survives ([S051]); the original two-point CC lane is not staged.
+Disposition: MATCHED
+Mapping: S199 (the switch journey leaves two CC points: lanePoints(panLane).count == 2)
 Original expression:
   QCOMPARE(points.size(), std::size_t{2})
 
@@ -1099,14 +1099,14 @@ Disposition: MATCHED
 Mapping: S051
 
 A219 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:824
-Disposition: PARTIAL
-Mapping/reason: The original second CC point is not staged in the Swift switch fixture ([S051]).
+Disposition: MATCHED
+Mapping: S200 (the second CC point keeps its tick: the second staged point's tick is 120)
 Original expression:
   QCOMPARE(points[1].tick, kOtherPointTick)
 
 A220 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:825
-Disposition: PARTIAL
-Mapping/reason: The original second CC point is not staged in the Swift switch fixture, so its value survival is unproved.
+Disposition: MATCHED
+Mapping: S201 (the second CC point keeps its value: the second staged point's value is 40)
 Original expression:
   QCOMPARE(points[1].value, kOtherPointValue)
 
@@ -1136,17 +1136,19 @@ Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone
 does not close any A entry. Preserve their surrounding setup and order in the paired source.
 S001-S027, S091-S094 and S173-S174 index drawerAutomationPromptTransactions;
-S028-S038, S079, S175-S176 drawerAutomationPointMenuDeleteAndStale; S039-S052 and S095-S103
-drawerAutomationDuplicatePromptAndParameterSwitch; S053-S078 plus S080-S081 and S104-S109
-drawerAutomationLaneDeleteConfirmation; and S082-S090 plus S110-S114
-drawerAutomationOutsidePressRetarget, all in
+S028-S038, S079, S175-S176 drawerAutomationPointMenuDeleteAndStale; S039-S052, S095-S103
+and S199-S201 drawerAutomationDuplicatePromptAndParameterSwitch; S053-S078 plus S080-S081
+and S104-S109 drawerAutomationLaneDeleteConfirmation; S082-S090 plus S110-S114
+drawerAutomationOutsidePressRetarget; S188-S193 drawerAutomationTrackSwitchInvalidation;
+and S194-S198 drawerAutomationSelectionInvalidation, all in
 src/checks/automation/automationpointmenus.swift.
 S116-S187 index the drawer lane's production predicates in
 src/checks/editorqml/tst_EditorDrawer.qml: S116-S131
 test_productionAutomationPointMenuDeleteAndDismiss, S132-S150 plus S177 and S183-S185
 test_productionAutomationSetValuePromptFocusRoute, S151-S155 plus S178, S180-S181 and S186
-test_productionAutomationTempoPromptFocusRoute and S156-S172 plus S179, S182 and S187
-test_productionAutomationSyntheticDefaultMenuRoute.
+test_productionAutomationTempoPromptFocusRoute, S156-S172 plus S179, S182, S187 and S203
+test_productionAutomationSyntheticDefaultMenuRoute, and S202
+test_productionAutomationMenusAndLaneCommands.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on a written node"
@@ -1702,3 +1704,51 @@ Anchor: message "the page stops publishing the plot as focused while the tempo p
 
 S187 | test_productionAutomationSyntheticDefaultMenuRoute | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the page stops publishing the plot as focused while the synthetic node's prompt owns focus"
+
+S188 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the second track stages its own lane point"
+
+S189 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "switching tracks closes the open CC prompt"
+
+S190 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the switched page lists the second track's pan lane"
+
+S191 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the switched page drops the first track's pan lane"
+
+S192 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the dropped prompt's late acceptance writes nothing"
+
+S193 | drawerAutomationTrackSwitchInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the switched prompt leaves both tracks and history untouched"
+
+S194 | drawerAutomationSelectionInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "a selection change dismisses the owned point menu"
+
+S195 | drawerAutomationSelectionInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the selection-dismissed menu leaves no prompt open"
+
+S196 | drawerAutomationSelectionInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "a selection change spares the open value prompt"
+
+S197 | drawerAutomationSelectionInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "a selection change spares the lane-delete confirmation"
+
+S198 | drawerAutomationSelectionInvalidation | src/checks/automation/automationpointmenus.swift
+Anchor: message "the spared confirmation keeps its delete content"
+
+S199 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
+Anchor: message "the switch journey leaves two CC points"
+
+S200 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
+Anchor: message "the second CC point keeps its tick"
+
+S201 | drawerAutomationDuplicatePromptAndParameterSwitch | src/checks/automation/automationpointmenus.swift
+Anchor: message "the second CC point keeps its value"
+
+S202 | test_productionAutomationMenusAndLaneCommands | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the confirmation's rendered Cancel button closes it"
+
+S203 | test_productionAutomationSyntheticDefaultMenuRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the unwritten lane projects its engine-default node"

@@ -458,9 +458,6 @@ public final class AutomationPage: EditorDrawerPage {
 
     // MARK: Refresh
 
-    /// Document, Undo/Redo, track or history publication: a frozen interaction or
-    /// modal whose captured revision, track or parameter identity no longer holds
-    /// cancels, then content rebuilds. Nothing here re-points a captured target.
     public func refreshFromDocument() {
         guard let session else { return }
         let revision = session.document.revision
@@ -474,7 +471,8 @@ public final class AutomationPage: EditorDrawerPage {
         if let prompt, stale(prompt.facts) { cancelPrompt() }
         if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
         if let live = menu,
-           stale(live.facts) || live.facts.parameter != activeParameter {
+           stale(live.facts) || live.facts.parameter != activeParameter
+               || live.facts.selection != selection {
             menu = nil
             publishMenuRows()
         }

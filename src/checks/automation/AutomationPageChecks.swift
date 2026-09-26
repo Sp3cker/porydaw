@@ -157,6 +157,9 @@ struct drawerAutomationAutomationFixture {
             let content: SessionChangeDomains = [.document, .bank]
             if !change.domains.intersection(content).isEmpty {
                 page?.refreshFromDocument()
+            } else if change.domains.contains(.selection),
+                      page?.menuOpen == true || page?.promptOpen == true {
+                page?.refreshFromDocument()
             } else if change.domains.contains(.cursor) {
                 page?.refreshEditCursor()
             }
@@ -319,6 +322,8 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationDuplicatePromptAndParameterSwitch(report, suite: session, service: service)
     drawerAutomationLaneDeleteConfirmation(report, suite: session, service: service)
     drawerAutomationOutsidePressRetarget(report, suite: session, service: service)
+    drawerAutomationSelectionInvalidation(report, suite: session, service: service)
+    drawerAutomationTrackSwitchInvalidation(report, suite: session, service: service)
     drawerAutomationDeleteTransactions(report, suite: session, service: service)
     drawerAutomationRangeEditAndClipboard(report, suite: session, service: service)
     drawerAutomationCrossLanePasteClamps(report, suite: session, service: service)

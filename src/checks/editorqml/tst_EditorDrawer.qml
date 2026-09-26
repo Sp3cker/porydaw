@@ -5848,6 +5848,21 @@ TestCase {
                 "initial Return preserves every written event")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "initial Return records no document change")
+        testCase.openAutomationTabMenu(volumeTab)
+        verify(testCase.triggerAutomationMenuRow(6),
+               "the Delete automation events row reopens the confirmation for Cancel")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        cancel = findChild(testCase.surface, "automationPromptCancel")
+        verify(cancel && cancel.visible, "the confirmation draws its Cancel button")
+        verify(waitForPolish(cancel.Window.window),
+               "the confirmation completed layout before clicking Cancel")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2, Qt.LeftButton)
+        tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
+                  "the confirmation's rendered Cancel button closes it")
+        compare(bootstrap.automationLaneEventCount(), beforeConfirmation,
+                "the rendered Cancel preserves every written event")
+        compare(bootstrap.automationDocumentRevision(), revision,
+                "the rendered Cancel records no document change")
         verify(testCase.clearAutomationLane(volumeTab),
                "an explicit Delete pointer activation empties the lane")
 

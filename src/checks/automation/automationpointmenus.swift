@@ -171,7 +171,8 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
                        what: "undo restores both duplicate occurrences")
 
     let switchID = "automation/AutomationEditingTest::parameterSwitchInvalidatesValuePrompt"
-    let switched = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    let switched = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
     switched.activate(switched.panLane)
     report.expect(switched.page.openPrompt(tick: 24, value: 64), cppID: switchID,
                   message: "a prompt opens on the CC lane")
@@ -185,8 +186,15 @@ func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, su
                   message: "Tempo commits its prompt")
     report.expectEqual(expected: ["0:150"], actual: switched.tempoValues, cppID: switchID,
                        what: "the tempo point stores the prompted BPM")
-    report.expectEqual(expected: ["24:64"], actual: switched.values(switched.panLane), cppID: switchID,
-                       what: "the CC lane stays untouched")
+    let ccPoints = switched.lanePoints(switched.panLane)
+    report.expectEqual(expected: ["24:64", "120:40"], actual: switched.values(switched.panLane),
+                       cppID: switchID, what: "the CC lane stays untouched")
+    report.expect(ccPoints.count == 2, cppID: switchID,
+                  message: "the switch journey leaves two CC points")
+    report.expect(ccPoints.count > 1 && ccPoints[1].tick == 120, cppID: switchID,
+                  message: "the second CC point keeps its tick")
+    report.expect(ccPoints.count > 1 && ccPoints[1].value == 40, cppID: switchID,
+                  message: "the second CC point keeps its value")
     report.expectEqual(expected: tempoBefore.revision + 1, actual: switched.document.revision, cppID: switchID,
                        what: "Tempo's acceptance is one revision")
     let routed = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
@@ -357,4 +365,87 @@ func drawerAutomationOutsidePressRetarget(_ report: CheckReport, suite: Document
     report.expect(page.handleEscape(), cppID: foreignID, message: "Escape claims the open point menu")
     report.expect(!page.menuOpen, cppID: foreignID, message: "Escape closes the open point menu")
     report.expectEqual(expected: menuEscapeBefore, actual: fixture.snapshot, cppID: foreignID, what: "Escape dismissal writes nothing")
+}
+
+@MainActor
+func drawerAutomationSelectionInvalidation(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let id = "automation/AutomationEditingTest::outsideRightClickDismissesPointMenu"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let before = fixture.snapshot
+    let selection = { (start: Tick, end: Tick) in
+        AutomationTimeSelection(range: TimeRange(startTick: start, endTick: end),
+                                scope: .lanes, lanes: [fixture.panLane], tempo: false)
+    }
+
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                          surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                            button: AutomationQtButton.right)
+    report.expect(page.menuOpen, cppID: id, message: "the point menu opens before selection changes")
+    fixture.session.applyTimeSelection(selection(20, 100))
+    report.expect(!page.menuOpen, cppID: id,
+                  message: "a selection change dismisses the owned point menu")
+    report.expect(!page.menuOpen && !page.hasPrompt, cppID: id,
+                  message: "the selection-dismissed menu leaves no prompt open")
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
+                       what: "dismissing the point menu for a selection writes nothing")
+
+    report.expect(page.openPrompt(tick: 24, value: 64), cppID: id,
+                  message: "the value prompt opens before selection changes")
+    fixture.session.applyTimeSelection(selection(30, 110))
+    report.expect(page.hasPrompt, cppID: id,
+                  message: "a selection change spares the open value prompt")
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
+                       what: "sparing the value prompt during selection writes nothing")
+    page.cancelPrompt()
+
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
+    _ = page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue)
+    report.expect(page.promptOpen, cppID: id,
+                  message: "the lane-delete confirmation opens before selection changes")
+    fixture.session.applyTimeSelection(selection(40, 130))
+    report.expect(page.promptOpen, cppID: id,
+                  message: "a selection change spares the lane-delete confirmation")
+    report.expect(page.promptKind == AutomationPromptKind.confirmLaneDelete.rawValue,
+                  cppID: id, message: "the spared confirmation keeps its delete content")
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
+                       what: "sparing the lane-delete confirmation during selection writes nothing")
+    page.cancelPrompt()
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
+                       what: "cancelling the spared confirmation writes nothing")
+}
+
+@MainActor
+func drawerAutomationTrackSwitchInvalidation(_ report: CheckReport, suite: DocumentSession,
+                                              service: ProjectService) {
+    let id = "automation/AutomationEditingTest::consumedValuePromptCannotFollowTrackSwitch"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64)])
+    let addedTrack = fixture.document.addTrack(voice: 0)
+    let otherPan: AutomationParameter = .controlChange(track: 1, controller: TimeDefaults.ccPan)
+    if addedTrack == 1 {
+        fixture.document.writeLane(track: 1, lane: .controller(TimeDefaults.ccPan), from: 120,
+                                   through: 120, points: [LaneWrite(tick: 120, value: 40)])
+    }
+    report.expect(addedTrack == 1 && fixture.values(otherPan) == ["120:40"], cppID: id,
+                  message: "the second track stages its own lane point")
+    fixture.activate(fixture.panLane)
+    let before = fixture.snapshot
+    report.expect(fixture.page.openPrompt(tick: 24, value: 64), cppID: id,
+                  message: "a prompt opens on the first track's node")
+    fixture.session.selectedTrack = 1
+    report.expect(!fixture.page.hasPrompt, cppID: id,
+                  message: "switching tracks closes the open CC prompt")
+    report.expect(fixture.page.catalogIndex(of: otherPan) >= 0, cppID: id,
+                  message: "the switched page lists the second track's pan lane")
+    report.expect(fixture.page.catalogIndex(of: fixture.panLane) == -1, cppID: id,
+                  message: "the switched page drops the first track's pan lane")
+    report.expect(!fixture.page.acceptPrompt(displayedValue: 10), cppID: id,
+                  message: "the dropped prompt's late acceptance writes nothing")
+    report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
+                       what: "the switched prompt leaves both tracks and history untouched")
 }
