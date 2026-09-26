@@ -87,7 +87,7 @@ private func editedDirectSound(
         try await store.applyVoicegroupEdit(
             lease: initial, operation: .set(.init(slot: directSoundSlot, value: changed, expected: original)))
     }
-    guard case .applied(let lease, let token) = result else {
+    guard case .applied(let lease, _, let token) = result else {
         throw BankLeasesCheckError.failed("DirectSound scalar edit conflicted")
     }
     try bankRequire(token == nil, "scalar edit unexpectedly minted a blank-slot token")
@@ -146,6 +146,16 @@ private func serviceBankCase(
 
 @MainActor
 internal func runBankLeasesSuite(_ report: CheckReport) {
+    bankCase("benchGuards", report) { _, store, song, first in
+        report.expect(song.isPlayable && first.slotViews.count == voicegroupSize,
+                      cppID: "vgbankcheck/VoicegroupBankTest::benchGuards",
+                      message: "the project opens and locates a playable song")
+        let warm = try bankAwait { try await store.loadBank(voicegroupArg: song.cfg.voicegroupArgument) }
+        report.expect(warm.bankToken == first.bankToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::benchGuards",
+                      message: "a warm reload reuses the loaded bank identity")
+    }
+
     bankCase("playableSongResolvesOnlyPlayableLabels", report) { _, store, _, _ in
         let found = try bankAwait { try await store.songMeta(label: "mus_gym") }
         try bankRequire(found.isPlayable, "mus_gym must resolve to a playable song")
@@ -207,7 +217,6 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
     }
 
     bankCase("unknownIdentityIsHardError", report) { root, store, song, initial in
-        // A fresh store at the same fixture root has no loaded voicegroup identity.
         let unknownStore = ProjectStore(projectRoot: root)
         _ = try bankAwait { try await unknownStore.open() }
         guard let value = initial.slotViews[directSoundSlot].voice else {
@@ -268,9 +277,14 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
             try await store.applyVoicegroupEdit(
                 lease: initial, operation: .set(.init(slot: blankSlot, value: blank, expected: nil)))
         }
-        guard case .applied(let materialized, let maybeToken) = result, let token = maybeToken else {
+        guard case .applied(let materialized, let materialization, let maybeToken) = result,
+              let token = maybeToken else {
             throw BankLeasesCheckError.failed("blank edit failed to mint a materialization token")
         }
+        report.expect(materialization?.firstAddedSlot == blankSlot &&
+                      materialization?.addedLines.isEmpty == false,
+                      cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+                      message: "a blank-slot edit publishes its first added slot and generated lines")
         try bankRequire(materialized.dirty && sameKindsExcept(initial, materialized, except: blankSlot) &&
                         materialized.slotViews[blankSlot].kind == .editable &&
                         materialized.slotViews[blankSlot].voice == blank,
@@ -278,7 +292,7 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
         let revert = try bankAwait {
             try await store.revertBlankSlot(lease: materialized, materializationToken: token)
         }
-        guard case .applied(let restored, let revertedToken) = revert else {
+        guard case .applied(let restored, _, let revertedToken) = revert else {
             throw BankLeasesCheckError.failed("materialization revert was not applied")
         }
         try bankRequire(revertedToken == nil && sameKindsExcept(initial, restored) &&
@@ -295,9 +309,6 @@ internal func runBankLeasesSuite(_ report: CheckReport) {
                         "spent token mutated the reverted bank")
     }
 
-    // Documented divergence: C++ tests a failed synth-definition save after this
-    // successful save. Synth-definition writes are verified-dead across the seam;
-    // projectstore-savebank/S04 covers the observable failed-save-leaves-dirty rule.
     bankCase("saveRefreshesBank", report) { _, store, song, initial in
         let before = try Data(contentsOf: URL(filePath: initial.sourcePath))
         let edited = try editedDirectSound(store, initial)

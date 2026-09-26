@@ -3,7 +3,6 @@ import PorydawCore
 import PorydawProject
 import PorydawProjectNative
 
-// A002 is a Qt session-pointer guard; A086–A092 depend on retired create/append APIs.
 internal let voicegroupEditingRowIDs: [String] = [
     "A001", "A003", "A004", "A005", "A006", "A007", "A008", "A009", "A010", "A011", "A012",
     "A013", "A014", "A015", "A016", "A017", "A018", "A019", "A020", "A021", "A022", "A023",
@@ -23,6 +22,7 @@ internal func runVoicegroupEditingSuite(_ report: CheckReport) {
         editingFamily(family, report)
     }
     editingDisplayNames(report)
+    editingConfiguredBaselineAndSynth(report)
 }
 
 private func editingExpect(_ row: String, _ result: Bool, _ report: CheckReport, _ message: String) {
@@ -468,6 +468,67 @@ private func editingFamily(_ family: Int, _ report: CheckReport) {
         }
     } catch {
         report.expect(false, cppID: "voicegroupsourceediting/A042", message: "A042: family \(family) fixture failed: \(error)")
+    }
+}
+
+private func editingConfiguredBaselineAndSynth(_ report: CheckReport) {
+    let baselineID = "voicegroupsourceediting/VoicegroupEditingChecks::configuredBaseline"
+    let synthID = "voicegroupsourceediting/VoicegroupEditingChecks::synthDescriptor"
+    do {
+        try withTempProjectCopy(prefix: "voicegroup-editing-synth") { root in
+            let midi = root.appendingPathComponent("sound/songs/midi/mus_gym.mid")
+            try FileManager.default.createDirectory(at: midi.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try Data([0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96,
+                      0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 4, 0, 0xff, 0x2f, 0]).write(to: midi)
+            let project = ProjectStore(projectRoot: root)
+            let opened = awaitValue { try await project.open() }
+            let song = awaitValue { try await project.songMeta(label: "mus_gym") }
+            guard case .success(let snapshot)? = opened,
+                  case .success(let info)? = song else {
+                report.fail(baselineID, "mus_gym metadata could not be read")
+                return
+            }
+            let bank = try VoicegroupStore(projectRoot: root.path)
+                .loadBank(voicegroupArg: info.cfg.voicegroupArgument)
+            report.expect(snapshot.isOpen && info.isPlayable &&
+                          info.cfg.voicegroupArgument == "_fixture_rich" &&
+                          bank.loadName == "fixture_rich" && bank.slotViews[0].voice != nil,
+                          cppID: baselineID,
+                          message: "the song's configured voicegroup argument resolves and loads the baseline bank")
+
+            let source = try openRichSource(at: root)
+            let slot = (0..<128).first { index in
+                guard let macro = source.voiceAt(slot: index)?.macro else { return false }
+                return macro == .directSound || macro == .directSoundNoResample || macro == .directSoundAlt
+            }
+            guard let slot, var voice = source.voiceAt(slot: slot) else {
+                report.fail(synthID, "rich bank has no DirectSound voice")
+                return
+            }
+            let synth = root.appendingPathComponent("sound/direct_sound_synth_data.inc")
+            try Data("VgcheckSynthPulse::\n\tset_synth_pulse 0x21, 0x43, 0x65, 0x87\n".utf8).write(to: synth)
+            voice.symbol = "VgcheckSynthPulse"
+            guard source.setVoice(slot: slot, voice: voice), try source.save(),
+                  let loaded = editingLoad(root: root, name: source.loadName) else {
+                report.fail(synthID, "edited synth voice failed to save or reload")
+                return
+            }
+            defer { voicegroup_free(loaded) }
+            let tone = editingTone(loaded, slot)
+            let bytes = tone.wav?.pointee.data.map { data in
+                (2...5).map { UInt8(bitPattern: data[$0]) }
+            }
+            report.expect(tone.type & ~UInt8(0x18) == 0 && tone.wav?.pointee.size == 0 &&
+                          bytes == [0x21, 0x43, 0x65, 0x87],
+                          cppID: synthID,
+                          message: "a saved synth descriptor loads through the voicegroup with its packed parameters")
+            report.expect(tone.wav?.pointee.data.map { UInt8(bitPattern: $0[1]) } == 0,
+                          cppID: synthID,
+                          message: "a saved synth descriptor loads with its zero waveform byte")
+        }
+    } catch {
+        report.fail(baselineID, "configured baseline or synth fixture failed: \(error)")
     }
 }
 

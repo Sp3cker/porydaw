@@ -1,10 +1,13 @@
 import Foundation
 import PorydawProject
+import PorydawProjectNative
 
 internal func runSynthCatalogSuite(_ report: CheckReport) {
     synthSoundDataChecks(report)
     synthVoicegroupChecks(report)
     synthStagedFixtureChecks(report)
+    synthFixtureAdsrChecks(report)
+    synthSingleColonLoadChecks(report)
 }
 
 private func synthSoundDataChecks(_ report: CheckReport) {
@@ -80,8 +83,14 @@ private func synthSoundDataChecks(_ report: CheckReport) {
         report.expectEqual(expected: VgSynthDesc(waveform: 0, baseDuty: 0x10, dutyStep: 0xF0,
                                        modDepth: 0xE0, phase: 0x80), actual: synths.find("SynthCheckInline"),
                            cppID: cppID, what: "S004: custom pulse descriptor parses hex parameters")
+        report.expectEqual(expected: "SynthCheckInline",
+                           actual: synths.symbolFor(VgSynthDesc(waveform: 0, baseDuty: 0x10,
+                                                                dutyStep: 0xF0, modDepth: 0xE0, phase: 0x80)),
+                           cppID: cppID, what: "a pulse descriptor resolves its original synth symbol")
         report.expectEqual(expected: VgSynthDesc(waveform: 1), actual: synths.find("SynthCheckSaw"), cppID: cppID,
                            what: "S005: saw descriptor parses from separate synth-data file")
+        report.expectEqual(expected: "SynthCheckSaw", actual: synths.symbolFor(VgSynthDesc(waveform: 1)),
+                           cppID: cppID, what: "a saw descriptor resolves its original synth symbol")
         report.expectEqual(expected: VgSynthDesc(waveform: 2), actual: synths.find("SynthCheckTriangle"), cppID: cppID,
                            what: "S006: triangle descriptor parses from separate synth-data file")
         report.expectEqual(expected: VgSynthDesc(waveform: 0, baseDuty: 0x20, dutyStep: 0x10,
@@ -219,6 +228,99 @@ private func synthStagedFixtureChecks(_ report: CheckReport) {
     report.expectEqual(expected: ["ProgrammableWaveData_fixture_pulse", "ProgrammableWaveData_fixture_saw"],
                        actual: VoicegroupSource.progWaveSymbols(root), cppID: cppID,
                        what: "S034: staged decomp programmable wave symbols match fixture")
+}
+
+private func synthFixtureAdsrChecks(_ report: CheckReport) {
+    let cppID = "swiftproject/SynthCatalogChecks::fixtureAdsr"
+    guard let fixture = CheckEnvironment.fixtureRoot else {
+        report.fail(cppID, "staged decomp fixture root is missing")
+        return
+    }
+    let defaults = VoicegroupSource.typicalAdsr(fixture)
+    let directSound = vgAdsrFamily(.directSound)
+    report.expect(!defaults.byFamily.isEmpty && defaults.byFamily.allSatisfy { family, adsr in
+        let chip = family != directSound
+        let max = chip ? 7 : 255
+        return adsr.release > 0 && adsr.release <= max &&
+            adsr.attack >= 0 && adsr.attack <= max && (!chip || adsr.attack > 0) &&
+            adsr.decay >= 0 && adsr.decay <= max &&
+            adsr.sustain >= 0 && adsr.sustain <= (chip ? 15 : 255)
+    }, cppID: cppID, message: "fixture family defaults are audible and chip-bounded")
+    report.expect(!defaults.bySymbol.isEmpty && defaults.bySymbol.values.allSatisfy { adsr in
+        adsr.release > 0 && adsr.release <= 255 && adsr.attack >= 0 && adsr.attack <= 255 &&
+            adsr.decay >= 0 && adsr.decay <= 255 && adsr.sustain >= 0 && adsr.sustain <= 255
+    }, cppID: cppID, message: "fixture symbol defaults are audible and bounded")
+}
+
+private func synthSingleColonLoadChecks(_ report: CheckReport) {
+    let cppID = "swiftproject/SynthCatalogChecks::singleColonLoad"
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "synth-colon-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    do {
+        let single = "sound/direct_sound_samples/colon_single.bin"
+        let double = "sound/direct_sound_samples/colon_double.bin"
+        let wave = "sound/programmable_wave_samples/colon_wave.pcm"
+        for (path, value) in [(single, UInt8(0x11)), (double, UInt8(0x22))] {
+            var bytes = [UInt8](repeating: 0, count: 20)
+            bytes[12] = 4
+            bytes.replaceSubrange(16..<20, with: repeatElement(value, count: 4))
+            let file = root.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try Data(bytes).write(to: file)
+        }
+        let waveFile = root.appendingPathComponent(wave)
+        try FileManager.default.createDirectory(at: waveFile.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+        try Data(repeating: 0x33, count: 16).write(to: waveFile)
+        try synthWrite(root, "sound/direct_sound_data.inc", """
+            DirectSoundWaveData_colon_double::
+            \t.incbin "\(double)"
+            DirectSoundWaveData_colon_single:
+            \t.incbin "\(single)"
+            ColonCheckSynth:
+            \tset_synth_25
+            """)
+        try synthWrite(root, "sound/programmable_wave_data.inc", """
+            ProgrammableWaveData_colon_wave:
+            \t.incbin "\(wave)"
+            """)
+        try synthWrite(root, "sound/voicegroups/coloncheck.inc", """
+            voicegroup_coloncheck::
+            \tvoice_directsound 60, 0, DirectSoundWaveData_colon_single, 255, 0, 255, 165
+            \tvoice_directsound 60, 0, DirectSoundWaveData_colon_double, 255, 0, 255, 165
+            \tvoice_programmable_wave 60, 0, ProgrammableWaveData_colon_wave, 0, 0, 15, 3
+            """)
+        let scan = VoicegroupSource.directSoundCatalog(root.path)
+        report.expect(scan.directSound.contains("DirectSoundWaveData_colon_single") &&
+                      scan.directSound.contains("DirectSoundWaveData_colon_double") &&
+                      !scan.directSound.contains("ColonCheckSynth") &&
+                      scan.synths.find("ColonCheckSynth") != nil &&
+                      VoicegroupSource.progWaveSymbols(root.path).contains("ProgrammableWaveData_colon_wave"),
+                      cppID: cppID, message: "single-colon sample labels resolve in both sound-data scans")
+        let loaded = root.path.withCString { path in
+            "coloncheck".withCString { voicegroup_load(path, $0, nil) }
+        }
+        guard let loaded else { report.fail(cppID, "single-colon bank did not load"); return }
+        defer { voicegroup_free(loaded) }
+        let sampleSizes = [0, 1].map { slot -> (UInt32?, UInt8?) in
+            let tone = withUnsafePointer(to: &loaded.pointee.voices) {
+                $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[slot] }
+            }
+            return (tone.wav?.pointee.size, tone.wav?.pointee.data.map { UInt8(bitPattern: $0[0]) })
+        }
+        report.expect(sampleSizes[0].0 == 4 && sampleSizes[0].1 == 0x11 &&
+                      sampleSizes[1].0 == 4 && sampleSizes[1].1 == 0x22,
+                      cppID: cppID, message: "single-colon sample labels load with exact wave bytes")
+        let waveTone = withUnsafePointer(to: &loaded.pointee.voices) {
+            $0.withMemoryRebound(to: ToneData.self, capacity: 128) { $0[2] }
+        }
+        report.expect(waveTone.wavePointer != nil, cppID: cppID,
+                      message: "programmable wave voices resolve a wave pointer")
+    } catch {
+        report.fail(cppID, "single-colon fixture failed: \(error)")
+    }
 }
 
 private func synthWrite(_ root: URL, _ relativePath: String, _ contents: String) throws {

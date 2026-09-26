@@ -1,6 +1,6 @@
 /// An adopted bank publication after an edit, or a confirmed not-applied conflict.
 public enum ProjectBankEditOutcome: Sendable {
-    case applied(lease: ProjectBankLease, materializationToken: UInt64?)
+    case applied(lease: ProjectBankLease, materialization: BlankSlotMaterialization?, materializationToken: UInt64?)
     case conflict(voicegroup: VoicegroupId)
 }
 
@@ -57,7 +57,8 @@ extension ProjectStore {
         switch result {
         case .applied(let applied):
             let adopted = try adoptBankLease(view: applied.view)
-            return .applied(lease: adopted, materializationToken: applied.materializationToken)
+            return .applied(lease: adopted, materialization: applied.materialization,
+                            materializationToken: applied.materializationToken)
         case .conflict(let conflict):
             return .conflict(voicegroup: conflict.voicegroup)
         }

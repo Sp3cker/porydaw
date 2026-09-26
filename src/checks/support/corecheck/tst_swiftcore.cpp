@@ -123,11 +123,6 @@ void SwiftCoreTest::voicegroupEditing()
     pdc_suite_run(PDC_SUITE_VOICE_EDITING, reportSwiftCheck, this);
 }
 
-void SwiftCoreTest::catalogAbsent()
-{
-    pdc_suite_run(PDC_SUITE_CATALOG_ABSENT, reportSwiftCheck, this);
-}
-
 void SwiftCoreTest::projectStoreChecks()
 {
     pdc_suite_run(PDC_SUITE_PROJECTSTORE_CHECKS, reportSwiftCheck, this);

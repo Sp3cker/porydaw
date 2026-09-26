@@ -1,14 +1,14 @@
 import Foundation
 import PorydawProject
 
-// Only exact savecore.cpp stimulus/oracle ports enter the row inventory.
-// A051/A076 preserve their bank-byte oracles but not the MainWindow song save/undo stimulus.
 internal let saveCoreRowIDs: [String] = ["A079"]
 
 internal func runSaveCoreSuite(_ report: CheckReport) {
     saveCoreBankRoundTrip(report)
     saveCoreSourceSaveAndPreview(report)
     saveCoreSectionRefusals(report)
+    saveCoreSynthWriteGates(report)
+    saveCoreFailedSaveRedirty(report)
 }
 
 private func saveCoreBankRoundTrip(_ report: CheckReport) {
@@ -46,8 +46,6 @@ private func saveCoreBankRoundTrip(_ report: CheckReport) {
                            cppID: "savecore/A051",
                            what: "A051: partial — bank-only save changes its on-disk voicegroup bytes")
 
-        // The C++ test undoes the voice edit and saves again; use the public bank
-        // operation rather than synthesizing a QWidget undo shortcut.
         let secondEdit = try store.applyVoicegroupEdit(input: .init(
             id: initial.id, operation: .set(.init(slot: 0, value: voice, expected: changed))))
         guard case .applied = secondEdit else {
@@ -205,5 +203,177 @@ private func saveCoreSectionRefusals(_ report: CheckReport) {
                       message: "S22: save writes only the selected section into the sibling-changed image")
     } catch {
         report.fail("source-save/S19", "S19: section refusal fixture failed: \(error)")
+    }
+}
+
+private func saveCoreSynthWriteGates(_ report: CheckReport) {
+    let cppID = "source-save/SaveCoreChecks::synthWriteGates"
+    let descriptor = VgSynthDesc(baseDuty: 0x21, dutyStep: 0x43, modDepth: 0x65, phase: 0x87)
+    for caseName in ["write", "collision", "bare", "unwired"] {
+        do {
+            try withTempProjectCopy(prefix: "savecore-synth-\(caseName)") { root in
+                let synth = root.appendingPathComponent("sound/direct_sound_synth_data.inc")
+                let macros = root.appendingPathComponent("asm/macros/music_voice.inc")
+                let assembly = root.appendingPathComponent("data/sound_data.s")
+                if caseName != "bare" {
+                    try FileManager.default.createDirectory(at: macros.deletingLastPathComponent(),
+                                                            withIntermediateDirectories: true)
+                    try Data(".macro set_synth_pulse a,b,c,d\n.endm\n".utf8).write(to: macros)
+                }
+                if caseName != "unwired" {
+                    try FileManager.default.createDirectory(at: assembly.deletingLastPathComponent(),
+                                                            withIntermediateDirectories: true)
+                    try Data("\t.include \"sound/direct_sound_data.inc\"\n\t.include \"sound/music_player_table.inc\"\n".utf8).write(to: assembly)
+                }
+                if caseName == "write" {
+                    try Data("\t.align 2\r\nSynthExisting::\r\n\tset_synth_saw\r\n".utf8).write(to: synth)
+                }
+                if caseName == "bare" {
+                    try Data("SynthCheckSaw::\n\tset_synth_saw\n".utf8).write(to: synth)
+                }
+                let store = ProjectStore(projectRoot: root)
+                guard case .success? = awaitValue({ try await store.open() }) else {
+                    report.fail(cppID, "\(caseName): could not open staged project")
+                    return
+                }
+                let minted = awaitValue { try await store.mintSynth(descriptor) }
+                if caseName == "bare" {
+                    report.expectEqual(expected: "SynthCheckSaw",
+                                       actual: VoicegroupSource.synthInstruments(root.path)
+                                           .symbolFor(VgSynthDesc(waveform: 1)),
+                                       cppID: cppID,
+                                       what: "a non-creatable catalog resolves an existing synth symbol by descriptor")
+                }
+                if caseName == "bare" {
+                    report.expect({
+                        if case .failure(let error)? = minted {
+                            return String(describing: error).contains("set_synth_*")
+                        }
+                        return false
+                    }(), cppID: cppID, message: "projects without defining macros cannot create synths")
+                    return
+                }
+                guard case .success(let symbol)? = minted,
+                      case .success(let first)? = awaitValue({
+                          try await store.loadBank(voicegroupArg: "_fixture_rich")
+                      }), let old = first.slotViews[0].voice else {
+                    report.fail(cppID, "\(caseName): could not mint or load bank")
+                    return
+                }
+                var voice = old
+                voice.symbol = symbol
+                let mintedVoice = voice
+                guard case .success(.applied(let edited, _, _))? = awaitValue({
+                    try await store.applyVoicegroupEdit(
+                        lease: first, operation: .set(.init(slot: 0, value: mintedVoice, expected: old)))
+                }) else {
+                    report.fail(cppID, "\(caseName): could not edit bank with minted synth")
+                    return
+                }
+                if caseName == "collision" {
+                    let existing = Data("\t.align 2\n\(symbol)::\n\tset_synth_pulse 0x01, 0x02, 0x03, 0x04\n".utf8)
+                    try existing.write(to: synth)
+                    let refused = awaitValue { try await store.saveVoicegroup(lease: edited) }
+                    report.expect({
+                        if case .failure(let error)? = refused {
+                            return String(describing: error).contains(symbol) &&
+                                (try? Data(contentsOf: synth)) == existing
+                        }
+                        return false
+                    }(), cppID: cppID,
+                    message: "an existing symbol with a different descriptor is rejected without mutation")
+                    return
+                }
+                if caseName == "unwired" {
+                    let refused = awaitValue { try await store.saveVoicegroup(lease: edited) }
+                    report.expect({
+                        if case .failure(let error)? = refused {
+                            return String(describing: error).contains("direct_sound_synth_data.inc")
+                        }
+                        return false
+                    }(), cppID: cppID,
+                    message: "an unwired project rejects synth writes naming the synth data file")
+                    return
+                }
+                guard case .success(.some(let saved))? = awaitValue({
+                    try await store.saveVoicegroup(lease: edited)
+                }), !saved.dirty else {
+                    report.fail(cppID, "write: bank did not persist the synth")
+                    return
+                }
+                let grown = try Data(contentsOf: synth)
+                report.expect(grown.enumerated().allSatisfy { index, byte in
+                    byte != 10 || index > 0 && grown[index - 1] == 13
+                }, cppID: cppID, message: "written synth definitions are CRLF")
+                let wired = try Data(contentsOf: assembly)
+                report.expectEqual(expected: Data((
+                    "\t.include \"sound/direct_sound_data.inc\"\n" +
+                    "\t.include \"sound/direct_sound_synth_data.inc\"\n" +
+                    "\t.include \"sound/music_player_table.inc\"\n"
+                ).utf8), actual: wired, cppID: cppID,
+                what: "synth write preserves sibling includes in exact order")
+                let second = awaitValue { try await store.saveVoicegroup(lease: saved) }
+                report.expect({
+                    if case .success? = second {
+                        return (try? Data(contentsOf: synth)) == grown &&
+                            (try? Data(contentsOf: assembly)) == wired &&
+                            String(decoding: wired, as: UTF8.self)
+                            .components(separatedBy: "direct_sound_synth_data.inc").count == 2
+                    }
+                    return false
+                }(), cppID: cppID, message: "re-saving the same definitions is a byte no-op")
+            }
+        } catch {
+            report.fail(cppID, "\(caseName): synth write fixture failed: \(error)")
+        }
+    }
+}
+
+private func saveCoreFailedSaveRedirty(_ report: CheckReport) {
+    let cppID = "source-save/SaveCoreChecks::failedSaveRedirty"
+    do {
+        try withTempProjectCopy(prefix: "savecore-redirty") { root in
+            let store = ProjectStore(projectRoot: root)
+            guard case .success? = awaitValue({ try await store.open() }),
+                  case .success(let first)? = awaitValue({
+                      try await store.loadBank(voicegroupArg: "_fixture_rich")
+                  }), let original = first.slotViews[0].voice else {
+                report.fail(cppID, "could not open redirty fixture")
+                return
+            }
+            var changed = original
+            changed.key = original.key == 60 ? 61 : 60
+            let firstChange = changed
+            guard case .success(.applied(let edited, _, _))? = awaitValue({
+                try await store.applyVoicegroupEdit(
+                    lease: first, operation: .set(.init(slot: 0, value: firstChange, expected: original)))
+            }) else {
+                report.fail(cppID, "could not edit bank before save failure")
+                return
+            }
+            let sourcePath = edited.sourcePath
+            try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: sourcePath)
+            defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: sourcePath) }
+            guard case .failure? = awaitValue({ try await store.saveVoicegroup(lease: edited) }),
+                  let previous = edited.slotViews[0].voice else {
+                report.fail(cppID, "immutable source did not reject the save")
+                return
+            }
+            var next = previous
+            next.release = previous.release == 3 ? 4 : 3
+            let secondChange = next
+            let followup = awaitValue {
+                try await store.applyVoicegroupEdit(
+                    lease: edited, operation: .set(.init(slot: 0, value: secondChange, expected: previous)))
+            }
+            report.expect({
+                if case .success(.applied(let newLease, _, _))? = followup {
+                    return newLease.dirty && newLease.slotViews[0].voice?.release == next.release
+                }
+                return false
+            }(), cppID: cppID, message: "an edit after a failed save republishes a dirty view")
+        }
+    } catch {
+        report.fail(cppID, "redirty fixture failed: \(error)")
     }
 }

@@ -36,7 +36,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 try await store.applyVoicegroupEdit(
                     lease: first, operation: .set(.init(slot: 0, value: changed, expected: original)))
             }
-            guard case .success(.applied(let edited, _)) = edit else {
+            guard case .success(.applied(let edited, _, _)) = edit else {
                 saveFail(["S01", "S02", "S05"], report,
                          "cannot edit fixture bank: \(String(describing: edit))")
                 return
@@ -137,7 +137,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 try await store.applyVoicegroupEdit(
                     lease: first, operation: .set(.init(slot: 0, value: changed, expected: original)))
             }
-            guard case .success(.applied(let edited, _)) = edit else {
+            guard case .success(.applied(let edited, _, _)) = edit else {
                 saveExpect("S04", false, report, "cannot edit writable fixture: \(String(describing: edit))")
                 return
             }
@@ -234,7 +234,7 @@ internal func runProjectStoreSaveSuite(_ report: CheckReport) {
                 try await store.applyVoicegroupEdit(
                     lease: lease, operation: .set(.init(slot: 0, value: changed, expected: original)))
             }
-            guard case .success(.applied(let edited, _)) = edit else {
+            guard case .success(.applied(let edited, _, _)) = edit else {
                 saveFail(["S08", "S09"], report,
                          "minted voice cannot preview: \(String(describing: edit))")
                 return

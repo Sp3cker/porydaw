@@ -43,7 +43,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             changed.key = original.key == 60 ? 61 : 60
             let scalarEdit: VoicegroupEditOperation = .set(.init(slot: 0, value: changed, expected: original))
             let setResult = awaitValue { try await store.applyVoicegroupEdit(lease: first, operation: scalarEdit) }
-            guard case .success(.applied(let edited, let scalarToken)) = setResult else {
+            guard case .success(.applied(let edited, _, let scalarToken)) = setResult else {
                 editFail(["E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09"],
                          report, "fixture scalar edit failed: \(String(describing: setResult))")
                 return
@@ -75,7 +75,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                 try await store.applyVoicegroupEdit(
                     lease: edited, operation: .set(.init(slot: blank, value: blankVoice, expected: nil)))
             }
-            guard case .success(.applied(let materialized, let maybeToken)) = insert,
+            guard case .success(.applied(let materialized, _, let maybeToken)) = insert,
                   let token = maybeToken else {
                 editFail(["E03", "E04", "E05", "E06", "E07", "E08", "E09"], report,
                          "blank-slot insertion failed or omitted its token: \(String(describing: insert))")
@@ -90,7 +90,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
             let reverted = awaitValue {
                 try await store.revertBlankSlot(lease: materialized, materializationToken: token)
             }
-            guard case .success(.applied(let restored, let revertedToken)) = reverted else {
+            guard case .success(.applied(let restored, _, let revertedToken)) = reverted else {
                 editFail(["E04", "E05", "E06", "E07", "E08", "E09"], report,
                          "blank-slot revert failed: \(String(describing: reverted))")
                 return
@@ -184,7 +184,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                         return
                     }
                     let blankValue = VgVoice(macro: .square1, sustain: 15)
-                    guard case .success(.applied(let materialized, let maybeToken)) = awaitValue({
+                    guard case .success(.applied(let materialized, _, let maybeToken)) = awaitValue({
                         try await expiryStore.applyVoicegroupEdit(
                             lease: fresh,
                             operation: .set(.init(slot: blankSlot, value: blankValue, expected: nil)))
@@ -214,7 +214,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                                "an external byte change to a clean bank reloads it and burns its minted tokens")
 
                     guard let pendingSlot = current.slotViews.firstIndex(where: { $0.kind == .none }),
-                          case .success(.applied(let pending, let maybePendingToken)) = awaitValue({
+                          case .success(.applied(let pending, _, let maybePendingToken)) = awaitValue({
                               try await expiryStore.applyVoicegroupEdit(
                                   lease: current,
                                   operation: .set(.init(slot: pendingSlot, value: blankValue, expected: nil)))
@@ -242,7 +242,7 @@ internal func runProjectStoreEditSuite(_ report: CheckReport) {
                     }
                     if case .failure(let conflict) = overlapped, conflict is VoicegroupStoreError,
                        case .success(let kept) = retained,
-                       case .success(.applied(let restored, _)) = undone {
+                       case .success(.applied(let restored, _, _)) = undone {
                         editExpect("E11", kept.dirty && kept.slotViews[pendingSlot].voice == blankValue &&
                                    !restored.dirty && restored.slotViews[pendingSlot].voice == nil, report,
                                    "an external change overlapping pending edits fails visibly and keeps them")

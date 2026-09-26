@@ -4,6 +4,7 @@ import PorydawProjectNative
 
 internal func runVoicegroupContextSuite(_ report: CheckReport) {
     fileIoChecks(report)
+    runVoicegroupLoaderChecks(report)
     projectContextChecks(report)
 }
 

@@ -212,14 +212,6 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = project + editor,
              .platforms = Platform::MacOS});
         result.push_back(
-            {.name = "projectstore-checks-catalog-absent",
-             .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "catalogAbsent"}),
-             .handler = swiftCore,
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = project + editor,
-             .platforms = Platform::MacOS});
-        result.push_back(
             {.name = "projectstore-context",
              .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "voicegroupContext"}),
              .handler = swiftCore,

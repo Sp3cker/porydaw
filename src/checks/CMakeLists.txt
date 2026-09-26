@@ -209,7 +209,7 @@ if(APPLE)
         projectstore/VoicegroupValueChecks.swift
         projectstore/SaveCoreChecks.swift
         projectstore/VoicegroupEditingChecks.swift
-        projectstore/VoicegroupCatalogAbsentChecks.swift
+        projectstore/VoicegroupLoaderChecks.swift
         projectstore/VoicegroupContextChecks.swift
         projectstore/VoicegroupBankLogicChecks.swift
         projectstore/ProjectStoreActorChecks.swift

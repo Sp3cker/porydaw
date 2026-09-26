@@ -786,7 +786,7 @@ private func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedBa
 
 private func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
     switch result {
-    case let .applied(lease, token): appliedBank(lease, token: token)
+    case let .applied(lease, _, token): appliedBank(lease, token: token)
     case .conflict: throw ProjectServiceError.bankConflict
     }
 }

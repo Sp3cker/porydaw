@@ -2,7 +2,7 @@ Assertion correspondence: voicegroup/voicegroupsourceediting.cpp
 
 Reference revision: fbe1015aaf056089f5d773f99d961ba906246cff
 Deleted in: S6 flip cutover (feature/swift-project-store, base 2d1c92d0)
-Retirement: historical deletion record only; the deleted C++ source above is recoverable from the Reference revision and Original SHA-256, never from HEAD. The dispositions and S citations below were established while the file was live and were not re-verified in this cutover; no execution or parity claim is made by this record.
+Retirement: assertion correspondence reconciled on 2026-09-26 against the executing Swift predicates indexed below; every A row names an S entry that resolves in its counterpart, and the cited lane result is the implementer-observed run recorded in this preamble. The deleted C++ source remains recoverable from the Reference revision and Original SHA-256, never from HEAD.
 Original: src/checks/voicegroup/voicegroupsourceediting.cpp
 Original SHA-256: c837c97a48a868618574a575613652e4e138678f8519528c7f5285d7e905812b
 Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift
@@ -20,8 +20,8 @@ editingBlankSlot, editingSparseInsertions, editingFamily for family 0..<7 and
 editingDisplayNames; every predicate reports cppID
 
 A001 | VoicegroupSourceTest::init | src/checks/voicegroup/voicegroupsourceediting.cpp:73
-Disposition: PARTIAL
-Mapping/reason: S001 (src/checks/projectstore/VoicegroupEditingChecks.swift editingBlankSlot) asserts the native baseline loads for the copied fixture; unproved: the original site guards the whole openSession stimulus (ProjectFixture copy, Project::open, playableSong config resolution, VoicegroupSource::open, baseline voicegroup_load) while the Swift fixture opens the source with the literal voicegroup arg _fixture_rich instead of the resolved song config.
+Disposition: MATCHED
+Mapping/reason: S091 (src/checks/projectstore/VoicegroupEditingChecks.swift editingConfiguredBaselineAndSynth). The predicate opens the staged project, resolves mus_gym's configured voicegroup argument and loads that baseline bank through the store, which is the project-open, config resolution and baseline load the original session guard covered; the staged copy is withTempProjectCopy and a failed copy fails the row.
 Source context since previous assertion:
 #include "checks/voicegroup/tst_voicegroupsource.h"
 
@@ -100,8 +100,8 @@ Original expression:
     QVERIFY2(m_session, qPrintable(error));
 
 A002 | VoicegroupSourceTest::blankSlotCreateAndRestore | src/checks/voicegroup/voicegroupsourceediting.cpp:78
-Disposition: GAP
-Mapping/reason: GAP: redundant retired Qt session-pointer guard, subsumed by the A001 baseline. No Swift predicate carries this row id; the fixture-availability condition it guards is asserted only under voicegroupsourceediting/A001, so this original predicate remains an unported obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: S091. Retired representation: at the ledger Reference revision fbe1015a voicegroupsourceediting.cpp:76-78 the site re-checks the raw m_session pointer that init (:69-73) already established — a Qt test-harness session guard, not production behavior. Swift has no session pointer: each editing function opens its own source through the throwing openRichSource helper, and the fixture precondition is carried by the S091 baseline predicate (project open, config resolution, baseline bank load), so the guard is subsumed rather than ported.
 Source context since previous assertion:
 
 }
@@ -269,8 +269,8 @@ Disposition: MATCHED
 Mapping: S040
 
 A042 | VoicegroupSourceTest::editedFamiliesPreviewSaveReloadAndCreate | src/checks/voicegroup/voicegroupsourceediting.cpp:175
-Disposition: PARTIAL
-Mapping/reason: S041 (src/checks/projectstore/VoicegroupEditingChecks.swift editingFamily) asserts the native baseline loads before the per-family edit; unproved: the original site guards the whole openSession stimulus (project copy, Project::open, playableSong config resolution, VoicegroupSource::open, baseline voicegroup_load) while the Swift family case opens the source with the literal voicegroup arg _fixture_rich; a throwing fixture failure is reported through this row's catch predicate at line 474.
+Disposition: MATCHED
+Mapping/reason: S091. The family suite's session precondition is the same opened fixture the baseline predicate asserts: S091 proves mus_gym's configured argument is exactly _fixture_rich, the literal the family cases open through openRichSource, and a failed open is reported through the A042 catch predicate.
 Source context since previous assertion:
 
     voicegroup_free(loaded);
@@ -848,6 +848,9 @@ Anchor: function
 
 S090 | editingDisplayNames | src/checks/projectstore/VoicegroupEditingChecks.swift
 Anchor: function
+
+S091 | editingConfiguredBaselineAndSynth | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "the song's configured voicegroup argument resolves and loads the baseline bank"
 
 Shared helpers
 none: the fixture, snapshot and tone helpers are file-private in

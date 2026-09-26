@@ -6,11 +6,13 @@ Original: src/checks/voicegroup/tst_voicegroupbank.cpp
 Original SHA-256: 478ab4b4f1233477838cc8a2367023c388d10032cd324d960677fa91593a75e4
 Swift counterpart: src/checks/projectstore/BankLeasesChecks.swift
 Additional Swift counterpart: src/checks/projectstore/ProjectStoreSaveChecks.swift (write-failure row S04 only, for A089-A093)
+Additional Swift counterpart: src/checks/projectstore/SaveCoreChecks.swift (failed-save re-dirty row S053, for A087/A088)
+Additional Swift counterpart: src/checks/projectstore/VoicegroupEditingChecks.swift (config-resolved baseline row S052, for A077)
 Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
 Shared helper: src/checks/projectstore/ProjectStoreCheckSupport.swift
-Shared SHA-256: 2bb40884c45fa62a7a88a6acfaf210e5766d3be4e58197b1759f8701e4e72612
+Shared SHA-256: 73eae643a6c9954b584a070c8a18eff64d0b348007b79a4777180236c734b1b4
 Shared helper: src/checks/support/corecheck/CoreCheckSupport.swift
-Shared SHA-256: 5047f1f06c61f42b946459a73e1482e09151d8ff95e6743d6790388e7e240eef
+Shared SHA-256: cd4e17f2b1517fb3f74f25d5312d21484d2dc439eea96537fec28fe8b2505dfb
 
 
 Command: deno task verify --filter vgbankcheck --verbose
@@ -428,8 +430,8 @@ Disposition: MATCHED
 Mapping: S029
 
 A063 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). The Swift store result publishes the materialization token but not the record fields; unproved: firstAddedSlot == 13, which the ProjectStore edit result does not carry (BlankSlotMaterialization exists in PorydawProject but the store publishes only materializationToken).
+Disposition: MATCHED
+Mapping/reason: S051 (src/checks/projectstore/BankLeasesChecks.swift blankMaterializationRevertAndSpentToken). The applied edit result now publishes the blank-slot materialization record end to end, and the predicate requires firstAddedSlot == 13 (the fixture blank slot), the same field the original read from the applied result.
 Source context since previous assertion:
 
 
@@ -437,8 +439,8 @@ Original expression:
     QCOMPARE(applied->materialization->firstAddedSlot, kBlankSlot);
 
 A064 | VoicegroupBankTest::blankMaterializationRevertAndSpentToken | src/checks/voicegroup/tst_voicegroupbank.cpp:253
-Disposition: PARTIAL
-Mapping/reason: Related predicate S029 (src/checks/projectstore/BankLeasesChecks.swift). Unproved: the materialization record non-empty addedLines, which the ProjectStore edit result does not publish; only the token presence is asserted.
+Disposition: MATCHED
+Mapping/reason: S051. The same predicate requires the published materialization to carry non-empty addedLines, the original's addedLines.isEmpty() negation.
 Source context since previous assertion:
 
 
@@ -494,8 +496,8 @@ Disposition: MATCHED
 Mapping: S010, S011
 
 A077 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related predicate S036 (src/checks/projectstore/BankLeasesChecks.swift saveRefreshesBank). The Swift row reads the voicegroup source bytes directly from initial.sourcePath with a throwing Data read before and after the save; unproved: the VoicegroupSource open with song.cfg.voicegroupArg, which the Swift row replaces with a direct byte read.
+Disposition: MATCHED
+Mapping/reason: S052 (src/checks/projectstore/VoicegroupEditingChecks.swift editingConfiguredBaselineAndSynth). The predicate resolves mus_gym's configured voicegroup argument and loads the baseline bank through that argument, the config-resolved open the original performed with song.cfg.voicegroupArg.
 Source context since previous assertion:
 
     VoicegroupSource source;
@@ -537,8 +539,8 @@ Disposition: MATCHED
 Mapping: S036
 
 A086 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:298
-Disposition: PARTIAL
-Mapping/reason: Related predicates S008 and S036 (src/checks/projectstore/BankLeasesChecks.swift and :305). The fixture requires an editable Square 1 slot on the loaded bank and S036 requires sameKindsExcept across the save, so the saved bank keeps that slot; unproved: no predicate runs firstSquareSlot over the saved lease itself, and the following re-dirty stimulus is not ported.
+Disposition: MATCHED
+Mapping/reason: S008, S036, S053. bankFixture requires the fixture bank to carry an editable Square 1 voice with a populated voice, and saveRefreshesBank requires sameKindsExcept(initial, saved) plus an unchanged non-edited slot set across the save, so the saved lease keeps that editable slot; the following re-dirty edit is covered by S053 under the accepted alternate failure stimulus (immutable source), the substitution A089-A093 record.
 Source context since previous assertion:
 
 
@@ -548,8 +550,8 @@ Original expression:
     QVERIFY2(squareSlot >= 0, "fixture_rich must retain a Square 1 voice");
 
 A087 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent Swift assertion exists. The re-dirty edit on the saved Square 1 slot belongs to the failed-synth-definition save stimulus, which is verified dead across the seam and is not ported (the divergence is recorded at src/checks/projectstore/BankLeasesChecks.swift); this site remains an open obligation.
+Disposition: MATCHED
+Mapping/reason: S053 (src/checks/projectstore/SaveCoreChecks.swift saveCoreFailedSaveRedirty). The predicate applies an edit after a failed save and requires the applied result (the original redirtied && error.isEmpty()), under the accepted alternate failure stimulus (immutable source; the fork's unknown-synth-definition save is unreachable because mintSynth gates definitions — the same substitution A089-A093 record).
 Source context since previous assertion:
 
     VgVoice square = *saved->slotViews[squareSlot].voice;
@@ -562,8 +564,8 @@ Original expression:
     QVERIFY2(redirtied && error.isEmpty(), qPrintable(error));
 
 A088 | VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty | src/checks/voicegroup/tst_voicegroupbank.cpp:306
-Disposition: GAP
-Mapping/reason: No equivalent Swift assertion exists. The re-dirty view guard belongs to the unported failed-synth-definition save stimulus (src/checks/projectstore/BankLeasesChecks.swift); this site remains an open obligation.
+Disposition: MATCHED
+Mapping/reason: S053. The predicate requires the post-failure edit to publish an applied dirty view carrying the new release, the original dirtyView guard.
 Source context since previous assertion:
 
     const auto *const dirtyView = std::get_if<VoicegroupEditAppliedResult>(&*redirtied);
@@ -790,6 +792,15 @@ Anchor: message "refused old-store edit leaves the native store unchanged"
 
 S050 | bankBindingIdentityIsolation | src/checks/workspace/bank_sharing.swift
 Anchor: message "refused old-store edit does not dirty the replacement source"
+
+S051 | runBankLeasesSuite | src/checks/projectstore/BankLeasesChecks.swift
+Anchor: message "a blank-slot edit publishes its first added slot and generated lines"
+
+S052 | editingConfiguredBaselineAndSynth | src/checks/projectstore/VoicegroupEditingChecks.swift
+Anchor: message "the song's configured voicegroup argument resolves and loads the baseline bank"
+
+S053 | saveCoreFailedSaveRedirty | src/checks/projectstore/SaveCoreChecks.swift
+Anchor: message "an edit after a failed save republishes a dirty view"
 
 Shared helpers
 src/checks/projectstore/ProjectStoreCheckSupport.swift (awaitValue) and

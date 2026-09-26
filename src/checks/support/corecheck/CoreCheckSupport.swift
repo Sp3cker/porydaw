@@ -201,8 +201,6 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         runSaveCoreSuite(report)
     case 20:
         runVoicegroupEditingSuite(report)
-    case 21:
-        runVoicegroupCatalogAbsentSuite(report)
     case 22:
         runVoicegroupEditingSuite(report)
         runSaveCoreSuite(report)
