@@ -964,3 +964,6 @@ Anchor: message "large lane height clamps to font-derived ceiling"
 
 S192 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
 Anchor: message "non-object or invalid JSON defaults lane fields"
+
+S193 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "resetPreferences clears every stored key"

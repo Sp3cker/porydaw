@@ -17,10 +17,11 @@ test_pointerScrubsUndoAndStationaryClick,
 test_scrubHoverAndIdleEnterKeepEditor,
 test_popupSpaceAuditionSoloAndMuteAbsorption and
 test_noteScopedCurveAndControls in src/checks/editorqml/tst_ShellPitchBend.qml
-(shell-pitch-bend lane, ShellQmlTests.swift:64-65). Eleven sites stay PARTIAL:
-A007-A009 (the two-notch wheel data row, whose range/description/lane values
-execute without a message anchor) and A011-A018 (the window cursor, which QML
-TestCase cannot read). A023's earlier PARTIAL closes: the mounted journey now
+(shell-pitch-bend lane, ShellQmlTests.swift:64-65). Eight sites stay PARTIAL:
+A011-A018 (the window cursor, which QML TestCase cannot read). The earlier
+A007-A009 PARTIALs close: test_wheelInsideCanvasOnly now message-anchors the
+two-notch wheel data row's range (S051), description (S052) and note-start-tick
+lane write (S053). A023's earlier PARTIAL closes: the mounted journey now
 performs the fork's pointer scrub over the production DragInput.
 Disclosed deviations: the native scrub rows execute through
 presenter.setBendRange and presenter.setLfoSpeed, the commit entry the
@@ -33,7 +34,7 @@ non-delivery for M and the audible playback execute mounted; the
 stationary-click row reads the field's activeFocus property where the fork
 compares the window's activeFocusItem; the two-notch wheel phase is two mounted
 events of 120 and 240 units instead of one 240-unit event.
-Disposition tally: 81 sites: 70 MATCHED, 11 PARTIAL.
+Disposition tally: 81 sites: 73 MATCHED, 8 PARTIAL.
 
 Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
 Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
@@ -63,14 +64,14 @@ mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65).
 This bookkeeping pass read the recordings at
 build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
-mounted recording was made from the revision of
-src/checks/editorqml/tst_ShellPitchBend.qml (SHA-256
-5a84bdc2474eed910ccb848f8f442b712c7560f23ba4206ee4cf57cedc64182d); that file
-has since been edited by the concurrent shell-hygiene work of another task (a
-per-test init() preference reset, still in flux while this bookkeeping pass
-ran), whose hunks touch none of the mapped predicates, messages or
-test-function names, so the mounted verdicts below are inherited from the
-recording and no final hash is pinned for that file. The native counterpart
+controller handoff records the shell-pitch-bend evidence fresh at this
+revision; that recording lists test_wheelInsideCanvasOnly (the function
+carrying S026-S031 and S051-S053), and the now-frozen counterpart
+src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
+637e30821906c0563e97eaf11fcb100e960cdc773d1399ad154d634de7d26702 with the
+two-notch message anchors at :659-660, :664-665 and :680-690, so the mounted
+verdicts below are inherited from that recording and not re-executed by this
+pass. The native counterpart
 src/checks/rollcheck/pitch_bend.swift carries the SHA-256
 2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
 task-41 handoff.
@@ -186,16 +187,16 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A007 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:69
-Disposition: PARTIAL
-Mapping/reason: S003 + S028 cover the inside-graph data row (one notch raises BENDR by one); unproved: the inside-multiple-notches data row's bendRange == initialRange + 2, which executes only in the unmessaged tryCompare(opened.editor, "bendRange", range + 3) in test_wheelInsideCanvasOnly and so carries no anchor
+Disposition: MATCHED
+Mapping/reason: S003 executes the inside-graph data row (one notch raises BENDR by one) and S051 the inside-multiple-notches data row (the 240-unit wheel raises bendRange by two); registered deviation: the mounted two-notch phase is a 120-unit then a 240-unit event, so S051 asserts range + 3 from the journey start where the fork's single 240-unit row asserts initialRange + 2
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(editor.bendRange(), initialRange + delta);
 
 A008 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:70
-Disposition: PARTIAL
-Mapping/reason: S004 + S027 cover the inside-graph data row's description ("<range+1> semitones") after one notch; unproved: the inside-multiple-notches data row's description, which no executing mounted assert reads after the 240 phase
+Disposition: MATCHED
+Mapping/reason: S004 executes the inside-graph data row's description ("<range + 1> semitones" after one notch) and S052 the inside-multiple-notches data row (the mounted description carries the two-notch range value, the phase's pre-wheel value + 2, where the fork's single 240-unit row reads initialRange + 2)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -203,8 +204,8 @@ Original expression:
           editor.description().contains(QStringLiteral("%1 semitones").arg(initialRange + delta)));
 
 A009 | PitchBendEditingTest::wheelScrollConfinesBendRangeToNoteSpan | src/checks/pitchbend/controller.cpp:72
-Disposition: PARTIAL
-Mapping/reason: S005 covers the inside-graph data row's note-tick channel value (the new range) and the note-off restoration; unproved: the inside-multiple-notches data row's note-tick channel value, which no predicate reads after the 240 phase
+Disposition: MATCHED
+Mapping/reason: S005 executes the inside-graph data row's note-tick channel value (the new range) and the note-off restoration; S053 executes the inside-multiple-notches data row through the serialized event-list projection, a type-3 row at the selected note's tick carrying controller 0x14 with the two-notch range value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -951,6 +952,15 @@ S049 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend
 Anchor: message "the committed Shift-line writes note-scoped pitch bend"
 S050 | test_noteScopedCurveAndControls | src/checks/editorqml/tst_ShellPitchBend.qml
 Anchor: message "pitch reset writes the default curve"
+
+S051 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "two-notch wheeling raises BENDR by two semitones"
+
+S052 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the description reports the two-notch wheeled range"
+
+S053 | test_wheelInsideCanvasOnly | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the two-notch wheel writes BENDR at the note start tick"
 
 Uncited index entries: S006 (the wheel journey's editor liveness; no
 wheelScrollConfinesBendRangeToNoteSpan row asserts the editor stays open after the
