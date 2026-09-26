@@ -75,6 +75,7 @@ TestCase {
             return session.songOpen || session.lastSaveError.length > 0
         }, 30000)
         verify(session.songOpen, "Route 101 loads before the failure is injected")
+        verify(session.projectOpen, "a successful open sets the project open flag")
         tryCompare(session.songTabs, "tabCount", 1)
         var tabs = session.songTabs
         var tabId = tabs.selectedId

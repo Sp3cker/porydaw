@@ -227,6 +227,26 @@ private func checkHeaderReconciliation(_ report: CheckReport, session: DocumentS
                   && (0..<headers.rows.count).allSatisfy { headers.rows[$0] === initialRows[$0] },
                   cppID: unchangedID,
                   message: "unchanged refresh preserves ordered header records and identities")
+    report.expect(headers.rows.count == document.engineTracks.usedTrackCount + 1
+                  && (0..<document.engineTracks.usedTrackCount).allSatisfy { track in
+        let row = headers.rows[track]
+        let name = document.trackName(track)
+        return row.track == track && !row.isAddTrack
+            && row.title == "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)"
+            && row.titleBold == (session.selectedTrack == track)
+            && row.muteChecked == session.mutedTracks.contains(track)
+            && row.soloChecked == session.soloedTracks.contains(track)
+    } && headers.rows.last?.track == -1
+        && headers.rows.last?.isAddTrack == true
+        && headers.rows.last?.title == "+ Add track",
+        cppID: unchangedID,
+        message: "unchanged refresh preserves header titles and roles against the rebuilt timeline")
+    report.expect(initialRows.count == 3 && initialRows.map(\.track) == [0, lastUsed, -1]
+                  && initialRows[0].isAddTrack == false
+                  && initialRows[1].isAddTrack == false
+                  && initialRows[2].isAddTrack == true,
+                  cppID: structuralID,
+                  message: "the structural fixture starts with ordered records and a trailing add row")
     document.deleteTrack(lastUsed)
     let replacement = document.state
     report.expect(document.engineTracks.usedTrackCount == 1

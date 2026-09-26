@@ -1221,6 +1221,38 @@ TestCase {
         compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
     }
 
+    function test_yCleanSessionClosesWithoutPrompt() {
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production ShellWindow loads")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        var presenter = shell.shellPresenter
+        var session = presenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "the clean close fixture opens Route 101" + openDiagnostics(session))
+        verify(session.songOpen && !session.documentDirty && !session.saveInProgress,
+               "the close begins with an open, clean song")
+        tryVerify(function() { return shell.sceneLoader.item !== null }, 5000,
+                  "the opened song mounts its scene")
+        var dialog = findChild(shell, "songTabCloseDialog")
+        verify(dialog !== null && !dialog.visible, "the discard prompt starts hidden")
+        var promptShown = false
+        dialog.visibleChanged.connect(function() {
+            if (dialog.visible)
+                promptShown = true
+        })
+        compare(presenter.closeReady, false, "the close is not already ready")
+        compare(presenter.beginClose(), false, "the close waits for tab and scene teardown")
+        verify(waitForNative(function() { return presenter.closeReady }, 5000),
+               "a clean close reaches the scene detach acknowledgement")
+        verify(!promptShown && presenter.closeReady && session.songTabs.pendingCloseId === -1
+               && session.songTabs.pendingCloseBankTitle.length === 0,
+               "a clean session closes without the discard prompt")
+    }
+
     function test_zWindowTitleAndStatusMeter() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production shell is mounted for chrome state")

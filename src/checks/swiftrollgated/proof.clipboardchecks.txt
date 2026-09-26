@@ -38,6 +38,12 @@ The test opens openRoute101 (mus_route101, S053) and selects two fully visible n
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
+Task 51c ledger pass (no lane re-run): A060 (QQuickView replacement and
+exposure) retires as a native-view representation - view replacement has no
+counterpart and the mounted reload surface stays MATCHED by S059. This pass re-ran
+only `deno task proof check`; the implementer handoff evidence belongs to the 51c
+surface checks, not to this ledger.
+
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:214
@@ -869,8 +875,8 @@ Original expression:
                                       Q_ARG(bool, true)));
 
 A060 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:442
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/swiftrollgated/clipboardchecks.cpp) no longer builds or runs. Previous native note: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Replacement surface exposure is MATCHED by S059. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QQuickView replacement and exposure pin the retired native view proxy; the mounted reload surface is MATCHED by S059.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
