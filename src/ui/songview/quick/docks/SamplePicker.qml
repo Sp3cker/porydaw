@@ -9,7 +9,8 @@ Item {
     required property QtObject controller
     required property QtObject draft
     required property var colors
-    required property real baseFontPx
+    required property QtObject applicationSession
+    readonly property real baseFontPx: applicationSession.baseFontPx
     required property bool waveMode
     property string clickedSymbol: ""
     property bool positioning: false
@@ -85,7 +86,6 @@ Item {
         text: picker.draft.symbol ? (picker.waveMode ? picker.draft.symbol
                                                    : picker.displayName(picker.draft.symbol))
                                   : qsTr("(none)")
-        font.pixelSize: picker.baseFontPx
         onClicked: popup.open()
     }
 
@@ -93,6 +93,7 @@ Item {
         id: popup
         objectName: "vgSamplePickerPopup"
         parent: picker
+        font: Qt.font(picker.applicationSession.typographyFonts.body)
         property real spacingPx: Math.max(1, Math.round(picker.baseFontPx / 3))
         x: 0
         y: trigger.height
@@ -130,7 +131,6 @@ Item {
                 objectName: "vgSamplePickerSearch"
                 Layout.fillWidth: true
                 placeholderText: qsTr("Search samples…")
-                font.pixelSize: picker.baseFontPx
                 onAccepted: picker.commit()
                 Keys.onDownPressed: {
                     for (let i = list.currentIndex + 1; i < picker.entries.length; i++) {
@@ -178,11 +178,15 @@ Item {
                     height: picker.baseFontPx * 1.83
                     enabled: !!modelData.symbol
                     highlighted: list.currentIndex === index
-                    font.pixelSize: picker.baseFontPx
-                    font.bold: !modelData.symbol
                     contentItem: Label {
                         text: entry.modelData.label
-                        font: entry.font
+                        font: entry.modelData.typed
+                              ? Qt.font(Object.assign({},
+                                                      picker.applicationSession.typographyFonts.body,
+                                                      { italic: true }))
+                              : !entry.modelData.symbol
+                                ? Qt.font(picker.applicationSession.typographyFonts.bodyBold)
+                                : entry.font
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
                         color: !entry.modelData.symbol ? picker.colors.secondaryText
@@ -205,7 +209,6 @@ Item {
                 Label {
                     objectName: "vgSamplePickerDetail"
                     Layout.fillWidth: true
-                    font.pixelSize: picker.baseFontPx
                     color: picker.colors.secondaryText
                     text: {
                         const entry = picker.currentEntry()
@@ -217,7 +220,6 @@ Item {
                 Label {
                     objectName: "vgSamplePickerLoop"
                     visible: picker.controller.pickerSampleLoop
-                    font.pixelSize: picker.baseFontPx
                     color: picker.colors.primaryText
                     text: qsTr("Loop")
                 }

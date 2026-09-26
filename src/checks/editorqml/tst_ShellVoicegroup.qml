@@ -17,18 +17,36 @@ TestCase {
 
     ShellQmlBootstrap { id: bootstrap }
     ApplicationSession { id: app }
-    VoicegroupPanel {
-        id: panel
+    Pane {
         anchors.fill: parent
-        applicationSession: app
-        controller: app.voiceListController()
+        padding: 0
+        font: Qt.font(app.typographyFonts.body)
+        contentItem: VoicegroupPanel {
+            id: panel
+            applicationSession: app
+            controller: app.voiceListController()
+        }
     }
+    function compareRole(item, role, name) {
+        verify(!!item, name + " is mounted for " + role)
+        const expected = app.typographyFonts[role]
+        compare(item.font.family, expected.family, name + " uses " + role + " family")
+        compare(item.font.pixelSize, expected.pixelSize, name + " uses " + role + " pixelSize")
+        compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
+    }
+
 
     function waitForNative(predicate, timeoutMs) {
         return NativeWait.waitForNative(bootstrap, function(ms) { wait(ms) }, predicate, timeoutMs)
     }
 
     function initTestCase() {
+        compare(panel.baseFontPx, app.baseFontPx,
+                "voicegroup pane derives its base before a song opens")
+        compareRole(findChild(panel, "vgArgCombo"), "body", "voicegroup selector before song open")
+        compare(findChild(panel, "voicegroupTreeHeader").height,
+                Math.round(app.baseFontPx * 1.83),
+                "voicegroup header follows the session base before song open")
         app.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
         verify(waitForNative(function() { return app.songOpen || app.lastSaveError.length > 0 }, 30000),
                "fixture song opens: " + app.lastSaveError)
@@ -71,14 +89,26 @@ TestCase {
         const expected = region(reference, name)
         verify(expected !== undefined, "widget reference has " + name)
         verify(item !== null, "mounted panel has " + name)
+        const scale = panel.baseFontPx / reference.environment.fontPx
         const origin = item.mapToItem(panel, 0, 0)
-        verify(Math.abs(origin.x - expected.x) <= tolerance
-               && Math.abs(origin.y - expected.y) <= tolerance
-               && Math.abs(item.width - expected.w) <= tolerance
-               && Math.abs(item.height - expected.h) <= tolerance,
+        const expectedX = expected.x * scale
+        const expectedWidth = panel.width - expectedX
+                              - (reference.image.width - expected.x - expected.w) * scale
+        const expectedY = name.startsWith("editor.")
+                          ? panel.height - (reference.image.height - expected.y) * scale
+                          : expected.y * scale
+        const expectedHeight = name === "tree"
+                               ? panel.height - expectedY
+                                 - (reference.image.height - expected.y - expected.h) * scale
+                               : expected.h * scale
+        verify(Math.abs(origin.x - expectedX) <= tolerance
+               && Math.abs(origin.y - expectedY) <= tolerance
+               && Math.abs(item.width - expectedWidth) <= tolerance
+               && Math.abs(item.height - expectedHeight) <= tolerance,
                name + " measured " + origin.x + "," + origin.y + " "
-               + item.width + "x" + item.height + " vs widget "
-               + expected.x + "," + expected.y + " " + expected.w + "x" + expected.h
+               + item.width + "x" + item.height + " vs rebased widget "
+               + expectedX + "," + expectedY + " "
+               + expectedWidth + "x" + expectedHeight
                + (name === "tree" ? "; " + directChildGeometry() : ""))
     }
 
@@ -100,8 +130,6 @@ TestCase {
                         findChild(panel, "voicegroupEditorNotice"), 5)
         } else {
             checkRegion(reference, "editor.type", findChild(panel, "vgTypeCombo"), 5)
-            checkRegion(reference, "editor.adsr.attack",
-                        findChild(panel, "vgAttackSpin"), 5)
             if (variant === "editor-square1") {
                 checkRegion(reference, "editor.sweep", findChild(panel, "vgSweepSpin"), 5)
             } else {
@@ -127,6 +155,23 @@ TestCase {
         verify(first !== null, "bank row zero is mounted")
         tryVerify(function() { return first.title.indexOf("fixture_loop") >= 0 }, 5000,
                   "row zero publishes fixture_loop after the bank model update; got: " + first.title)
+        compareRole(findChild(panel, "vgArgCombo"), "body", "voicegroup selector")
+        compareRole(findChild(panel, "voicegroupEditorNotice"), "body", "voice editor notice")
+        compareRole(findChild(panel, "voicegroupVoiceHeader"),
+                    "body", "voicegroup Voice header")
+        compareRole(findChild(panel, "voicegroupTypeHeader"),
+                    "body", "voicegroup Type header")
+        compareRole(findChild(panel, "voicegroupAdsrHeader"),
+                    "body", "voicegroup ADSR header")
+        compareRole(findChild(panel, "voicegroupTitle_0"), "body", "used voice title")
+        compareRole(findChild(panel, "voicegroupAdsr_0"), "body", "used voice ADSR")
+        compare(first.used, true, "fixture row is an assigned voice")
+        compare(findChild(panel, "voicegroupTitle_0").font.bold, false,
+                "used voice row stays regular while retaining its accent tint")
+        compare(first.color, Qt.tint(app.palette.windowBackground, "#22b4e4ee"),
+                "assigned voice retains its themed accent tint")
+        compare(first.height, Math.round(app.baseFontPx * 1.33),
+                "voicegroup row height follows the session base")
         const cry = findChild(panel, "voicegroupRow_12")
         verify(cry !== null, "read-only cry slot is mounted")
         tryVerify(function() { return cry.title.indexOf("fixture_loop") >= 0 }, 5000,
@@ -148,6 +193,14 @@ TestCase {
         const draft = controller.editorModel()
         compare(draft.editable, true)
         compare(draft.macro, 3)
+        compareRole(findChild(panel, "vgTypeCombo"), "body", "voice editor type selector")
+        compareRole(findChild(panel, "vgAttackSpin"), "body", "voice editor attack spin")
+        compare(findChild(panel, "vgAttackSpin").Layout.minimumWidth,
+                app.baseFontPx * 3.3,
+                "voice editor attack minimum width follows the captured base")
+        compare(findChild(panel, "vgAttackSpin").Layout.preferredHeight,
+                app.baseFontPx * 2.08,
+                "voice editor attack height follows the captured base")
         const initial = draft.release
         draft.change("release", initial === 7 ? 6 : initial + 1)
         verify(waitForNative(function() {
@@ -188,6 +241,7 @@ TestCase {
         verify(waitForNative(function() { return controller.bankDirty && draft.release !== initial },
                              15000), "editor change makes bank dirty")
         const save = findChild(panel, "vgSaveButton")
+        compareRole(save, "body", "voice editor save button")
         verify(save !== null && save.enabled, "mounted editor offers save for dirty bank")
         mouseClick(save, save.width / 2, save.height / 2)
         verify(waitForNative(function() { return !controller.bankDirty || app.lastSaveError.length > 0 },
@@ -223,6 +277,34 @@ TestCase {
                        "popup opens after clicking button at " + position.x + "," + position.y)
             const search = findChild(popup, "vgSamplePickerSearch")
             const list = findChild(popup, "vgSamplePickerList")
+            compareRole(search, "body", "sample picker search")
+            compareRole(trigger, "body", "sample picker trigger")
+            compareRole(popup, "body", "sample picker popup")
+            compareRole(findChild(popup, "vgSamplePickerDetail"), "body", "sample picker detail")
+            compareRole(findChild(popup, "vgSamplePickerLoop"), "body", "sample picker loop")
+            compare(popup.width, Math.max(trigger.width, app.baseFontPx * 28.33),
+                    "sample picker width follows the session base")
+            compare(popup.height, app.baseFontPx * 35,
+                    "sample picker height follows the session base")
+            if (symbol === "DirectSoundWaveData_fixture_bass") {
+                const headingIndex = list.model.findIndex(row => !row.symbol)
+                verify(headingIndex >= 0, "sample picker preserves grouped section headings")
+                list.positionViewAtIndex(headingIndex, ListView.Contain)
+                tryVerify(function() { return !!list.itemAtIndex(headingIndex) }, 1000,
+                          "sample picker section header is mounted")
+                compareRole(list.itemAtIndex(headingIndex).contentItem,
+                            "bodyBold", "sample picker section heading")
+            }
+            search.text = "unlisted_typography_sample"
+            const typedIndex = list.model.findIndex(row => row.typed)
+            verify(typedIndex >= 0, "sample picker offers the typed symbol fallback")
+            list.positionViewAtIndex(typedIndex, ListView.Contain)
+            tryVerify(function() { return !!list.itemAtIndex(typedIndex) }, 1000,
+                      "sample picker typed fallback is mounted")
+            compareRole(list.itemAtIndex(typedIndex).contentItem,
+                        "body", "sample picker typed fallback")
+            compare(list.itemAtIndex(typedIndex).contentItem.font.italic, true,
+                    "sample picker typed fallback uses the published body's italic variant")
             search.text = symbol
             tryVerify(function() {
                 return list.model.some(function(row) { return row.symbol === symbol })
@@ -231,6 +313,10 @@ TestCase {
             list.positionViewAtIndex(index, ListView.Contain)
             tryVerify(function() { return list.itemAtIndex(index) !== null }, 5000)
             const item = list.itemAtIndex(index)
+            compareRole(item, "body", "sample picker sample row")
+            compareRole(item.contentItem, "body", "sample picker sample text")
+            compare(item.height, app.baseFontPx * 1.83,
+                    "sample picker row height follows the session base")
             const before = draft.symbol
             mouseClick(item, item.width / 2, item.height / 2)
             compare(draft.symbol, before, "first click only auditions")

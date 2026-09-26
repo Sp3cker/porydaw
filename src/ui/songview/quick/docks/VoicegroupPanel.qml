@@ -11,10 +11,8 @@ ColumnLayout {
     objectName: "voicegroupPanel"
     required property QtObject applicationSession
     required property QtObject controller
-    readonly property var grid: applicationSession.songOpen
-                                ? applicationSession.gridPresenter() : null
     readonly property QtObject colors: applicationSession.palette
-    readonly property real baseFontPx: grid ? grid.baseFontPx : 12
+    readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property int rowHeight: Math.round(baseFontPx * 1.33)
     readonly property int headerHeight: Math.round(baseFontPx * 1.83)
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
@@ -34,7 +32,6 @@ ColumnLayout {
         Label {
             text: qsTr("voicegroup_")
             Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
-            font.pixelSize: panel.baseFontPx
             color: panel.colors.primaryText
         }
         ComboBox {
@@ -46,7 +43,6 @@ ColumnLayout {
             enabled: panel.controller.selectorEnabled
             model: panel.controller.argChoices
             textRole: "name"
-            font.pixelSize: panel.baseFontPx
             editText: panel.controller.selectorText
             onActivated: {
                 panel.controller.selectorText = editText
@@ -86,21 +82,21 @@ ColumnLayout {
                 spacing: 0
                 Label {
                     text: qsTr("Voice")
+                    objectName: "voicegroupVoiceHeader"
                     Layout.fillWidth: true
-                    Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
-                    font.pixelSize: panel.baseFontPx
+                    Layout.leftMargin: panel.applicationSession.layoutSpaces.one
                     color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("Type")
+                    objectName: "voicegroupTypeHeader"
                     Layout.preferredWidth: panel.typeWidth
-                    font.pixelSize: panel.baseFontPx
                     color: panel.colors.primaryText
                 }
                 Label {
                     text: qsTr("ADSR")
+                    objectName: "voicegroupAdsrHeader"
                     Layout.preferredWidth: panel.adsrWidth
-                    font.pixelSize: panel.baseFontPx
                     color: panel.colors.primaryText
                 }
             }
@@ -148,10 +144,9 @@ ColumnLayout {
                     spacing: 0
                     Label {
                         text: row.title
+                        objectName: "voicegroupTitle_" + row.slot
                         Layout.fillWidth: true
-                        Layout.leftMargin: Math.round(panel.baseFontPx * 0.25)
-                        font.pixelSize: panel.baseFontPx
-                        font.bold: row.used
+                        Layout.leftMargin: panel.applicationSession.layoutSpaces.one
                         color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
                                                                        : panel.colors.primaryText
                         elide: Text.ElideRight
@@ -196,8 +191,6 @@ ColumnLayout {
                         objectName: "voicegroupAdsr_" + row.slot
                         Layout.preferredWidth: panel.adsrWidth
                         text: row.adsr
-                        font.pixelSize: panel.baseFontPx
-                        font.bold: row.used
                         color: panel.controller.currentSlot === row.slot ? panel.colors.selectionText
                                                                        : panel.colors.primaryText
                         elide: Text.ElideRight
@@ -247,7 +240,7 @@ ColumnLayout {
             height: editorScroll.contentHeight
             controller: panel.controller
             colors: panel.colors
-            baseFontPx: panel.baseFontPx
+            applicationSession: panel.applicationSession
         }
     }
 }

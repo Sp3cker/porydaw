@@ -9,8 +9,7 @@ SplitView {
     required property var controller
     required property QtObject applicationSession
     required property var colors
-    required property font applicationFont
-    required property real baseFontPx
+    readonly property real baseFontPx: applicationSession.baseFontPx
     // Normalized fraction of this split's usable height assigned to Songs.
     // The shell persists it as swiftDock/songsRatio the same way it persists
     // swiftDock/columnWidth; divider write-back clamps it so both panes keep
@@ -67,8 +66,7 @@ SplitView {
             anchors.fill: parent
             controller: dock.controller
             colors: dock.colors
-            applicationFont: dock.applicationFont
-            baseFontPx: dock.baseFontPx
+            applicationSession: dock.applicationSession
         }
     }
 

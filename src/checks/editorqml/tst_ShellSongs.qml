@@ -69,6 +69,14 @@ TestCase {
     }
     function presenter() { return shell.shellPresenter.session.songDockController().songListPresenter() }
     function controller() { return shell.shellPresenter.session.songDockController() }
+    function compareRole(item, role, name) {
+        verify(!!item, name + " is mounted for " + role)
+        const expected = shell.shellPresenter.session.typographyFonts[role]
+        compare(item.font.family, expected.family, name + " uses " + role + " family")
+        compare(item.font.pixelSize, expected.pixelSize, name + " uses " + role + " pixelSize")
+        compare(item.font.weight, expected.weight, name + " uses " + role + " weight")
+    }
+
 
     function menuAction(id) {
         const menu = findChild(shell, "songListContextMenu")
@@ -116,6 +124,19 @@ TestCase {
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         const session = shell.shellPresenter.session
+        compare(panel().baseFontPx, session.baseFontPx,
+                "Songs pane derives its geometry from the captured session base before project open")
+        compare(panel().pad, session.layoutSpaces.one,
+                "Songs pane margins follow the published One token")
+        compareRole(findChild(shell, "songListSearch"), "body", "song search")
+        compareRole(findChild(shell, "songListCategory"), "body", "song category")
+        compareRole(findChild(shell, "songListSort"), "body", "song sort")
+        compareRole(findChild(shell, "songListCount"), "body", "song count")
+        compare(findChild(shell, "songListSearch").height,
+                Math.ceil(session.baseFontPx * (1.5 + 1 / 3)),
+                "song search height follows the captured base")
+        compare(findChild(shell, "songListSort").width, session.baseFontPx * 7.25,
+                "song sort width follows the captured base")
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen || session.lastSaveError.length > 0 }, 30000),
                "fixture project opens: " + session.lastSaveError)
@@ -159,6 +180,10 @@ TestCase {
         compare(row(firstId).objectName, "songListRow_" + firstId,
                 "the rendered delegate identifies the first catalog song")
         compareRegion(baseline, "songs.row.first", row(firstId), 3)
+        compareRole(row(firstId), "body", "song row")
+        compareRole(row(firstId).contentItem, "body", "song row text")
+        compare(row(firstId).height, Math.ceil(session.baseFontPx * 9 / 8),
+                "song row height follows the captured base")
         compareRegion(baseline, "songs.row.second", row(secondId), 3)
         // The service assigns the partial song an earlier ID than the stray.
         // Compare the two warning-row slots independent of their label order.
@@ -166,6 +191,9 @@ TestCase {
         const secondWarningId = presenter().songId(9)
         compareRegion(baseline, "songs.row.unregistered", row(firstWarningId), 3)
         compareRegion(baseline, "songs.row.partial", row(secondWarningId), 3)
+        compareRole(row(firstWarningId).contentItem, "body", "unregistered song row text")
+        compare(row(firstWarningId).height, Math.ceil(session.baseFontPx * 11 / 8),
+                "warning song row height follows the captured base")
         const image = grabImage(shell.contentItem)
         const warningRow = row(firstWarningId)
         const origin = warningRow.mapToItem(shell.contentItem, 0, 0)
@@ -204,6 +232,7 @@ TestCase {
         const musicChoice = category.popup.contentItem.itemAtIndex(1)
         verify(musicChoice !== null && musicChoice.text.indexOf("Music") === 0,
                "the second category is the mounted Music choice")
+        compareRole(musicChoice, "body", "category popup delegate")
         mouseClick(musicChoice)
         compare(category.currentIndex, 1, "the clicked category is selected in the mounted combo")
         tryCompare(presenter(), "categoryIndex", 1, 3000)
@@ -227,6 +256,13 @@ TestCase {
         tryCompare(emptyMessage, "visible", false, 3000,
                    "the guidance hides when a song opens")
         mouseClick(row(secondId), 4, 4, Qt.RightButton)
+        const typographyMenu = findChild(shell, "songListContextMenu")
+        compareRole(typographyMenu, "body", "song context menu")
+        const openAction = typographyMenu.contentItem.rowItem(0)
+        compareRole(openAction.children.find(child => child.text === qsTr("Open")),
+                    "body", "song context action text")
+        compare(typographyMenu.contentItem.rowHeight, Math.ceil(session.baseFontPx * 1.7),
+                "song context action height follows the captured base")
         menuAction("newTab")
         verify(waitForNative(function() { return session.songTabs.tabCount === 2 }, 5000),
                "Open in New Tab preserves the existing tab (tabs="

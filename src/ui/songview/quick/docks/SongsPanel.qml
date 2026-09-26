@@ -10,10 +10,10 @@ FocusScope {
     objectName: "swiftSongsPanel"
     required property var controller
     required property var colors
-    required property font applicationFont
-    required property real baseFontPx
+    required property QtObject applicationSession
+    readonly property real baseFontPx: applicationSession.baseFontPx
     readonly property var songs: controller.songListPresenter()
-    readonly property int pad: Math.max(1, Math.round(baseFontPx * 0.25))
+    readonly property int pad: applicationSession.layoutSpaces.one
 
     function focusSearch() {
         search.forceActiveFocus()
@@ -47,7 +47,6 @@ FocusScope {
             objectName: "songListSearch"
             Layout.fillWidth: true
             Layout.preferredHeight: Math.ceil(root.baseFontPx * (1.5 + 1 / 3))
-            font: root.applicationFont
             placeholderText: qsTr("Filter songs (Ctrl+F)")
             text: root.songs.searchText
             onTextEdited: root.songs.updateSearch(text)
@@ -77,7 +76,6 @@ FocusScope {
                 objectName: "songListCategory"
                 Layout.fillWidth: true
                 Layout.preferredHeight: search.height
-                font: root.applicationFont
                 model: root.songs.categories
                 displayText: {
                     categoryModelRevision
@@ -87,7 +85,6 @@ FocusScope {
                     required property var model
                     required property int index
                     width: category.width
-                    font: root.applicationFont
                     text: model.display.name
                     onClicked: {
                         const selectedIndex = index
@@ -115,7 +112,6 @@ FocusScope {
                 objectName: "songListSort"
                 Layout.preferredWidth: root.baseFontPx * 7.25
                 Layout.preferredHeight: search.height
-                font: root.applicationFont
                 model: [qsTr("ID order"), qsTr("A–Z")]
                 currentIndex: root.songs.sortIndex
                 onActivated: index => root.songs.selectSort(index)
@@ -169,7 +165,7 @@ FocusScope {
                 contentItem: Text {
                     id: label
                     text: row.song ? row.song.text : ""
-                    font: root.applicationFont
+                    font: row.font
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
@@ -211,7 +207,6 @@ FocusScope {
             objectName: "songListCount"
             Layout.fillWidth: true
             Layout.preferredHeight: Math.ceil(root.baseFontPx * 1.15)
-            font: root.applicationFont
             color: root.colors.secondaryText
             text: root.songs.countText
         }
@@ -221,6 +216,7 @@ FocusScope {
         id: songMenu
         objectName: "songListContextMenu"
         parent: Overlay.overlay
+        font: Qt.font(root.applicationSession.typographyFonts.body)
         property int songId: -1
         property bool canRegister: false
         padding: 0
@@ -254,7 +250,7 @@ FocusScope {
                            hoverBackground: root.colors.menuHoverBackground,
                            hoverText: root.colors.windowText,
                            separator: root.colors.outline,
-                           font: root.applicationFont })
+                           font: Qt.font(root.applicationSession.typographyFonts.body) })
         }
         function hoverRow(panel, index) { panel.highlightedRow = index }
         function activateRow(panel, index) {

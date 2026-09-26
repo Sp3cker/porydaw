@@ -522,8 +522,6 @@ ThemedWindow {
             applicationSession: shell.session
             songsRatio: dockSettings.songsRatio
             colors: shell.session.palette
-            applicationFont: Qt.font(shell.session.typographyFonts.body)
-            baseFontPx: shell.session.baseFontPx
             onSongsRatioChanged: {
                 if (songsRatio !== dockSettings.songsRatio)
                     dockSettings.songsRatio = songsRatio
