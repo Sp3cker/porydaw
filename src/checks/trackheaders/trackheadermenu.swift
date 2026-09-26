@@ -213,14 +213,22 @@ func headerMenuQueuedDestructiveMutationsDropAfterRemap(
     for action in [5, 4] {
         let fx = TrackHeadersFixture(suite: suite, service: service)
         let h = fx.headers
+        var pickers = 0
+        h.onChangeTrackVoiceRequested = { _ in pickers += 1 }
+        h.onAddTrackRequested = { pickers += 1 }
         fx.openMenu(report, track: 1, cppID: id)
-        // Deliver the captured menu action after another event remaps its raw slot.
+        let beforeMoveRevision = fx.document.revision
         report.expect(fx.document.moveTrack(1, to: 0), cppID: id,
                       message: "action \(action): remap precedes delayed activation")
         let remapped = HeaderDocumentBaseline(fx.document)
         h.activateHeaderMenuAction(actionId: action)
         remapped.expectUnchanged(report, fx.document, cppID: id, phase: "delayed action \(action)")
         report.expect(!h.menuOpen, cppID: id, message: "action \(action): stale menu stays closed")
+        report.expectEqual(expected: 0, actual: pickers, cppID: id,
+                           what: "stale destructive action requests no picker")
+        report.expect(fx.document.revision == beforeMoveRevision + 1
+                      && fx.document.state == remapped.state && pickers == 0,
+                      cppID: id, message: "a stale delete or duplicate drops after the move's only write")
         fx.expectRows(report, names: ["Bass", "Lead"], cppID: id, phase: "delayed action \(action)")
     }
 }

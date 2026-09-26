@@ -61,6 +61,14 @@ func trackActivityPhysicalPixelPredicates(
     _ report: CheckReport, suite: DocumentSession, service: ProjectService
 ) {
     let id = "TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries"
+    let single = TrackHeadersFixture(suite: suite, service: service, trackBudget: 1)
+    single.document.deleteTrack(1)
+    report.expect(single.document.engineTracks.usedTrackCount == 1
+                  && !single.document.canAddTrack
+                  && single.headers.rows.count == 1
+                  && !single.headers.rows[0].isAddTrack
+                  && single.headers.rows[0].track == 0,
+                  cppID: id, message: "a single-track document without capacity publishes exactly one row")
     for dpr in [1.0, 1.25, 2.0] {
         let fx = TrackHeadersFixture(suite: suite, service: service)
         let h = fx.headers
@@ -71,7 +79,10 @@ func trackActivityPhysicalPixelPredicates(
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         levels[0] = AudioActivityLevel(left: 128, right: 128)
         let untouched = h.rows[1]
+        let driven = h.rows[0]
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
+        report.expect(h.rows[0] !== driven && h.rows[1] === untouched,
+                      cppID: id, message: "a level change republishes exactly the driven row")
         report.expect(h.rows[1] === untouched, cppID: id, message: "activity does not publish another track")
         func physical(_ level: UInt8) -> Int {
             Int((Double(Float(level) / 255) * Double(height) * dpr).rounded())
@@ -88,8 +99,11 @@ func trackActivityPhysicalPixelPredicates(
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         let within = h.rows[0]
         levels[0] = AudioActivityLevel(left: UInt8(shared + 1), right: UInt8(shared + 1))
+        let quietNeighbor = h.rows[1]
         h.advanceActivity(levels: levels, elapsedSeconds: 60, playing: true)
         report.expect(h.rows[0] === within, cppID: id, message: "same physical pixel publishes no row")
+        report.expect(h.rows[0] === within && h.rows[1] === quietNeighbor,
+                      cppID: id, message: "a pixel-identical level republishes nothing")
         guard let across = ((shared + 2)...255).first(where: { physical(UInt8($0)) > physical(UInt8(shared + 1)) }) else {
             report.fail(id, "fixture has no next physical pixel")
             continue

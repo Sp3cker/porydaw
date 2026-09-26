@@ -170,6 +170,10 @@ func addTrackOpensPickerAndRebuildsHeader(
     let h = fx.headers
     let baseline = HeaderDocumentBaseline(fx.document)
     let add = fx.point(.add, row: 2)
+    report.expect(add.x >= 0 && add.x < h.trackHeaderWidth
+                  && add.y - Double(h.rowHeight) >= 0
+                  && add.y - Double(h.rowHeight) < h.viewportHeight,
+                  cppID: id, message: "the release outside the add row remains inside the header input")
     var requests = 0
     h.onAddTrackRequested = { requests += 1 }
     h.updateHover(x: add.x, y: add.y)

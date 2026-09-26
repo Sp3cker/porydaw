@@ -10,13 +10,15 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
 Result: PASS (3 passed, 0 failed; covering PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins). Full-suite PASS not claimed (concurrent-slice noise during the run).
 Converted-window command: deno task verify:qml-roll --verbose
-Converted-window result: PASS (build/proof-evidence/swiftroll-window.json records SwiftRollTrackHeaders::test_zMountedRenameAndReorderCommit and test_headerMenuRenameRowActivates as executed lane functions; this proof-only pass cites the exercised anchors without re-running the suite). Exercised functions on the frozen tree: test_renameEditorBoundToTrackRow (:301-320) exercises A017-A019, test_reorderMarkerStaysInsideInput (:321-338) exercises A046-A048, test_headerMenuRenameRowActivates (:339-359) exercises A007/A010, test_zMountedRenameAndReorderCommit (:569-606) exercises A005/A011, test_zMountedMenuDispatchAndDismissal (:487-568) exercises A005.
-Verified QML SHA-256: e5583fc8c00ed942e3d550bc148a005f0778dc0b0ff8d50f177682ca43cabde1 (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
+Converted-window result: PASS (controller-reported deno task verify:qml-roll --verbose; swiftroll-window). build/proof-evidence/swiftroll-window.json lists test_yRenameEscapeAndTransientCancellation (:648-679) as an executed lane function; it exercises A001/A022/A027. The in-bounds add-release guard (A090) is the Swift addTrackOpensPickerAndRebuildsHeader row in build/proof-evidence/swiftcore-projectsession.json. This proof-only reconciliation ran no lane.
+Verified QML SHA-256: 81d7bcfbb4c7f54635ad534728bf80a68ef4664844a2dfe51fe05c59642615ba (src/checks/rollqml/tst_SwiftRollTrackHeaders.qml)
 Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 3d5180399d5d8370d75fc3e6e7498188abdc76b90a0195436b1ceda69fa9f98d (re-pinned by task 32 and task 33, then by the task-34b/35 grid cutover and by task 48, whose headerMenuLoader focus deferral shifted the later lines; the cited ranges are re-verified on the frozen tree: header menu loader :755-814 with QuickMenuPanel at :786-810, presenter property :20, menu-action routing :89-107 with the header branch at :94-95, header band mount :217-231; Main-authorized parity fix for the previously unrendered presenter menu)
 
+Task 66 ledger pass (no lane re-run): A001/A022/A027 close on the mounted rename-editor anchors (S083-S085) and A090 on the in-bounds add-release guard (S086). The remaining 41 picker-journey rows (GAP A075/A098/A108/A117/A119/A128/A147/A152, PARTIAL the other 33) keep their dispositions with the named task-66b deferral appended. The projectsession lane's exit status is not green as a whole: it reported two unrelated in-flight failures (VoicegroupSaveTest dirty-identity, VoiceChangesPage fixture-marker); every predicate cited below is recorded in build/proof-evidence/swiftcore-projectsession.json and the converted-window anchors in build/proof-evidence/swiftroll-window.json.
+
 A001 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:55
-Disposition: PARTIAL
-Mapping/reason: Native fixture focus establishment (fixture.focusInput) inside the shared commitRename helper is setup, not an observable; the converted lane asserts the band input keeps keyboard focus across an outside dismissal (S082) and that the mounted editor accepts focus (S080), so the establishment clause itself stays unproved.
+Disposition: MATCHED
+Mapping: S083 (the mounted rename editor takes active focus), S080
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -155,8 +157,8 @@ A021 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheader
 Disposition: MATCHED
 
 A022 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:126
-Disposition: PARTIAL
-Mapping/reason: Presenter predicates S003/S004 prove a cancelled rename closes the editor and drops the draft, and S081 proves the mounted editor closes after a commit; unproved: no converted predicate observes the mounted editor after a discarded rename, which is only exercised unasserted in the lane's cleanup.
+Disposition: MATCHED
+Mapping: S084 (Escape discards the mounted rename editor)
 Source context since previous assertion:
   ;
 Original expression:
@@ -177,8 +179,8 @@ A026 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheader
 Disposition: MATCHED
 
 A027 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:139
-Disposition: PARTIAL
-Mapping/reason: Presenter predicate S004 (hidden cancels draft permanently) proves a cancelled rename drops the draft, and S081 proves the mounted editor closes after a commit; unproved: no converted predicate observes the mounted editor after a transient cancellation.
+Disposition: MATCHED
+Mapping: S085 (a transient cancelled rename stays hidden without writing)
 Source context since previous assertion:
   ;
 Original expression:
@@ -371,7 +373,7 @@ Mapping: S029
 
 A075 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:252
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
   }
@@ -440,8 +442,8 @@ Disposition: MATCHED
 Mapping: S034
 
 A090 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:290
-Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the outside release outcome is proven by S037/S038 but the in-bounds guard condition itself is unasserted.
+Disposition: MATCHED
+Mapping: S086 (the release outside the add row remains inside the header input)
 Source context since previous assertion:
   ;
       const QPointF outsideRow = *addPoint - QPointF{0.0, qreal(headers.rowHeight())};
@@ -469,7 +471,7 @@ Mapping: S039
 
 A096 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:299
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the onAddTrackRequested callback; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the onAddTrackRequested callback; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -477,7 +479,7 @@ Original expression:
 
 A097 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:301
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker cancelled = checks::voicepicker::active(fx.view());
@@ -486,7 +488,7 @@ Original expression:
 
 A098 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:303
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(cancelled, QStringLiteral("127"));
@@ -496,7 +498,7 @@ Original expression:
 
 A099 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:315
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; picker cancellation is proven but the audition callback lives on VoiceChangesPage, not the header presenter.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; picker cancellation is proven but the audition callback lives on VoiceChangesPage, not the header presenter. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       const QPoint cancelledHeldPoint =
@@ -514,7 +516,7 @@ Original expression:
 
 A100 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:316
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -522,7 +524,7 @@ Original expression:
 
 A101 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:317
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -530,7 +532,7 @@ Original expression:
 
 A102 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:318
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -538,7 +540,7 @@ Original expression:
 
 A103 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:321
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       checks::voicepicker::release(cancelled, 127);
@@ -548,7 +550,7 @@ Original expression:
 
 A104 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:322
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -556,7 +558,7 @@ Original expression:
 
 A105 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:323
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -564,7 +566,7 @@ Original expression:
 
 A106 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:324
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -572,7 +574,7 @@ Original expression:
 
 A107 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:325
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift with completeVoiceRequest(-1) cover cancellation; outside-press picker dismissal stays unproved: the picker surface is owned by the editor/drawer surface, not the header band, and no header-band QML predicate dismisses it.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift with completeVoiceRequest(-1) cover cancellation; outside-press picker dismissal stays unproved: the picker surface is owned by the editor/drawer surface, not the header band, and no header-band QML predicate dismisses it. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -580,7 +582,7 @@ Original expression:
 
 A108 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:326
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -588,7 +590,7 @@ Original expression:
 
 A109 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:327
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition count after dismissal has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition count after dismissal has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -610,7 +612,7 @@ Mapping: S040
 
 A114 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:335
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the reopened picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the reopened picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -618,7 +620,7 @@ Original expression:
 
 A115 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:337
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
@@ -627,7 +629,7 @@ Original expression:
 
 A116 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:340
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker accept-button state stays unproved: accept-state is owned by the editor/drawer picker surface (drawer/VoicePicker.qml), not the header band, and no header-band QML predicate observes it.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker accept-button state stays unproved: accept-state is owned by the editor/drawer picker surface (drawer/VoicePicker.qml), not the header band, and no header-band QML predicate observes it. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 
@@ -637,7 +639,7 @@ Original expression:
 
 A117 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:343
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       QTest::keyClick(picker.window, Qt::Key_Return);
@@ -650,7 +652,7 @@ Disposition: MATCHED
 
 A119 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:347
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 
@@ -661,7 +663,7 @@ Original expression:
 
 A120 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:351
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition hold event has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition hold event has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       QSignalSpy audition(&fx.view(), &SongView::auditionVoice);
@@ -671,7 +673,7 @@ Original expression:
 
 A121 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:352
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -679,7 +681,7 @@ Original expression:
 
 A122 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:353
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -687,7 +689,7 @@ Original expression:
 
 A123 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:354
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -695,7 +697,7 @@ Original expression:
 
 A124 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:359
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       // Release while this picker still owns the input. Accepting tears down
@@ -707,7 +709,7 @@ Original expression:
 
 A125 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:360
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -715,7 +717,7 @@ Original expression:
 
 A126 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:361
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -723,7 +725,7 @@ Original expression:
 
 A127 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:362
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -731,7 +733,7 @@ Original expression:
 
 A128 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:365
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 
@@ -805,7 +807,7 @@ Mapping: S055
 
 A145 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:398
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the remapped picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the remapped picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       // Drive the opening gesture through the QQuickWindow. Calling the model
@@ -818,7 +820,7 @@ Original expression:
 
 A146 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:400
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker remapped = checks::voicepicker::active(fx.view());
@@ -827,7 +829,7 @@ Original expression:
 
 A147 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:402
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(remapped, QStringLiteral("127"));
@@ -837,7 +839,7 @@ Original expression:
 
 A148 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:415
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-hold audition event has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-hold audition event has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       const QPoint remapHeldPoint =
@@ -856,7 +858,7 @@ Original expression:
 
 A149 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:416
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -864,7 +866,7 @@ Original expression:
 
 A150 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:417
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -872,7 +874,7 @@ Original expression:
 
 A151 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:418
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -880,7 +882,7 @@ Original expression:
 
 A152 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:424
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: No executing check: the native C++ lane (src/checks/trackheaders/trackheadermutations.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
       }
@@ -893,7 +895,7 @@ Original expression:
 
 A153 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:425
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-release audition event has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-release audition event has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -901,7 +903,7 @@ Original expression:
 
 A154 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:426
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -909,7 +911,7 @@ Original expression:
 
 A155 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:427
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -917,7 +919,7 @@ Original expression:
 
 A156 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:428
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart. Blocked on the header→voice-picker mount (callbacks unwired: DocumentWorkspace.swift:120 wires only changeTrackVoiceRequested; no QML handler; fork picker form lives in drawer/VoicePicker.qml); the slice is task 66b.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1182,3 +1184,15 @@ Anchor: message "mounted rename closes its editor after commit"
 
 S082 | test_zMountedMenuDispatchAndDismissal | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
 Anchor: message "the band keeps keyboard focus across outside dismissal"
+
+S083 | test_yRenameEscapeAndTransientCancellation | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "the rename editor takes focus after the menu closes"
+
+S084 | test_yRenameEscapeAndTransientCancellation | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "Escape discards the mounted rename editor"
+
+S085 | test_yRenameEscapeAndTransientCancellation | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml
+Anchor: message "a transient cancelled rename stays hidden without writing"
+
+S086 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift
+Anchor: message "the release outside the add row remains inside the header input"
