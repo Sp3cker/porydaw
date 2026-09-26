@@ -20,7 +20,7 @@ ThemedWindow {
     readonly property int bodyFontPx: Math.max(1, Math.round(baseFontInfo.pixelSize * 1.125))
     width: bodyFontPx * 72
     height: bodyFontPx * 48
-    title: qsTr("Porydaw")
+    title: shell.windowTitle
     visible: true
     color: shell.session.palette.windowBackground
     font: Qt.font({ family: regularFont.name || baseFontInfo.family,
@@ -140,7 +140,11 @@ ThemedWindow {
     // updateWindowActions/updateGridActions slots, without duplicating policy.
     Connections {
         target: shell.session
-        function onProjectOpenChanged() { ++root.actionRevision }
+        function onProjectOpenChanged() {
+            shell.refreshWindowChrome()
+            ++root.actionRevision
+        }
+        function onProjectRootChanged() { shell.refreshWindowChrome() }
         function onSongOpenChanged() {
             shell.songOpenChanged()
             ++root.actionRevision
@@ -149,6 +153,7 @@ ThemedWindow {
             shell.saveStateChanged()
             ++root.actionRevision
         }
+        function onDocumentDirtyChanged() { shell.refreshWindowChrome() }
         function onCanUndoChanged() { ++root.actionRevision }
         function onCanRedoChanged() { ++root.actionRevision }
         function onGridCommandAvailabilityChanged() { ++root.actionRevision }
@@ -171,7 +176,10 @@ ThemedWindow {
     Connections {
         target: shell.session.songTabs
         function onSelectedTabShowsEventsChanged() { ++root.actionRevision }
-        function onSelectedPageChanged() { ++root.actionRevision }
+        function onSelectedPageChanged() {
+            shell.refreshWindowChrome()
+            ++root.actionRevision
+        }
         function onSelectedIdChanged() { ++root.actionRevision }
         function onTabCountChanged() { ++root.actionRevision }
     }
@@ -653,7 +661,10 @@ ThemedWindow {
         implicitHeight: Math.ceil(bodyMetrics.height * 1.5)
         color: shell.session.palette.windowBackground
         Text {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: polyMeter.visible ? polyMeter.left : parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.leftMargin: bodyMetrics.height / 2
             anchors.rightMargin: bodyMetrics.height / 2
             text: shell.statusText
@@ -661,6 +672,97 @@ ThemedWindow {
             color: shell.session.palette.windowText
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
+        }
+        Row {
+            id: polyMeter
+            objectName: "shellPolyMeter"
+            anchors.right: parent.right
+            anchors.rightMargin: bodyMetrics.height / 2
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: bodyMetrics.advanceWidth(" ") / 2
+            visible: presenter.polyMeterVisible
+            readonly property var presenter: shell.session.transportBarPresenter()
+            Text {
+                objectName: "shellPolyPcmCaption"
+                text: qsTr("PCM")
+                font: root.font
+                color: root.colors.windowText
+            }
+            Rectangle {
+                implicitWidth: pcmValue.implicitWidth + polyMeter.spacing * 2
+                implicitHeight: bodyMetrics.height
+                color: root.colors.polyphonyValueBackground
+                Text {
+                    id: pcmValue
+                    objectName: "shellPolyPcmValue"
+                    anchors.fill: parent
+                    anchors.leftMargin: polyMeter.spacing
+                    anchors.rightMargin: polyMeter.spacing
+                    text: polyMeter.presenter.pcmText
+                    font: root.font
+                    color: root.colors.polyphonyValueText
+                    horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+            Text {
+                text: "·"
+                font: root.font
+                color: root.colors.windowText
+            }
+            Text {
+                objectName: "shellPolyCgbCaption"
+                text: qsTr("CGB")
+                font: root.font
+                color: root.colors.windowText
+            }
+            Rectangle {
+                implicitWidth: cgbValue.implicitWidth + polyMeter.spacing * 2
+                implicitHeight: bodyMetrics.height
+                color: root.colors.polyphonyValueBackground
+                Text {
+                    id: cgbValue
+                    objectName: "shellPolyCgbValue"
+                    anchors.fill: parent
+                    anchors.leftMargin: polyMeter.spacing
+                    anchors.rightMargin: polyMeter.spacing
+                    text: polyMeter.presenter.cgbText
+                    font: root.font
+                    color: root.colors.polyphonyValueText
+                    horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+            Text {
+                visible: polyMeter.presenter.lostVisible
+                text: "·"
+                font: root.font
+                color: root.colors.windowText
+            }
+            Rectangle {
+                visible: polyMeter.presenter.lostVisible
+                implicitWidth: lostValue.implicitWidth + polyMeter.spacing * 2
+                implicitHeight: bodyMetrics.height
+                color: root.colors.polyphonyValueBackground
+                Text {
+                    id: lostValue
+                    objectName: "shellPolyLostValue"
+                    anchors.fill: parent
+                    anchors.leftMargin: polyMeter.spacing
+                    anchors.rightMargin: polyMeter.spacing
+                    text: polyMeter.presenter.lostText
+                    font: root.font
+                    color: root.colors.polyphonyValueText
+                    horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+            Text {
+                visible: polyMeter.presenter.lostVisible
+                text: qsTr("notes lost")
+                font: root.font
+                color: root.colors.windowText
+            }
         }
     }
 

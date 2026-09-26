@@ -12,6 +12,7 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
+QML counterpart: src/checks/editorqml/tst_ShellWindow.qml (window-title rows A002/A005, S186-S188)
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -23,6 +24,9 @@ Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS for the shellwindow lane (1/1) on the task-24 settled sources; implementer-run per the task-24 handoff, not re-run by the ledger agent. The same handoff records the full shell sweep failing the typography static-title pin (deleted by task 24; focused rerun green) and shell-chrome-visuals (controller-owned scope).
+
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceSessionTest)
 would run against a real MainWindow with the Null audio backend and a staged
@@ -33,7 +37,13 @@ reconciled to GAP (user-visible behavior) or RETIRED-REPRESENTATION (fixture,
 widget-handle and staging plumbing). On the Swift side, pdcSuiteRun in
 src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
 runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
-workspace, tab, transport, scale control, or editor-codec flow. The 184
+workspace, tab, transport, scale control, or editor-codec flow. Three further
+predicates run in the mounted shell lane instead (QML counterpart
+src/checks/editorqml/tst_ShellWindow.qml, function
+test_zWindowTitleAndStatusMeter, registered as the shellwindow entry in
+src/checks/editorqml/ShellQmlTests.swift): S186-S187 are the window-title
+predicates cited by the PARTIAL rows A002/A005 and S188 is cited as related at
+A031. The 184
 paired predicates are split across SessionChecks.swift (both suite entry
 points and their shared-state checks) and the session_*/bank_* counterparts
 (session_editor_semantics.swift, session_io.swift,
@@ -48,8 +58,8 @@ A001 | WorkspaceSessionTest::init | src/checks/workspace/session.cpp:111
 Disposition: RETIRED-REPRESENTATION
 
 A002 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:145
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell project restoration exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: S186 covers the title formula: src/checks/editorqml/tst_ShellWindow.qml:1226-1227 (test_zWindowTitleAndStatusMeter, shellwindow lane) mounts the fixture project with no song open and compares shell.title with projectName + " — porydaw", the same "<projectDirName> — porydaw" formula with U+2014 separators and the same last-path-component project name derived from bootstrap.projectRoot; unproved: the QSettings lastProjectDir restore ingress this row drives (the predicate calls session.openProject explicitly and never re-creates the session from settings), so the restore-specific title clauses also stay GAP at A031/A043. [S186]
 Source context since previous assertion:
   ;
   }
@@ -105,8 +115,8 @@ Original expression:
   QCOMPARE(window.m_workspace->openTabCount(), 0)
 
 A005 | WorkspaceSessionTest::restoreProjectOnly | src/checks/workspace/session.cpp:149
-Disposition: GAP
-Mapping/reason: Behavior gap, not proof: the Swift owner ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Disposition: PARTIAL
+Mapping/reason: S187 covers the title literal: src/checks/editorqml/tst_ShellWindow.qml:1220 (test_zWindowTitleAndStatusMeter, shellwindow lane) compares shell.title with "porydaw" for the mounted shell with no project open, the same literal this compare asserts for a session that restores no project; unproved: the QSettings restore ingress — neither the nothing recipe (cleared settings) nor the vanished-project recipe (lastProjectDir naming a missing project) is driven by any predicate, and the tab-count sibling A006 stays GAP. [S187]
 Source context since previous assertion:
   ;
       } else {
@@ -278,7 +288,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A031 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:228
 Disposition: GAP
-Mapping/reason: Behavior gap, not proof: ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: related predicate S188 (src/checks/editorqml/tst_ShellWindow.qml:1233-1236, test_zWindowTitleAndStatusMeter) asserts shell.title == "mus_route101 — " + projectName + " — porydaw" once the song opens, but no Swift/QML predicate destroys and re-creates the session (the closeReopen restore) before asserting that the restored window title starts with the song label, so the restore-specific clause stays unproved; native harness unexecuted (uncompiled, unregistered). [S188]
 Source context since previous assertion:
   ;
 Original expression:
@@ -354,7 +364,7 @@ Original expression:
 
 A043 | WorkspaceSessionTest::deletedRecipeSongIsIgnored | src/checks/workspace/session.cpp:257
 Disposition: GAP
-Mapping/reason: Behavior gap, not proof: ApplicationSession.openProject with the shell window title exists, but no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: related predicate S186 (src/checks/editorqml/tst_ShellWindow.qml:1226-1227, test_zWindowTitleAndStatusMeter) asserts the same "<projectDirName> — porydaw" project-only title formula for a project opened with no song, but this site restores settings whose lastOpenSongs/lastSongLabel name a missing song and requires the restore to ignore it; no Swift/QML predicate drives that deleted-recipe-song restore, and its tab-count sibling A044 stays GAP. [S186]
 Source context since previous assertion:
   ;
   }
@@ -937,3 +947,12 @@ Anchor: message "hard bank failure keeps the entry available and does not cross 
 
 S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift
 Anchor: message "self-cancelling bank merge is removed so undo reaches the preceding document edit"
+
+S186 | test_zWindowTitleAndStatusMeter (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "an empty project title names the project directory"
+
+S187 | test_zWindowTitleAndStatusMeter (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the empty shell names the application"
+
+S188 | test_zWindowTitleAndStatusMeter (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the selected song and project appear in the window title; actual="

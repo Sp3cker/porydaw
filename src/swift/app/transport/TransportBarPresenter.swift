@@ -25,6 +25,11 @@ public final class TransportBarPresenter {
     @QtTracked public var scaleNames = ScaleID.displayOrder.map(\.displayName)
     @QtTracked public var followPlayhead = true
     @QtTracked public var resonanceSuppression = false
+    @QtTracked public var polyMeterVisible = false
+    @QtTracked public var pcmText = ""
+    @QtTracked public var cgbText = ""
+    @QtTracked public var lostText = ""
+    @QtTracked public var lostVisible = false
     private weak var keyDocument: SongDocument?
     private var keyRevision: UInt64 = 0
     private var keyEvents: [(tick: Tick, label: String)] = []
@@ -57,6 +62,11 @@ public final class TransportBarPresenter {
             measureText = "1:1"
             loopBounds = ""
             keySignature = "C"
+            polyMeterVisible = false
+            pcmText = ""
+            cgbText = ""
+            lostText = ""
+            lostVisible = false
             // Scale remains available on a document even when audio failed to bind.
             masterVolume = 127
             if let audio = self.session?.transportAudio {
@@ -67,6 +77,12 @@ public final class TransportBarPresenter {
             return
         }
         state = Int(audio.transport) + 1
+        polyMeterVisible = true
+        pcmText = "\(audio.activePcmChannels)/\(audio.maxPcmChannels)"
+        cgbText = "\(audio.activeCgbChannels)/4"
+        let lost = audio.polyLostTotal
+        lostVisible = lost > 0
+        lostText = lostVisible ? "\(lost)" : ""
         let timeline = document.timeline
         let sample = audio.playheadSamples
         timeText = Self.clock(sample: sample, sampleRate: audio.sampleRate) + " / "

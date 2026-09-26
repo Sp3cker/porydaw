@@ -96,7 +96,6 @@ TestCase {
         tryCompare(shell, "active", true, 3000)
         compare(Qt.application.organization, "sp3cker",
                 "the shell keeps the production organization identity")
-        compare(shell.title, "Porydaw", "the shell keeps the production title")
         tryVerify(function() {
             return shell.font.family === "Atkinson Hyperlegible Next"
         }, 5000, "the resolved base font carries the bundled Next family")

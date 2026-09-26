@@ -145,6 +145,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var gridLineContrast = 50
     @QtTracked public var polyphonyVisible = false
     @QtTracked public var statusText = "Ready"
+    @QtTracked public var windowTitle = "porydaw"
+    @QtTracked public var windowModified = false
     private var closePending = false
     private var closing = false
 
@@ -437,11 +439,25 @@ public final class ShellPresenter: QmlInstantiableStatus {
     }
 
 
+    public func refreshWindowChrome() {
+        let project = session.projectOpen
+            ? URL(fileURLWithPath: session.projectRoot, isDirectory: true).lastPathComponent : ""
+        if let selected = session.songTabs.selectedPage {
+            windowTitle = "\(selected.title) — \(project) — porydaw"
+            windowModified = selected.workspace.session.document.isDirty
+        } else {
+            windowTitle = project.isEmpty ? "porydaw" : "\(project) — porydaw"
+            windowModified = false
+        }
+    }
+
     public func songOpenChanged() {
         if session.songOpen { statusText = "Song open" }
+        refreshWindowChrome()
     }
 
     public func saveStateChanged() {
+        refreshWindowChrome()
         guard !session.saveInProgress, !session.lastSaveError.isEmpty else { return }
         criticalRequested(title: "Save Failed", message: session.lastSaveError)
     }

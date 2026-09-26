@@ -55,6 +55,17 @@ private func checkSelectedWorkspaceAudio(_ report: CheckReport, fixtureRoot: Str
         report.fail(id, "first fixture workspace did not open: \(app.lastSaveError)")
         return
     }
+    let meter = app.transportBarPresenter()
+    meter.refresh()
+    let meterID = "swiftcore/TransportBar::polyphonyMeter"
+    report.expect(meter.polyMeterVisible, cppID: meterID,
+                  message: "the selected loaded song publishes the PCM/CGB meter")
+    report.expectEqual(expected: "0/\(audio.maxPcmChannels)", actual: meter.pcmText,
+                       cppID: meterID, what: "idle PCM channels use the audio engine's current limit")
+    report.expectEqual(expected: "0/4", actual: meter.cgbText,
+                       cppID: meterID, what: "idle CGB channels use the four-channel limit")
+    report.expect(!meter.lostVisible && meter.lostText.isEmpty, cppID: meterID,
+                  message: "zero lost notes hide and clear the lost readout")
     guard let silentTrack = app.selectedDocument?.document.addTrack(voice: 0),
           silentTrack != 0 else {
         report.fail(id, "fixture could not add an empty track for the solo exclusion")

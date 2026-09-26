@@ -257,6 +257,8 @@ public final class GridPalette {
     public var menuBackground: String = "#D2D0CA"
     public var menuHoverBackground: String = "#E7E2DC"
     public var disabledText: String = "#8B847E"
+    public var polyphonyValueBackground: String = "#E1DBD6"
+    public var polyphonyValueText: String = "#302C29"
     public var selectionText: String = "#302C29"
     /// Editable-field and tooltip surface: the preset's input swatch, which
     /// keeps text and placeholder ink above 4.5:1 in every theme.

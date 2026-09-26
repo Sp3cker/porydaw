@@ -1207,4 +1207,87 @@ TestCase {
         compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
     }
 
+    function test_zWindowTitleAndStatusMeter() {
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "the production shell is mounted for chrome state")
+        var presenter = shell.shellPresenter
+        var session = presenter.session
+        var projectName = bootstrap.projectRoot.split("/").filter(function(part) {
+            return part.length > 0
+        }).pop()
+        var meter = findChild(shell, "shellPolyMeter")
+        verify(meter !== null && !meter.visible, "the status meter is hidden with no song")
+        compare(shell.title, "porydaw", "the empty shell names the application")
+        compare(presenter.windowModified, false, "the empty shell is not modified")
+
+        session.openProject(bootstrap.projectRoot)
+        verify(waitForNative(function() { return session.projectOpen }, 30000),
+               "the fixture project opens without selecting a tab" + openDiagnostics(session))
+        compare(shell.title, projectName + " — porydaw",
+                "an empty project title names the project directory")
+        compare(meter.visible, false, "a project without a tab has no audio meter")
+
+        session.openSong("mus_route101")
+        verify(waitForNative(function() { return session.songOpen }, 30000),
+               "Route 101 opens for shell chrome" + openDiagnostics(session))
+        verify(waitForNative(function() {
+            return shell.title === "mus_route101 — " + projectName + " — porydaw"
+        }, 5000), "the selected song and project appear in the window title; actual="
+                 + shell.title)
+        compare(presenter.windowModified, false, "the loaded clean song is not modified")
+        verify(waitForNative(function() { return meter.visible }, 5000),
+               "the selected loaded song exposes the status meter")
+        compare(findChild(meter, "shellPolyPcmCaption").text, "PCM",
+                "the first meter caption identifies PCM channels")
+        compare(findChild(meter, "shellPolyPcmValue").text,
+                "0/" + presenter.settingsStore.maxPcmChannels,
+                "the PCM meter reports active channels and the configured limit")
+        compare(findChild(meter, "shellPolyCgbCaption").text, "CGB",
+                "the second meter caption identifies CGB channels")
+        compare(findChild(meter, "shellPolyCgbValue").text, "0/4",
+                "the CGB meter reports zero of four channels")
+        compare(findChild(meter, "shellPolyLostValue").visible, false,
+                "the lost-note readout stays hidden without losses")
+
+        var transport = session.transportBarPresenter()
+        transport.setMasterVolume(86)
+        verify(waitForNative(function() { return session.documentDirty }, 5000),
+               "changing song master volume dirties the selected document")
+        verify(waitForNative(function() { return presenter.windowModified }, 5000),
+               "the title presenter publishes the dirty state")
+        presenter.activate("file.save_song")
+        verify(waitForNative(function() { return !session.documentDirty && !session.saveInProgress },
+                             30000), "saving the edited song clears the dirty state")
+        verify(waitForNative(function() { return !presenter.windowModified }, 5000),
+               "saving clears the title modified state")
+        var firstId = session.songTabs.selectedId
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 2 && session.songTabs.selectedId !== firstId
+        }, 30000), "the second project song becomes the selected tab")
+        verify(waitForNative(function() {
+            return shell.title === "mus_littleroot_test — " + projectName + " — porydaw"
+        }, 5000), "the window title follows the newly selected song")
+        var secondId = session.songTabs.selectedId
+        session.songTabs.selectTab(firstId)
+        verify(waitForNative(function() {
+            return shell.title === "mus_route101 — " + projectName + " — porydaw"
+        }, 5000), "switching tabs restores the first song's title")
+        session.songTabs.requestClose(secondId)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 1 }, 5000),
+               "closing the inactive clean tab preserves the selected song")
+        session.songTabs.requestClose(session.songTabs.selectedId)
+        verify(waitForNative(function() { return session.songTabs.tabCount === 0 }, 5000),
+               "closing the clean tab leaves the project open")
+        verify(waitForNative(function() {
+            return shell.title === projectName + " — porydaw"
+        }, 5000), "closing the last tab restores the project-only title")
+        verify(waitForNative(function() { return !meter.visible }, 5000),
+               "closing the last tab hides its audio meter")
+        compare(findChild(meter, "shellPolyPcmValue").text, "",
+                "unloaded PCM meter values are cleared")
+        compare(findChild(meter, "shellPolyCgbValue").text, "",
+                "unloaded CGB meter values are cleared")
+    }
+
 }

@@ -143,6 +143,8 @@ public enum ShellAppearance {
         palette.menuBackground = colors.item
         palette.menuHoverBackground = colors.itemHover
         palette.disabledText = colors.disabledText
+        palette.polyphonyValueBackground = colors.control
+        palette.polyphonyValueText = colors.text
         palette.selectionText = palette.buttonPressedText
         palette.tabBackground = colors.control
         palette.tabHoverBackground = colors.controlHover

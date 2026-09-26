@@ -51,7 +51,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var songTabs: SongTabsController
     @QtTracked public var polyphony: PolyphonyPanelPresenter
 
-    private var projectRoot = ""
+    public private(set) var projectRoot = ""
     private var labels: [String] = []
     private var settingsVoicegroups: [String] = []
     private var catalogService: ProjectService?
@@ -501,6 +501,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
 
     @QtSignal public func gridCommandAvailabilityChanged()
     @QtSignal public func transportAvailabilityChanged()
+    @QtSignal public func projectRootChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
     @QtSignal public func allTabsClosed()
@@ -1178,6 +1179,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         catalogService = candidate.service
         projectRoot = candidate.path
+        projectRootChanged()
         labels = candidate.labels
         songDock.install(service: candidate.service, songs: candidate.songs)
         let catalog = candidate.voicegroupCatalog
