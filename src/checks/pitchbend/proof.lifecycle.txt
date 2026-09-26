@@ -16,14 +16,27 @@ predicates in src/checks/editorqml/tst_ShellPitchBend.qml
 (ShellQmlTests.swift:64-65, lane shell-pitch-bend). A016-A032 are closed by
 task 41 against the native pitchBendFineRampPredicates,
 pitchBendControllerPredicates, pitchBendSetterPredicates and
-pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:649-940
+pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:736-1027
 and the mounted test_wheelInsideCanvasOnly,
 test_pointerScrubsUndoAndStationaryClick and
 test_scrubHoverAndIdleEnterKeepEditor in
-src/checks/editorqml/tst_ShellPitchBend.qml:639-770. A036, A038, A040-A066 and
-A068-A093 stay GAP: roll-click and outside-click dismissal, cursor, focus
-return and deactivate dismissal causes belong to later pitch-bend/ED12 slices;
-A002, A006-A008, A037, A039 and A067 keep their earlier dispositions.
+src/checks/editorqml/tst_ShellPitchBend.qml:726-857. Task 41b closed the
+remainder: A036, A038, A039-A066 and A068-A093 moved to MATCHED (A037, A067 and
+A001-A035 kept their earlier dispositions), so no lifecycle.cpp site is GAP.
+A039 moved PARTIAL to MATCHED after the probe correction; A069 and A070 stay
+PARTIAL by controller ruling (the fork window cursor pixmap is not readable from
+a QML TestCase and the Swift roll publishes a cursor kind instead). The closure
+rides the task-41b mounted functions in
+src/checks/editorqml/tst_ShellPitchBend.qml:1091-1372
+(test_escapeRestoresRollFocus, test_outsideNotePressRetargetsWithoutDrag,
+test_strayNoteRetargetsWithoutDrag, test_trackHeaderPressPassesThrough,
+test_insideFormBlankKeepsEditor, test_hostWindowLossSettlesHeldStroke,
+test_noteEdgeCursorAcrossDismissal, test_reanchorTargetsNewNoteGraph,
+test_blankPassThroughAndFixtureFocus) plus the corrected
+test_cancelReopenAndOutsideClickDoNotEdit, the pre-existing
+test_externalRedoDeletesAnchorAndUnloadsPopup destroyed-editor anchor, the
+openViaG staging anchors and the new native pitchBendVertexPredicates
+held-gesture and host-loss rows in src/checks/rollcheck/pitch_bend.swift:103-185.
 Disclosed deviations: the anchored form is a single-scene overlay mounted in
 the timeline window (EditorSurface.qml:942-998) instead of the fork's
 shared-canvas QuickPopupSession, so destroyed-editor rows map to Loader
@@ -39,8 +52,21 @@ editor's); the idle move lands on the mounted graph item's canvas rather than
 the shared canvas window; the internal-edit journey drives the wheel through
 PitchBendScene.wheel and the scrub through presenter.setBendRange, the commit
 entry DragInput writes; the identity rows compare the mounted popup item
-(findChild) and the presenter instead of QPointer equality.
-Disposition tally: 99 sites: 43 MATCHED, 1 PARTIAL, 55 GAP.
+(findChild) and the presenter instead of QPointer equality. Task-41b
+disclosures: the outside press law is the composed overlay MouseArea (eat with
+retarget, else close then pass through) rather than the fork window filter, so
+A040/A045/A052/A079/A084 destroyed-editor rows read the Loader unload
+(findChild null) and A063 reads the new lane binding; A060/A061 focus handoff is
+the unmessaged forceActiveFocus plus activeFocus wait in the same journey whose
+messaged anchor proves the editor survived; A090-A092 read the native
+held-gesture and mounted host-loss anchors, and the native host-loss message is
+not cited for the focus clause (its assertion covers closed presenter plus
+changed bytes only); the host-loss stimulus is the production seam
+cancelGridInput(3) because QML cannot synthesize WindowDeactivate, and the settle
+rides the close path rather than a separate grab-revoke step; A069/A070 stay
+PARTIAL because the fork window cursor pixmap has no Swift observable (the roll
+publishes cursorKind and cursorShape).
+Disposition tally: 99 sites: 97 MATCHED, 2 PARTIAL.
 
 Command: deno task verify --filter swiftcore --verbose (task-40 implementer run)
 Result: the controller reports the new pitch-bend rows PASSED inside the
@@ -74,24 +100,35 @@ re-run the lane. The artifact has since been rewritten by the fresh task-50c run
 of the frozen revision (see Verification below), which still lists every function
 named here.
 
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-41b implementer run)
+Result: no lane-level PASS is claimed by this pass.
+build/proof-evidence/shell-pitch-bend.json (recorded 2026-09-26 13:33) lists the
+lane's thirty functions, including every function named in the closure paragraph
+above, so the mounted predicates indexed below execute there. The ledger agent
+read that recording; it did not re-run the lane.
+Command: deno task verify --filter swiftcore-projectsession --verbose (task-41b implementer run)
+Result: no lane-level PASS is claimed by this pass.
+build/proof-evidence/swiftcore-projectsession.json (recorded 2026-09-26 13:32)
+lists every pitchBendVertexPredicates row cited below among its recorded passes,
+so the native held-gesture and host-loss predicates are recorded as executed. The
+ledger agent read that recording; it did not re-run the lane.
+
 Verification: the native predicates execute on the swiftcore-projectsession
 lane (SessionChecks.swift:75 passes the suite's DocumentSession) and the
 mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65).
 This bookkeeping pass read the recordings at
 build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
-controller handoff for task 50c records that shell-pitch-bend evidence fresh at
-the frozen revision, and the now-frozen counterpart
+task-41b handoff records the shell-pitch-bend evidence fresh at the frozen
+revision; the now-frozen counterpart
 src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
-d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac after task 50c
-appended its three overlay-key test functions; that recording lists
-test_wheelInsideCanvasOnly, test_pointerScrubsUndoAndStationaryClick and
-test_scrubHoverAndIdleEnterKeepEditor among the lane's eighteen functions, so the
-mounted verdicts below are inherited from it rather than re-executed by this
-pass, which did not run the lane. The native counterpart
+08ceeb8116bb7780925ce2ce0fea4aa474ac1406713d7c9475b60f74350bba27 (1373 lines),
+with the task-41b functions at :1091-1372 and the corrected A039 probe in
+test_cancelReopenAndOutsideClickDoNotEdit, and that recording lists the lane's
+thirty functions, so the mounted verdicts below are inherited from it rather than
+re-executed by this pass, which did not run the lane. The native counterpart
 src/checks/rollcheck/pitch_bend.swift carries the SHA-256
-2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9
-pinned by the task-41 handoff.
+c67d674683eda7ef271dee7a47cd58dd9a2054a018670bb2a52d0f3227510723 (1027 lines).
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -464,8 +501,8 @@ Original expression:
       QVERIFY(editor.isNull());
 
 A036 | PitchBendEditingTest::escapeKeyDismissesPopupRetainingNoteSelection | src/checks/pitchbend/lifecycle.cpp:169
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the mounted G journey realizes the anchored editor and keeps it open for this escape journey
 Source context since previous assertion:
   }
 
@@ -479,8 +516,8 @@ A037 | PitchBendEditingTest::escapeKeyDismissesPopupRetainingNoteSelection | src
 Disposition: MATCHED
 
 A038 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:179
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the mounted G journey realizes the anchored editor and keeps it open before the roll-click journey
 Source context since previous assertion:
       m_fixture.assertNoteSelection();
   }
@@ -492,8 +529,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A039 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:183
-Disposition: PARTIAL
-Mapping/reason: tst_ShellPitchBend.qml test_cancelReopenAndOutsideClickDoNotEdit verifies outside click dismisses and retains selection, but its probe is a blank host location rather than the note itself.
+Disposition: MATCHED
+Mapping/reason: S059 + S037 - the corrected probe clicks the anchored note centre (test_cancelReopenAndOutsideClickDoNotEdit) and asserts the editor closes with no edit and no selection change (S059), and the outside-note journey keeps that note selected by id (S037)
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = openedEditor;
       QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
@@ -502,16 +539,16 @@ Original expression:
       QTRY_VERIFY(!editor || !editor->isOpen());
 
 A040 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:185
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S059 + S060 - the note-point journey closes the editor and the Loader unloads the popup item (findChild null), the mounted form of the drained QPointer editor
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(editor.isNull());
 
 A041 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:200
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S002 - the realized anchored popup item is the mounted form content for this journey
 Source context since previous assertion:
       m_fixture.assertNoteSelection();
 
@@ -531,8 +568,8 @@ Original expression:
           QVERIFY(content);
 
 A042 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:203
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S037 + S044 - the probe-position guard is carried by the two probe predicates: an inside-form press keeps the editor open (S044) while the anchored-note press dismisses it and keeps the note selected (S037), so the note point lies outside the form rect
 Source context since previous assertion:
           const QRect formRect(content->mapToScene(QPointF(0, 0)).toPoint(),
                                QSize(qRound(content->width()), qRound(content->height())));
@@ -541,8 +578,8 @@ Original expression:
                    "the probe point must sit outside the popup form panel");
 
 A043 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:207
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the reopen realizes the anchored editor again for this journey
 Source context since previous assertion:
       };
       songview::PitchBendEditor *reopened = popup();
@@ -550,8 +587,8 @@ Original expression:
       QVERIFY(reopened);
 
 A044 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:213
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S036 + S037 - the eaten outside-note press closes the editor and keeps the note selected
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> anchored = reopened;
       const QByteArray beforeGesture = m_fixture.smf();
@@ -562,32 +599,32 @@ Original expression:
       QTRY_VERIFY(!anchored || !anchored->isOpen());
 
 A045 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:215
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S036 + S060 - the eaten press leaves the editor closed and the Loader unloads the popup item
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(anchored.isNull());
 
 A046 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:216
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S038 - the eaten outside-note press restores keyboard focus to the roll input
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_VERIFY(m_fixture.rollInput().hasActiveFocus());
 
 A047 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:217
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S036 - the eaten press-move-release writes no document bytes (the revision text is unchanged)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), beforeGesture);
 
 A048 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:227
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S064 - the mounted roll draws exactly one separate stray note before the popup opens (noteSummary grows by one)
 Source context since previous assertion:
       m_fixture.assertNoteSelection();
 
@@ -602,16 +639,16 @@ Original expression:
       QVERIFY(inserted.size() == 1);
 
 A049 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:229
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S065 - the drawn stray note renders in the real roll (findChild gridNote_<id> is non-null)
 Source context since previous assertion:
       DocNote strayNote;
 Original expression:
       QVERIFY(m_fixture.document().findNote(inserted.front(), &strayNote));
 
 A050 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:233
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the stray-note journey realizes the anchored editor before the stray press
 Source context since previous assertion:
       m_fixture.view().ensureRangeVisible(m_fixture.note().tick, strayNote.tick + strayNote.duration,
                                           false);
@@ -620,8 +657,8 @@ Original expression:
       QVERIFY(strayEditor);
 
 A051 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:239
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S040 - the stray-note press is eaten without editing and retargets selection to the stray note
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> strayGuard = strayEditor;
       const QByteArray beforeStray = m_fixture.smf();
@@ -632,32 +669,32 @@ Original expression:
       QTRY_VERIFY(!strayGuard || !strayGuard->isOpen());
 
 A052 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:241
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S060 - the stray-note press leaves the editor closed and the Loader unloads the popup item
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(strayGuard.isNull());
 
 A053 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:242
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S041 - the stray-note press restores keyboard focus to the roll input
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_VERIFY(m_fixture.rollInput().hasActiveFocus());
 
 A054 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:243
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 - the eaten stray press-move-release writes no document bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), beforeStray);
 
 A055 | PitchBendEditingTest::rollClickDismissesPopupAndPreservesSelection | src/checks/pitchbend/lifecycle.cpp:246
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S040 - the mounted outside note press retargets the note selection to the consumed stray note before dismissal
 Source context since previous assertion:
       // Original close-controller rule retargets selection to the consumed
       // note under the cursor: the stray note is now selected, not the anchor.
@@ -666,8 +703,8 @@ Original expression:
               std::vector<NoteId>{inserted.front()});
 
 A056 | PitchBendEditingTest::rollCursorTracksAfterDismissal | src/checks/pitchbend/lifecycle.cpp:252
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the cursor journey realizes the anchored editor and keeps it open before the escape
 Source context since previous assertion:
   }
 
@@ -677,8 +714,8 @@ Original expression:
       QVERIFY(popup());
 
 A057 | PitchBendEditingTest::rollCursorTracksAfterDismissal | src/checks/pitchbend/lifecycle.cpp:257
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S058 - after Escape and a move to the roll blank the published cursorKind is 0, the Swift form of the fork arrow cursor
 Source context since previous assertion:
       m_fixture.closePopupViaEscape();
       checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove,
@@ -688,8 +725,8 @@ Original expression:
       QCOMPARE(m_fixture.rollInput().cursor().shape(), Qt::ArrowCursor);
 
 A058 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:263
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the reopen journey realizes the anchored editor and keeps it open
 Source context since previous assertion:
   }
 
@@ -700,8 +737,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A059 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:266
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S066 - the mounted roll input and plot mount for the G route, so the view quick surface exists
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> first = openedEditor;
       songview::TimelineQuickView *quick = m_fixture.view().quickView();
@@ -709,24 +746,24 @@ Original expression:
       QVERIFY(quick);
 
 A060 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:267
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S056 - the roll forceActiveFocus(OtherFocusReason) handoff precedes the messaged anchor: focus escaping to the roll keeps the editor open (the handoff itself is the unmessaged tryCompare in that journey)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(quick->focusBand(songview::TimelineBand::Roll, Qt::OtherFocusReason));
 
 A061 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:269
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S056 - the roll holds the focus for the same journey (the unmessaged activeFocus wait) and the messaged anchor proves the editor survives the handoff
 Source context since previous assertion:
       QCoreApplication::processEvents();
 Original expression:
       QVERIFY(quick->focusedBand() == songview::TimelineBand::Roll);
 
 A062 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:272
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S056 - focus escaping to the roll keeps the editor open
 Source context since previous assertion:
       // Restored: focus escaping to the roll alone retains the editor; the
       // re-anchor command, not focus loss, is what replaces it.
@@ -734,8 +771,8 @@ Original expression:
       QVERIFY(first && first->isOpen());
 
 A063 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:275
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S049 + S050 + S051 + S052 + S053 + S054 - the re-anchor journey replaces the open editor: the hit law reselects the stray note (S049), the open editor accepts the command (S050), the visible graph rebinds to the newly anchored lane and drops the old lane objects (S051) and the old note curve state is absent (S054); registered deviation: the mount keeps one presenter and one Loader item, so the destroyed-QPointer wording is the mount destroyed-editor form S060 (findChild null) and the replacement is the new lane binding
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_G);
       m_fixture.drainDeferredDeletes();
@@ -743,24 +780,24 @@ Original expression:
       QVERIFY(first.isNull());
 
 A064 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:277
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S050 + S051 - the re-anchor command is accepted by the open editor and the realized graph binds the newly anchored lane
 Source context since previous assertion:
       songview::PitchBendEditor *replacement = m_fixture.popup();
 Original expression:
       QVERIFY(replacement);
 
 A065 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:278
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S050 - openSelected returns true, the production route that opens (or re-opens) the editor on the newly selected note
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(replacement->isOpen());
 
 A066 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks/pitchbend/lifecycle.cpp:280
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S051 - the realized pitchBendGraph binds the newly anchored lane after the replacement
 Source context since previous assertion:
       songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
 Original expression:
@@ -770,8 +807,8 @@ A067 | PitchBendEditingTest::reopeningPopupRestoresActiveGraphFocus | src/checks
 Disposition: MATCHED
 
 A068 | PitchBendEditingTest::dismissalRestoresRollEdgeCursor | src/checks/pitchbend/lifecycle.cpp:286
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the cursor journey realizes the anchored editor and keeps it open before the edge hover
 Source context since previous assertion:
   }
 
@@ -781,8 +818,8 @@ Original expression:
       QVERIFY(popup());
 
 A069 | PitchBendEditingTest::dismissalRestoresRollEdgeCursor | src/checks/pitchbend/lifecycle.cpp:289
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S061 + S062 - PROVEN: the hovered note edge advertises cursorKind 3 and the roll cursorShape SizeHorCursor before dismissal. UNPROVEN: the fork clause is the window cursor non-null pixmap (QTRY_VERIFY(!cursor().pixmap().isNull())), which a QML TestCase cannot read and the Swift roll does not carry; registered deviation: the note-edge cursor is the advertised kind/shape, not a native pixmap cursor. Controller ruling: PARTIAL
 Source context since previous assertion:
       checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, noteEdgePoint(m_fixture),
                                 Qt::NoButton, Qt::NoButton, Qt::NoModifier);
@@ -790,8 +827,8 @@ Original expression:
       QTRY_VERIFY(!m_fixture.rollInput().cursor().pixmap().isNull());
 
 A070 | PitchBendEditingTest::dismissalRestoresRollEdgeCursor | src/checks/pitchbend/lifecycle.cpp:293
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: S047 + S048 - PROVEN: after Escape and a fresh move to the note edge the roll keeps cursorKind 3 and still advertises SizeHorCursor. UNPROVEN: the fork asserts the restored window cursor pixmap is non-null, which the mount cannot read. Controller ruling: PARTIAL
 Source context since previous assertion:
       m_fixture.closePopupViaEscape();
       checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, noteEdgePoint(m_fixture),
@@ -800,8 +837,8 @@ Original expression:
       QTRY_VERIFY(!m_fixture.rollInput().cursor().pixmap().isNull());
 
 A071 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:300
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S042 - the mounted fixture presents a second selectable track header (rows.count > otherTrack), the staged header target this journey clicks
 Source context since previous assertion:
   }
 
@@ -813,16 +850,16 @@ Original expression:
       QVERIFY(m_fixture.document().canAddTrack());
 
 A072 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:302
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S042 - the mounted fixture has a selectable header row for the other track, so the added-track staging fact holds
 Source context since previous assertion:
       const int addedTrack = m_fixture.document().addTrack(0);
 Original expression:
       QVERIFY(addedTrack > 0);
 
 A073 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:303
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S042 - the header rows item is realized with a selectable row for the other track, so a header point exists
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -830,16 +867,16 @@ Original expression:
           [this, addedTrack] { return trackHeaderWindowPoint(m_fixture, addedTrack).has_value(); }));
 
 A074 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:306
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S042 - the mounted header probe point is derived from the realized header rows and used by the pass-through click
 Source context since previous assertion:
       const std::optional<QPoint> headerPoint = trackHeaderWindowPoint(m_fixture, addedTrack);
 Original expression:
       QVERIFY(headerPoint.has_value());
 
 A075 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:309
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the header-pass-through journey realizes the anchored editor before the probes
 Source context since previous assertion:
 
       songview::PitchBendEditor *openedEditor = popup();
@@ -847,8 +884,8 @@ Original expression:
       QVERIFY(openedEditor);
 
 A076 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:312
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S002 - the realized anchored popup item is the mounted form content the inside-form probe clicks
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> editor = openedEditor;
       QQuickItem *content = m_fixture.formContent();
@@ -856,8 +893,8 @@ Original expression:
       QVERIFY(content);
 
 A077 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:315
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S044 - an inside-form blank press keeps the editor open
 Source context since previous assertion:
       QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
                         m_fixture.windowPoint(*content, QPoint(4, 24)));
@@ -865,8 +902,8 @@ Original expression:
       QVERIFY(editor->isOpen());
 
 A078 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:318
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S057 - the outside blank press dismisses the editor and passes through to the roll (every note deselected)
 Source context since previous assertion:
       QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
                         rollWindowPoint(m_fixture, QPoint(1, 1)));
@@ -874,16 +911,16 @@ Original expression:
       QTRY_VERIFY(!editor || !editor->isOpen());
 
 A079 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:320
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S057 + S060 - the blank pass-through leaves the editor closed and the Loader unloads the popup item
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(editor.isNull());
 
 A080 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:323
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the header journey reopens and realizes the anchored editor for the pass-through probe
 Source context since previous assertion:
 
       songview::PitchBendEditor *reopened = popup();
@@ -891,8 +928,8 @@ Original expression:
       QVERIFY(reopened);
 
 A081 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:327
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S002 - the realized anchored popup item is the mounted form panel the probe position is checked against
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> forwarded = reopened;
       // The pass-through probe must click a real other-UI header and select it.
@@ -901,8 +938,8 @@ Original expression:
       QVERIFY(panel);
 
 A082 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:330
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S043 + S044 - the header probe lies outside the form rect: the inside-form press retains the editor (S044) while the header click passes through and selects the other track (S043)
 Source context since previous assertion:
       const QRect panelRect(panel->mapToScene(QPointF(0, 0)).toPoint(),
                             QSize(qRound(panel->width()), qRound(panel->height())));
@@ -911,32 +948,32 @@ Original expression:
                "the header probe point must sit outside the popup form panel");
 
 A083 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:333
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S043 - the header click dismisses the editor and passes through to select that track
 Source context since previous assertion:
       QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier, *headerPoint);
 Original expression:
       QTRY_VERIFY(!forwarded || !forwarded->isOpen());
 
 A084 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:335
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S043 + S060 - the header pass-through leaves the editor closed and the Loader unloads the popup item
 Source context since previous assertion:
       m_fixture.drainDeferredDeletes();
 Original expression:
       QVERIFY(forwarded.isNull());
 
 A085 | PitchBendEditingTest::insideClickRetainedOutsideClickDismisses | src/checks/pitchbend/lifecycle.cpp:336
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S043 - the track-header click passes through and selects its track (grid.trackIndex becomes the other track)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QTRY_COMPARE(m_fixture.view().selectionModel().primaryTrack(), addedTrack);
 
 A086 | PitchBendEditingTest::popupDismissalReturnsFocusToRollInputItem | src/checks/pitchbend/lifecycle.cpp:342
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the focus-return journey realizes the anchored editor before the escape
 Source context since previous assertion:
       m_fixture.view().selectTrack(0);
   }
@@ -947,16 +984,16 @@ Original expression:
       QVERIFY(popup());
 
 A087 | PitchBendEditingTest::popupDismissalReturnsFocusToRollInputItem | src/checks/pitchbend/lifecycle.cpp:344
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S035 - Escape dismissal returns keyboard focus to the roll input
 Source context since previous assertion:
       m_fixture.closePopupViaEscape();
 Original expression:
       QTRY_VERIFY(m_fixture.rollInput().hasActiveFocus());
 
 A088 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:350
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - the host-loss journey realizes the anchored editor before the held stroke
 Source context since previous assertion:
   }
 
@@ -967,16 +1004,16 @@ Original expression:
       QVERIFY(editorResult);
 
 A089 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:352
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S002 + S032 - the realized popup presents the pitch graph and the native held-gesture predicate proves that graph carries a live gesture
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
       QVERIFY(graphResult);
 
 A090 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:360
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S032 - the native held-gesture predicate asserts graph.kernel.hasGesture with no commit yet while the pointer is down
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const int index = m_fixture.document().undoStack()->index();
@@ -989,8 +1026,8 @@ Original expression:
       QVERIFY(graph.hasGesture());
 
 A091 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:365
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S034 + S045 - host-window loss settles the held stroke and closes the editor (native S034 asserts the closed presenter with changed bytes; mounted S045 asserts the closed editor with one committed revision)
 Source context since previous assertion:
       // The shared session cancels on shared-window deactivation; the live
       // editor commits its pending stroke without restoring roll focus.
@@ -1000,16 +1037,16 @@ Original expression:
       QTRY_VERIFY(!m_fixture.popup());
 
 A092 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:366
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S033 + S045 - the loss commits exactly one history entry for the held stroke and closes the editor
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A093 | PitchBendEditingTest::windowDeactivateCommitsWithoutFocusRestore | src/checks/pitchbend/lifecycle.cpp:367
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S046 - host-window loss does not restore keyboard focus to the roll (opened.roll.activeFocus stays false); the native S034 message is not cited for this clause
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -1138,6 +1175,77 @@ Anchor: message "a pointer scrub raises BENDR by one"
 S031 | pitchBendControllerPredicates | src/checks/rollcheck/pitch_bend.swift
 Anchor: message "wheeling inside the pitch graph raises BENDR one step per notch"
 
+S032 | pitchBendVertexPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a held graph gesture settles as a commit" #1
+S033 | pitchBendVertexPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a held graph gesture settles as a commit" #2
+S034 | pitchBendVertexPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "host-window loss settles and closes the editor without restoring roll focus"
+S035 | test_escapeRestoresRollFocus | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "dismissal returns keyboard focus to the roll input"
+S036 | test_outsideNotePressRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "an outside note press is eaten without dragging the note"
+S037 | test_outsideNotePressRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "clicking the anchored note dismisses the editor and keeps it selected"
+S038 | test_outsideNotePressRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "dismissal returns keyboard focus to the roll input"
+S039 | test_strayNoteRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "an outside note press is eaten without dragging the note"
+S040 | test_strayNoteRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the outside note press retargets selection before dismissal"
+S041 | test_strayNoteRetargetsWithoutDrag | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "dismissal returns keyboard focus to the roll input"
+S042 | test_trackHeaderPressPassesThrough | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a second track has a selectable header"
+S043 | test_trackHeaderPressPassesThrough | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a track-header click passes through and selects its track"
+S044 | test_insideFormBlankKeepsEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "an inside-form blank press keeps the editor open"
+S045 | test_hostWindowLossSettlesHeldStroke | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "host-window loss commits the held stroke and closes without focus restore"
+S046 | test_hostWindowLossSettlesHeldStroke | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "host-window loss does not restore keyboard focus to the roll"
+S047 | test_noteEdgeCursorAcrossDismissal | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the roll keeps its note-edge cursor across dismissal"
+S048 | test_noteEdgeCursorAcrossDismissal | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the roll's advertised cursor remains horizontal resize"
+S049 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the real roll hit law selects the stray note for re-anchoring"
+S050 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the open editor accepts the re-anchor command"
+S051 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the visible graph binds the newly anchored lane"
+S052 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup targets the newly selected note"
+S053 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup anchor follows the newly selected note's key"
+S054 | test_reanchorTargetsNewNoteGraph | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the old note's curve state is absent from the new graph"
+S055 | test_blankPassThroughAndFixtureFocus | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the mounted fixture holds exactly its anchor note selected"
+S056 | test_blankPassThroughAndFixtureFocus | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "focus escaping to the roll keeps the editor open"
+S057 | test_blankPassThroughAndFixtureFocus | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "an outside blank press passes through to the roll"
+S058 | test_blankPassThroughAndFixtureFocus | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the roll advertises the arrow cursor after dismissal"
+S059 | test_cancelReopenAndOutsideClickDoNotEdit | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "outside click dismisses without editing or changing selection"
+S060 | test_externalRedoDeletesAnchorAndUnloadsPopup | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "closing the editor unloads the popup item"
+S061 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the hovered note edge advertises horizontal resize"
+S062 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the note-edge cursor binding observes the roll kind"
+S063 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the drawn stray note fits beyond and above the anchor"
+S064 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the real roll draws a separate note before the popup opens"
+S065 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the stray note renders in the real roll"
+S066 | openViaG | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the roll input and plot mount for the G route"
+
 The mounted predicates carry no line numbers by design: the reader resolves the
 index's message literal inside the named function (see `deno task proof show
 pitchbend/lifecycle.cpp S001`). The remaining predicates of the three task-40
@@ -1145,6 +1253,11 @@ mounted journeys and of the two native blocks are indexed in proof.curve.txt
 (S102-S128 and S064-S101); they cover curve.cpp clauses, so they carry no
 lifecycle.cpp site here. Task 41's mounted wheel/scrub/idle-Enter predicates and
 the native controller/scrub/active-BENDR predicates are indexed in this file as
-S021-S031 because they cover its A016-A032 rows. Uncited index entries in this
-file: S005 (the inside-window clause of the already-MATCHED pre-shrink rows) and
-S010 (the fork's trailing assertNoteSelection, which is no A row).
+S021-S031 because they cover its A016-A032 rows. Task 41b added S032-S066 for the
+A036-A093 closure: the native held-gesture and host-loss predicates (S032-S034)
+and the mounted escape, outside-press, retarget, header, inside-form, host-loss,
+cursor, re-anchor and fixture anchors (S035-S066), plus the pre-existing
+destroyed-editor anchor (S060). Uncited index entries in this
+file: S005 (the inside-window clause of the already-MATCHED pre-shrink rows),
+S010 (the fork's trailing assertNoteSelection, which is no A row) and S055 (the
+mounted fixture-selection anchor, which no lifecycle.cpp site claims).

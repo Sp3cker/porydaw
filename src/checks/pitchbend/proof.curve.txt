@@ -14,14 +14,14 @@ src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
 shell-pitch-bend); A058-A087
 are closed by task 40 against the native pitchBendOwnerLifetimePredicates,
 pitchBendExternalPreviewPredicates and pitchBendUnterminatedPredicates rows in
-src/checks/rollcheck/pitch_bend.swift:479-626 and the mounted predicates in
+src/checks/rollcheck/pitch_bend.swift:566-713 and the mounted predicates in
 test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
-in src/checks/editorqml/tst_ShellPitchBend.qml:494-638. A088-A123 are closed by task 41
+in src/checks/editorqml/tst_ShellPitchBend.qml:581-725. A088-A123 are closed by task 41
 against the native pitchBendResetPredicates, pitchBendFineRampPredicates and
-pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:649-940
+pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:736-1027
 and the mounted test_noteScopedCurveAndControls in
-src/checks/editorqml/tst_ShellPitchBend.qml:328-442. Disclosed
+src/checks/editorqml/tst_ShellPitchBend.qml:378-492. Disclosed
 deviations: the native navigation predicate calls presenter.routeUnclaimedKey
 directly instead of the mounted window key event (mounted coverage S050-S053);
 the native undo rows call document.history.undoDocument() where the mounted lane
@@ -31,7 +31,7 @@ presenter.documentDidChange, so popup liveness through undo is proved on the
 mounted lane for those journeys, while the task-40 blocks mirror the two
 DocumentWorkspace.sessionDidChange rules through pitchBendObserveDocument; the
 duplicate-note fixture is two notes inserted together in one addNotes call
-(pitch_bend.swift:485-493) instead of the fork's dedicated setUp(false, true)
+(pitch_bend.swift:572-580) instead of the fork's dedicated setUp(false, true)
 note set; the native external break is moveNotes(byTicks: 1) plus deleteNotes
 (the fork's public mutator set has no per-note track move) and the mounted
 external mutation is a redo of a real roll Delete rather than the fork's
@@ -59,8 +59,9 @@ test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and
 test_livePreviewSurvivesUndoRedo alongside the seven unchanged tests. The ledger
 agent read that recording; it did not re-run the lane. The artifact has since been
-rewritten by the fresh task-50c run of the frozen revision (see Verification
-below), which still lists every function named here.
+rewritten by the task-41b run of the frozen revision (see Verification
+below, re-pinned to the task-41b recording), which still lists every function
+named here.
 Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
 Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
 check); build/proof-evidence/swiftcore-projectsession.json (5427 passes, recorded
@@ -84,20 +85,21 @@ this bookkeeping pass read the recorded evidence at
 build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
 the lane-level result for the task-40 native rows is the controller-reported
-implementer run described above, not an observation of this pass. The controller
-handoff for task 50c records the shell-pitch-bend evidence fresh at the frozen
-revision, and the now-frozen counterpart
+implementer run described above, not an observation of this pass. The task-41b
+handoff records the shell-pitch-bend evidence fresh at the frozen revision, and
+the counterpart
 src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
-d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac after task 50c
-appended its three overlay-key test functions; that recording lists
+08ceeb8116bb7780925ce2ce0fea4aa474ac1406713d7c9475b60f74350bba27 (1373 lines,
+re-pinned by task 41b, which appended its closure functions after the task-50c
+overlay-key functions); that recording lists
 test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and
-test_livePreviewSurvivesUndoRedo among the lane's eighteen functions, so the
+test_livePreviewSurvivesUndoRedo among the lane's thirty functions, so the
 mounted verdicts below are inherited from it rather than re-executed by this
 pass, which did not run the lane. The native counterpart
 src/checks/rollcheck/pitch_bend.swift carries the SHA-256
-2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
-task-41 handoff.
+c67d674683eda7ef271dee7a47cd58dd9a2054a018670bb2a52d0f3227510723 (1027 lines,
+re-pinned by task 41b).
 Task 32's fix round added the popup-face predicates S061-S063 (popup title, caption
 and readout faces against the published roles; the drag-input body face; and the
 13->26->13 republish round trip), executed by pitchBendReadoutPredicates under
@@ -666,7 +668,7 @@ Original expression:
 
 A058 | PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote | src/checks/pitchbend/curve.cpp:210
 Disposition: MATCHED
-Mapping/reason: S064 - the duplicate pair is staged by one addNotes call (pitch_bend.swift:485-493) and the executed identity predicate proves the duplicate note exists with an independent identity; registered deviation: the fork's dedicated two-note setUp(false, true) fixture is replaced by two notes inserted together into the synthetic session's track
+Mapping/reason: S064 - the duplicate pair is staged by one addNotes call (pitch_bend.swift:572-580) and the executed identity predicate proves the duplicate note exists with an independent identity; registered deviation: the fork's dedicated two-note setUp(false, true) fixture is replaced by two notes inserted together into the synthetic session's track
 Source context since previous assertion:
   }
 

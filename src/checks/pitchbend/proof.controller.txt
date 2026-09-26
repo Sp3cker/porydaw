@@ -10,7 +10,7 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Scope: all 81 sites are closed by task 41 against the native
 pitchBendControllerPredicates, pitchBendSetterPredicates,
 pitchBendResetPredicates and the popup-key arbitration block of
-pitchBendParityPredicates in src/checks/rollcheck/pitch_bend.swift:739-940
+pitchBendParityPredicates in src/checks/rollcheck/pitch_bend.swift:826-1027
 (swiftcore-projectsession lane, SessionChecks.swift:75 passes the suite's
 DocumentSession) and the mounted test_wheelInsideCanvasOnly,
 test_pointerScrubsUndoAndStationaryClick,
@@ -49,8 +49,8 @@ Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (reco
 test_pointerScrubsUndoAndStationaryClick, test_scrubHoverAndIdleEnterKeepEditor,
 test_popupSpaceAuditionSoloAndMuteAbsorption and test_noteScopedCurveAndControls
 alongside the earlier ten tests. The ledger agent read that recording; it did not
-re-run the lane. The artifact has since been rewritten by the fresh task-50c run
-of the frozen revision (see Verification below), which still lists every function
+re-run the lane. The artifact has since been rewritten by the task-41b run of the
+frozen revision (see Verification below), which still lists every function
 named here.
 Command: deno task verify --filter swiftcore --verbose (task-41 implementer run)
 Result: 12/37 checks ran ok before the final lattice-check edits; the implementer's
@@ -68,16 +68,18 @@ build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
 controller handoff records the shell-pitch-bend evidence fresh at this
 revision; that recording lists test_wheelInsideCanvasOnly (the function
-carrying S026-S031 and S051-S053), and the now-frozen counterpart
+carrying S026-S031 and S051-S053), and the counterpart
 src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
-d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac with the
-two-notch message anchors at :663-664, :668-669 and :684-694 after task 50c
-appended its three overlay-key test functions, so the mounted
-verdicts below are inherited from that recording and not re-executed by this
-pass. The native counterpart
+08ceeb8116bb7780925ce2ce0fea4aa474ac1406713d7c9475b60f74350bba27 (1373 lines,
+re-pinned by task 41b, which appended its closure functions after the task-50c
+overlay-key functions) with the two-notch message anchors now at :750-751,
+:755-756 and :771-781, so the mounted
+verdicts below are inherited from the task-41b recording and not re-executed by
+this pass. The native counterpart
 src/checks/rollcheck/pitch_bend.swift carries the SHA-256
-2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
-task-41 handoff.
+c67d674683eda7ef271dee7a47cd58dd9a2054a018670bb2a52d0f3227510723 (1027 lines,
+re-pinned by task 41b) and the recording at
+build/proof-evidence/shell-pitch-bend.json lists every function named here.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with

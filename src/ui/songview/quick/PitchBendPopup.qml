@@ -71,9 +71,11 @@ Rectangle {
     }
 
     Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape)
-            bridge.cancelAndClose()
-        else if (!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
+        if (event.key === Qt.Key_Escape) {
+            event.accepted = false
+            return
+        }
+        if (!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
             bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat)
         event.accepted = true
     }
@@ -381,7 +383,7 @@ Rectangle {
             }
             onCanceled: {
                 if (graphCanvas.lane)
-                    graphCanvas.lane.cancelGesture()
+                    graphCanvas.lane.settleGesture()
             }
             onWheel: (wheel) => {
                 if (graphCanvas.lane && graphCanvas.inCanvas(wheel.x, wheel.y))
@@ -394,7 +396,7 @@ Rectangle {
 
     GraphCanvas {
         id: pitchGraph
-        lane: bridge ? bridge.pitchGraph() : null
+        lane: bridge ? bridge.currentPitch : null
         objectName: "pitchBendGraph"
         x: 0
         y: root.headerHeight
@@ -405,7 +407,7 @@ Rectangle {
 
     GraphCanvas {
         id: modGraph
-        lane: bridge ? bridge.modGraph() : null
+        lane: bridge ? bridge.currentMod : null
         objectName: "modWheelGraph"
         x: 0
         y: root.headerHeight + root.graphHeight

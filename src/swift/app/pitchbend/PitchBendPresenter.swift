@@ -28,8 +28,8 @@ public final class PitchBendPresenter {
     private var noteEnd = 0
     private var endRange = 2
     private var endSpeed = 22
-    private var currentPitch: PitchBendLane?
-    private var currentMod: PitchBendLane?
+    @QtTracked public var currentPitch: PitchBendLane?
+    @QtTracked public var currentMod: PitchBendLane?
     @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
     @QtIgnored public var onSoloTracksRequested: (() -> Void)?
 
@@ -140,6 +140,16 @@ public final class PitchBendPresenter {
         guard isOpen else { return }
         currentPitch?.cancelGesture()
         currentMod?.cancelGesture()
+        isOpen = false
+        currentPitch = nil
+        currentMod = nil
+        note = nil
+    }
+
+    public func settleAndClose() {
+        guard isOpen else { return }
+        currentPitch?.settleGesture()
+        currentMod?.settleGesture()
         isOpen = false
         currentPitch = nil
         currentMod = nil

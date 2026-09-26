@@ -599,6 +599,13 @@ public final class PianoGrid {
         }
     }
 
+    public func focusNoteUnderCursor(x: Double, y: Double) -> Bool {
+        guard let hit = hitNote(x: x, y: y) else { return false }
+        applyPressSelection(notes[hit.index].noteId, modifiers: 0)
+        refreshNotes()
+        return true
+    }
+
     public func beginPointer(x: Double, y: Double, modifiers: Int) {
         guard gesture == nil else { return }
         suppressedLeftRelease = false

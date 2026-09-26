@@ -999,7 +999,17 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                    onPressed: root.pitchBendPresenter.cancelAndClose()
+                    onPressed: (mouse) => {
+                        const rollPoint = rollInput.mapFromItem(root, mouse.x, mouse.y)
+                        const overRoll = rollPlot.visible && rollPoint.x >= 0 && rollPoint.y >= 0
+                            && rollPoint.x < rollInput.width && rollPoint.y < rollInput.height
+                        const hit = overRoll && mouse.button === Qt.LeftButton
+                            && root.gridModel.focusNoteUnderCursor(rollPoint.x, rollPoint.y)
+                        root.pitchBendPresenter.cancelAndClose()
+                        mouse.accepted = hit
+                        if (hit)
+                            rollInput.forceActiveFocus(Qt.MouseFocusReason)
+                    }
                     onWheel: (wheel) => wheel.accepted = true
                 }
                 PitchBendPopup {
@@ -1038,6 +1048,7 @@ Item {
                 }
                 Keys.onEscapePressed: (event) => {
                     root.pitchBendPresenter.cancelAndClose()
+                    rollInput.forceActiveFocus(Qt.OtherFocusReason)
                     event.accepted = true
                 }
             }

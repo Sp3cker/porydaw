@@ -21,8 +21,9 @@ frozen final sources; raw log /tmp/porydaw-shell-parity-final.log
 row above stays pending.
 Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-50c implementer run)
 Result: the controller handoff records the shell-pitch-bend evidence fresh at this
-revision; build/proof-evidence/shell-pitch-bend.json lists the lane's eighteen
-functions, including test_graphKeyOwnershipAndRepeatedOpener,
+revision; build/proof-evidence/shell-pitch-bend.json lists the lane functions (eighteen at
+task 50c; rewritten by the task-41b run with thirty), including
+test_graphKeyOwnershipAndRepeatedOpener,
 test_graphVertexDeleteUndoAndWindowSoloResumption and
 test_numericFieldOwnsCopyAndYieldsSpace, so the mounted predicates S013-S036 below
 execute there. This bookkeeping pass read that recording; it did not re-run the
@@ -37,15 +38,16 @@ Verification: the mapped mounted predicates execute on the shell-pitch-bend lane
 build/proof-evidence/shell-pitch-bend.json and did not execute the lane. The
 now-frozen counterpart src/checks/editorqml/tst_ShellPitchBend.qml carries the
 SHA-256
-d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac, and the anchors
-cited below resolve to :833 (S013), :838 (S014), :851 (S015), :864 (S016), :869
-(S017), :888 (S018), :894 (S019), :912 (S020), :921 (S021), :923 (S022), :932
-(S023), :934 (S024), :940 (S025), :944 (S026), :949 (S027), :952 (S028), :975
-(S029), :982 (S030), :990 (S031), :993 (S032), :997 (S033), :732 (S034), :987
-(S035) and :205 (S036). The native counterpart src/checks/rollcheck/pitch_bend.swift
+08ceeb8116bb7780925ce2ce0fea4aa474ac1406713d7c9475b60f74350bba27 (1373 lines,
+re-pinned by task 41b), and the anchors
+cited below resolve to :920 (S013), :925 (S014), :938 (S015), :951 (S016), :956
+(S017), :975 (S018), :981 (S019), :999 (S020), :1008 (S021), :1010 (S022), :1019
+(S023), :1021 (S024), :1027 (S025), :1031 (S026), :1036 (S027), :1039 (S028), :1062
+(S029), :1069 (S030), :1077 (S031), :1080 (S032), :1084 (S033), :819 (S034), :1074
+(S035) and :247 (S036). The native counterpart src/checks/rollcheck/pitch_bend.swift
 carries the SHA-256
-2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
-task-41 handoff. The swiftcore rows S001-S008 stay pending.
+c67d674683eda7ef271dee7a47cd58dd9a2054a018670bb2a52d0f3227510723 (1027 lines,
+re-pinned by task 41b). The swiftcore rows S001-S008 stay pending.
 Registered deviations, recorded per row: the window shortcut carries Undo into the
 open popup (A025-A027); count clauses are carried by exactly-once state
 observables (A013-A015, A019, A034, A035, A040, A041); the mounted solo, mute and
@@ -307,7 +309,7 @@ A010 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: PARTIAL
 Mapping/reason: PARTIAL - the mounted G journey stages the same Roll-origin
 focus with roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
-tryCompare(roll, "activeFocus", true) (tst_ShellPitchBend.qml:477-478, helper
+tryCompare(roll, "activeFocus", true) (tst_ShellPitchBend.qml:563-564, helper
 openViaG). The fork's clause asserts the native band-focus request returned true
 (focusedTimelineBand(Roll) accepted), an API with no QML counterpart, and the
 mounted stage carries no message anchor, so what remains unproved is the
@@ -323,7 +325,7 @@ Disposition: PARTIAL
 Mapping/reason: PARTIAL - the Roll-origin focus observation
 (focusedTimelineBand() == Roll plus the native window's activeFocusItem and the
 QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
-roll activeFocus stage (tst_ShellPitchBend.qml:477-478). No message-anchored
+roll activeFocus stage (tst_ShellPitchBend.qml:563-564). No message-anchored
 predicate asserts the roll's QML focus and the native focus-window identity has
 no QML counterpart, so that half stays unproved.
 Source context since previous assertion:
@@ -365,7 +367,7 @@ Disposition: MATCHED
 Mapping/reason: S013 - test_graphKeyOwnershipAndRepeatedOpener delivers exactly
 one G into the focused roll (helper openViaG) and then compares
 findChild("pitchBendPopup") with the popup that journey opened
-(tst_ShellPitchBend.qml:832-833), so one delivered opener key leaves exactly one
+(tst_ShellPitchBend.qml:919-920), so one delivered opener key leaves exactly one
 editor open and no replacement instance; the companion compare at :839-840 pins
 the document revision unchanged across that key. Registered deviation: the Swift
 shell has no QAction and no trigger counter, so the fork's
@@ -407,7 +409,7 @@ Original expression:
 A014 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:226
 Disposition: PARTIAL
 Mapping/reason: S014 - with the graph focused (graph.forceActiveFocus plus the
-unmessaged tryCompare(graph, "activeFocus", true) at tst_ShellPitchBend.qml:834-835)
+unmessaged tryCompare(graph, "activeFocus", true) at tst_ShellPitchBend.qml:921-922)
 the journey re-delivers G and asserts the same popup instance is still mounted
 (:836-838), so a repeated opener key never reopens the editor. PARTIAL: the
 fork's clause is consumption of an autorepeat press (TimelineKeyInput.autoRepeat
@@ -430,7 +432,7 @@ Original expression:
 A015 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:228
 Disposition: PARTIAL
 Mapping/reason: S014 - after the second delivered G the journey still shows the
-same single popup (tst_ShellPitchBend.qml:836-838) and the unchanged document
+same single popup (tst_ShellPitchBend.qml:923-925) and the unchanged document
 revision (:839-840), the count-free equivalent of still-one trigger. PARTIAL:
 the fork's QCOMPARE(pitchBendTriggered.count(), 1) has no Swift QAction or
 trigger counter behind it and the second delivery is a plain keyClick rather
@@ -443,7 +445,7 @@ Original expression:
 A016 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:229
 Disposition: MATCHED
 Mapping/reason: S013 - the G route realizes the popup item and the journey then
-compares it by identity (tst_ShellPitchBend.qml:832-833); the helper's own
+compares it by identity (tst_ShellPitchBend.qml:919-920); the helper's own
 realization check carries the message "the G key realizes the anchored popup"
 (:482-483). Registered deviation: realization is a mounted
 findChild("pitchBendPopup") item instead of the fork's native QuickPopupSession
@@ -464,7 +466,7 @@ Disposition: MATCHED
 Mapping/reason: S036 - test_keyboardUndoWhileOpenRestoresCurve asserts the
 popup's graph keeps the keyboard focus while the editor is open
 (verify(opened.graph.activeFocus, "undo keeps the graph focused"),
-tst_ShellPitchBend.qml:205), the mounted equivalent of the fork's completed graph
+tst_ShellPitchBend.qml:247), the mounted equivalent of the fork's completed graph
 focus; the G journey stages the same state with the unmessaged
 tryCompare(graph, "activeFocus", true) at :834-835 before delivering its absorbed
 keys, and the helper openPitchEditor carries the same clause at :160. Registered
@@ -488,7 +490,7 @@ A019 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S015 - the popup graph's S key flips the selected track's mounted
 solo state exactly once (tryCompare(solo, "checked", !initialSolo, 5000, "graph
-Solo toggles the track exactly once"), tst_ShellPitchBend.qml:849-851) - the
+Solo toggles the track exactly once"), tst_ShellPitchBend.qml:936-938) - the
 count-free equivalent of the fork's soloMaskChanged count of one with a zero
 window-action delta, which the popup's ShortcutOverride claim keeps from seeing
 the key (PitchBendPopup.qml:66-72). The companion journey proves one mask change
@@ -513,7 +515,7 @@ Original expression:
 A020 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:268
 Disposition: MATCHED
 Mapping/reason: S016 - after a window Copy over the focused graph
-(keySequence(StandardKey.Copy) at tst_ShellPitchBend.qml:860) the mounted
+(keySequence(StandardKey.Copy) at tst_ShellPitchBend.qml:947) the mounted
 clipboard probe still pastes the sentinel text, so no window Copy ran
 (:861-864); the journey's serialized revision is unchanged as well (:870-871).
 Registered deviation: the fork's window-action delta and native clipboard
@@ -543,7 +545,7 @@ Disposition: MATCHED
 Mapping/reason: S017 - the popup graph's M key leaves both the mounted mute
 checkbox and the transport state untouched (verify(mute.checked === initialMute
 && bar.presenter.state === initialTransport, "graph Mute never toggles playback
-or the mask"), tst_ShellPitchBend.qml:865-869) with the document revision
+or the mask"), tst_ShellPitchBend.qml:952-956) with the document revision
 unchanged (:870-871) - the fork's zero playback requests and unchanged mute mask.
 Registered deviation: playback and the mute mask are read from the mounted
 transport state and the timelineHeaderMute checkbox.
@@ -570,7 +572,7 @@ Disposition: MATCHED
 Mapping/reason: S018 - test_graphVertexDeleteUndoAndWindowSoloResumption asserts
 the mounted pitch graph exposes a non-empty canvas before the drawn stroke
 (verify(canvas.width > 0 && canvas.height > 0, "the pitch graph has an editable
-canvas"), tst_ShellPitchBend.qml:887-888), the same observable as the fork's
+canvas"), tst_ShellPitchBend.qml:974-975), the same observable as the fork's
 non-empty canvasRect gate.
 Source context since previous assertion:
   ;
@@ -586,7 +588,7 @@ A023 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S019 - one mouseClick on that canvas inserts one interior vertex
 (tryCompare(graph, "curveSegmentCount", originalSegments + 2, 5000, "the drawn
-stroke creates one undoable vertex") at tst_ShellPitchBend.qml:892-894, with the
+stroke creates one undoable vertex") at tst_ShellPitchBend.qml:979-981, with the
 interior-vertex search at :895-901 finding a vertex between the anchor note's
 tick and its note-off) and the serialized revision advances by exactly one
 history entry (:904-906) - the fork's index == undoBefore + 1 with an interior
@@ -613,7 +615,7 @@ Disposition: MATCHED
 Mapping/reason: S020 - Delete in the focused graph removes exactly the drawn
 interior vertex: the curve returns to its original segment count
 (tryCompare(graph, "curveSegmentCount", originalSegments, 5000, "Delete removes
-exactly the selected vertex") at tst_ShellPitchBend.qml:910-912), hitVertex at
+exactly the selected vertex") at tst_ShellPitchBend.qml:997-999), hitVertex at
 the drawn position returns -1 (:913-914) and the revision advances by exactly one
 more history entry (:915-916) - the fork's index == undoBefore + 2 with the
 selected tick's lane point gone.
@@ -635,7 +637,7 @@ Mapping/reason: S021 - the real StandardKey.Undo key sequence is delivered while
 the popup is open and reaches the song history (verify(waitForNative(function()
 { return Number(opened.grid.appliedRevisionText) > baseline + 2 &&
 shell.shellPresenter.session.canRedo }, 5000), "the first standard Undo reaches
-the song history") at tst_ShellPitchBend.qml:917-921), so the popup's own edit
+the song history") at tst_ShellPitchBend.qml:1004-1008), so the popup's own edit
 is undone through
 platform Undo rather than a synthesized call. Registered deviation: the fork's
 sendStandardUndo first asserts the popup accepted the ShortcutOverride; the Swift
@@ -653,7 +655,7 @@ Disposition: MATCHED
 Mapping/reason: S022 - after that Undo the deleted vertex is restored: the curve
 regains the drawn segment count (tryCompare(graph, "curveSegmentCount",
 originalSegments + 2, 5000, "the first standard Undo restores the deleted vertex")
-at tst_ShellPitchBend.qml:922-923) and hitVertex at the drawn position returns the
+at tst_ShellPitchBend.qml:1009-1010) and hitVertex at the drawn position returns the
 vertex's tick (:924-925), with the redo tip retained (:926-927). Registered
 deviation: the fork compares the native undo index with the restored SMF bytes;
 here the restored state is the curve segment count plus the restored interior
@@ -670,7 +672,7 @@ Disposition: MATCHED
 Mapping/reason: S023 - a second real StandardKey.Undo advances the song history
 again from the restored state (verify(waitForNative(function() { return
 opened.grid.appliedRevisionText !== onceUndoneRevision }, 5000), "the second
-standard Undo advances song history") at tst_ShellPitchBend.qml:928-932).
+standard Undo advances song history") at tst_ShellPitchBend.qml:1015-1019).
 Registered deviation: same window-shortcut route as A025 - the shortcut is
 delivered while the popup is open rather than claimed by a popup
 ShortcutOverride.
@@ -685,7 +687,7 @@ Disposition: MATCHED
 Mapping/reason: S024 - the second standard Undo restores the pre-edit document:
 the rendered curve returns to its original segment count (tryCompare(graph,
 "curveSegmentCount", originalSegments, 5000, "the second standard Undo restores
-the pre-edit document") at tst_ShellPitchBend.qml:933-934) and the selected notes
+the pre-edit document") at tst_ShellPitchBend.qml:1020-1021) and the selected notes
 are identical to the journey's opening note summary (:935-936). Registered
 deviation: the fork's document-byte equality is carried by the curve segment
 count and the unchanged note summary.
@@ -700,7 +702,7 @@ A029 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S034 - the mounted numeric journey focuses bendRangeInput through
 the real click on its spin field (mouseClick(field, ...) plus the unmessaged
-tryCompare(input, "activeFocus", true) at tst_ShellPitchBend.qml:971-972), and
+tryCompare(input, "activeFocus", true) at tst_ShellPitchBend.qml:1058-1059), and
 the messaged predicate tryCompare(input, "activeFocus", true, 5000, "a stationary
 click focuses the field") (:732) asserts the field owns the keyboard focus while
 the popup is open; the field still holds focus after two transport keys (:999).
@@ -732,7 +734,7 @@ Disposition: MATCHED
 Mapping/reason: S030 - with the numeric field focused, StandardKey.Copy fills the
 mounted clipboard with the field's own selection, read back by pasting into a
 probe TextInput (compare(probe.text, String(originalRange), "numeric Copy copies
-the selection without the window action") at tst_ShellPitchBend.qml:976-982),
+the selection without the window action") at tst_ShellPitchBend.qml:1063-1069),
 after StandardKey.SelectAll left that value selected (:973-975); the window Copy
 would have carried the lane selection instead. Registered deviation: the fork's
 window-action delta and native clipboard equality are carried by the probe's
@@ -758,7 +760,7 @@ A031 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S035 - with the numeric field focused the S key leaves the track's
 solo state untouched (compare(solo.checked, originalSolo, "the numeric field
-absorbs Solo") at tst_ShellPitchBend.qml:986-987) and the field text still equals
+absorbs Solo") at tst_ShellPitchBend.qml:1073-1074) and the field text still equals
 its bend value, so a nonnumeric key never reaches the field (:988). Registered
 deviation: the fork's window-action delta and solo-mask equality are carried by
 the mounted timelineHeaderSolo checkbox state.
@@ -787,7 +789,7 @@ Disposition: MATCHED
 Mapping/reason: S031 - after the S and Space keys the presenter's published
 bendRange still equals the value the field shows (compare(opened.editor.bendRange,
 originalRange, "the numeric field keeps its bend range") at
-tst_ShellPitchBend.qml:989-990), and the numeric journey writes no document
+tst_ShellPitchBend.qml:1076-1077), and the numeric journey writes no document
 revision (:1000-1001). Registered deviation: the stored controller value is read
 from the presenter that writes BENDR instead of the fork's native popup object.
 Source context since previous assertion:
@@ -802,7 +804,7 @@ Disposition: MATCHED
 Mapping/reason: S029 - the mounted journey applies the real
 StandardKey.SelectAll to the focused numeric field and proves the selection took
 (compare(input.selectedText, String(originalRange), "the numeric field selects
-its value on Select All") at tst_ShellPitchBend.qml:973-975), the functional
+its value on Select All") at tst_ShellPitchBend.qml:1060-1062), the functional
 equivalent of the fork's invokeMethod(numericEdit, "selectAll") staging guard.
 Source context since previous assertion:
   ;
@@ -816,7 +818,7 @@ A034 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S032 - the first Space in the focused numeric field toggles the
 transport (tryCompare(bar.presenter, "state", 3, 5000, "numeric Space starts
-transport without editing text") at tst_ShellPitchBend.qml:991-993) while the
+transport without editing text") at tst_ShellPitchBend.qml:1078-1080) while the
 field text stays at its bend value (:994), so the field yields the key and no
 text is edited. Registered deviation: the fork's playPause signal count of one is
 carried by the mounted transport state transition.
@@ -838,7 +840,7 @@ A035 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S033 - the second Space toggles the transport back
 (tryCompare(bar.presenter, "state", 2, 5000, "numeric Space toggles the transport
-twice without editing text") at tst_ShellPitchBend.qml:995-997) with the field
+twice without editing text") at tst_ShellPitchBend.qml:1082-1084) with the field
 text still intact (:998) and the field still focused (:999). Registered
 deviation: the fork's playPause count of two is carried by the two mounted
 transport state transitions.
@@ -854,7 +856,7 @@ A036 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S025 - the real Escape delivered while the popup is open closes
 the editor (tryCompare(opened.editor, "isOpen", false, 5000, "Escape closes the
-pitch-bend editor") at tst_ShellPitchBend.qml:938-940) and the popup item then
+pitch-bend editor") at tst_ShellPitchBend.qml:1025-1027) and the popup item then
 unloads (:941-942) - the fork's Escape-closes-the-popup row.
 Source context since previous assertion:
   ;
@@ -873,7 +875,7 @@ Disposition: MATCHED
 Mapping/reason: S026 - after Escape the serialized revision still equals the
 revision the two-step Undo journey restored
 (compare(opened.grid.appliedRevisionText, restoredRevision, "the closed session
-leaves no document changes") at tst_ShellPitchBend.qml:943-944), so the closed
+leaves no document changes") at tst_ShellPitchBend.qml:1030-1031), so the closed
 popup left no document changes; the row above proves that restored revision is
 the pre-edit document. Registered deviation: revision-text equality replaces the
 fork's SMF byte equality.
@@ -889,7 +891,7 @@ Disposition: PARTIAL
 Mapping/reason: PARTIAL - no messaged predicate covers the post-popup Roll-focus
 staging. The mounted journey stages it with
 opened.roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
-tryCompare(opened.roll, "activeFocus", true) (tst_ShellPitchBend.qml:945-946)
+tryCompare(opened.roll, "activeFocus", true) (tst_ShellPitchBend.qml:1032-1033)
 before measuring the resumed window Solo, but the fork's clause asserts the
 native band-focus request returned true (an API with no QML counterpart) and the
 mounted stage carries no message anchor, so what remains unproved is the messaged
@@ -908,7 +910,7 @@ Disposition: PARTIAL
 Mapping/reason: PARTIAL - the post-popup Roll-focus observation
 (focusedTimelineBand() == Roll plus the native activeFocusItem and
 QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
-roll activeFocus stage (tst_ShellPitchBend.qml:945-946); no messaged predicate
+roll activeFocus stage (tst_ShellPitchBend.qml:1032-1033); no messaged predicate
 asserts the roll's QML focus and the native focus-window identity has no QML
 counterpart, so that half stays unproved.
 Source context since previous assertion:
@@ -923,7 +925,7 @@ Disposition: MATCHED
 Mapping/reason: S027 - with the popup closed and the roll focused, one S key
 toggles the selected track's solo state exactly once (tryCompare(solo, "checked",
 !originalSolo, 5000, "Solo resumes as a window command after the popup closes") at
-tst_ShellPitchBend.qml:947-949) - the count-free equivalent of the fork's window
+tst_ShellPitchBend.qml:1034-1036) - the count-free equivalent of the fork's window
 Solo delta of one with trackSoloed flipped.
 Source context since previous assertion:
   ;
@@ -941,7 +943,7 @@ A041 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: MATCHED
 Mapping/reason: S028 - the second S restores the solo flag (tryCompare(solo,
 "checked", originalSolo, 5000, "the resumed window Solo toggles twice total") at
-tst_ShellPitchBend.qml:951-952) and the closing journey leaves the note summary
+tst_ShellPitchBend.qml:1038-1039) and the closing journey leaves the note summary
 unchanged (:953-954) - the fork's window Solo delta of two with trackSoloed back
 to its opening value.
 Source context since previous assertion:

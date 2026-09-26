@@ -96,6 +96,93 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
     pitchBendResetPredicates(report, session: session)
     pitchBendSetterPredicates(report, session: session)
     pitchBendFineRampPredicates(report, session: session)
+    pitchBendVertexPredicates(report, suite: session)
+}
+
+@MainActor
+private func pitchBendVertexPredicates(_ report: CheckReport, suite: DocumentSession) {
+    let id = "swiftcore/PitchBendEditingTest::vertexLifecycle"
+    let service = ProjectService()
+    let session = pitchBendSyntheticSession(suite, service: service)
+    defer { withExtendedLifetime(service) {} }
+    guard let scene = pitchBendCheckScene(report, cppID: id, session: session) else { return }
+    let presenter = scene.presenter
+    defer { presenter.cancelAndClose() }
+    let graph = presenter.pitchGraph()
+    let document = session.document
+    let center = pitchBendCanvasPoint(graph, xFraction: 0.5, yFraction: 0.25)
+    graph.press(x: center.x, y: center.y, modifiers: 0)
+    graph.release(x: center.x, y: center.y, modifiers: 0)
+    let point = graph.kernel.hitTest(x: center.x, y: center.y)
+    guard let point, point.tick > Int(scene.note.tick), point.tick < Int(scene.noteEnd) else {
+        report.fail(id, "the interior vertex fixture must be drawable")
+        return
+    }
+    let tick = point.tick
+    let initialBytes = coreTimeBytes(document)
+    let initialIndex = document.history.undoIndex
+    graph.press(x: graph.kernel.x(at: tick), y: graph.kernel.y(at: point.value),
+                modifiers: 0x0800_0000)
+    report.expect(graph.kernel.selectedTick == tick && graph.kernel.hasGesture,
+                  cppID: id, message: "an interior vertex hit selects its tick")
+    let destination = pitchBendCanvasPoint(graph, xFraction: 0.75, yFraction: 0.75)
+    graph.drag(x: destination.x, y: destination.y, modifiers: 0x0800_0000)
+    graph.release(x: destination.x, y: destination.y, modifiers: 0x0800_0000)
+    let moved = graph.kernel.selectedTick ?? -1
+    report.expect(moved != tick && moved > Int(scene.note.tick)
+                  && moved < Int(scene.noteEnd) && graph.kernel.points[tick] == nil
+                  && document.history.undoIndex == initialIndex + 1,
+                  cppID: id,
+                  message: "an Alt drag moves the selected interior vertex in one entry")
+    report.expect(document.history.undoDocument(), cppID: id,
+                  message: "undoing the Alt drag restores the moved vertex")
+    presenter.documentDidChange()
+    report.expect(coreTimeBytes(document) == initialBytes
+                  && graph.kernel.points[tick] == point.value,
+                  cppID: id, message: "undoing the Alt drag restores the moved vertex")
+    graph.press(x: graph.kernel.x(at: tick), y: graph.kernel.y(at: point.value), modifiers: 0)
+    graph.release(x: graph.kernel.x(at: tick), y: graph.kernel.y(at: point.value), modifiers: 0)
+    let beforeDelete = document.history.undoIndex
+    graph.removeSelectedVertex()
+    report.expect(graph.kernel.points[tick] == nil
+                  && graph.kernel.points[graph.kernel.startTick] != nil
+                  && graph.kernel.points[graph.kernel.endTick] != nil
+                  && document.history.undoIndex == beforeDelete + 1,
+                  cppID: id,
+                  message: "deleting a selected interior vertex writes one entry and keeps both endpoints")
+    let undoneDelete = document.history.undoDocument()
+    presenter.documentDidChange()
+    report.expect(undoneDelete && graph.kernel.points[tick] == point.value,
+                  cppID: id, message: "undoing the vertex delete restores the point")
+    for endpoint in [graph.kernel.startTick, graph.kernel.endTick] {
+        guard let value = graph.kernel.points[endpoint] else { continue }
+        graph.press(x: graph.kernel.x(at: endpoint), y: graph.kernel.y(at: value),
+                    modifiers: 0)
+        graph.release(x: graph.kernel.x(at: endpoint), y: graph.kernel.y(at: value),
+                      modifiers: 0)
+        let before = coreTimeBytes(document)
+        let index = document.history.undoIndex
+        graph.removeSelectedVertex()
+        report.expect(graph.kernel.selectedTick == endpoint
+                      && graph.kernel.points[endpoint] == value
+                      && coreTimeBytes(document) == before
+                      && document.history.undoIndex == index,
+                      cppID: id, message: "endpoint vertices select but never delete")
+    }
+    let start = pitchBendCanvasPoint(graph, xFraction: 0.25, yFraction: 0.75)
+    let finish = pitchBendCanvasPoint(graph, xFraction: 0.8, yFraction: 0.25)
+    let beforeSettle = document.history.undoIndex
+    graph.press(x: start.x, y: start.y, modifiers: 0)
+    graph.drag(x: finish.x, y: finish.y, modifiers: 0)
+    report.expect(graph.kernel.hasGesture && document.history.undoIndex == beforeSettle,
+                  cppID: id, message: "a held graph gesture settles as a commit")
+    presenter.settleAndClose()
+    report.expect(!presenter.isOpen && !graph.kernel.hasGesture
+                  && document.history.undoIndex == beforeSettle + 1,
+                  cppID: id, message: "a held graph gesture settles as a commit")
+    report.expect(!presenter.isOpen && coreTimeBytes(document) != initialBytes,
+                  cppID: id,
+                  message: "host-window loss settles and closes the editor without restoring roll focus")
 }
 
 @MainActor

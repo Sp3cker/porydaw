@@ -98,6 +98,11 @@ public final class PitchBendLane {
     public func release(x: Double, y: Double, modifiers: Int) {
         guard kernel.hasGesture else { return }
         _ = kernel.update(x: x, y: y, fine: modifiers & 0x0800_0000 != 0)
+        settleGesture()
+    }
+
+    public func settleGesture() {
+        guard kernel.hasGesture else { return }
         kernel.finish()
         let changed = gestureStartingPoints != kernel.points
         gestureStartingPoints = nil
