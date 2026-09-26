@@ -5,6 +5,12 @@ Original: src/checks/selectionkey/coreediting.cpp
 Original SHA-256: b7d9cbae89ad503c6650e245838dc43a02d476bd5784746e639c27dcd3df748c
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/automation/automationselection.swift
+Additional Swift counterpart: src/checks/editcheck/SelectionChecks.swift
+Additional Swift counterpart: src/checks/rollcheck/keyboard.swift
+Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
+Additional Swift counterpart: src/checks/rollcheck/selection.swift
+Additional Swift counterpart: src/checks/rollcheck/keyboard_parity.swift
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -13,12 +19,33 @@ Result: PASS; build ok (0.15 s), ok swiftcore (10.38 s); verify 1/6 ok (5 skippe
 Command: deno task verify:shell --filter shellwindow --verbose (controller-observed)
 Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok (10 skipped); run_checks PASS. That run executes the shellwindow predicates S009-S016 through the shellwindow entry of ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
 
+Command: deno task verify --filter swiftcore --verbose and deno task verify:shell --filter shellwindow --verbose
+Result: PASS - task-58 implementer-recorded runs on the frozen sources: swiftcore 12/36
+harnesses passed and the mounted shellwindow lane 1/26 selected harnesses passed. Evidence
+build/proof-evidence/shellwindow.json (mtime 16:31:03) postdates the frozen check edit
+tst_ShellWindow.qml (16:30:46) and records test_nLabelTimeSelectionCommands, so S017-S032 and
+S040 classify executed. Every non-QML literal cited by S033-S041 was verified present in the
+swiftcore evidence pass rows of build/proof-evidence/swiftcore-projectsession.json (observed
+at 16:39 and again at 16:44); concurrent sibling lane runs rewrite that artifact (16:43 and
+16:44 writes), so the executed classification belongs to the controller's settled re-run.
+This task-58 ledger pass flipped the row dispositions and indexed the added anchors; it ran no
+lane, rebuilt nothing and re-ran no check.
+
+Correction pass (controller review): the roll.delete, roll.paste and roll.select_all
+binding rows map to the production KeybindingRegistry predicates (src/checks/keyboard/
+KeybindingRegistryChecks.swift) instead of retiring as native keymap queries, and the audition
+PARTIAL reasons name the existing PianoGrid.onAudition observable instead of claiming none
+exists.
+
+Counts: MATCHED 9, PARTIAL 9, GAP 0, RETIRED-REPRESENTATION 35
+
 A001 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:63
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check) for the drawer-audition fixture; the mounted lane stages its own Route 101 fixture.
 
 A002 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:67
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick-window plumbing: focusTimelineInput stages native input focus on the automation drawer input; the mounted lanes take focus through real gestures.
 Source context since previous assertion:
   ;
       QQuickWindow *const quick = m_fixture->window();
@@ -29,8 +56,8 @@ Original expression:
                "could not focus the automation drawer for transpose audition")
 
 A003 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:76
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKeyEvent posts the transpose key-down straight into the QQuickWindow; the mounted lane delivers real keyClick input.
 Source context since previous assertion:
   ;
       songView.selectionModel().setNoteSelection({m_fixture->notes()[0]});
@@ -46,8 +73,8 @@ Original expression:
                "drawer transpose key-down did not reach the Quick window")
 
 A004 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:79
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the fork clause is the transpose key-down's live audition (one emission with velocity > 0). The Swift audition observable exists (PianoGrid.onAudition, wired to the audio engine) and its emissions - including the velocity-0 release - are asserted for pointer flavors (S046, S047 in rollcheck/selection.swift), but no predicate stages a drawer transpose key-down: unproved as stated (the Swift app has no keyboard-transpose audition path).
 Source context since previous assertion:
   ;
       const std::size_t started = auditions.size();
@@ -57,8 +84,8 @@ Original expression:
                "drawer transpose key-down did not start a live audition")
 
 A005 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:82
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKeyEvent posts the autorepeat key-up (autorepeat=true) into the QQuickWindow; the mounted lane delivers real key input.
 Source context since previous assertion:
   ;
 
@@ -68,8 +95,8 @@ Original expression:
                "drawer autorepeat key-up did not reach the Quick window")
 
 A006 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:84
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the fork clause is that an autorepeat key-up must not end the live audition. No predicate stages an audition term at all (the Swift audition observable is exercised only by pointer flavors, S046, S047), and the autorepeat predicates that do exist assert key routing rather than an audition (S048, the repeated pencil key): unproved as stated.
 Source context since previous assertion:
   ;
 
@@ -78,8 +105,8 @@ Original expression:
                "drawer autorepeat key-up prematurely ended the live audition")
 
 A007 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:87
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKeyEvent posts the physical key-up into the QQuickWindow; the mounted lane delivers real key input.
 Source context since previous assertion:
   ;
 
@@ -89,8 +116,8 @@ Original expression:
                "drawer physical key-up did not reach the Quick window")
 
 A008 | SelectionKeyCoreTest::drawerTransposeAuditionReleasesOnPhysicalKeyUp | src/checks/selectionkey/coreediting.cpp:93
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the fork clause is the physical key-up ending the audition with the velocity-0 release. The velocity-0 release observable is asserted for pointer flavors (S047 asserts zero-velocity releases at auditions[1]/auditions[3]) but no predicate stages a transpose key-up: unproved as stated.
 Source context since previous assertion:
   ;
       // The shared release path ends the audition with the velocity-0
@@ -104,13 +131,15 @@ Original expression:
 
 A009 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:101
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check); the mounted lane stages its own Route 101 fixture.
 
 A010 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:107
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native surface guard: the Quick window, the automation input item and the projected lane window points must exist; the mounted lane resolves its own items by object name.
 
 A011 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:109
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Automation); the mounted lane routes through the QML label and plot focus instead.
 Source context since previous assertion:
   ;
 
@@ -120,8 +149,8 @@ Original expression:
                "could not stage automation focus for range delivery")
 
 A012 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:113
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick-input pointer delivery: moveMouseToTimelineInput projects the lane point into the native input item; the mounted lane stages the band with real mouse press/move/release.
 Source context since previous assertion:
   ;
       m_fixture->view().selectionModel().setNoteSelection({m_fixture->notes()[0]});
@@ -132,8 +161,8 @@ Original expression:
                "automation range start did not reach the Quick input item")
 
 A013 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:128
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the right band stages an active lane-scoped Volume range without writing a lane (S017/S018) and the presenter clears the competing note selection when a lane-scoped range commits (S039); unproved as stated: the staged range's exact boundary ticks (kFirstPointTick/kOutsidePointTick) and the replacement of a pre-existing note selection are not asserted (S019 pins the empty-selection precondition form only).
 Source context since previous assertion:
   ;
       stageMousePress(Qt::RightButton, points->at(0));
@@ -154,8 +183,8 @@ Original expression:
   QVERIFY2(rangeReady, "actual automation range did not replace note selection with lane scope")
 
 A014 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:130
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the shipped Delete into the QQuickWindow; the mounted lane sends a real Delete keyClick.
 Source context since previous assertion:
   ;
 
@@ -165,8 +194,8 @@ Original expression:
                "shipped Delete did not reach the Quick automation surface")
 
 A015 | SelectionKeyCoreTest::automationRangeAndReboundDelete | src/checks/selectionkey/coreediting.cpp:132
-Disposition: GAP
-Mapping/reason: No Swift predicate delivers Delete to a lane-scoped automation range: the shell lane never stages an automation time range for Delete-key delivery (test_j selects a plot range only for Insert/Delete-Time), and the paired transaction covers the numeric prompt only. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S024, S023, S025 (the lane-scoped Delete drops the in-range Volume points and keeps the out-of-range point, the notes stay byte-identical and the range remains selected; the named inside ticks are asserted through the node count rather than per tick)
 Source context since previous assertion:
   ;
 
@@ -179,8 +208,8 @@ Original expression:
           "automation range Delete did not affect only its selected points")
 
 A016 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:159
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S042, S043 (the production KeybindingRegistry matches Delete and Backspace with no modifiers for roll.delete - the shipped single-key defaults - and the mounted lane delivers the real Delete key)
 Source context since previous assertion:
   ;
   }
@@ -211,10 +240,11 @@ Original expression:
 
 A017 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:162
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check) for the pencil-hover fixture; the mounted lane stages its own Route 101 fixture.
 
 A018 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:167
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Automation) for the pencil-hover delete; the mounted lane stages the plot and label focus instead.
 Source context since previous assertion:
   ;
       QQuickWindow *const quick = m_fixture->window();
@@ -227,10 +257,11 @@ Original expression:
 
 A019 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:187
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native hover fixture guard: the Quick window, the automation input item and the projected hover point must exist before the hover delivery.
 
 A020 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:188
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick-input pointer delivery: moveMouseToTimelineInput sends the hover move into the native input item; the mounted lane uses real mouseMove input.
 Source context since previous assertion:
   ;
 
@@ -239,8 +270,8 @@ Original expression:
                "automation hover did not reach the Quick input item")
 
 A021 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:191
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the default Delete binding into the QQuickWindow; the mounted lane sends a real Delete keyClick.
 Source context since previous assertion:
   ;
       const QByteArray before = m_fixture->document().smf().write();
@@ -250,8 +281,8 @@ Original expression:
                "default Delete did not reach the pencil-hover surface")
 
 A022 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:198
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S031 (a hovered point survives a selected-note Delete: the selected notes are removed while the hovered point's tick list stays unchanged)
 Source context since previous assertion:
   ;
 
@@ -265,8 +296,8 @@ Original expression:
                    "selected notes did not win over pencil hover Delete")
 
 A023 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:202
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S033 (time selection retains semantic delete priority: the presenter declines the hover delete while a lane-scoped range is active)
 Source context since previous assertion:
   ;
           break;
@@ -277,8 +308,8 @@ Original expression:
                    "track time selection did not win over pencil hover Delete")
 
 A024 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:206
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S034, S035 (the pencil hover delete consumes the written point and removes the actual written tick)
 Source context since previous assertion:
   ;
           break;
@@ -288,8 +319,8 @@ Original expression:
   QVERIFY2(!pointAlive, "eligible pencil hover Delete did not remove the hovered point")
 
 A025 | SelectionKeyCoreTest::pencilHoverDeletePrecedence | src/checks/selectionkey/coreediting.cpp:209
-Disposition: GAP
-Mapping/reason: No Swift predicate delivers hover-targeted Delete: the shell lane has no mouse-hover point-targeting path (test_g and test_i click drawn notes and deliver keys; nothing stages a hover miss over a lane point). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S036, S032 (a blank hover and a hover miss both leave the document bytes and revision unchanged)
 Source context since previous assertion:
   ;
           break;
@@ -300,8 +331,8 @@ Original expression:
                    "pencil hover miss Delete changed the document")
 
 A026 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:218
-Disposition: GAP
-Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this lane-nudge fixture. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check) for the lane-nudge fixture; the mounted lane stages its own fixture.
 Source context since previous assertion:
   ;
           break;
@@ -319,8 +350,8 @@ Original expression:
               QStringLiteral("could not create lane-nudge fixture: %1").arg(m_lastFixtureError)))
 
 A027 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:222
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Automation); the mounted lane routes through the QML label focus.
 Source context since previous assertion:
   ;
 
@@ -329,8 +360,8 @@ Original expression:
                "could not focus the automation Quick band")
 
 A028 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:227
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the lane-scoped Up into the QQuickWindow; the mounted lane sends a real Up keyClick.
 Source context since previous assertion:
   ;
       m_fixture->view().selectionModel().setTimeSelection(
@@ -342,8 +373,8 @@ Original expression:
                "Quick window did not accept the lane-scoped vertical arrow")
 
 A029 | SelectionKeyCoreTest::laneScopedVerticalArrowLeavesDocumentUntouched | src/checks/selectionkey/coreediting.cpp:229
-Disposition: GAP
-Mapping/reason: No Swift predicate delivers arrows to a lane-scoped automation input: shell Up/Down go to the focused roll and transpose notes (test_g), never to lanes. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S020, S021 (lane-focus Up leaves the document untouched and preserves every Volume point byte-identically)
 Source context since previous assertion:
   ;
 
@@ -352,8 +383,8 @@ Original expression:
                "lane-scoped vertical arrow mutated automation or hidden notes")
 
 A030 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:236
-Disposition: GAP
-Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this lane-nudge fixture. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Automations) plus the m_fixture check) for the horizontal lane-nudge fixture; the mounted lane stages its own fixture.
 Source context since previous assertion:
   ;
   }
@@ -369,8 +400,8 @@ Original expression:
               QStringLiteral("could not create lane-nudge fixture: %1").arg(m_lastFixtureError)))
 
 A031 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:240
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Automation); the mounted lane routes through the QML label focus.
 Source context since previous assertion:
   ;
 
@@ -379,8 +410,8 @@ Original expression:
                "could not focus the automation Quick band")
 
 A032 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:247
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the lane-scoped Right into the QQuickWindow; the mounted lane sends a real Right keyClick.
 Source context since previous assertion:
   ;
       m_fixture->view().selectionModel().setTimeSelection(
@@ -394,8 +425,8 @@ Original expression:
                "Quick window did not accept the lane-scoped horizontal arrow")
 
 A033 | SelectionKeyCoreTest::laneScopedHorizontalArrowNudgesPointsAndInterval | src/checks/selectionkey/coreediting.cpp:250
-Disposition: GAP
-Mapping/reason: No Swift predicate nudges lane points with a horizontal arrow: shell Left/Right nudge roll notes (test_g), never lane points or the selected interval. Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the mounted lane Right moves the point set and keeps the range active (S022), the presenter's empty lanes-scoped range advances on the camera grid without changing its span and writes nothing (S037/S038), and the same-delta interval translation executes for a track-scoped range (S041); unproved as stated: no predicate asserts a populated lanes-scoped range whose point lands on the snapped destination and whose interval translates by the same delta.
 Source context since previous assertion:
   ;
       const auto &moved = m_fixture->view().selectionModel().timeSelection();
@@ -409,8 +440,8 @@ Original expression:
           "lane-scoped horizontal arrow did not nudge points and the selected interval")
 
 A034 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:275
-Disposition: GAP
-Mapping/reason: Binding-existence row with no executing predicate in this lane: test_i delivers StandardKey.Paste without asserting the roll.paste binding itself, and the keyboard-lane delivery-scope predicate asserts scope, not this single-key binding. Original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the production registry pins roll.paste's delivery scope as editor-routed (S044) and the mounted lane delivers the platform standard Paste and asserts its landing (S013, S016, S029); unproved as stated: no predicate asserts the paste single-key stroke itself (the registry checks assert strokes only for transpose-up, play-pause, insert-time, delete-time, pencil-mode and the delete/backspace/copy chords).
 Source context since previous assertion:
   ;
   }
@@ -437,8 +468,8 @@ Original expression:
   QVERIFY2(paste.has_value(), "keyboard Paste has no single-key binding")
 
 A035 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:278
-Disposition: GAP
-Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this per-band clipboard fixture. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(drawerPageForBand(band)) plus the m_fixture check) for the per-band clipboard fixture; the mounted lane stages its own two-song fixture.
 Source context since previous assertion:
   ;
 
@@ -451,8 +482,8 @@ Original expression:
               QStringLiteral("could not create the clipboard fixture: %1").arg(m_lastFixtureError)))
 
 A036 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:285
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Roll) for the keyboard Copy; the mounted lane focuses the roll through QML activeFocus.
 Source context since previous assertion:
   ;
       SongView &songView = m_fixture->view();
@@ -464,8 +495,8 @@ Original expression:
                "could not focus the roll for keyboard Copy")
 
 A037 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:290
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native harness plumbing: the unhosted rig's SongView::editActions() handle (the row only guards that the rig holds a production action set); production command enablement is asserted through the presenter and grid APIs instead (actionEnabled in the mounted lanes).
 Source context since previous assertion:
   ;
       // Copy is Window-class: the unhosted rig registers no shortcut owner, so
@@ -476,8 +507,8 @@ Original expression:
   QVERIFY2(actions, "the unhosted rig has no production action set")
 
 A038 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:292
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native harness plumbing: the rig's production Copy QAction existence and enablement (the native trigger path); the mounted lanes exercise the equivalent journey through the platform standard Copy/Paste and assert its landing (S013, S016, S029).
 Source context since previous assertion:
   ;
       QAction *const copy = actions->action(SongView::EditCommand::Copy);
@@ -486,8 +517,8 @@ Original expression:
   QVERIFY2(copy && copy->isEnabled(), "the rig has no enabled production Copy action")
 
 A039 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:296
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(band) for the paste destination band.
 Source context since previous assertion:
   ;
       copy->trigger();
@@ -498,8 +529,8 @@ Original expression:
   QVERIFY2(m_fixture->focusBand(band), "could not focus paste destination band")
 
 A040 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:297
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the Paste binding into the QQuickWindow; the mounted lane sends a real standard Paste keySequence.
 Source context since previous assertion:
   ;
 
@@ -509,7 +540,7 @@ Original expression:
 
 A041 | SelectionKeyCoreTest::keyboardClipboardParity | src/checks/selectionkey/coreediting.cpp:299
 Disposition: PARTIAL
-Mapping/reason: Related predicates S013 and S016 in src/checks/editorqml/tst_ShellWindow.qml: the production roll receives StandardKey.Paste and inserts clipboard notes into the focused roll, selecting at least one inserted note (S013), and the cross-tab Paste case asserts the destination edit cursor advance past the inserted note (S016). Unproved as stated: the exact committed-cursor landing tick of the pasted clip and the note key (the shell rows assert a count increase plus selection and a relative cursor advance, not the kPasteTick/key-60 identity).
+Mapping/reason: PARTIAL - related: S013 (Paste selects at least one inserted note), S016 (Paste advances the destination cursor past the inserted note) and S029 (Paste over label focus writes the copied Volume lane at the edit cursor, the node count grown past tick 7680); unproved as stated: the exact committed-cursor landing tick of the pasted clip and the pasted note key (the kPasteTick/60 identity).
 Source context since previous assertion:
   ;
 
@@ -518,8 +549,8 @@ Original expression:
                "keyboard Paste did not land the roll-copied note clip at the committed cursor")
 
 A042 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:306
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the production registry pins roll.select_all's delivery scope as editor-routed (S045) and the mounted Select All deliveries assert the resulting note selection and the cleared range (S019, S027, S028); unproved as stated: no predicate asserts the select-all single-key stroke itself.
 Source context since previous assertion:
   ;
   }
@@ -532,8 +563,8 @@ Original expression:
   QVERIFY2(shortcut.has_value(), "Select All Notes has no single-key binding")
 
 A043 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:309
-Disposition: GAP
-Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this Select All fixture. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Velocity) plus the m_fixture check) for the Select All fixture; the mounted lane stages its own fixture.
 Source context since previous assertion:
   ;
 
@@ -546,8 +577,8 @@ Original expression:
               QStringLiteral("could not create Select All fixture: %1").arg(m_lastFixtureError)))
 
 A044 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:317
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick-window plumbing: focusTimelineInput stages native input focus on the velocity input; the mounted lane uses QML focus.
 Source context since previous assertion:
   ;
       SongView &songView = m_fixture->view();
@@ -560,8 +591,8 @@ Original expression:
                "could not focus the velocity band before Select All")
 
 A045 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:319
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Velocity) before Select All.
 Source context since previous assertion:
   ;
 
@@ -570,8 +601,8 @@ Original expression:
                "could not stage velocity focus before Select All")
 
 A046 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:321
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the Select All binding into the QQuickWindow; the mounted lane sends a real standard SelectAll keySequence.
 Source context since previous assertion:
   ;
 
@@ -580,8 +611,8 @@ Original expression:
                "Select All key did not reach the velocity band")
 
 A047 | SelectionKeyCoreTest::selectAllFromEmptySelection | src/checks/selectionkey/coreediting.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Related predicates S010 and S015 in src/checks/editorqml/tst_ShellWindow.qml: Select All delivered to the focused production roll selects the focused track notes (S015: selectedAll.length > 0, "Select All targets the currently focused roll track"; S010: the selection includes both same-track notes after Duplicate). Unproved as stated: the >= primary-track note-count extent of the C++ fixture and the !timeSelection.active() condition of the empty-selection row.
+Disposition: MATCHED
+Mapping: S019, S028, S027 (Select All from an empty note selection takes the active track's notes - asserted per note, standing in for the C++ >= count over the staged fixture list - and leaves no time range; the mounted stimulus is the Volume label focus rather than the velocity band)
 Source context since previous assertion:
   ;
       // >= is deliberate: the project fixture carries pre-existing primary-track notes.
@@ -592,8 +623,8 @@ Original expression:
                "Select All Notes from empty selection did not select primary-track notes")
 
 A048 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:332
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - same clause as A042 in the ruler-click row: the registry pins roll.select_all's delivery scope as editor-routed (S045) and the mounted Select All deliveries assert the selection results (S019, S027, S028); unproved as stated: no predicate asserts the select-all single-key stroke itself.
 Source context since previous assertion:
   ;
   }
@@ -606,8 +637,8 @@ Original expression:
   QVERIFY2(shortcut.has_value(), "Select All Notes has no single-key binding")
 
 A049 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:335
-Disposition: GAP
-Mapping/reason: Native harness fixture-creation guard with no Swift counterpart; the shell lane stages its own two-song fixture instead of this ruler-click Select All fixture. Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(EditorDrawerPage::Velocity) plus the m_fixture check) for the ruler-click fixture; the mounted lane stages its own fixture.
 Source context since previous assertion:
   ;
 
@@ -620,8 +651,8 @@ Original expression:
               QStringLiteral("could not create Select All fixture: %1").arg(m_lastFixtureError)))
 
 A050 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:347
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native ruler probe and click delivery (plainRulerPoint plus clickTimelineInput into the native ruler input item).
 Source context since previous assertion:
   ;
       SongView &songView = m_fixture->view();
@@ -638,8 +669,8 @@ Original expression:
                "could not deliver the ruler click before Select All")
 
 A051 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:349
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging: m_fixture->focusBand(TimelineBand::Ruler) before Select All.
 Source context since previous assertion:
   ;
 
@@ -648,8 +679,8 @@ Original expression:
                "could not stage ruler focus before Select All")
 
 A052 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:351
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/coreediting.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery: deliverKey posts the Select All binding into the QQuickWindow; the mounted lane sends a real standard SelectAll.
 Source context since previous assertion:
   ;
 
@@ -658,8 +689,8 @@ Original expression:
                "Select All key did not reach the ruler band")
 
 A053 | SelectionKeyCoreTest::selectAllReplacesTimeSelectionAfterRulerClick | src/checks/selectionkey/coreediting.cpp:354
-Disposition: GAP
-Mapping/reason: No Swift predicate stages a ruler-click time selection: the shell lane has no ruler-click or time-selection path (test_i Select All runs from a note selection, never a ruler click). Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S027, S028, S019 (Select All after an active lane range replaces the time selection with the active track's notes and clears the range; the mounted stimulus is the Volume label focus rather than the ruler click)
 Source context since previous assertion:
   ;
       // >= is deliberate: the project fixture carries pre-existing primary-track notes.
@@ -723,6 +754,104 @@ Anchor: message "Delete removes only the selected track's notes"
 
 S016 | test_dCopyFromOneSongTabPastesIntoAnother | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Paste changes only the destination by one note"
+
+
+S017 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the right-band selects Volume time"
+
+S018 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the right-band alone never writes a lane"
+
+S019 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the lane-only range begins with an empty note selection"
+
+S020 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "lane-focus Up leaves the document untouched"
+
+S021 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "lane-focus Up preserves every Volume point"
+
+S022 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "lane-focus Right moves the point and translates the interval"
+
+S023 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Delete over label focus removes the selected Volume points"
+
+S024 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Delete removes only the lane points inside the staged range"
+
+S025 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Volume range Delete preserves the notes"
+
+S026 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Delete keeps the selected time range"
+
+S027 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Select All over label focus clears the time range"
+
+S028 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Select All over label focus selects the active track's notes"
+
+S029 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Paste over label focus writes the copied Volume lane at the edit cursor"
+
+S030 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a written Volume node is visible for hover deletion"
+
+S031 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a hovered point survives a selected-note Delete"
+
+S032 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a hover miss changes no document bytes"
+
+S033 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "time selection retains semantic delete priority"
+
+S034 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "pencil hover deletion consumes the written point"
+
+S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "hover deletion removes the actual written point"
+
+S036 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "blank hover deletion changes nothing"
+
+S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "an empty range owns its nudge command"
+
+S038 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
+Anchor: message "an empty range advances on the camera grid without changing its span"
+
+S039 | clipboardUnifiedTimeSelectionChecks | src/checks/editcheck/SelectionChecks.swift
+Anchor: message "A008 committing an active range clears the competing note selection"
+
+S040 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Up transposes one semitone"
+
+S041 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "Right over an active time selection nudges the covered notes and advances the band start"
+
+
+S042 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "delete"
+
+S043 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "backspace"
+
+S044 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "roll.paste"
+
+S045 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "roll.select_all"
+
+S046 | checkGroupedVelocityDrag | src/checks/rollcheck/selection.swift
+Anchor: message "Ctrl note press auditions its own velocity and latches the drawing velocity"
+
+S047 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
+Anchor: message "pending-draw row changes glissando before horizontal draw slop"
+
+S048 | checkBandKeyAutoRepeat | src/checks/rollcheck/keyboard_parity.swift
+Anchor: message "repeated eligible pencil key is consumed"
 
 Shared helpers
 selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml) and

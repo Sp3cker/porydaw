@@ -4,15 +4,41 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/selectionkey/gesturecommands.cpp
 Original SHA-256: ed999f71cc95f95de23e9a70c0cad201260977fb484e9fc2c6ee6f09395e6e8d
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridInput.qml
+Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
+Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
+Additional Swift counterpart: src/checks/rollcheck/note_commands.swift
+Additional Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
+Additional Swift counterpart: src/checks/keyboard/KeybindingRegistryChecks.swift
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
 
+Command: deno task verify --filter swiftcore --verbose and deno task verify:shell --filter shell-grid-input --verbose
+Result: PASS - task-58 implementer-recorded runs on the frozen sources: swiftcore 12/36
+harnesses passed and the mounted shell-grid-input lane 1/26 selected harnesses passed.
+Evidence build/proof-evidence/shell-grid-input.json (mtime 16:32:31) postdates
+tst_ShellGridInput.qml (16:19:13) and records test_gestureKeysPreserveNotesUntilRelease,
+test_moveGestureEscapeRestoresSelectedNote and test_thumbGrabKeepsDeleteFromSelectedNote, so
+S009-S014 classify executed. The S015-S029 swiftcore literals were verified present in the
+swiftcore evidence pass rows of build/proof-evidence/swiftcore-projectsession.json (observed
+at 16:39 and again at 16:44); concurrent sibling lane runs rewrite that artifact (16:43 and
+16:44 writes), so the executed classification belongs to the controller's settled re-run.
+This task-58 ledger pass flipped the row dispositions and indexed the added anchors; it ran no
+lane, rebuilt nothing and re-ran no check.
+
+Correction pass (controller review): the roll.delete binding rows map to the production
+KeybindingRegistry predicates (src/checks/keyboard/KeybindingRegistryChecks.swift) instead of
+retiring as native keymap queries.
+
+Counts: MATCHED 3, PARTIAL 4, GAP 0, RETIRED-REPRESENTATION 10
+
 A001 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:42
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S030, S031 (the production KeybindingRegistry matches Delete and Backspace with no modifiers for roll.delete - the shipped single-key defaults - and the mounted lane delivers the real Delete key, S009/S012)
 Source context since previous assertion:
   // Roll and automation gesture scenarios for the selection-keyboard-routing
   // Qt Test: a roll note drag and an automation middle-button pan are both
@@ -60,8 +86,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A002 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:46
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native rig input lookup plus the Quick bounds guard for the roll input; the mounted lane resolves its roll input by object name and never reads native bounds.
 Source context since previous assertion:
   ;
       if (!stageWorld("roll-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
@@ -72,8 +98,8 @@ Original expression:
   QVERIFY2(mRollInput && !mRollInput->bounds().isEmpty(), "roll Quick input is unavailable")
 
 A003 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:47
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus plumbing (focusPointerSurface stages live Quick and native focus); the mounted lane takes focus with roll.forceActiveFocus.
 Source context since previous assertion:
   ;
 
@@ -82,8 +108,8 @@ Original expression:
                "roll drag surface did not own live Quick and native focus")
 
 A004 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:63
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture and view-model publication guard (the roll view model exposing the staged fixture note); the mounted lane stages its own Route 101 fixture and asserts its note renders before the press.
 Source context since previous assertion:
   ;
 
@@ -113,8 +139,8 @@ Original expression:
           "the roll view model never exposed the fixture note for the gesture")
 
 A005 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:83
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native camera geometry (displayX, keyHeight, scrollY) computing the production roll press point; the mounted lane maps the drawn note item into the roll.
 Source context since previous assertion:
   ;
 
@@ -134,8 +160,8 @@ Original expression:
                "production roll geometry did not expose the fixture note for the drag")
 
 A006 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:92
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the drag's ownership is proved behaviorally (S019 'delete is refused while a pointer gesture owns the grid' mid-press, plus S012) and the grid's live-gesture flag is asserted for the middle pan (S016 'the page publishes the live pan', S021); unproved as stated: no predicate reads a note-body drag's own live-gesture state (grid.interactionActive or the 'Moving ...' status text).
 Source context since previous assertion:
   ;
       const QPoint rollPress = windowPoint(*mRollInput, rollPoint);
@@ -150,8 +176,8 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "roll note drag did not become a live gesture")
 
 A007 | SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:96
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the pieces execute: the mid-press Delete is a consumed no-op (S019, S012) and its release commits nothing (S020, S013), while the roll grid's Escape cancellation keeps the history depth, the song bytes and the drag selection (S024, S025) and clears its previews (S023); unproved as stated: no fixture chains drag, Delete, Escape and release on one roll gesture, and the note-move flavor asserts neither the undo depth nor the post-release gesture state (S014 covers the bytes and the retained selection only).
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
@@ -165,8 +191,8 @@ Original expression:
                "roll gesture did not block Delete and restore selection on Escape")
 
 A008 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:105
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S030, S031 (the same registry clause for the pan row: Delete and Backspace are bound to roll.delete with no modifiers, and the mounted lane delivers the real Delete key)
 Source context since previous assertion:
   ;
   }
@@ -179,8 +205,8 @@ Original expression:
   QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
 
 A009 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:111
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native automation input availability guard (AutomationPage pointer, non-null input item, non-empty Quick bounds); the mounted lane resolves the plot by object name.
 Source context since previous assertion:
   ;
       if (!stageWorld("automation-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
@@ -195,8 +221,8 @@ Original expression:
                "automation Quick input is unavailable")
 
 A010 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:117
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native AutomationProbe::locate (the native lane-row geometry projection).
 Source context since previous assertion:
   ;
       QString diagnostics;
@@ -207,8 +233,8 @@ Original expression:
   QVERIFY2(probe.has_value(), qPrintable(diagnostics))
 
 A011 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:118
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native AutomationProbe::activateParameter (native parameter activation).
 Source context since previous assertion:
   ;
 
@@ -216,8 +242,8 @@ Original expression:
   QVERIFY2(probe->activateParameter(&diagnostics), qPrintable(diagnostics))
 
 A012 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:119
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus plumbing (focusPointerSurface on the automation input).
 Source context since previous assertion:
   ;
 
@@ -227,10 +253,11 @@ Original expression:
 
 A013 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:132
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native automation lane lookup guard (the laneRow() scan for the CC lane in the native canvas); the mounted lane stages its own parameter row.
 
 A014 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:137
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native geometry guard: the projected automation point must lie inside the Quick input bounds.
 Source context since previous assertion:
   ;
       const QRect body = automation->canvas()->laneBody(*laneRow());
@@ -243,8 +270,8 @@ Original expression:
                "production automation geometry did not expose the gesture point")
 
 A015 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:146
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping: S015, S016 (the production automation page publishes the live pan for a middle press: 'a middle press starts the pan' with 'the page publishes the live pan')
 Source context since previous assertion:
   ;
       view().selectionModel().setTimeSelection(automationSelection());
@@ -259,8 +286,8 @@ Original expression:
   QTRY_VERIFY2(view().userGestureActive(), "automation pan did not become a live gesture")
 
 A016 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:150
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/gesturecommands.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the pan's invariance (S017 'panning mutates nothing', S018 'the released pan leaves document and history untouched'), the Escape cancel keeping the time selection (S027, S028) and the arbiter's live-gesture Delete consumption with a time selection staged (S026) all execute; unproved as stated: no predicate delivers Delete (nor a real Escape) against a live middle-button pan, so the pan's own Delete no-op and its post-cancel time-selection preservation are not asserted.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
@@ -276,8 +303,8 @@ Original expression:
                "Escape")
 
 A017 | SelectionKeyGestureTest::automationPanGuardsSharedCommands | src/checks/selectionkey/gesturecommands.cpp:157
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the idle Escape clearing an explicit time selection (S029) and the gesture-first Escape keeping it (S027, S028) both execute on the automation page in one function; unproved as stated: no predicate runs the second Escape immediately after a pan cancellation, so the cancel-then-clear sequence itself is not staged.
 Source context since previous assertion:
   ;
       QTest::keyClick(window(), Qt::Key_Escape);
@@ -316,3 +343,74 @@ Anchor: message "cancellation leaves the original document unchanged"
 
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "draft and cancellation preserve the full song contents"
+
+
+S009 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Delete during an active note gesture changes no notes"
+
+S010 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Delete during a draw records no document edit"
+
+S011 | test_gestureKeysPreserveNotesUntilRelease | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Escape cancels the gesture and restores the staged selection"
+
+S012 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "a selected-note move consumes Delete while its pointer is held"
+
+S013 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "Delete during a move records no document edit"
+
+S014 | test_moveGestureEscapeRestoresSelectedNote | src/checks/editorqml/tst_ShellGridInput.qml
+Anchor: message "the cancelled move retains the original selected note and its bytes"
+
+S015 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "a middle press starts the pan"
+
+S016 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the page publishes the live pan"
+
+S017 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "panning mutates nothing"
+
+S018 | drawerAutomationMiddlePanIsolation | src/checks/automation/automationcanvaslayout.swift
+Anchor: message "the released pan leaves document and history untouched"
+
+S019 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+Anchor: message "delete is refused while a pointer gesture owns the grid"
+
+S020 | checkCommandRouting | src/checks/rollcheck/note_commands.swift
+Anchor: message "releasing a zero-delta press commits nothing"
+
+S021 | checkPlayheadMiddlePan | src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Anchor: message "the gesture retains ownership while the pointer is down"
+
+S022 | drawerVelocityRollCoreRollEscape | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape is claimed while the roll gesture is live"
+
+S023 | drawerVelocityRollCoreRollEscape | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape clears every roll preview"
+
+S024 | drawerVelocityRollCoreRollEscape | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape leaves history depth and song bytes frozen"
+
+S025 | drawerVelocityRollCoreRollEscape | src/checks/velocity/VelocityRollCoreChecks.swift
+Anchor: message "Escape preserves the drag pair selection"
+
+S026 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "a live gesture swallows the Delete key without acting"
+
+S027 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "Escape cancels the gesture first"
+
+S028 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "the selection survives a gesture-first Escape"
+
+S029 | drawerAutomationKeyboardIngress | src/checks/automation/automationcanvasediting.swift
+Anchor: message "Escape clears the explicit time selection"
+
+S030 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "delete"
+
+S031 | runKeybindingRegistryChecks | src/checks/keyboard/KeybindingRegistryChecks.swift
+Anchor: message "backspace"
+

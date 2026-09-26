@@ -8,6 +8,7 @@ Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Additional Swift counterpart: src/checks/rollcheck/selection.swift (A056 click-clears-time-selection predicate, cppID swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts)
 Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml (task-58 mounted Ctrl+D duplicate and Insert Time journeys, shellwindow lane)
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/typography/theme C++; the pinned SHA is the 5f0924e8 blob, resolvable via git show 5f0924e8:src/checks/swiftrollgated/gesturechecks.cpp. S001-S028 index that pinned revision and close no A entry.
@@ -34,6 +35,10 @@ swiftcore projectSession lane, which the controller re-runs on the settled tree.
 reconciliation ran no lane, rebuilt nothing and re-ran no check.
 
 Task 66 ledger pass (no lane re-run): A022/A023 close on the ruler-scope guard and reconciliation predicates S111/S112 (rulerScopeHeaderRecordsGuard, src/checks/trackheaders/TrackHeadersInputChecks.swift, cppID swiftcore/PianoRoll::timelineRulerScope), recorded in build/proof-evidence/swiftcore-projectsession.json. S111 is the guard's report.fail predicate and did not fire in the passing lane; the executed reconciliation row is S112. This proof-only reconciliation ran no lane, rebuilt nothing and re-ran no check.
+
+Task 58 ledger pass (implementer-recorded lanes; this bookkeeping pass ran no lane, rebuilt nothing and re-ran no check):
+Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shellwindow --verbose
+Result: PASS — implementer-reported swiftcore 12 of 36 ok and shellwindow 1/26 selected ok on the frozen task-58 tree. build/proof-evidence/swiftcore-projectsession.json (5877 pass rows, mtime 2026-09-26 16:31 at handoff) records the hardened insert anchors S121–S127 and the seed-unwind row S091; build/proof-evidence/shellwindow.json (31 test functions, mtime 16:31) records test_jTimeSelectionInsertAndDeleteMutatesDocument and test_oEmptySelectionLabelUpEditsNothing, so the S113–S120, S128/S129 predicates classify executed under `deno task proof check --executed`. S119/S120 come from note_commands.swift (cppID swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection, recorded in build/proof-evidence/swiftcore.json); that file's rows were produced before the 2026-09-26 note_commands.swift fixture refactor, so their execution on the final tree is the controller's lane re-run to establish.
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -347,8 +352,8 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: the retired native lane unwound its seeded strip slot and compared the fixture's SMF bytes; the Swift roll seeds no native slot, so the harness restore has no counterpart.
 
 A047 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:385
-Disposition: GAP
-Mapping/reason: GAP — no time-selection or repaint model in the Swift roll; so this repaint-slot seed guard has no executing counterpart.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native `makeResizeSeed` optional fixture builder on the retired repaint lane; the Swift slots stage typed, non-optional fixtures through withKeyboardSeed (its seed assertion is S043) and the mounted shell fixture stages its own song, so no Swift optional-seed predicate exists.
 Source context since previous assertion:
   }
 
@@ -360,8 +365,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A048 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:404
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — full-framebuffer repaint comparison: Swift asserts document and history state, never framebuffer pixels.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native full-framebuffer partial-selection repaint comparison (`captureQuickFramebuffer` on the retired lane); the repaint slot has no Swift counterpart and the roll lanes assert document, history and scene state only, never framebuffer pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -385,8 +390,8 @@ Original expression:
   QCOMPARE(partialSelectionImage, check.captureQuickFramebuffer());
 
 A049 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:407
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the repaint slot SMF restoration is unproved.
+Disposition: MATCHED
+Mapping: S091
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -465,8 +470,8 @@ Disposition: MATCHED
 Mapping: S091 (the scenario unwind restores the slot's post-seed bytes)
 
 A061 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:489
-Disposition: GAP
-Mapping/reason: GAP — no time-range duplication in PianoGrid; so this duplicate-time seed guard has no executing counterpart.
+Disposition: MATCHED
+Mapping/reason: S113 — the mounted duplicate journey stages its content with a real plot sweep and asserts it landed ("a mouse sweep writes Volume automation into the document"); the substitute stimulus is the lane-flavored Volume fixture in place of the fork's note-pair makeResizeSeed seed.
 Source context since previous assertion:
   }
 
@@ -478,8 +483,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A062 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:499
-Disposition: GAP
-Mapping/reason: GAP — no time duplication in PianoGrid: the duplicate-time seed lookup is unmodelled.
+Disposition: MATCHED
+Mapping/reason: S114 — the mounted duplicate journey asserts its staged content resolves at the expected distinct ticks ("the sweep leaves written Volume events at distinct ticks"), the lane-flavored form of the fork's note lookup at the fixture tick.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -495,8 +500,8 @@ Original expression:
                "duplicate-time seed note was not found");
 
 A063 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:502
-Disposition: GAP
-Mapping/reason: GAP — no time duplication in PianoGrid: the duplicate-time post-transpose setup is unmodelled.
+Disposition: MATCHED
+Mapping/reason: S115 — the fork prepares this seed by mutating it (moveNotes) to a known post-transpose state, and the mounted lane-flavored journey stages the same obligation by pointer (a written Volume lane plus the right-drag range) and asserts the prepared state ("the selected lane range enables Insert Time"); that alternate stimulus is the named substitution for the note mutation.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -504,8 +509,8 @@ Original expression:
                "duplicate-time seed did not reach the expected post-transpose state");
 
 A064 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:522
-Disposition: GAP
-Mapping/reason: GAP — native host key delivery (sendKeyStroke Ctrl+D) into the roll input: the retired C++ lane owns this observation. The command-router arm is asserted at S008 (src/checks/rollcheck/note_commands.swift: the active time range owns the duplicate, advances one span and moves the cursor), but no Swift predicate delivers Ctrl+D through the mounted surface, and the exact undo-index +1 stays unproved (S008 asserts a changed history identity).
+Disposition: MATCHED
+Mapping/reason: S116 (the mounted Ctrl+D journey duplicates the range once and advances the cursor) with S119 (swiftcore/PianoRoll::keyboardDuplicatePrefersTimeSelection: the active time range owns the duplicate, the selection lands exactly one span later, the copy exists at the new start and the cursor sits at the new end) and S120 (one undo reverses the command, so exactly one step was pushed). The fork's undo-index +1 is carried by S120's single-undo restoration.
 Source context since previous assertion:
       view.selectionModel().setTimeSelection({d.tick + snapCell,
                                               d.tick + 2 * snapCell,
@@ -532,8 +537,8 @@ Original expression:
                "Ctrl+D did not duplicate once and advance the time selection");
 
 A065 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:528
-Disposition: GAP
-Mapping/reason: GAP — no duplicate-time camera follow in the Swift roll: making the duplicated range visible via displayX has no executing counterpart.
+Disposition: MATCHED
+Mapping: S117
 Source context since previous assertion:
       const qreal duplicateDpr = roll.devicePixelRatio();
       const qreal duplicateViewport = std::max<qreal>(50, roll.width());
@@ -543,8 +548,8 @@ Original expression:
                "first duplicated range was not made visible");
 
 A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
-Disposition: GAP
-Mapping/reason: GAP — native host key delivery (repeated sendKeyStroke Ctrl+D): the retired C++ lane owns this observation, and no Swift predicate repeats the time-range duplicate; S008 covers one duplicate through the command router (the session owns the time selection, PianoGrid holds none of its own).
+Disposition: PARTIAL
+Mapping/reason: S118 (the mounted second Ctrl+D grows the copied set and advances the cursor) executes the repeat and S119/S120 the single-duplicate routing law. Unproved: the second copy's exact span (firstEnd to secondEnd), the cursor at the second end, the note at the second start and the undo-index +2 — no predicate repeats the time-range duplicate through the swiftcore router (checkKeyboardDuplicatePrefersTimeSelection duplicates once).
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
       const Tick secondStart = firstEnd;
@@ -558,8 +563,8 @@ Original expression:
                "repeating Ctrl+D did not duplicate the newest copy");
 
 A067 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:542
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the duplicate-time slot SMF restoration is unproved.
+Disposition: MATCHED
+Mapping: S091
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -579,8 +584,8 @@ Disposition: MATCHED
 Mapping: S056
 
 A071 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:568
-Disposition: GAP
-Mapping/reason: GAP — the fewer-than-two-tracks early-return path is unasserted in Swift: the guard at keyboard.swift returns without a report.expect.
+Disposition: MATCHED
+Mapping/reason: S121 — the converted guard now asserts the precondition the fork's early-return tested ("a second track can be provisioned for the insert fixture") and the bail-out path is unwound by S091 ("the scenario unwind restores the slot's post-seed bytes"), the bytes this row compares.
 Source context since previous assertion:
       const Tick insertStart = d.tick + 2 * snapCell;
       const Tick insertEnd = insertStart + snapCell;
@@ -591,8 +596,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A072 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:579
-Disposition: GAP
-Mapping/reason: GAP — the free-key reservation loop is guard-only in Swift (keyboard.swift report.fail, no report.expect pins the reservation).
+Disposition: MATCHED
+Mapping: S122
 Source context since previous assertion:
           return;
       }
@@ -608,8 +613,8 @@ Original expression:
   QVERIFY2(otherKey < 128, "could not reserve an unselected-track insert fixture");
 
 A073 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:583
-Disposition: GAP
-Mapping/reason: GAP — the unselected-track fixture creation is guard-only in Swift (keyboard.swift report.fail, no report.expect pins otherBefore).
+Disposition: MATCHED
+Mapping: S123
 Source context since previous assertion:
       const uint8_t otherPitch = uint8_t(otherKey);
       doc.addNote(otherTrack, insertStart, otherPitch, uint32_t(snapCell), 91);
@@ -619,8 +624,8 @@ Original expression:
                "could not create the unselected-track insert fixture");
 
 A074 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:593
-Disposition: GAP
-Mapping/reason: GAP — no edit cursor in the Swift session: parking the cursor past the range end is unmodelled.
+Disposition: MATCHED
+Mapping/reason: S124 — the converted guard stages the scoped range and parks the cursor after the range end, then asserts the parked state ("track insert starts with the scoped range and parked cursor"), the fork's editCursorTick park.
 Source context since previous assertion:
       view.selectTrack(track);
       songview::EditorSelectionModel::TimeSelection trackSelection;
@@ -635,8 +640,8 @@ Original expression:
                "could not park the edit cursor away from the range start");
 
 A075 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:606
-Disposition: GAP
-Mapping/reason: S057 (keyboard.swift) proves the document half — the selected note shifts to insertEnd and the other track stays byte-identical. GAP remains: the undo-index +1 increment, the retained Tracks band, and the cursor reset to range start are unasserted in Swift.
+Disposition: MATCHED
+Mapping/reason: S057 (the hardened anchor: undo index +1, the selected note at the shortcut destination, the unselected track byte-identical, the retained Tracks band with its exact span, and the cursor reset to the range start) with the mounted Insert Time corroboration S128 (all later lane events shift by the same range span) and S129 (a lane-only range moves no notes).
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -658,8 +663,8 @@ Original expression:
                "Insert Time changed scope, cursor, or an unselected track");
 
 A076 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:614
-Disposition: GAP
-Mapping/reason: GAP — S058 (keyboard.swift) restores the scenario-local post-fixture baseline, whereas this unwind targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
+Disposition: MATCHED
+Mapping: S091
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -668,7 +673,7 @@ Original expression:
 
 A077 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:624
 Disposition: GAP
-Mapping/reason: GAP — no timeline-unused-track concept in the Swift roll: the rejected-insert track precondition is unmodelled.
+Mapping/reason: GAP — the fork stages an active time selection on a timeline-unused track to force the rejected Insert Time path; the Swift session exposes no timeline-unused-track scope and the briefed rejected-insert journey did not land, so no executing predicate builds this precondition. The nearest mounted refusal surface is the disabled Insert Time action after Select All clears the range (test_nLabelTimeSelectionCommands, "Select All over label focus clears the time range"), which refuses by action disable rather than by scope validation.
 Source context since previous assertion:
       // An active but unresolved scope is a rejected command: the unified
       // entry must refuse without falling through to the whole-song prompt.
@@ -683,7 +688,7 @@ Original expression:
 
 A078 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:631
 Disposition: GAP
-Mapping/reason: GAP — no primaryTrack, storedTrackScope, or time selection in the Swift session: the invalid active-scope setup is unmodelled.
+Mapping/reason: GAP — the fork's invalid active scope (primaryTrack == the unused track, storedTrackScope == 1 << unusedTrack, an active Tracks-span time selection) has no Swift counterpart and no counterpart predicate: no scenario stages a scope the app must reject, and the invalid-scope Insert Time journey is unmounted.
 Source context since previous assertion:
       view.selectTrack(unusedTrack);
       songview::EditorSelectionModel::TimeSelection rejectedSelection;
@@ -704,7 +709,7 @@ Original expression:
 
 A079 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:649
 Disposition: GAP
-Mapping/reason: GAP — the rejected Insert Time path is unmodelled in Swift: no prompt UI exists and no scenario asserts refusal without a prompt.
+Mapping/reason: GAP — no Swift predicate drives a refused Insert Time and asserts that no prompt opens; the mounted surface has no Insert Time prompt form at all (the command is gated on an active time selection and disabled otherwise), so an absent-ingress argument cannot stand in for this observation.
 Source context since previous assertion:
       const quick_popup::PromptGuard guard(view);
       const QByteArray rejectedBefore = doc.smf().write();
@@ -720,7 +725,7 @@ Original expression:
 
 A080 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:651
 Disposition: GAP
-Mapping/reason: GAP — the rejected-insert invariance (bytes, revision, undo index/count, cursor, selection, scope) is unmodelled in Swift: no scenario drives the invalid-scope path.
+Mapping/reason: GAP — the rejected-insert invariance (SMF bytes, revision, undo index and count, cursor, time selection, primary track, stored scope) is unasserted: no scenario invokes Insert Time with an invalid active scope. A refusal journey that stages the unused-track scope and asserts this invariance would close A077–A080.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -736,8 +741,8 @@ Original expression:
                "the rejected Insert Time changed document, cursor, or selection state");
 
 A081 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:666
-Disposition: GAP
-Mapping/reason: GAP — S058 (keyboard.swift) restores the scenario-local post-fixture baseline, whereas this restore targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
+Disposition: MATCHED
+Mapping: S091
 Source context since previous assertion:
       // Restore the fixture state after the rejected scenario.
       view.selectTrack(track);
@@ -755,8 +760,8 @@ Disposition: MATCHED
 Mapping: S043
 
 A084 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:685
-Disposition: GAP
-Mapping/reason: GAP — the lane-seed shortcut position has no report.expect in Swift: checkTimelineInsertBlankTimeLanes performs the same nudgeNotes (keyboard.swift) but only fail-guards the fixture (keyboard.swift); S056 belongs to the tracks scenario.
+Disposition: MATCHED
+Mapping: S125
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
 Original expression:
@@ -764,8 +769,8 @@ Original expression:
                "lane insertion seed did not reach the expected shortcut state");
 
 A085 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:694
-Disposition: GAP
-Mapping/reason: GAP — the lane-point fixture (findLanePoint plus findNote) is guard-only in Swift (keyboard.swift report.fail, no report.expect).
+Disposition: MATCHED
+Mapping: S126
 Source context since previous assertion:
       const Tick insertStart = d.tick + 2 * snapCell;
       const Tick insertEnd = insertStart + snapCell;
@@ -780,8 +785,8 @@ Original expression:
                "could not create the lane-scoped insert fixture");
 
 A086 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:706
-Disposition: GAP
-Mapping/reason: GAP — no edit cursor in the Swift session: parking the cursor past the range end is unmodelled.
+Disposition: MATCHED
+Mapping/reason: S127 — the converted guard stages the lane-scoped range and parks the cursor after the range end, then asserts the parked state ("lane insert starts with the scoped range and parked cursor"), the fork's editCursorTick park.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection laneSelection;
       laneSelection.startTick = insertStart;
@@ -797,8 +802,8 @@ Original expression:
                "could not park the edit cursor away from the range start");
 
 A087 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:721
-Disposition: GAP
-Mapping/reason: S059 (keyboard.swift) proves the document half — CC7 shifts by one snap and the note stays byte-identical. GAP remains: the undo-index +1 increment, the retained Lanes band and lane list, and the cursor reset to range start are unasserted in Swift.
+Disposition: MATCHED
+Mapping/reason: S059 (the hardened anchor: undo index +1, the CC7 point shifted one snap, the note byte-identical, the retained Lanes band and lane list, and the cursor reset to the range start) with the mounted Insert Time corroboration S128 (all later lane events shift by the same range span) and S129 (a lane-only range moves no notes).
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -823,8 +828,8 @@ Original expression:
                "lane-scoped Insert Time widened its scope or moved the band");
 
 A088 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:730
-Disposition: GAP
-Mapping/reason: GAP — S060 (keyboard.swift) restores the scenario-local post-fixture baseline, whereas this unwind targets the slot-level post-seed snapshot; the slot SMF restoration is unproved.
+Disposition: MATCHED
+Mapping: S091
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -1319,3 +1324,56 @@ S112 | rulerScopeHeaderRecordsGuard | src/checks/trackheaders/TrackHeadersInputC
 Anchor: message "header records follow used timeline tracks with one conditional trailing add row"
 
 S111/S112 are the task-66 additions: the guard lookup and the records-match-timeline reconciliation of the main Swift check's timelineRulerScope block, executed under cppID swiftcore/PianoRoll::timelineRulerScope in the swiftcore projectSession lane. S111 is the guard's report.fail predicate, which did not fire in the passing lane; S112 is recorded in build/proof-evidence/swiftcore-projectsession.json.
+
+S113 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a mouse sweep writes Volume automation into the document"
+
+S114 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the sweep leaves written Volume events at distinct ticks"
+
+S115 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the selected lane range enables Insert Time"
+
+S116 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Ctrl+D duplicates the range once and advances the selection and cursor"
+
+S117 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the duplicated range is camera-visible"
+
+S118 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "repeating Ctrl+D duplicates the newest copy"
+
+S119 | checkKeyboardDuplicatePrefersTimeSelection | src/checks/rollcheck/note_commands.swift
+Anchor: message "active time range owns duplicate and advances the cursor"
+
+S120 | expectOneUndo | src/checks/rollcheck/note_commands.swift
+Anchor: message "one undo reverses the command"
+
+S121 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+Anchor: message "a second track can be provisioned for the insert fixture"
+
+S122 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+Anchor: message "a free key exists on the unselected track"
+
+S123 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+Anchor: message "the unselected-track insert fixture exists"
+
+S124 | checkTimelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift
+Anchor: message "track insert starts with the scoped range and parked cursor"
+
+S125 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+Anchor: message "lane insertion seed reaches its shortcut position"
+
+S126 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+Anchor: message "the lane point and note insert fixtures exist"
+
+S127 | checkTimelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift
+Anchor: message "lane insert starts with the scoped range and parked cursor"
+
+S128 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Insert Time shifts all later events by the same range span"
+
+S129 | test_jTimeSelectionInsertAndDeleteMutatesDocument | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a Volume-only selection does not move notes"
+
+S113–S118 and S128/S129 are the task-58 additions from the mounted shellwindow journey test_jTimeSelectionInsertAndDeleteMutatesDocument (the duplicate-time and Insert Time rows A061–A067, A075, A087); S119/S120 are the swiftcore duplicate-routing and single-undo predicates of note_commands.swift (checkKeyboardDuplicatePrefersTimeSelection and its expectOneUndo helper); S121–S127 are the converted insert fixture guards and the hardened track/lane Insert Time anchors of keyboard.swift (checkTimelineInsertBlankTimeTracks, checkTimelineInsertBlankTimeLanes). S091 remains the shared seed helper's post-seed unwind anchor (swiftcore/PianoRoll::withKeyboardSeed) that closes A049, A067, A076, A081 and A088.

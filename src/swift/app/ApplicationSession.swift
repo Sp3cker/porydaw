@@ -487,7 +487,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var commandRouter: EditorCommandRouter? {
         guard let workspace else { return nil }
         return EditorCommandRouter(session: workspace.session, grid: workspace.grid,
-                                   automation: workspace.automationPage)
+                                   automation: workspace.automationPage, drawer: workspace.drawer,
+                                   velocity: workspace.velocityPage)
     }
 
     public func gridCommandAvailable(command: Int) -> Bool {
@@ -541,7 +542,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func handleGridEscape() -> Bool {
-        workspace?.grid.handleEscape() ?? false
+        if workspace?.drawer.resizeActive == true {
+            workspace?.drawer.cancelResize()
+            return true
+        }
+        return workspace?.grid.handleEscape() ?? false
     }
 
     public func cancelGridInput(reason: Int) {
@@ -1360,16 +1365,23 @@ public struct EditorCommandRouter {
     private unowned let session: DocumentSession
     private unowned let grid: PianoGrid
     private unowned let automation: AutomationPage
+    private let drawer: EditorDrawerPresenter?
+    private let velocity: VelocityPage?
 
-    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage) {
+    public init(session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
+                drawer: EditorDrawerPresenter? = nil, velocity: VelocityPage? = nil) {
         self.session = session
         self.grid = grid
         self.automation = automation
+        self.drawer = drawer
+        self.velocity = velocity
     }
 
     private var timeSelectionActive: Bool { session.timeSelection?.isActive == true }
     private var pointerGestureActive: Bool {
-        grid.interactionActive || automation.pointerGestureActive
+        grid.interactionActive || grid.scrollbarGrabActive
+            || drawer?.resizeActive == true || automation.pointerGestureActive
+            || velocity?.hasGesture == true
     }
     private var modalActive: Bool { automation.menuOpen || automation.promptOpen }
 

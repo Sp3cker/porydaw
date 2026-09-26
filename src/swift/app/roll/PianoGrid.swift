@@ -58,6 +58,7 @@ public final class PianoGrid {
     private var pendingControlToggle: NoteID?
     private var pendingVelocityReanchor: NoteID?
     private var selectionAtRightPress: [NoteID] = []
+    public private(set) var scrollbarGrabActive = false
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
     /// prompt transaction. `true` means the request was accepted. Swift-only,
@@ -934,11 +935,10 @@ public final class PianoGrid {
 
     @QtIgnored
     public func handleEscape() -> Bool {
-        // Production Escape (editkeyrouting.cpp:409-418): an active gesture
-        // cancels with its rollback/audition teardown; idle Escape clears the
-        // ephemeral note selection and is consumed even though this surface
-        // owns no time selection. Never a host cancel reason: reasons arrive
-        // only through inputCancelled.
+        if scrollbarGrabActive {
+            cancelScrollbarGrab()
+            return true
+        }
         guard interactionActive else {
             session.clearSelectedNotes()
             refreshNotes()
@@ -947,6 +947,18 @@ public final class PianoGrid {
         cancelInput()
         return true
     }
+
+    public func setScrollbarGrabActive(active: Bool) {
+        guard scrollbarGrabActive != active else { return }
+        scrollbarGrabActive = active
+        onCommandAvailabilityChanged?()
+    }
+    private func cancelScrollbarGrab() {
+        guard scrollbarGrabActive else { return }
+        setScrollbarGrabActive(active: false)
+        scrollbarGrabCancelRequested()
+    }
+
 
     public func inputCancelled(reason: Int) {
         guard let reason = GridCancelReason(rawValue: reason) else { return }
@@ -968,6 +980,7 @@ public final class PianoGrid {
         releaseBandAudition()
         pendingControlToggle = nil
         pendingVelocityReanchor = nil
+        cancelScrollbarGrab()
         pointerModifiers = 0
         gesture = nil
         rightGesture = nil
@@ -976,6 +989,8 @@ public final class PianoGrid {
         clearKeyboardHover()
         refreshNotes()
     }
+
+    @QtSignal public func scrollbarGrabCancelRequested()
 
     @QtSignal public func contextMenuRequested(x: Double, y: Double)
 

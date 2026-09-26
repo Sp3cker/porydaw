@@ -213,6 +213,9 @@ public final class EditorDrawerPresenter {
         publish(layout.cancelInteractions())
     }
 
+    @QtIgnored
+    public var resizeActive: Bool { layout.resizeKind != nil }
+
     /// The container's aggregate interaction state: the chrome resize session or
     /// any attached page's own interaction. Swift-only: the shared playhead's
     /// follow gate reads it, and no QML surface learns gesture state from it.

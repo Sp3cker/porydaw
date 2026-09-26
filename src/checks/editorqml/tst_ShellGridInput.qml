@@ -874,4 +874,131 @@ TestCase {
                "mounted folded boundary Up pushes no edit")
     }
 
+    function test_gestureKeysPreserveNotesUntilRelease() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var lane = freeLane(grid, surface, 5)
+        verify(roll && lane, "an empty visible roll lane accepts the draw gesture")
+        var start = pointFor(grid, lane.tick, lane.pitch)
+        var end = pointFor(grid, lane.tick + 2 * grid.snapTicks, lane.pitch)
+        var before = grid.noteSummary
+        var originalIds = gridNotes(grid).map(function(note) { return note.id })
+        var revision = grid.appliedRevisionText
+        mousePress(roll, start.x, start.y, Qt.LeftButton)
+        mouseMove(roll, end.x, end.y, -1, Qt.LeftButton)
+        tryVerify(function() { return grid.statusText.indexOf("Drawing") !== -1 }, 3000)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Delete)
+        compare(grid.noteSummary, before,
+                "Delete during an active note gesture changes no notes")
+        compare(grid.appliedRevisionText, revision,
+                "Delete during a draw records no document edit")
+        keyClick(Qt.Key_Escape)
+        mouseRelease(roll, end.x, end.y, Qt.LeftButton)
+        compare(grid.noteSummary, before,
+                "Escape cancels the gesture and restores the staged selection")
+        mousePress(roll, start.x, start.y, Qt.LeftButton)
+        mouseMove(roll, end.x, end.y, -1, Qt.LeftButton)
+        mouseRelease(roll, end.x, end.y, Qt.LeftButton)
+        tryVerify(function() { return grid.noteSummary !== before }, 3000,
+                  "the released re-press commits its drawn note")
+        var inserted = gridNotes(grid).filter(function(note) {
+            return originalIds.indexOf(note.id) < 0
+        })
+        verify(inserted.length === 1 && inserted[0].pitch === lane.pitch
+               && inserted[0].duration >= 2 * grid.snapTicks,
+               "a re-pressed drag works before Delete deletes again")
+        var drawn = findChild(surface, "gridNote_" + inserted[0].id)
+        verify(drawn, "the re-pressed note renders for selection")
+        var center = drawn.mapToItem(roll, drawn.width / 2, drawn.height / 2)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return noteById(grid, inserted[0].id).selected }, 3000)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Delete)
+        tryVerify(function() {
+            return !noteById(grid, inserted[0].id)
+        }, 3000, "Delete after the completed gesture deletes its note")
+    }
+
+    function test_moveGestureEscapeRestoresSelectedNote() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var target = firstBandedNote(grid, surface, roll)
+        verify(target && roll, "a fully visible note accepts a body drag")
+        var item = findChild(surface, "gridNote_" + target.id)
+        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        var destination = center.x + 2 * grid.snapTicks * grid.beatWidth / grid.ticksPerBeat
+        verify(destination < roll.width, "the selected note has room for a move preview")
+        mousePress(roll, center.x, center.y, Qt.LeftButton)
+        mouseMove(roll, destination, center.y, -1, Qt.LeftButton)
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Delete)
+        compare(grid.noteSummary, before,
+                "a selected-note move consumes Delete while its pointer is held")
+        compare(grid.appliedRevisionText, revision,
+                "Delete during a move records no document edit")
+        keyClick(Qt.Key_Escape)
+        mouseRelease(roll, destination, center.y, Qt.LeftButton)
+        compare(grid.noteSummary, before,
+                "the cancelled move retains the original selected note and its bytes")
+    }
+
+    function test_thumbGrabKeepsDeleteFromSelectedNote() {
+        openRoute101()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = rollInput(surface)
+        var target = firstBandedNote(grid, surface, roll)
+        verify(target && roll, "a visible roll note can be selected before thumb drag")
+        var item = findChild(surface, "gridNote_" + target.id)
+        var center = item.mapToItem(roll, item.width / 2, item.height / 2)
+        mouseClick(roll, center.x, center.y, Qt.LeftButton)
+        tryVerify(function() { return noteById(grid, target.id).selected }, 3000)
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        var scrollbar = findChild(surface, "timelineRollScrollBar")
+        verify(scrollbar && scrollbar.scrollable, "the roll scrollbar has a movable thumb")
+        var thumb = findChild(scrollbar, "timelineRollScrollThumb")
+        verify(scrollbar && thumb && scrollbar.scrollable && thumb.visible,
+               "the real scrollable roll thumb is available")
+        var point = thumb.mapToItem(scrollbar, thumb.width / 2, thumb.height / 2)
+        mousePress(scrollbar, point.x, point.y, Qt.LeftButton)
+        tryCompare(scrollbar, "gestureActive", true, 3000)
+        keyClick(Qt.Key_Delete)
+        verify(grid.noteSummary === before && grid.appliedRevisionText === revision,
+               "the thumb grab blocks Delete without editing the selected note")
+        keyClick(Qt.Key_Escape)
+        tryCompare(scrollbar, "gestureActive", false, 3000)
+        var cameraY = grid.cameraScrollY
+        var delta = Qt.styleHints.startDragDistance * 2
+        var heldY = point.y < scrollbar.height / 2 ? point.y + delta : point.y - delta
+        mouseMove(scrollbar, point.x, heldY, -1, Qt.LeftButton)
+        compare(grid.cameraScrollY, cameraY, "a cancelled thumb ignores held-button movement")
+        mouseRelease(scrollbar, point.x, point.y, Qt.LeftButton)
+        verify(grid.noteSummary === before && grid.appliedRevisionText === revision,
+               "the thumb grab blocks Delete and Escape releases it")
+        mousePress(scrollbar, point.x, point.y, Qt.LeftButton)
+        tryCompare(scrollbar, "gestureActive", true, 3000)
+        keyClick(Qt.Key_Delete)
+        compare(grid.noteSummary, before, "the next thumb grab still protects the note")
+        var dragY = cameraY < grid.cameraMaxVScroll / 2 ? point.y + delta : point.y - delta
+        mouseMove(scrollbar, point.x, dragY, -1, Qt.LeftButton)
+        tryVerify(function() { return grid.cameraScrollY !== cameraY }, 3000,
+                  "a re-pressed drag works before Delete deletes again")
+        mouseRelease(scrollbar, point.x, dragY, Qt.LeftButton)
+        tryCompare(scrollbar, "gestureActive", false, 3000)
+        keyClick(Qt.Key_Delete)
+        tryVerify(function() { return !noteById(grid, target.id) }, 3000)
+        verify(grid.appliedRevisionText !== revision,
+               "released thumb permits the selected-note Delete edit")
+    }
+
 }

@@ -209,6 +209,10 @@ Item {
                 root.contextMenuAt(position.x, position.y)
             }
         }
+        function onScrollbarGrabCancelRequested() {
+            horizontalScrollBar.cancelGrab()
+            rollScrollBar.cancelGrab()
+        }
     }
 
     Connections {
@@ -737,6 +741,9 @@ Item {
         handleHoverColor: root.headersModel.appearance.scrollbarHandleHover
         visibleWhenNotScrollable: true
         thumbObjectName: "timelineHorizontalScrollThumb"
+        onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
+                                    horizontalScrollBar.gestureActive
+                                    || (rollScrollBar && rollScrollBar.gestureActive))
 
         onValueRequested: (value) => root.gridModel.setCameraHScroll(value)
         onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
@@ -766,6 +773,8 @@ Item {
         visibleWhenNotScrollable: true
         externalVisible: !root.showEvents
         thumbObjectName: "timelineRollScrollThumb"
+        onGestureActiveChanged: root.gridModel.setScrollbarGrabActive(
+                                    horizontalScrollBar.gestureActive || rollScrollBar.gestureActive)
 
         onValueRequested: (value) => root.gridModel.setCameraVScroll(value)
         onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>

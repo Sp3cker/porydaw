@@ -795,6 +795,102 @@ TestCase {
         keyClick(Qt.Key_Left)
         keyClick(Qt.Key_Right)
         compare(grid.noteSummary, beforeGrip, "grip arrows never mutate selected notes")
+        var revisionBeforeGrip = grid.appliedRevisionText
+        var gripY = grip.height / 2
+        mousePress(grip, grip.width / 2, gripY, Qt.LeftButton)
+        mouseMove(grip, grip.width / 2, gripY - Qt.styleHints.startDragDistance * 2,
+                  -1, Qt.LeftButton)
+        var resizedHeight = surface.drawerPresenter.section(
+                    bootstrap.velocitySectionKind()).bodyHeight
+        verify(resizedHeight !== heightBefore,
+               "the held drawer grip changes the section height")
+        keyClick(Qt.Key_Delete)
+        verify(grid.noteSummary === beforeGrip
+               && grid.appliedRevisionText === revisionBeforeGrip,
+               "drawer resize drag consumes Delete without editing the selected note")
+        keyClick(Qt.Key_Escape)
+        var cancelledHeight = surface.drawerPresenter.section(
+                    bootstrap.velocitySectionKind()).bodyHeight
+        mouseMove(grip, grip.width / 2, gripY + Qt.styleHints.startDragDistance * 2,
+                  -1, Qt.LeftButton)
+        compare(surface.drawerPresenter.section(bootstrap.velocitySectionKind()).bodyHeight,
+                cancelledHeight, "Escape freezes the cancelled drawer resize")
+        mouseRelease(grip, grip.width / 2, gripY, Qt.LeftButton)
+        compare(grid.noteSummary, beforeGrip,
+                "drawer resize Escape keeps the selected note intact")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Right)
+        verify(selectedNote().tick > original.tick,
+               "note editing resumes after the drawer resize releases")
+        keyClick(Qt.Key_Escape)
+        compare(JSON.parse(grid.noteSummary).some(function(note) { return note.selected }),
+                false, "the next idle Escape clears selection after the resize")
+    }
+
+    function test_gMultiNoteArrowSelectionAndHistory() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var roll = findChild(surface, "swiftRollInput")
+        selectDrawnVelocityNote(surface)
+        var initiallySelected = JSON.parse(grid.noteSummary).find(function(note) {
+            return note.selected && !note.ghost
+        })
+        var other = JSON.parse(grid.noteSummary).find(function(note) {
+            var item = findChild(surface, "gridNote_" + note.id)
+            return !note.selected && !note.ghost && item && item.visible
+                   && item.width > 0 && item.height > 0
+        })
+        verify(initiallySelected && other, "two visible notes can form an arrow selection")
+        var item = findChild(surface, "gridNote_" + other.id)
+        var point = item.mapToItem(roll, item.width / 2, item.height / 2)
+        mouseClick(roll, point.x, point.y, Qt.LeftButton, Qt.ShiftModifier)
+        var before = JSON.parse(grid.noteSummary)
+        var selected = before.filter(function(note) { return note.selected }).map(function(note) {
+            return note.id
+        })
+        compare(selected.length, 2, "the click extends the note selection")
+        var unchanged = before.filter(function(note) { return !note.selected })
+        verify(unchanged.length > 0, "unselected notes remain for the invariance check")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        var directions = [
+            { key: Qt.Key_Up, tick: 0, pitch: 1 },
+            { key: Qt.Key_Down, tick: 0, pitch: -1 },
+            { key: Qt.Key_Right, tick: grid.snapTicks, pitch: 0 }
+        ]
+        for (var direction of directions) {
+            keyClick(direction.key)
+            var after = JSON.parse(grid.noteSummary)
+            verify(selected.every(function(id) {
+                var previous = before.find(function(note) { return note.id === id })
+                var current = after.find(function(note) { return note.id === id })
+                return current && current.tick === previous.tick + direction.tick
+                       && current.pitch === previous.pitch + direction.pitch
+            }), "only selected notes move by one key or one snap")
+            compare(JSON.stringify(after.filter(function(note) { return !note.selected })),
+                    JSON.stringify(unchanged), "unselected notes stay byte-identical")
+            compare(JSON.stringify(after.filter(function(note) { return note.selected })
+                                          .map(function(note) { return note.id })),
+                    JSON.stringify(selected), "the selection vector is identical after the arrow")
+            keySequence(StandardKey.Undo)
+            verify(waitForNative(function() {
+                return grid.noteSummary === JSON.stringify(before)
+            }, 3000), "one undo restores the pre-arrow state")
+            keySequence(StandardKey.Redo)
+            verify(waitForNative(function() {
+                return grid.noteSummary === JSON.stringify(after)
+            }, 3000), "one redo reapplies the selected-note arrow")
+            keySequence(StandardKey.Undo)
+            verify(waitForNative(function() {
+                return grid.noteSummary === JSON.stringify(before)
+            }, 3000))
+        }
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Left)
+        compare(grid.noteSummary, JSON.stringify(before),
+                "Left moves the selected notes back by one snap")
     }
 
     function test_hKeyboardFocusAndDrawerSpacePriority() {
@@ -1048,6 +1144,34 @@ TestCase {
                 && restored.every(function(tick, index) { return tick === originalTicks[index] })
         }, 3000, "the Time menu Delete Time removes the inserted blank range")
         compare(grid.noteSummary, notesBefore, "a Volume-only deletion preserves all notes")
+        mousePress(plot, 130, row, Qt.RightButton)
+        mouseMove(plot, 205, row, -1, Qt.RightButton)
+        mouseRelease(plot, 205, row, Qt.RightButton)
+        tryCompare(insertTime, "enabled", true, 3000)
+        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(volumeTab, "activeFocus", true, 3000)
+        var firstCursor = grid.editCursorTick
+        var originalCount = writtenTicks(page, []).length
+        keyClick(Qt.Key_D, Qt.ControlModifier)
+        tryVerify(function() {
+            return writtenTicks(page, []).length > originalCount
+                   && grid.editCursorTick > firstCursor
+        }, 3000, "Ctrl+D duplicates the range once and advances the selection and cursor")
+        var copiedCount = writtenTicks(page, []).length
+        var copiedCursor = grid.editCursorTick
+        var copiedTicks = writtenTicks(page, [])
+        verify(copiedTicks.some(function(tick) {
+            var x = tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX
+            return tick > originalTicks[originalTicks.length - 1]
+                   && x >= 0 && x <= plot.width
+        }), "the duplicated range is camera-visible")
+        keyClick(Qt.Key_D, Qt.ControlModifier)
+        tryVerify(function() {
+            return writtenTicks(page, []).length > copiedCount
+                   && grid.editCursorTick > copiedCursor
+        }, 3000, "repeating Ctrl+D duplicates the newest copy")
+        compare(grid.noteSummary, notesBefore,
+                "lane-flavored Ctrl+D leaves unrelated notes byte-identical")
     }
 
     function test_kVelocityGestureTermination_data() {
@@ -1541,6 +1665,12 @@ TestCase {
         mouseRelease(plot, plot.width / 2, row, Qt.LeftButton)
         tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
                   "a real plot sweep writes Volume events")
+        var sweepCount = page.pageModel.nodeCount
+        mousePress(plot, plot.width * 3 / 4, row, Qt.LeftButton)
+        mouseMove(plot, plot.width * 4 / 5, row, -1, Qt.LeftButton)
+        mouseRelease(plot, plot.width * 4 / 5, row, Qt.LeftButton)
+        tryVerify(function() { return page.pageModel.nodeCount > sweepCount }, 3000,
+                  "a separate Volume event lies outside the staged range")
         var beforeCount = page.pageModel.nodeCount
         var beforeNotes = grid.noteSummary
         var revisionBeforeSelection = grid.appliedRevisionText
@@ -1564,11 +1694,39 @@ TestCase {
                + clipProbe.readClipJson() + "; activations=" + copyActivatedSpy.count)
         compare(grid.appliedRevisionText, revisionBeforeSelection,
                 "window Copy over label focus never writes the document")
+        function writtenTicks(item, result) {
+            if (item.objectName === "automationNode" && item.model
+                    && !item.model.projected && !item.model.phantom)
+                result.push(item.model.tick)
+            for (var child = 0; child < item.children.length; ++child)
+                writtenTicks(item.children[child], result)
+            return result
+        }
+        var outsideTick = Math.max.apply(null, writtenTicks(page, []))
+        var beforeUp = writtenTicks(page, []).sort(function(a, b) { return a - b })
+        var beforeUpRevision = grid.appliedRevisionText
+        keyClick(Qt.Key_Up)
+        compare(grid.appliedRevisionText, beforeUpRevision,
+                "lane-focus Up leaves the document untouched")
+        compare(JSON.stringify(writtenTicks(page, []).sort(function(a, b) { return a - b })),
+                JSON.stringify(beforeUp), "lane-focus Up preserves every Volume point")
+        keyClick(Qt.Key_Right)
+        var advanced = writtenTicks(page, []).sort(function(a, b) { return a - b })
+        verify(advanced.length === beforeUp.length
+               && advanced.some(function(tick, index) { return tick !== beforeUp[index] })
+               && grid.noteSummary === beforeNotes
+               && insertTime.enabled,
+               "lane-focus Right moves the point and translates the interval")
         keyClick(Qt.Key_Delete)
         verify(page.pageModel.nodeCount < beforeCount,
                "Delete over label focus removes the selected Volume points")
+        verify(writtenTicks(page, []).indexOf(outsideTick) >= 0
+               && page.pageModel.nodeCount < beforeCount,
+               "Delete removes only the lane points inside the staged range")
         compare(grid.noteSummary, beforeNotes, "Volume range Delete preserves the notes")
         compare(insertTime.enabled, true, "Delete keeps the selected time range")
+        verify(!JSON.parse(beforeNotes).some(function(note) { return note.selected }),
+               "the lane-only range begins with an empty note selection")
         keySequence(StandardKey.SelectAll)
         compare(insertTime.enabled, false, "Select All over label focus clears the time range")
         var activeNotes = JSON.parse(grid.noteSummary).filter(function(note) {
@@ -1581,9 +1739,94 @@ TestCase {
         tryVerify(function() {
             return page.pageModel.nodeCount > 0 && grid.editCursorTick > 7680
         }, 3000, "Paste over label focus writes the copied Volume lane at the edit cursor")
+        var roll = findChild(surface, "swiftRollInput")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true, 3000)
+        keyClick(Qt.Key_B)
+        tryCompare(page.pageModel, "isPencilMode", true, 3000)
+        function visibleNode(item) {
+            if (item.objectName === "automationNode" && item.model
+                    && !item.model.projected && !item.model.phantom
+                    && item.model.x > item.model.radius
+                    && item.model.x < plot.width - item.model.radius)
+                return item
+            for (var index = 0; index < item.children.length; ++index) {
+                var candidate = visibleNode(item.children[index])
+                if (candidate)
+                    return candidate
+            }
+            return null
+        }
+        var node = visibleNode(page)
+        verify(node, "a written Volume node is visible for hover deletion")
+        var plotted = findChild(surface, "automationPlot")
+        plotted.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(plotted, "activeFocus", true, 3000)
+        mouseMove(plot, node.model.x, node.model.y)
+        tryVerify(function() { return page.pageModel.hoverDisplay.hasNode }, 3000)
+        var hoverTick = node.model.tick
+        var pointsBeforeHover = JSON.stringify(writtenTicks(page, []))
+        keyClick(Qt.Key_Delete)
+        verify(activeNotes.every(function(note) {
+            return !JSON.parse(grid.noteSummary).some(function(current) {
+                return current.id === note.id && !current.ghost
+            })
+        }) && JSON.stringify(writtenTicks(page, [])) === pointsBeforeHover,
+               "a hovered point survives a selected-note Delete")
+        keyClick(Qt.Key_Delete)
+        tryVerify(function() {
+            return writtenTicks(page, []).indexOf(hoverTick) < 0
+        }, 3000, "an eligible hovered point is deleted after note selection clears; "
+                 + "selected=" + JSON.stringify(JSON.parse(grid.noteSummary).filter(
+                     function(note) { return note.selected }))
+                 + "; pencil=" + page.pageModel.isPencilMode
+                 + "; focus=" + page.pageModel.plotFocused
+                 + "; hover=" + JSON.stringify(page.pageModel.hoverDisplay)
+                 + "; points=" + JSON.stringify(writtenTicks(page, [])))
+        var untouchedPoints = JSON.stringify(writtenTicks(page, []))
+        var revisionAtMiss = grid.appliedRevisionText
+        mouseMove(plot, plot.width - grid.keyboardWidth / 2, plot.height / 2)
+        tryVerify(function() { return !page.pageModel.hoverDisplay.hasNode }, 3000)
+        keyClick(Qt.Key_Delete)
+        verify(JSON.stringify(writtenTicks(page, [])) === untouchedPoints
+               && grid.appliedRevisionText === revisionAtMiss,
+               "a hover miss changes no document bytes")
     }
 
-
+    function test_oEmptySelectionLabelUpEditsNothing() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var toggle = findChild(surface, "drawerToggle_automation")
+        if (!surface.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible
+        }, 3000, "the focused Volume label mounts in the drawer")
+        var volumeTab = null
+        for (var index = 0; index < page.pageModel.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.text === "Volume") {
+                volumeTab = candidate
+                break
+            }
+        }
+        verify(volumeTab && volumeTab.enabled, "Volume is a usable label")
+        var tabPress = findChild(volumeTab, "automationParameterTabPress" + volumeTab.model.index)
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
+        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(volumeTab, "activeFocus", true, 3000)
+        var before = grid.noteSummary
+        verify(JSON.parse(before).every(function(note) { return !note.selected }),
+               "the label-Up fixture has no selected notes")
+        var revision = grid.appliedRevisionText
+        keyClick(Qt.Key_Up)
+        verify(grid.noteSummary === before && grid.appliedRevisionText === revision
+               && volumeTab.activeFocus,
+               "label-focus Up with an empty selection edits nothing")
+    }
 
     function test_yCleanSessionClosesWithoutPrompt() {
         settings.setString("lastProjectDir", "")

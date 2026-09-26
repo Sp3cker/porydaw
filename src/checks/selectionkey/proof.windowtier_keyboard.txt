@@ -21,13 +21,16 @@ test_lChromeArrowsAndUnknownKey / test_mLabelCommandsAndPromptTextOwnership /
 test_nLabelTimeSelectionCommands journeys S068-S118 through the shellwindow entry of
 ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
 
+Command: deno task verify:shell --filter shellwindow --verbose (task-58 sources)
+Result: PASS — implementer-reported 1/26 selected ok, 31 test functions recorded in build/proof-evidence/shellwindow.json (mtime 2026-09-26 16:31, postdating the tst_ShellWindow.qml task-58 additions). That run executes test_oEmptySelectionLabelUpEditsNothing, whose predicate S119 (the empty-selection label-focus Up no-op) closes A039, alongside the test_gEditorRoutedNoteKeysAndChromeArrows grip journeys S037-S039 that the windowtier gestures rows cite. This bookkeeping pass ran no lane, rebuilt nothing and re-ran no check.
+
 A001 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:97
 Disposition: MATCHED
 Mapping: S019, S023, S018
 
 A002 | SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce | src/checks/selectionkey/windowtier_keyboard.cpp:99
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/windowtier_keyboard.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: native `focusAutomationBand` (the fork's Quick-band plus native-focus acquisition, src/checks/selectionkey/windowtier_keyboard.cpp:99 at c17d966f) has no Swift counterpart; the mounted shellwindow journeys stage focus through the QML surface (a real toggle click or forceActiveFocus on the real chrome) and assert it with S032 ("bare Space on focused drawer chrome owns transport") and S061 ("the first label takes keyboard focus").
 Source context since previous assertion:
   ;
 
@@ -344,8 +347,8 @@ Disposition: MATCHED
 Mapping: S046
 
 A035 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:251
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: The label Return/Enter activation executes on the mounted lane (S043 "Enter activates the focused label once", S045 "Return activates the focused second label") and its no-edit markers are asserted (S046 "label Enter never edits the song", S047 "label Enter never moves the cursor", S048 "label Enter never retargets the track" — all in test_kParameterTabActivationAndTapCession). Unproved as stated: this row's exact undo-stack index equality — no mounted predicate reads a history depth (the lane pins the dirty flag for the label route, and the revision/undo-availability pair S065 only for the tempo-tap routes), so the exact `undoStack()->index()` conjunct stays open.
 Source context since previous assertion:
   ;
 
@@ -370,8 +373,8 @@ Original expression:
   QVERIFY(selectionUnchanged())
 
 A039 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:258
-Disposition: GAP
-Mapping/reason: Fork law at the Reference revision: Up resolves to roll.transpose_up with Scope::EditorRouted (src/ui/keymap.cpp) and no widget holds its QAction, so the editor claims the key itself (src/ui/songview/editactions.h). This row's no-edit observation holds only because its fixture leaves the note selection empty — the fork stages setNoteSelection at windowtier_keyboard.cpp:326, after this press. No Swift predicate asserts a label-focus Up with an empty note selection; the mounted label journey stages a selected note and asserts the routed transpose instead (S086), so the pinned empty-selection no-edit clause remains unproved.
+Disposition: MATCHED
+Mapping/reason: S119 — test_oEmptySelectionLabelUpEditsNothing (src/checks/editorqml/tst_ShellWindow.qml) stages exactly this row's fixture (a focused Volume parameter label and an asserted empty note selection, "the label-Up fixture has no selected notes"), presses a real Up on it and asserts the no-edit outcome with the label still focused ("label-focus Up with an empty selection edits nothing": the note summary, the applied revision and the label's active focus are all unchanged). Fork law unchanged: Up resolves to roll.transpose_up with Scope::EditorRouted (src/ui/keymap.cpp) and the editor claims the key itself (src/ui/songview/editactions.h), so the pinned empty-selection no-edit clause is the transposable-selection-absent case this journey executes.
 
 A040 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:259
 Disposition: MATCHED
@@ -379,7 +382,7 @@ Mapping: S049
 
 A041 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:260
 Disposition: PARTIAL
-Mapping/reason: Partial via S086 (:1411) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the routed Up moves the note resolved by id by exactly one semitone, so the routed editor command does not replace the note selection. Unproved as stated: the time-selection fields and the empty-note-selection precondition of selectionUnchanged() across a label-focus Up (the mounted Up journey stages no time selection).
+Mapping/reason: Partial via S086 (tst_ShellWindow.qml:1543, test_mLabelCommandsAndPromptTextOwnership): the routed Up moves the note resolved by id by exactly one semitone, so the routed editor command does not replace the note selection. S119 (test_oEmptySelectionLabelUpEditsNothing) now executes the predicate's empty-note-selection precondition across a label-focus Up (the fixture asserts no selected note and the Up leaves the note summary unchanged). Unproved as stated: the time-selection fields of selectionUnchanged() across a label-focus Up — neither mounted journey stages a time selection alongside label focus, and no predicate reads the session's time-selection fields there.
 
 A042 | SelectionWindowTierTest::parameterLabelActivationAndSharedCommands | src/checks/selectionkey/windowtier_keyboard.cpp:265
 Disposition: PARTIAL
@@ -1475,4 +1478,9 @@ Anchor: message "Select All over label focus selects the active track's notes"
 
 S118 | test_nLabelTimeSelectionCommands | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "Paste over label focus writes the copied Volume lane at the edit cursor"
+
+S119 | test_oEmptySelectionLabelUpEditsNothing | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "label-focus Up with an empty selection edits nothing"
+
+S119 is the task-58 addition: the empty-selection label-focus Up no-op journey of the shellwindow entry in ShellQmlTests.swift, which closes A039 and executes the empty-note-selection precondition of A041's selectionUnchanged() row.
 

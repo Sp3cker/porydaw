@@ -57,7 +57,8 @@ Item {
     property real dragLastPosition: 0
     property point dragLastPoint: Qt.point(0, 0)
     property bool dragThresholdReached: false
-    property bool gestureActive: thumbMouse.pressed
+    property bool cancelledWhileHeld: false
+    readonly property bool gestureActive: thumbMouse.pressed && !cancelledWhileHeld
 
     signal valueRequested(real value)
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
@@ -70,6 +71,15 @@ Item {
         if (!scrollable)
             return
         valueRequested(clampedValue(requested))
+    }
+    function cancelGrab() {
+        if (!thumbMouse.pressed)
+            return
+        scrollbar.cancelledWhileHeld = true
+        thumbMouse.enabled = false
+        Qt.callLater(() => {
+            thumbMouse.enabled = Qt.binding(() => scrollbar.scrollable && scrollbar.thumbTravel > 0)
+        })
     }
 
     // Settles the hint group from a drag owner's delivered local
@@ -200,6 +210,7 @@ Item {
         z: 1
 
         onPressed: (mouse) => {
+            scrollbar.cancelledWhileHeld = false
             const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
             if (position < scrollbar.thumbPos
                     || position >= scrollbar.thumbPos + scrollbar.thumbLength) {
@@ -213,7 +224,7 @@ Item {
             scrollbar.dragThresholdReached = false
         }
         onPositionChanged: (mouse) => {
-            if (!pressed)
+            if (!pressed || scrollbar.cancelledWhileHeld)
                 return
             const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
             scrollbar.dragLastPoint = Qt.point(mouse.x, mouse.y)
@@ -235,12 +246,16 @@ Item {
             // release coordinates: an outside release clears even when Qt
             // froze hover membership during the implicit grab.
             scrollbar.settleHintRelease(mouse.x, mouse.y)
+            scrollbar.cancelledWhileHeld = false
         }
         // canceled() delivers no event: the grab was lost before a release
         // event existed. The cleanup is still unconditional, settling from
         // the drag owner's last delivered position so a stale retained
         // membership cannot survive the cancellation.
-        onCanceled: scrollbar.settleHintRelease(scrollbar.dragLastPoint.x,
-                                                scrollbar.dragLastPoint.y)
+        onCanceled: {
+            scrollbar.cancelledWhileHeld = false
+            scrollbar.settleHintRelease(scrollbar.dragLastPoint.x,
+                                        scrollbar.dragLastPoint.y)
+        }
     }
 }

@@ -15,19 +15,30 @@ predicates S001-S008 only.
 Command: deno task verify:shell --filter shellwindow --verbose
 (controller-observed)
 Result: PASS; build ok (0.16 s), ok shellwindow (3.74 s); verify 1/11 ok
+
+Command: deno task verify --filter swiftcore --verbose and deno task verify:shell --filter shellwindow --verbose
+Result: PASS - task-58 implementer-recorded runs on the frozen sources: swiftcore 12/36
+harnesses passed and the mounted shellwindow lane 1/26 selected harnesses passed. Evidence
+build/proof-evidence/shellwindow.json (mtime 16:31:03) postdates tst_ShellWindow.qml
+(16:30:46) and records test_gMultiNoteArrowSelectionAndHistory, whose QML anchors S015-S022
+therefore classify executed. This task-58 ledger pass flipped the row dispositions and indexed
+the added anchors; it ran no lane, rebuilt nothing and re-ran no check, so the controller
+still owns the green re-run on the settled tree.
+
+Counts: MATCHED 3, PARTIAL 0, GAP 1, RETIRED-REPRESENTATION 16
 (10 skipped); run_checks PASS. That run executes the shellwindow predicates
 
 A001 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:85
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(std::nullopt) plus the m_fixture check); the mounted lane stages its own Route 101 fixture.
 
 A002 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:94
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick band input availability guard (non-empty bounds plus the Quick-window identity); the mounted lane resolves its roll and plot items by object name.
 
 A003 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:124
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the click-point probe depends on native production geometry and
-cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native click-point geometry: the probe resolves the band point from production geometry (selectedVelocityStemPoint, plainRulerPoint, band bounds centre); the mounted lane maps drawn note items into the roll.
 Source context since previous assertion:
   ;
 
@@ -61,10 +72,8 @@ Original expression:
                                                  .arg(QLatin1String(probe.label), clickDiagnostics)))
 
 A004 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:145
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the threshold-crossing stem-drag delivery requires native mouse
-input and cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native threshold-crossing pointer delivery for the selected velocity-stem drag (a startDragDistance+4 move on the native window); the mounted lane sends real mouse press/move/release.
 Source context since previous assertion:
   ;
 
@@ -93,10 +102,8 @@ Original expression:
                                   .arg(QLatin1String(probe.label), clickDiagnostics)))
 
 A005 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:150
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; click delivery into the production band requires native input and
-cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native click delivery (clickTimelineInput) into the production band; the mounted lane clicks QML items through the production surface.
 Source context since previous assertion:
   ;
       } else {
@@ -106,10 +113,8 @@ Original expression:
                                   .arg(QLatin1String(probe.label), clickDiagnostics)))
 
 A006 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:157
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Quick active-focus observation requires the native window and
-cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native host focus identity (band->hasActiveFocus()); the mounted lane asserts QML activeFocus instead.
 Source context since previous assertion:
   ;
       }
@@ -121,13 +126,7 @@ Original expression:
 
 A007 | SelectionKeyCoreTest::incidentalBandClickPreservesSelection | src/checks/selectionkey/corearrows.cpp:159
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the incidental band-click selection equality is pure selection
-state a presenter-level Swift check could in principle assert, but none does.
-The frozen shellwindow rows (S009) click the drawn velocity node and create a
-one-note selection; no predicate asserts that an incidental band click preserves
-an already eligible note selection. Original predicate and setup below remain an
-open obligation.
+Mapping/reason: GAP - no Swift predicate stages an incidental band or chrome press that must preserve an already eligible note selection: the new multi-note journey's click extends the selection (S016), test_g's chrome press is a drawer resize drag whose retained selection belongs to the windowtier_gestures rows, and the empty-space clicks in the menu lane assert the time selection rather than the note selection. Missing assertion site: a band/ruler press with an eligible note selection that asserts noteSelection() is unchanged.
 Source context since previous assertion:
   ;
 
@@ -141,15 +140,15 @@ Original expression:
 
 A008 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:190
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(std::nullopt) plus the m_fixture check) for the cross-band arrow fixture; the mounted lane stages its own fixture.
 
 A009 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:199
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native Quick band input availability guard (non-empty bounds plus the Quick-window identity); the mounted lane resolves its roll item by object name.
 
 A010 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:206
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; explicit band-focus staging requires the native window and cannot
-be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging (focusBand(probe.band)) for the four-band arrow matrix; the mounted lane forces QML focus on the roll.
 Source context since previous assertion:
   ;
 
@@ -161,12 +160,8 @@ Original expression:
                               .arg(QLatin1String(probe.label))))
 
 A011 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:213
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the cross-band fixture note presence is a native harness
-precondition with no Swift counterpart (the shellwindow lane stages its own
-single selected velocity note instead, S009). Original predicate and setup below
-remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture note presence guard (snapshotNotes() before the arrow); the mounted lane stages and asserts its own two-note selection (S015).
 Source context since previous assertion:
   ;
       songView.selectionModel().setNoteSelection(selection);
@@ -180,10 +175,8 @@ Original expression:
                          .arg(QLatin1String(probe.label))))
 
 A012 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:227
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Quick-window key acceptance requires native delivery and cannot
-be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery (deliverKey into the Quick window) for the band arrow; the mounted lane sends a real keyClick.
 Source context since previous assertion:
   ;
 
@@ -202,16 +195,8 @@ Original expression:
                               .arg(QLatin1String(probe.label), direction)))
 
 A013 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:238
-Disposition: PARTIAL
-Mapping/reason: Related predicates S010-S013 in
-src/checks/editorqml/tst_ShellWindow.qml
-(test_gEditorRoutedNoteKeysAndChromeArrows) deliver real arrow keys to the
-focused production roll and observe the selected note transposition (Up +1,
-Down back, Shift+Up +12, Shift+Down back), its nudge (Right advances the tick,
-Left returns it) and its length (Shift+Right grows, Shift+Left restores).
-Unproved as stated: invariance of the unselected fixture notes, the exact
-snap-step tick delta (the shell row asserts only tick > original), and the
-four-band row expansion (velocity, voice changes, ruler, other events).
+Disposition: MATCHED
+Mapping: S017, S018, S015, S016 (only selected notes move by one key or one exact snap step, the unselected notes stay byte-identical; the four-band matrix is substituted by the mounted roll band, and the exact snap step comes from grid.snapTicks)
 Source context since previous assertion:
   ;
 
@@ -237,15 +222,8 @@ Original expression:
                            QString::number(expectedKey), QString::number(expectedTick))))
 
 A014 | SelectionKeyCoreTest::arrowsMoveSelectedNotesAcrossBands | src/checks/selectionkey/corearrows.cpp:251
-Disposition: PARTIAL
-Mapping/reason: Related predicate S014 in
-src/checks/editorqml/tst_ShellWindow.qml
-(test_gEditorRoutedNoteKeysAndChromeArrows): the edited source note stays
-selected and resolvable by its original id after every routed arrow
-(compare(selection.length, 1, "the edited source note stays selected")).
-Unproved as stated: full noteSelection() vector equality over the whole
-selection (the shell row tracks the single source note, not the pair) and the
-four-band row expansion.
+Disposition: MATCHED
+Mapping: S019, S016 (the selection vector is identical after the arrow: the selected id list is compared in order, covering the whole two-note selection rather than the single source note)
 Source context since previous assertion:
   ;
       }
@@ -259,12 +237,11 @@ Original expression:
 
 A015 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:267
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture-creation guard (createFixture(std::nullopt) plus the m_fixture check) for the undo-proof fixture; the mounted lane stages its own fixture.
 
 A016 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; staging band focus for the undo proof requires the native window
-and cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native focus staging (focusBand(TimelineBand::OtherEvents)) for the undo proof; the mounted lane forces QML focus on the roll.
 Source context since previous assertion:
   ;
       QQuickWindow *const quick = m_fixture->window();
@@ -276,12 +253,8 @@ Original expression:
                "could not stage band focus for the undo proof")
 
 A017 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:279
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the fixture note presence before the undo proof is a native harness
-precondition with no Swift counterpart. The shellwindow rows observe the selected
-note before and after each arrow (S014) but assert no separate pre-undo snapshot.
-Original predicate and setup below remain an open obligation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native fixture note presence guard (snapshotNotes() before the undo proof); the mounted journey captures its own pre-arrow summary and compares byte-identical summaries (S020).
 Source context since previous assertion:
   ;
       songView.selectionModel().setNoteSelection(selection);
@@ -291,15 +264,8 @@ Original expression:
   QVERIFY2(beforeUndo.has_value(), "the fixture notes vanished before the undo proof")
 
 A018 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Related predicates S010-S013 in
-src/checks/editorqml/tst_ShellWindow.qml
-(test_gEditorRoutedNoteKeysAndChromeArrows): the shell delivers Up and then Down
-through the production roll and observes the selected note key return to its
-original value, proving the transposing press and its reversal by the opposite
-arrow. Unproved as stated: the production mergeable-move history undo/redo
-stages (the shell rows press the opposite arrow instead of traversing history)
-and invariance of the unselected notes across stages.
+Disposition: MATCHED
+Mapping: S020, S021, S022 (one undo restores the pre-arrow state and one redo reapplies the selected-note arrow, both as byte-identical summaries; the closing Left returns the moved selection by one snap)
 Source context since previous assertion:
   ;
 
@@ -328,10 +294,8 @@ Original expression:
                                QString::number(expectedKey), QString::number(expectedTick))))
 
 A019 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:306
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Quick-window key acceptance requires native delivery and cannot
-be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery (deliverKey Up) for the undo proof; the mounted journey sends real arrow keys.
 Source context since previous assertion:
   ;
           }
@@ -342,10 +306,8 @@ Original expression:
                "Quick window did not accept the undo-proof key")
 
 A020 | SelectionKeyCoreTest::mergeableMoveHistorySupportsUndoRedoRoundTrip | src/checks/selectionkey/corearrows.cpp:313
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/corearrows.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Quick-window key acceptance requires native delivery and cannot
-be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - native key delivery (deliverKey Down) for the undo proof; the mounted journey sends real arrow keys.
 Source context since previous assertion:
   ;
       expectShift("Up", +1, 0);
@@ -404,6 +366,31 @@ Anchor: message "Shift+Left restores the selected note duration"
 
 S014 | test_gEditorRoutedNoteKeysAndChromeArrows | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "the edited source note stays selected"
+
+
+S015 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "two visible notes can form an arrow selection"
+
+S016 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the click extends the note selection"
+
+S017 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "only selected notes move by one key or one snap"
+
+S018 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "unselected notes stay byte-identical"
+
+S019 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the selection vector is identical after the arrow"
+
+S020 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "one undo restores the pre-arrow state"
+
+S021 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "one redo reapplies the selected-note arrow"
+
+S022 | test_gMultiNoteArrowSelectionAndHistory | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Left moves the selected notes back by one snap"
 
 Shared helpers
 selectDrawnVelocityNote (src/checks/editorqml/tst_ShellWindow.qml) and
