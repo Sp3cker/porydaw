@@ -5,19 +5,58 @@ Original: src/checks/selectionkey/localinputtier_pitchbend.cpp
 Original SHA-256: dfffb49ac306107884b336a69859d3db9390feb3f1c5a702bdc61ac4e50351b7
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellMenus.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPitchBend.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Result: pending integrated run: S001-S008 derive from
+src/checks/selectionkey/localinputtier_text.swift, which the parallel
+window-tier subtask still owns, so this row stays pending.
 Command: deno task verify:shell --filter shell-menus --filter shell-pitch-bend --filter
 shell-grid-input --filter shell-grid-menu --filter shell-transport --verbose
 Result: PASS — run_checks: PASS (5/26 ok, 3.52 s); shell-menus ok (2.38 s) on the
 frozen final sources; raw log /tmp/porydaw-shell-parity-final.log
 (controller-supplied). S009-S012 execute in the shell-menus slot; the swiftcore
 row above stays pending.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-50c implementer run)
+Result: the controller handoff records the shell-pitch-bend evidence fresh at this
+revision; build/proof-evidence/shell-pitch-bend.json lists the lane's eighteen
+functions, including test_graphKeyOwnershipAndRepeatedOpener,
+test_graphVertexDeleteUndoAndWindowSoloResumption and
+test_numericFieldOwnsCopyAndYieldsSpace, so the mounted predicates S013-S036 below
+execute there. This bookkeeping pass read that recording; it did not re-run the
+lane and claims no lane-level PASS of its own.
+Command: deno task verify:shell --filter shell-menus --verbose (task-50c regression)
+Result: the shell-menus recording at build/proof-evidence/shell-menus.json lists
+test_noteCommandsRouteThroughMenuAndKey, so S009-S012 execute on the current
+tst_ShellMenus.qml; no PASS is re-claimed for that lane by this pass.
 
-SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys runs on the fresh
+Verification: the mapped mounted predicates execute on the shell-pitch-bend lane
+(ShellQmlTests.swift:64-65); this bookkeeping pass read the fresh recording at
+build/proof-evidence/shell-pitch-bend.json and did not execute the lane. The
+now-frozen counterpart src/checks/editorqml/tst_ShellPitchBend.qml carries the
+SHA-256
+d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac, and the anchors
+cited below resolve to :833 (S013), :838 (S014), :851 (S015), :864 (S016), :869
+(S017), :888 (S018), :894 (S019), :912 (S020), :921 (S021), :923 (S022), :932
+(S023), :934 (S024), :940 (S025), :944 (S026), :949 (S027), :952 (S028), :975
+(S029), :982 (S030), :990 (S031), :993 (S032), :997 (S033), :732 (S034), :987
+(S035) and :205 (S036). The native counterpart src/checks/rollcheck/pitch_bend.swift
+carries the SHA-256
+2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9 pinned by the
+task-41 handoff. The swiftcore rows S001-S008 stay pending.
+Registered deviations, recorded per row: the window shortcut carries Undo into the
+open popup (A025-A027); count clauses are carried by exactly-once state
+observables (A013-A015, A019, A034, A035, A040, A041); the mounted solo, mute and
+transport state replaces native masks and action counters (A019-A021, A031, A034,
+A035); revision or curve equality replaces SMF byte equality (A023, A026, A028,
+A037); and the item's activeFocus replaces the native focus-window identity (A018,
+A029). Six rows stay PARTIAL: A010, A011, A038, A039 (the Roll-focus staging and
+observation carry no message anchor and the native focus-window identity has no
+QML counterpart) and A014, A015 (no check injects an autorepeat event).
+
+Disposition tally: 41 sites: 25 MATCHED, 6 PARTIAL, 4 GAP, 6 RETIRED-REPRESENTATION.
 
 A001 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:115
 Disposition: GAP
@@ -147,10 +186,12 @@ A002 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: RETIRED-REPRESENTATION
 
 A003 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:120
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the canonical pitch-bend action precondition is native
-production-object setup a presenter-level Swift check cannot establish.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - the site pins the native pitch-bend
+QAction object (actions->action(SongView::EditCommand::PitchBend)) and its
+presence guard, Qt-widget internals the Swift shell does not have; verified at
+git show a1244957:src/checks/selectionkey/localinputtier_pitchbend.cpp:120, the
+ledger's pinned revision, byte-identical to the fceecd88 fork oracle.
 Source context since previous assertion:
   ;
       QAction *const pitchBendAction = actions->action(SongView::EditCommand::PitchBend);
@@ -182,11 +223,12 @@ Original expression:
                "unavailable pitch-bend key was consumed by shared routing")
 
 A005 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:131
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the zero-trigger observation requires the native signal spy on
-the production action and cannot be established by a presenter-level Swift
-check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - the site pins the QSignalSpy on that
+native QAction (an expected trigger count of zero); the Swift shell publishes no
+QAction and no trigger counter; verified at
+git show a1244957:src/checks/selectionkey/localinputtier_pitchbend.cpp:131, the
+ledger's pinned revision, byte-identical to the fceecd88 fork oracle.
 Source context since previous assertion:
   ;
 Original expression:
@@ -262,10 +304,14 @@ Original expression:
                               .arg(view.selectionModel().timeSelection().active())))
 
 A010 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:171
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Roll-origin focus staging requires the native window and cannot
-be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the mounted G journey stages the same Roll-origin
+focus with roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
+tryCompare(roll, "activeFocus", true) (tst_ShellPitchBend.qml:477-478, helper
+openViaG). The fork's clause asserts the native band-focus request returned true
+(focusedTimelineBand(Roll) accepted), an API with no QML counterpart, and the
+mounted stage carries no message anchor, so what remains unproved is the
+messaged focus predicate and the native request half.
 Source context since previous assertion:
   ;
 Original expression:
@@ -273,10 +319,13 @@ Original expression:
                "could not request roll focus for the pitch-bend opener")
 
 A011 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:179
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Roll-origin focus observation requires native Quick focus state
-and cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the Roll-origin focus observation
+(focusedTimelineBand() == Roll plus the native window's activeFocusItem and the
+QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
+roll activeFocus stage (tst_ShellPitchBend.qml:477-478). No message-anchored
+predicate asserts the roll's QML focus and the native focus-window identity has
+no QML counterpart, so that half stays unproved.
 Source context since previous assertion:
   ;
       const auto rollHasFocus = [&] {
@@ -296,10 +345,13 @@ Original expression:
                                    applicationFocusState())))
 
 A012 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:190
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; staging the disabled production action observes the native action
-object and cannot be established by a presenter-level Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION - the site stages the native QAction's
+disabled state (pitchBendAction->setEnabled(false)) and guards it with that same
+action's enabled property: representation of the QAction object the Swift shell
+does not have; verified at
+git show a1244957:src/checks/selectionkey/localinputtier_pitchbend.cpp:190, the
+ledger's pinned revision, byte-identical to the fceecd88 fork oracle.
 Source context since previous assertion:
   ;
       // The manual key route must use live eligibility even if this one
@@ -309,16 +361,16 @@ Original expression:
   QVERIFY2(!pitchBendAction->isEnabled(), "the disabled action state was not staged")
 
 A013 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:219
-Disposition: PARTIAL
-Mapping/reason: S011 + S012: the same test delivers one real keyClick(Qt.Key_G)
-into the focused swiftRollInput and then observes the production pitch-bend
-editor open (lines 381-382, tryCompare editor.isOpen true, "delivered G opens
-pitch bend on the selected note") with the roll document revision unchanged
-(line 383). The delivered key executed the pitch-bend route
-and mutated nothing, but not exactly once: the Swift shell has no QAction and
-no trigger-count or open-count predicate, so
-QCOMPARE(pitchBendTriggered.count(), 1) stays unproved, as does the original
-signal spy on the canonical action. One open is observed, not a count of one.
+Disposition: MATCHED
+Mapping/reason: S013 - test_graphKeyOwnershipAndRepeatedOpener delivers exactly
+one G into the focused roll (helper openViaG) and then compares
+findChild("pitchBendPopup") with the popup that journey opened
+(tst_ShellPitchBend.qml:832-833), so one delivered opener key leaves exactly one
+editor open and no replacement instance; the companion compare at :839-840 pins
+the document revision unchanged across that key. Registered deviation: the Swift
+shell has no QAction and no trigger counter, so the fork's
+QCOMPARE(pitchBendTriggered.count(), 1) is carried by the exactly-once popup
+identity instead of a count.
 Source context since previous assertion:
   ;
 
@@ -353,11 +405,16 @@ Original expression:
   QCOMPARE(pitchBendTriggered.count(), 1)
 
 A014 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:226
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; autorepeat consumption through the production key route requires
-the native routing objects and cannot be established by a presenter-level
-Swift check.
+Disposition: PARTIAL
+Mapping/reason: S014 - with the graph focused (graph.forceActiveFocus plus the
+unmessaged tryCompare(graph, "activeFocus", true) at tst_ShellPitchBend.qml:834-835)
+the journey re-delivers G and asserts the same popup instance is still mounted
+(:836-838), so a repeated opener key never reopens the editor. PARTIAL: the
+fork's clause is consumption of an autorepeat press (TimelineKeyInput.autoRepeat
+= true); the mounted popup does forward event.isAutoRepeat to the presenter
+(PitchBendPopup.qml:78), but no check injects an autorepeat event (QtTest
+keyClick never sets isAutoRepeat) and the lane has no consumption or
+trigger-count observable, so the autorepeat half stays unproved.
 Source context since previous assertion:
   ;
       const songview::TimelineKeyInput repeatedPitchBend{
@@ -371,20 +428,26 @@ Original expression:
                "eligible pitch-bend repeat was not consumed")
 
 A015 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:228
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the still-once trigger observation requires the native signal
-spy and cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: S014 - after the second delivered G the journey still shows the
+same single popup (tst_ShellPitchBend.qml:836-838) and the unchanged document
+revision (:839-840), the count-free equivalent of still-one trigger. PARTIAL:
+the fork's QCOMPARE(pitchBendTriggered.count(), 1) has no Swift QAction or
+trigger counter behind it and the second delivery is a plain keyClick rather
+than an autorepeat event, so the autorepeat half stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(pitchBendTriggered.count(), 1)
 
 A016 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:229
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the revealed Quick popup observation requires the native popup
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S013 - the G route realizes the popup item and the journey then
+compares it by identity (tst_ShellPitchBend.qml:832-833); the helper's own
+realization check carries the message "the G key realizes the anchored popup"
+(:482-483). Registered deviation: realization is a mounted
+findChild("pitchBendPopup") item instead of the fork's native QuickPopupSession
+object.
 Source context since previous assertion:
   ;
 Original expression:
@@ -397,10 +460,17 @@ A017 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/select
 Disposition: RETIRED-REPRESENTATION
 
 A018 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:243
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; completing native Quick focus on the graph requires the native
-window and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S036 - test_keyboardUndoWhileOpenRestoresCurve asserts the
+popup's graph keeps the keyboard focus while the editor is open
+(verify(opened.graph.activeFocus, "undo keeps the graph focused"),
+tst_ShellPitchBend.qml:205), the mounted equivalent of the fork's completed graph
+focus; the G journey stages the same state with the unmessaged
+tryCompare(graph, "activeFocus", true) at :834-835 before delivering its absorbed
+keys, and the helper openPitchEditor carries the same clause at :160. Registered
+deviation: the mounted lane reads the graph item's activeFocus property where the
+fork waits for the native focus-window identity
+(QGuiApplication::focusObject/focusWindow).
 Source context since previous assertion:
   ;
 
@@ -415,11 +485,15 @@ Original expression:
                               .arg(graphFocusBefore, applicationFocusState())))
 
 A019 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:252
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the graph-local Solo observation (signal count, window-action
-delta, production solo mask) requires native objects and cannot be established
-by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S015 - the popup graph's S key flips the selected track's mounted
+solo state exactly once (tryCompare(solo, "checked", !initialSolo, 5000, "graph
+Solo toggles the track exactly once"), tst_ShellPitchBend.qml:849-851) - the
+count-free equivalent of the fork's soloMaskChanged count of one with a zero
+window-action delta, which the popup's ShortcutOverride claim keeps from seeing
+the key (PitchBendPopup.qml:66-72). The companion journey proves one mask change
+per press (a second S restores the flag, :796-799). Registered deviation: the
+solo mask is read as the mounted timelineHeaderSolo checkbox state.
 Source context since previous assertion:
   ;
       const int actionSoloBefore = m_counts.solo;
@@ -437,11 +511,14 @@ Original expression:
                               .arg(view.soloMask())))
 
 A020 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:268
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the popup-local Copy observation (window-action delta, sentinel
-clipboard text, document bytes) requires the native clipboard and window owner
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S016 - after a window Copy over the focused graph
+(keySequence(StandardKey.Copy) at tst_ShellPitchBend.qml:860) the mounted
+clipboard probe still pastes the sentinel text, so no window Copy ran
+(:861-864); the journey's serialized revision is unchanged as well (:870-871).
+Registered deviation: the fork's window-action delta and native clipboard
+equality are carried by sentinel clipboard text plus the serialized revision,
+since the Swift shell publishes no QAction counter.
 Source context since previous assertion:
   ;
       view.setTrackSolo(kTrack, (soloMaskBefore & (uint32_t{1} << kTrack)) != 0);
@@ -462,11 +539,14 @@ Original expression:
                               .arg(QApplication::clipboard()->text())))
 
 A021 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:286
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the absorbed roll-command observation (playback requests,
-production mute mask, document bytes) requires native signal and view objects
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S017 - the popup graph's M key leaves both the mounted mute
+checkbox and the transport state untouched (verify(mute.checked === initialMute
+&& bar.presenter.state === initialTransport, "graph Mute never toggles playback
+or the mask"), tst_ShellPitchBend.qml:865-869) with the document revision
+unchanged (:870-871) - the fork's zero playback requests and unchanged mute mask.
+Registered deviation: playback and the mute mask are read from the mounted
+transport state and the timelineHeaderMute checkbox.
 Source context since previous assertion:
   ;
 
@@ -486,10 +566,12 @@ Original expression:
                "a non-audition roll command escaped the pitch-bend graph")
 
 A022 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:294
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the editable-canvas geometry requires the native QML graph item
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S018 - test_graphVertexDeleteUndoAndWindowSoloResumption asserts
+the mounted pitch graph exposes a non-empty canvas before the drawn stroke
+(verify(canvas.width > 0 && canvas.height > 0, "the pitch graph has an editable
+canvas"), tst_ShellPitchBend.qml:887-888), the same observable as the fork's
+non-empty canvasRect gate.
 Source context since previous assertion:
   ;
 
@@ -501,10 +583,14 @@ Original expression:
   QVERIFY2(!canvas.isEmpty(), "pitch-bend graph has no editable canvas")
 
 A023 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:306
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the one-vertex production-history observation requires the native
-undo stack and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S019 - one mouseClick on that canvas inserts one interior vertex
+(tryCompare(graph, "curveSegmentCount", originalSegments + 2, 5000, "the drawn
+stroke creates one undoable vertex") at tst_ShellPitchBend.qml:892-894, with the
+interior-vertex search at :895-901 finding a vertex between the anchor note's
+tick and its note-off) and the serialized revision advances by exactly one
+history entry (:904-906) - the fork's index == undoBefore + 1 with an interior
+lane point present.
 Source context since previous assertion:
   ;
       const QPointF stroke(canvas.center().x(), canvas.top() + std::max(1, canvas.height() / 4));
@@ -523,10 +609,14 @@ Original expression:
                "graph input did not create one undoable interior bend vertex")
 
 A024 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:313
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the graph-local Delete observation requires the native undo stack
-and lane lookup and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S020 - Delete in the focused graph removes exactly the drawn
+interior vertex: the curve returns to its original segment count
+(tryCompare(graph, "curveSegmentCount", originalSegments, 5000, "Delete removes
+exactly the selected vertex") at tst_ShellPitchBend.qml:910-912), hitVertex at
+the drawn position returns -1 (:913-914) and the revision advances by exactly one
+more history entry (:915-916) - the fork's index == undoBefore + 2 with the
+selected tick's lane point gone.
 Source context since previous assertion:
   ;
       const QByteArray afterDraw = document.smf().write();
@@ -540,10 +630,18 @@ Original expression:
                "graph-local Delete did not remove exactly one selected vertex")
 
 A025 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:316
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; claiming the platform Undo shortcut requires native shortcut
-arbitration and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S021 - the real StandardKey.Undo key sequence is delivered while
+the popup is open and reaches the song history (verify(waitForNative(function()
+{ return Number(opened.grid.appliedRevisionText) > baseline + 2 &&
+shell.shellPresenter.session.canRedo }, 5000), "the first standard Undo reaches
+the song history") at tst_ShellPitchBend.qml:917-921), so the popup's own edit
+is undone through
+platform Undo rather than a synthesized call. Registered deviation: the fork's
+sendStandardUndo first asserts the popup accepted the ShortcutOverride; the Swift
+popup declines Undo (PitchBendPopup.qml:66-72) and the accepted route lets the
+window Undo travel into the open popup, so the observable is the undo of the
+popup's edit rather than the claim itself.
 Source context since previous assertion:
   ;
 Original expression:
@@ -551,10 +649,15 @@ Original expression:
                "pitch-bend popup did not claim the standard Undo shortcut")
 
 A026 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:319
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the popup-Undo restoration observation requires the native undo
-stack and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S022 - after that Undo the deleted vertex is restored: the curve
+regains the drawn segment count (tryCompare(graph, "curveSegmentCount",
+originalSegments + 2, 5000, "the first standard Undo restores the deleted vertex")
+at tst_ShellPitchBend.qml:922-923) and hitVertex at the drawn position returns the
+vertex's tick (:924-925), with the redo tip retained (:926-927). Registered
+deviation: the fork compares the native undo index with the restored SMF bytes;
+here the restored state is the curve segment count plus the restored interior
+vertex.
 Source context since previous assertion:
   ;
       selectionkey::settle();
@@ -563,10 +666,14 @@ Original expression:
                "popup Undo did not restore the deleted bend vertex")
 
 A027 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:321
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; claiming Undo for the graph edit requires native shortcut
-arbitration and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S023 - a second real StandardKey.Undo advances the song history
+again from the restored state (verify(waitForNative(function() { return
+opened.grid.appliedRevisionText !== onceUndoneRevision }, 5000), "the second
+standard Undo advances song history") at tst_ShellPitchBend.qml:928-932).
+Registered deviation: same window-shortcut route as A025 - the shortcut is
+delivered while the popup is open rather than claimed by a popup
+ShortcutOverride.
 Source context since previous assertion:
   ;
 Original expression:
@@ -574,10 +681,14 @@ Original expression:
                "pitch-bend popup did not claim Undo for the graph edit")
 
 A028 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:324
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the pre-edit restoration observation requires the native undo
-stack and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S024 - the second standard Undo restores the pre-edit document:
+the rendered curve returns to its original segment count (tryCompare(graph,
+"curveSegmentCount", originalSegments, 5000, "the second standard Undo restores
+the pre-edit document") at tst_ShellPitchBend.qml:933-934) and the selected notes
+are identical to the journey's opening note summary (:935-936). Registered
+deviation: the fork's document-byte equality is carried by the curve segment
+count and the unchanged note summary.
 Source context since previous assertion:
   ;
       selectionkey::settle();
@@ -586,10 +697,16 @@ Original expression:
                "popup Undo did not restore the pre-edit document")
 
 A029 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:337
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; completing native Quick focus on the numeric TextInput requires
-the native window and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S034 - the mounted numeric journey focuses bendRangeInput through
+the real click on its spin field (mouseClick(field, ...) plus the unmessaged
+tryCompare(input, "activeFocus", true) at tst_ShellPitchBend.qml:971-972), and
+the messaged predicate tryCompare(input, "activeFocus", true, 5000, "a stationary
+click focuses the field") (:732) asserts the field owns the keyboard focus while
+the popup is open; the field still holds focus after two transport keys (:999).
+Registered deviation: the mounted lane reads the field's activeFocus property
+where the fork waits for the native focus-window identity
+(QGuiApplication::focusObject/focusWindow), which QML TestCase cannot read.
 Source context since previous assertion:
   ;
 
@@ -611,11 +728,15 @@ Original expression:
                               .arg(numericFocusBefore, applicationFocusState())))
 
 A030 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:347
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the numeric Copy observation (native focus, selected text,
-window-action delta, clipboard) requires the native window and clipboard and
-cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S030 - with the numeric field focused, StandardKey.Copy fills the
+mounted clipboard with the field's own selection, read back by pasting into a
+probe TextInput (compare(probe.text, String(originalRange), "numeric Copy copies
+the selection without the window action") at tst_ShellPitchBend.qml:976-982),
+after StandardKey.SelectAll left that value selected (:973-975); the window Copy
+would have carried the lane selection instead. Registered deviation: the fork's
+window-action delta and native clipboard equality are carried by the probe's
+pasted text.
 Source context since previous assertion:
   ;
       const bool selectedForCopy = QMetaObject::invokeMethod(numericEdit, "selectAll");
@@ -634,11 +755,13 @@ Original expression:
                                    applicationFocusState())))
 
 A031 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:363
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the numeric Solo-key observation (QML field text, window-action
-delta, production solo mask) requires native objects and cannot be established
-by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S035 - with the numeric field focused the S key leaves the track's
+solo state untouched (compare(solo.checked, originalSolo, "the numeric field
+absorbs Solo") at tst_ShellPitchBend.qml:986-987) and the field text still equals
+its bend value, so a nonnumeric key never reaches the field (:988). Registered
+deviation: the fork's window-action delta and solo-mask equality are carried by
+the mounted timelineHeaderSolo checkbox state.
 Source context since previous assertion:
   ;
 
@@ -660,10 +783,13 @@ Original expression:
                               .arg(view.soloMask())))
 
 A032 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:373
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the stored BENDR observation requires the native popup object
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S031 - after the S and Space keys the presenter's published
+bendRange still equals the value the field shows (compare(opened.editor.bendRange,
+originalRange, "the numeric field keeps its bend range") at
+tst_ShellPitchBend.qml:989-990), and the numeric journey writes no document
+revision (:1000-1001). Registered deviation: the stored controller value is read
+from the presenter that writes BENDR instead of the fork's native popup object.
 Source context since previous assertion:
   ;
       if (numericEdit->property("text").toString() != textBefore)
@@ -672,10 +798,12 @@ Original expression:
   QCOMPARE(popup->bendRange(), textBefore.toInt())
 
 A033 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:377
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; invoking selectAll on the native QML field requires the native
-item and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S029 - the mounted journey applies the real
+StandardKey.SelectAll to the focused numeric field and proves the selection took
+(compare(input.selectedText, String(originalRange), "the numeric field selects
+its value on Select All") at tst_ShellPitchBend.qml:973-975), the functional
+equivalent of the fork's invokeMethod(numericEdit, "selectAll") staging guard.
 Source context since previous assertion:
   ;
 
@@ -685,11 +813,13 @@ Original expression:
   QVERIFY(QMetaObject::invokeMethod(numericEdit, "selectAll"))
 
 A034 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:380
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the Space-yields-transport observation (native signal spy, QML
-field text and focus, popup openness) requires the native window and cannot be
-established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S032 - the first Space in the focused numeric field toggles the
+transport (tryCompare(bar.presenter, "state", 3, 5000, "numeric Space starts
+transport without editing text") at tst_ShellPitchBend.qml:991-993) while the
+field text stays at its bend value (:994), so the field yields the key and no
+text is edited. Registered deviation: the fork's playPause signal count of one is
+carried by the mounted transport state transition.
 Source context since previous assertion:
   ;
       QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
@@ -705,10 +835,13 @@ Original expression:
                               .arg(applicationFocusState())))
 
 A035 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:389
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the double-toggle observation requires the native signal spy and
-cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S033 - the second Space toggles the transport back
+(tryCompare(bar.presenter, "state", 2, 5000, "numeric Space toggles the transport
+twice without editing text") at tst_ShellPitchBend.qml:995-997) with the field
+text still intact (:998) and the field still focused (:999). Registered
+deviation: the fork's playPause count of two is carried by the two mounted
+transport state transitions.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow, Qt::Key_Space);
@@ -718,10 +851,11 @@ Original expression:
                               .arg(playPause.count())))
 
 A036 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:399
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Escape closing the native Quick popup requires the native window
-and cannot be established by a presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S025 - the real Escape delivered while the popup is open closes
+the editor (tryCompare(opened.editor, "isOpen", false, 5000, "Escape closes the
+pitch-bend editor") at tst_ShellPitchBend.qml:938-940) and the popup item then
+unloads (:941-942) - the fork's Escape-closes-the-popup row.
 Source context since previous assertion:
   ;
 
@@ -735,11 +869,14 @@ Original expression:
   QVERIFY2(popupClosedByEscape, "Escape did not close the pitch-bend Quick popup")
 
 A037 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:401
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the paired Swift transaction has been
-established; the no-leftover-changes document bytes below are pure document
-state a presenter-level Swift check could in principle assert, but none does.
-Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S026 - after Escape the serialized revision still equals the
+revision the two-step Undo journey restored
+(compare(opened.grid.appliedRevisionText, restoredRevision, "the closed session
+leaves no document changes") at tst_ShellPitchBend.qml:943-944), so the closed
+popup left no document changes; the row above proves that restored revision is
+the pre-edit document. Registered deviation: revision-text equality replaces the
+fork's SMF byte equality.
 Source context since previous assertion:
   ;
       drainPopupDeletes();
@@ -748,10 +885,15 @@ Original expression:
                "the pitch-bend popup session left document changes behind")
 
 A038 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:406
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Roll-focus staging after the popup requires the native window and
-cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - no messaged predicate covers the post-popup Roll-focus
+staging. The mounted journey stages it with
+opened.roll.forceActiveFocus(Qt.OtherFocusReason) and the unmessaged
+tryCompare(opened.roll, "activeFocus", true) (tst_ShellPitchBend.qml:945-946)
+before measuring the resumed window Solo, but the fork's clause asserts the
+native band-focus request returned true (an API with no QML counterpart) and the
+mounted stage carries no message anchor, so what remains unproved is the messaged
+focus predicate and the native request half.
 Source context since previous assertion:
   ;
 
@@ -762,10 +904,13 @@ Original expression:
                "could not request Roll focus after the popup")
 
 A039 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:408
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; Roll-focus observation requires native Quick focus state and
-cannot be established by a presenter-level Swift check.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - the post-popup Roll-focus observation
+(focusedTimelineBand() == Roll plus the native activeFocusItem and
+QGuiApplication::focusObject/focusWindow identity) maps to that same unmessaged
+roll activeFocus stage (tst_ShellPitchBend.qml:945-946); no messaged predicate
+asserts the roll's QML focus and the native focus-window identity has no QML
+counterpart, so that half stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -774,11 +919,12 @@ Original expression:
                "Roll focus did not become active after the popup")
 
 A040 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:414
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the Solo-resume observation (window-action delta, production solo
-state) requires native objects and cannot be established by a presenter-level
-Swift check.
+Disposition: MATCHED
+Mapping/reason: S027 - with the popup closed and the roll focused, one S key
+toggles the selected track's solo state exactly once (tryCompare(solo, "checked",
+!originalSolo, 5000, "Solo resumes as a window command after the popup closes") at
+tst_ShellPitchBend.qml:947-949) - the count-free equivalent of the fork's window
+Solo delta of one with trackSoloed flipped.
 Source context since previous assertion:
   ;
       const int resumeBefore = m_counts.solo;
@@ -792,11 +938,12 @@ Original expression:
                               .arg(view.trackSoloed(kTrack))))
 
 A041 | SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys | src/checks/selectionkey/localinputtier_pitchbend.cpp:420
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/selectionkey/localinputtier_pitchbend.cpp) no longer builds or runs. Previous native note: No equivalent predicate in the paired Swift transaction has been
-established; the Solo-untoggle observation (window-action delta, production
-solo state) requires native objects and cannot be established by a
-presenter-level Swift check.
+Disposition: MATCHED
+Mapping/reason: S028 - the second S restores the solo flag (tryCompare(solo,
+"checked", originalSolo, 5000, "the resumed window Solo toggles twice total") at
+tst_ShellPitchBend.qml:951-952) and the closing journey leaves the note summary
+unchanged (:953-954) - the fork's window Solo delta of two with trackSoloed back
+to its opening value.
 Source context since previous assertion:
   ;
       selectionkey::deliverKey(quickWindow, solo->key(), solo->keyboardModifiers());
@@ -848,3 +995,75 @@ Anchor: message "delivered G opens pitch bend on the selected note"
 
 S012 | test_noteCommandsRouteThroughMenuAndKey | src/checks/editorqml/tst_ShellMenus.qml
 Anchor: message "the delivered key edits nothing on open"
+
+S013 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "delivered G opens the editor exactly once"
+
+S014 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "repeat G never reopens the editor"
+
+S015 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "graph Solo toggles the track exactly once"
+
+S016 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "graph Copy leaves the clipboard sentinel untouched"
+
+S017 | test_graphKeyOwnershipAndRepeatedOpener | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "graph Mute never toggles playback or the mask"
+
+S018 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the pitch graph has an editable canvas"
+
+S019 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the drawn stroke creates one undoable vertex"
+
+S020 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Delete removes exactly the selected vertex"
+
+S021 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the first standard Undo reaches the song history"
+
+S022 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the first standard Undo restores the deleted vertex"
+
+S023 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the second standard Undo advances song history"
+
+S024 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the second standard Undo restores the pre-edit document"
+
+S025 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Escape closes the pitch-bend editor"
+
+S026 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the closed session leaves no document changes"
+
+S027 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Solo resumes as a window command after the popup closes"
+
+S028 | test_graphVertexDeleteUndoAndWindowSoloResumption | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the resumed window Solo toggles twice total"
+
+S029 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the numeric field selects its value on Select All"
+
+S030 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "numeric Copy copies the selection without the window action"
+
+S031 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the numeric field keeps its bend range"
+
+S032 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "numeric Space starts transport without editing text"
+
+S033 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "numeric Space toggles the transport twice without editing text"
+
+S034 | test_pointerScrubsUndoAndStationaryClick | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a stationary click focuses the field"
+
+S035 | test_numericFieldOwnsCopyAndYieldsSpace | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the numeric field absorbs Solo"
+
+S036 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo keeps the graph focused"

@@ -48,8 +48,10 @@ Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (reco
 2026-09-26 11:27:22) lists test_wheelInsideCanvasOnly,
 test_pointerScrubsUndoAndStationaryClick, test_scrubHoverAndIdleEnterKeepEditor,
 test_popupSpaceAuditionSoloAndMuteAbsorption and test_noteScopedCurveAndControls
-alongside the earlier ten tests. The ledger agent read the recording; it did not
-re-run the lane.
+alongside the earlier ten tests. The ledger agent read that recording; it did not
+re-run the lane. The artifact has since been rewritten by the fresh task-50c run
+of the frozen revision (see Verification below), which still lists every function
+named here.
 Command: deno task verify --filter swiftcore --verbose (task-41 implementer run)
 Result: 12/37 checks ran ok before the final lattice-check edits; the implementer's
 report records RED-before-repair on the new Space and S arbitration predicates and
@@ -68,8 +70,9 @@ controller handoff records the shell-pitch-bend evidence fresh at this
 revision; that recording lists test_wheelInsideCanvasOnly (the function
 carrying S026-S031 and S051-S053), and the now-frozen counterpart
 src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
-637e30821906c0563e97eaf11fcb100e960cdc773d1399ad154d634de7d26702 with the
-two-notch message anchors at :659-660, :664-665 and :680-690, so the mounted
+d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac with the
+two-notch message anchors at :663-664, :668-669 and :684-694 after task 50c
+appended its three overlay-key test functions, so the mounted
 verdicts below are inherited from that recording and not re-executed by this
 pass. The native counterpart
 src/checks/rollcheck/pitch_bend.swift carries the SHA-256

@@ -20,7 +20,7 @@ pitchBendParityPredicates rows in src/checks/rollcheck/pitch_bend.swift:649-940
 and the mounted test_wheelInsideCanvasOnly,
 test_pointerScrubsUndoAndStationaryClick and
 test_scrubHoverAndIdleEnterKeepEditor in
-src/checks/editorqml/tst_ShellPitchBend.qml:637-739. A036, A038, A040-A066 and
+src/checks/editorqml/tst_ShellPitchBend.qml:639-770. A036, A038, A040-A066 and
 A068-A093 stay GAP: roll-click and outside-click dismissal, cursor, focus
 return and deactivate dismissal causes belong to later pitch-bend/ED12 slices;
 A002, A006-A008, A037, A039 and A067 keep their earlier dispositions.
@@ -53,8 +53,10 @@ Command: deno task verify:shell --filter shell-pitch-bend --verbose (controller-
 Result: PASS - ok, 9/9 tests; build/proof-evidence/shell-pitch-bend.json lists
 test_gAnchorsPopupAndShrinkingWindowReclamps,
 test_externalRedoDeletesAnchorAndUnloadsPopup and test_livePreviewSurvivesUndoRedo
-alongside the seven unchanged tests. The ledger agent read the recording and did
-not re-run the lane.
+alongside the seven unchanged tests. The ledger agent read that recording and did
+not re-run the lane. The artifact has since been rewritten by the fresh task-50c
+run of the frozen revision (see Verification below), which still lists every
+function named here.
 Command: deno task verify --filter swiftcore-projectsession --verbose (task-41 implementer final run)
 Result: PASS - ok, 1/37 checks (the filter selects the swiftcore-projectsession
 check); build/proof-evidence/swiftcore-projectsession.json (5427 passes, recorded
@@ -67,8 +69,10 @@ Command: deno task verify:shell --filter shell-pitch-bend --verbose (task-41 imp
 Result: PASS - ok, 1/26 checks; build/proof-evidence/shell-pitch-bend.json (recorded
 2026-09-26 11:27:22) lists test_wheelInsideCanvasOnly,
 test_pointerScrubsUndoAndStationaryClick and test_scrubHoverAndIdleEnterKeepEditor
-alongside the twelve other tests. The ledger agent read the recording; it did not
-re-run the lane.
+alongside the twelve other tests. The ledger agent read that recording; it did not
+re-run the lane. The artifact has since been rewritten by the fresh task-50c run
+of the frozen revision (see Verification below), which still lists every function
+named here.
 
 Verification: the native predicates execute on the swiftcore-projectsession
 lane (SessionChecks.swift:75 passes the suite's DocumentSession) and the
@@ -76,16 +80,17 @@ mounted predicates on the shell-pitch-bend lane (ShellQmlTests.swift:64-65).
 This bookkeeping pass read the recordings at
 build/proof-evidence/swiftcore-projectsession.json and
 build/proof-evidence/shell-pitch-bend.json and did not execute either lane. The
-mounted recording was made from the revision of
-src/checks/editorqml/tst_ShellPitchBend.qml (SHA-256
-5a84bdc2474eed910ccb848f8f442b712c7560f23ba4206ee4cf57cedc64182d); that file is
-still being edited by the concurrent shell-hygiene work of another task (a
-per-test init() preference reset), whose hunks touch none of the mapped
-predicates, messages or test-function names, so this ledger pins the recording
-revision rather than the moving working-tree revision. The controller re-runs
-the shell lane on the final tree before committing and that run refreshes this
-evidence. The native counterpart src/checks/rollcheck/pitch_bend.swift carries
-the SHA-256 2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9
+controller handoff for task 50c records that shell-pitch-bend evidence fresh at
+the frozen revision, and the now-frozen counterpart
+src/checks/editorqml/tst_ShellPitchBend.qml carries the SHA-256
+d472be2d666e3aa07b86447cb70290ac1ffcfe06a9ff4ec93d2d309cc4ac5aac after task 50c
+appended its three overlay-key test functions; that recording lists
+test_wheelInsideCanvasOnly, test_pointerScrubsUndoAndStationaryClick and
+test_scrubHoverAndIdleEnterKeepEditor among the lane's eighteen functions, so the
+mounted verdicts below are inherited from it rather than re-executed by this
+pass, which did not run the lane. The native counterpart
+src/checks/rollcheck/pitch_bend.swift carries the SHA-256
+2a365c34d1f4f91a289b93e0ac4b4aabd414a225456b9bf1c191827a9faca3f9
 pinned by the task-41 handoff.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve

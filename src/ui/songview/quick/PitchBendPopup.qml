@@ -73,7 +73,7 @@ Rectangle {
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             bridge.cancelAndClose()
-        else
+        else if (!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
             bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat)
         event.accepted = true
     }
@@ -515,6 +515,13 @@ Rectangle {
             if (bridge)
                 bridge.setBendRange(committed)
         }
+        Connections {
+            target: bendRangeField.textInput.Keys
+            function onShortcutOverride(event) {
+                event.accepted = event.key !== Qt.Key_Space
+                    && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
+            }
+        }
     }
 
     Text {
@@ -549,6 +556,13 @@ Rectangle {
         onValueCommitted: (committed) => {
             if (bridge)
                 bridge.setLfoSpeed(committed)
+        }
+        Connections {
+            target: lfoSpeedField.textInput.Keys
+            function onShortcutOverride(event) {
+                event.accepted = event.key !== Qt.Key_Space
+                    && !event.matches(StandardKey.Undo) && !event.matches(StandardKey.Redo)
+            }
         }
     }
 }
