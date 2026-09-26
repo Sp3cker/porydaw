@@ -326,6 +326,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationTrackSwitchInvalidation(report, suite: session, service: service)
     drawerAutomationDeleteTransactions(report, suite: session, service: service)
     drawerAutomationRangeEditAndClipboard(report, suite: session, service: service)
+    drawerAutomationTrackScopedSelectionClipboard(report, suite: session, service: service)
     drawerAutomationCrossLanePasteClamps(report, suite: session, service: service)
     drawerAutomationCancellationAndNoOps(report, suite: session, service: service)
     drawerAutomationInflightDragInvalidation(report, suite: session, service: service)

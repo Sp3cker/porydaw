@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 import PorydawBankLease
 
@@ -173,4 +174,275 @@ func drawerAutomationCrossLanePasteClamps(_ report: CheckReport, suite: Document
     report.expectEqual(expected: TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM), actual:
                        pasted.first?.microsecondsPerQuarterNote ?? 0, cppID: id,
                        what: "the pasted tempo point clamps to the slowest tempo")
+}
+
+@MainActor
+func drawerAutomationTrackScopedSelectionClipboard(_ report: CheckReport, suite: DocumentSession,
+                                                   service: ProjectService) {
+    let copyID = "clipcheck/ClipCheckTest::timeSelectionCopy"
+    let scopedID = "clipcheck/ClipCheckTest::scopedRangeCopyPasteCreatesTracks"
+    let deleteID = "clipcheck/ClipCheckTest::rangeDeleteCutAndUndo"
+    let noteID = "clipcheck/ClipCheckTest::sameDocumentPaste"
+    let crossID = "clipcheck/ClipCheckTest::crossTpbNotePaste"
+    let mergeID = "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo"
+    let emptyID = "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop"
+    let tileID = "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime"
+    let savedClipboard = drawerAutomationPorydawSelectionClipboardState()
+    defer { savedClipboard.restore() }
+    let clipboard = GridClipboard()
+    _ = pd_clipboard_write(nil, 0)
+
+    let single = drawerAutomationAutomationFixture(suite: suite, service: service)
+    single.session.setSelectedNotes(single.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    single.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 96), scope: .tracks([0])))
+    report.expect(single.session.selectedNotes.isEmpty, cppID: copyID,
+                  message: "a time-selection commit clears the competing note selection")
+    report.expect(single.session.timeSelection?.isActive == true
+                      && single.session.timeSelection?.range == TimeRange(startTick: 0, endTick: 96),
+                  cppID: copyID, message: "the committed time selection is active over its exact range")
+    report.expect(single.session.timeSelection?.scope == .tracks([0]), cppID: copyID,
+                  message: "the committed scope is track-scoped")
+    report.expect(single.session.timeSelection?.scope == .tracks([0]), cppID: copyID,
+                  message: "the stored track scope keeps the swept tracks")
+    report.expect(!single.page.selectionCommandAvailable(command: .paste), cppID: copyID,
+                  message: "Paste is unavailable without native clip bytes")
+    report.expect(single.page.consumeSelectionCommand(command: .copy), cppID: copyID,
+                  message: "Copy consumes the committed track selection")
+    let singleClip = clipboard.read()
+    report.expect(singleClip?.ticksPerBeat == 24 && singleClip?.clip.span == 96
+                      && singleClip?.clip.tracks == [ClipTrack(track: 0, notes: [
+                          ClipNote(relTick: 0, key: 60, duration: 24, velocity: 100),
+                      ])],
+                  cppID: copyID, message: "Copy over an active time selection writes the decodable span clip")
+    report.expect(single.page.selectionCommandAvailable(command: .paste), cppID: copyID,
+                  message: "Paste becomes available after track-scoped Copy")
+
+    let scoped = drawerAutomationAutomationFixture(suite: suite, service: service)
+    scoped.document.deleteNotes(scoped.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    for (track, tick, pitch, duration, velocity, laneTick, laneValue) in [
+        (0, Tick(12), UInt8(60), Tick(12), UInt8(90), Tick(18), 11),
+        (1, Tick(24), UInt8(64), Tick(24), UInt8(100), Tick(30), 22),
+        (2, Tick(36), UInt8(68), Tick(36), UInt8(110), Tick(42), 33),
+    ] {
+        if track > 0 { _ = scoped.document.addTrack(voice: 0) }
+        guard (try? scoped.document.addNotes([
+            NewNote(track: track, tick: tick, pitch: pitch, duration: duration, velocity: velocity),
+        ]))?.count == 1 else {
+            report.fail(scopedID, "the scoped copy fixture could not stage its source note")
+            return
+        }
+        scoped.document.writeLane(track: track, lane: .controller(1), from: laneTick,
+                                  through: laneTick, points: [LaneWrite(tick: laneTick, value: laneValue)])
+    }
+    scoped.session.setSelectedNotes(scoped.document.notes(in: 0).filter { $0.tick == 12 }.map(\.id))
+    scoped.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 96), scope: .tracks([0, 1, 2])))
+    report.expect(scoped.session.selectedNotes.isEmpty, cppID: scopedID,
+                  message: "a time-selection commit clears the competing note selection")
+    report.expect(scoped.session.timeSelection?.isActive == true
+                      && scoped.session.timeSelection?.range == TimeRange(startTick: 0, endTick: 96),
+                  cppID: scopedID, message: "the committed time selection is active over its exact range")
+    report.expect(scoped.session.timeSelection?.scope == .tracks([0, 1, 2]), cppID: scopedID,
+                  message: "the committed scope is track-scoped")
+    report.expect(scoped.session.timeSelection?.scope == .tracks([0, 1, 2]), cppID: scopedID,
+                  message: "the stored track scope keeps the swept tracks")
+    report.expect(scoped.page.consumeSelectionCommand(command: .copy), cppID: scopedID,
+                  message: "Copy consumes the three-track selection")
+    let scopedClip = clipboard.read()
+    report.expect(scopedClip?.clip.span == 96
+                      && scopedClip?.clip.tracks.map(\.track) == [0, 1, 2]
+                      && scopedClip?.clip.tracks.map(\.notes) == [
+                          [ClipNote(relTick: 12, key: 60, duration: 12, velocity: 90)],
+                          [ClipNote(relTick: 24, key: 64, duration: 24, velocity: 100)],
+                          [ClipNote(relTick: 36, key: 68, duration: 36, velocity: 110)],
+                      ]
+                      && scopedClip?.clip.lanes.filter { $0.cc == 1 }.map(\.points) == [
+                          [ClipLanePoint(relTick: 18, value: 11)],
+                          [ClipLanePoint(relTick: 30, value: 22)],
+                          [ClipLanePoint(relTick: 42, value: 33)],
+                      ], cppID: scopedID,
+                  message: "Copy over an active time selection writes the decodable span clip")
+    let destination = drawerAutomationAutomationFixture(suite: suite, service: service)
+    destination.document.deleteNotes(destination.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    let destinationBefore = coreTimeBytes(destination.document)
+    destination.session.editCursor = 0
+    report.expect(destination.page.consumeSelectionCommand(command: .paste), cppID: scopedID,
+                  message: "the scoped clip pastes through the production command")
+    report.expect(destination.document.engineTracks.usedTrackCount == 3
+                      && destination.document.notes(in: 0).contains { $0.tick == 12 && $0.pitch == 60 }
+                      && destination.document.notes(in: 1).contains { $0.tick == 24 && $0.pitch == 64 }
+                      && destination.document.notes(in: 2).contains { $0.tick == 36 && $0.pitch == 68 }
+                      && destination.document.lanePoints(track: 2, lane: .controller(1))
+                          .contains { $0.tick == 42 && $0.value == 33 }
+                      && destination.session.editCursor == 96, cppID: scopedID,
+                  message: "a scoped three-track paste expands the destination tracks")
+    report.expect(destination.document.lanePoints(track: 0, lane: .controller(1))
+                      .contains { $0.tick == 18 && $0.value == 11 }
+                      && destination.document.lanePoints(track: 1, lane: .controller(1))
+                          .contains { $0.tick == 30 && $0.value == 22 }
+                      && destination.document.lanePoints(track: 2, lane: .controller(1))
+                          .contains { $0.tick == 42 && $0.value == 33 }, cppID: scopedID,
+                  message: "the expanded destination carries each track's modulation point")
+    report.expect(destination.undo() && coreTimeBytes(destination.document) == destinationBefore
+                      && destination.document.engineTracks.usedTrackCount == 1, cppID: scopedID,
+                  message: "one Undo restores the destination track, lanes, and voice seed")
+
+    let deleting = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     tempo: [(24, 600_000), (96, 400_000)])
+    deleting.document.deleteNotes(deleting.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    report.expect((try? deleting.document.addNotes([
+        NewNote(track: 0, tick: 24, pitch: 60, duration: 24, velocity: 100),
+        NewNote(track: 0, tick: 96, pitch: 64, duration: 24, velocity: 80),
+    ]))?.count == 2, cppID: deleteID, message: "the delete fixture stages both covered and retained notes")
+    deleting.document.writeLane(track: 0, lane: .voice, from: 24, through: 24,
+                                points: [LaneWrite(tick: 24, value: 3)])
+    deleting.document.writeLane(track: 0, lane: .voice, from: 96, through: 96,
+                                points: [LaneWrite(tick: 96, value: 5)])
+    deleting.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 48), scope: .tracks([0])))
+    let beforeDelete = coreTimeBytes(deleting.document)
+    report.expect(deleting.page.consumeSelectionCommand(command: .copy), cppID: deleteID,
+                  message: "range Copy captures the covered note, voice, and tempo")
+    let copiedBeforeCut = clipboard.read()
+    report.expect(deleting.page.consumeSelectionCommand(command: .delete), cppID: deleteID,
+                  message: "Delete consumes the selected range")
+    report.expect(deleting.document.notes(in: 0).filter { $0.tick < 120 }.map(\.tick) == [96]
+                      && deleting.document.lanePoints(track: 0, lane: .voice).map(\.tick) == [96]
+                      && deleting.document.state.tempo.map(\.tick) == [96], cppID: deleteID,
+                  message: "range Delete removes the covered note, voice, and tempo only")
+    report.expect(deleting.session.timeSelection?.isActive == true, cppID: deleteID,
+                  message: "range delete leaves the time selection active")
+    report.expect(deleting.undo() && coreTimeBytes(deleting.document) == beforeDelete, cppID: deleteID,
+                  message: "one Undo restores the deleted note, voice, and tempo")
+    report.expect(deleting.page.consumeSelectionCommand(command: .cut), cppID: deleteID,
+                  message: "Cut consumes the selected range")
+    let cutClip = clipboard.read()
+    report.expect(cutClip == copiedBeforeCut
+                      && cutClip?.clip.tracks.first?.notes == [
+                          ClipNote(relTick: 24, key: 60, duration: 24, velocity: 100),
+                      ]
+                      && cutClip?.clip.lanes.first { $0.cc == TimeDefaults.laneCCVoice }?
+                          .points.contains(ClipLanePoint(relTick: 24, value: 3)) == true
+                      && cutClip?.clip.tempo.first?.relTick == 24
+                      && deleting.document.notes(in: 0).filter { $0.tick < 120 }.map(\.tick) == [96],
+                  cppID: deleteID, message: "range Cut publishes its payload and removes the covered content")
+    report.expect(deleting.undo() && coreTimeBytes(deleting.document) == beforeDelete, cppID: deleteID,
+                  message: "one Undo restores the cut note, voice, and tempo")
+
+    let notes = drawerAutomationAutomationFixture(suite: suite, service: service)
+    notes.document.deleteNotes(notes.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    guard let sourceIDs = try? notes.document.addNotes([
+        NewNote(track: 0, tick: 24, pitch: 60, duration: 24, velocity: 100),
+        NewNote(track: 0, tick: 36, pitch: 64, duration: 12, velocity: 80),
+    ]), let noteClip = ClipboardSemantics.copyNotes(
+        sourceIDs.compactMap(notes.document.note), from: 0, unterminatedDuration: 6) else {
+        report.fail(noteID, "the two source notes cannot be staged for span-zero paste")
+        return
+    }
+    notes.session.setSelectedNotes(sourceIDs)
+    report.expect(clipboard.write(noteClip, ticksPerBeat: 24), cppID: noteID,
+                  message: "the selected notes stage their span-zero clip")
+    notes.session.editCursor = 48
+    report.expect(notes.page.consumeSelectionCommand(command: .paste), cppID: noteID,
+                  message: "note Paste consumes the copied clip")
+    let inserted = notes.document.notes(in: 0).filter { $0.tick == 48 || $0.tick == 60 }
+    report.expect(inserted.count == 2 && notes.session.selectedNotes == Set(inserted.map(\.id)),
+                  cppID: noteID,
+                  message: "a span-zero paste through the command path selects the pasted notes")
+    report.expect(notes.session.editCursor == 72, cppID: noteID,
+                  message: "a span-zero paste through the command path advances the cursor to the paste end")
+
+    let cross = drawerAutomationAutomationFixture(suite: suite, service: service, division: 48)
+    cross.session.editCursor = 24
+    report.expect(clipboard.write(PorydawClip(tracks: [
+        ClipTrack(track: 0, notes: [ClipNote(relTick: 0, key: 60, duration: 24, velocity: 100)]),
+    ]), ticksPerBeat: 24) && cross.page.consumeSelectionCommand(command: .paste), cppID: crossID,
+                  message: "a 24-TPB clip pastes into the 48-TPB document")
+    report.expect(cross.session.editCursor == 72
+                      && cross.document.notes(in: 0).contains {
+                          $0.tick == 24 && $0.pitch == 60 && $0.duration == 48
+                      }, cppID: crossID,
+                  message: "a rescaled cross-ticks-per-beat paste advances the cursor to the rescaled end")
+
+    let merging = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    modulation: [(36, 40), (60, 70), (96, 40)],
+                                                    tempo: [(0, 500_000), (25, 600_000), (60, 700_000)])
+    merging.document.deleteNotes(merging.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    report.expect((try? merging.document.addNotes([
+        NewNote(track: 0, tick: 24, pitch: 60, duration: 24, velocity: 100),
+        NewNote(track: 0, tick: 48, pitch: 64, duration: 24, velocity: 100),
+    ]))?.count == 2, cppID: mergeID, message: "the merge fixture stages its two destination notes")
+    merging.session.editCursor = 24
+    merging.page.applyTimeSelection(AutomationTimeSelection(
+        range: TimeRange(startTick: 0, endTick: 48), scope: .tracks([0])))
+    let beforeMerge = coreTimeBytes(merging.document)
+    let mergeClip = PorydawClip(span: 48, tracks: [
+        ClipTrack(track: 0, notes: [ClipNote(relTick: 0, key: 60, duration: 24, velocity: 120)]),
+    ], lanes: [ClipLane(track: 0, cc: 1, points: [
+        ClipLanePoint(relTick: 23, value: 110), ClipLanePoint(relTick: 24, value: 120),
+    ])], tempo: [
+        ClipTempo(relTick: 1, microsecondsPerQuarterNote: 300_000),
+        ClipTempo(relTick: 2, microsecondsPerQuarterNote: 400_000),
+    ])
+    report.expect(clipboard.write(mergeClip, ticksPerBeat: 48)
+                      && merging.page.consumeSelectionCommand(command: .paste), cppID: mergeID,
+                  message: "the staged last-wins range clip pastes through the command")
+    report.expect(merging.document.notes(in: 0).filter { $0.tick < 72 }
+                      .map { "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)" } ==
+                      ["24:60:12:120", "36:60:12:100", "48:64:24:100"]
+                      && merging.document.lanePoints(track: 0, lane: .controller(1))
+                          .map { "\($0.tick):\($0.value)" } == ["36:120", "60:70", "96:40"]
+                      && merging.document.state.tempo.map {
+                          "\($0.tick):\($0.microsecondsPerQuarterNote)"
+                      } == ["0:500000", "25:400000", "60:700000"], cppID: mergeID,
+                  message: "range paste uses last-wins lane and tempo points")
+    report.expect(merging.session.editCursor == 48, cppID: mergeID,
+                  message: "a last-wins range paste advances the cursor by its span")
+    report.expect(merging.session.timeSelection == nil, cppID: mergeID,
+                  message: "a range paste through the command path clears the active time selection")
+    report.expect(merging.undo() && coreTimeBytes(merging.document) == beforeMerge, cppID: mergeID,
+                  message: "one Undo restores the last-wins range merge")
+
+    let empty = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  volume: [(144, 90)])
+    empty.document.deleteNotes(empty.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    report.expect((try? empty.document.addNotes([
+        NewNote(track: 0, tick: 24, pitch: 62, duration: 24, velocity: 100),
+    ]))?.count == 1, cppID: emptyID, message: "the empty-lane fixture stages its retained note")
+    empty.session.editCursor = 120
+    let emptyBefore = empty.snapshot
+    let emptyRevision = empty.document.revision
+    let emptyHistory = empty.document.history.currentIdentity
+    report.expect(clipboard.write(PorydawClip(span: 48, lanes: [
+        ClipLane(track: 0, cc: 7, points: []),
+    ]), ticksPerBeat: 24), cppID: emptyID, message: "the empty lane clip is staged")
+    _ = empty.page.consumeSelectionCommand(command: .paste)
+    report.expect(empty.snapshot == emptyBefore && empty.document.revision == emptyRevision
+                      && empty.document.history.currentIdentity == emptyHistory
+                      && empty.document.notes(in: 0).contains { $0.tick == 24 && $0.pitch == 62 }
+                      && empty.document.lanePoints(track: 0, lane: .controller(7))
+                          .contains { $0.tick == 144 && $0.value == 90 }, cppID: emptyID,
+                  message: "an empty lane paste through the command path changes neither document nor history")
+    report.expect(empty.session.editCursor == 120, cppID: emptyID,
+                  message: "an empty lane paste leaves the edit cursor unchanged")
+
+    let tiled = drawerAutomationAutomationFixture(suite: suite, service: service)
+    tiled.document.deleteNotes(tiled.document.notes(in: 0).filter { $0.tick == 0 }.map(\.id))
+    tiled.session.editCursor = 0
+    report.expect(clipboard.write(PorydawClip(span: 96, tracks: [
+        ClipTrack(track: 0, notes: [ClipNote(relTick: 0, key: 60, duration: 24, velocity: 100)]),
+    ]), ticksPerBeat: 24), cppID: tileID, message: "the 96-tick tile is staged")
+    let tileBefore = coreTimeBytes(tiled.document)
+    _ = tiled.page.consumeSelectionCommand(command: .paste)
+    let firstCursor = tiled.session.editCursor
+    _ = tiled.page.consumeSelectionCommand(command: .paste)
+    let secondCursor = tiled.session.editCursor
+    let secondTile = tiled.document.notes(in: 0).contains { $0.tick == 96 && $0.pitch == 60 }
+    let firstUndo = tiled.undo() && !tiled.document.notes(in: 0).contains { $0.tick == 96 && $0.pitch == 60 }
+        && tiled.document.notes(in: 0).contains { $0.tick == 0 && $0.pitch == 60 }
+    let secondUndo = tiled.undo() && coreTimeBytes(tiled.document) == tileBefore
+    report.expect(firstCursor == 96 && secondCursor == 192 && secondTile && firstUndo && secondUndo,
+                  cppID: tileID,
+                  message: "each tiled paste advances the cursor by one span and retracts as its own undo entry")
 }
