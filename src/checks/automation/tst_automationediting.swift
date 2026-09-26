@@ -57,4 +57,14 @@ func drawerAutomationHistoryUndoRedo(_ report: CheckReport, suite: DocumentSessi
                   message: "the second undo removes the first transaction")
     report.expect(!two.undo(), cppID: drawerAutomationHistoryID,
                   message: "a third undo finds nothing and reports nothing")
+    let blank = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    blank.activate(blank.panLane)
+    let unwrittenTick: Tick = 72
+    let beforeBlank = blank.lanePoints(blank.panLane).contains { $0.tick == unwrittenTick }
+    let blankX = blank.x(unwrittenTick)
+    _ = blank.page.pointerPress(x: blankX, y: 60, surface: AutomationInputSurface.plot.rawValue,
+                                button: AutomationQtButton.left)
+    _ = blank.page.pointerRelease(x: blankX, y: 60, button: AutomationQtButton.left)
+    report.expect(!beforeBlank && !blank.lanePoints(blank.panLane).contains { $0.tick == unwrittenTick },
+                  cppID: drawerAutomationHistoryID, message: "an unwritten tick holds no point")
 }

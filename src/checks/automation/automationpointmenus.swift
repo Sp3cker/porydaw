@@ -142,6 +142,9 @@ func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: Docum
                   message: "the rejected row activation dismisses the stale point menu")
     report.expect(!stale.page.hasPrompt, cppID: staleID,
                   message: "the rejected row activation opens no prompt")
+    report.expect(!stale.page.publishedMenuRows.contains {
+        $0.actionId == AutomationMenuAction.deleteNode.rawValue
+    }, cppID: staleID, message: "the stale journey renders no Delete row")
     report.expectEqual(expected: rewritten, actual: stale.snapshot, cppID: staleID,
                        what: "the rejected Delete leaves the rewritten lane intact")
     report.expectEqual(expected: ["24:64", "120:40", "168:5"], actual: stale.values(stale.panLane), cppID: staleID,
@@ -568,4 +571,6 @@ func drawerAutomationSharedPopupArbitration(_ report: CheckReport, suite: Docume
                   && fixture.document.history.undoCount == undoCount
                   && (try? fixture.document.state.file.encoded()) == bytes,
                   cppID: id, message: "the post-switch pick still changes the grid selection")
+    report.expect(!page.hasPrompt, cppID: id,
+                  message: "the survival journey leaves no prompt visible")
 }

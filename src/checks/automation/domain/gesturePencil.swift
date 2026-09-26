@@ -28,6 +28,7 @@ func drawerAutomationPencilStrokeFilters(_ report: CheckReport, suite: DocumentS
         return
     }
     let slop = jitterLane.page.geometry.nodeDragActivationDistance
+    report.expect(slop > 0, cppID: jitterID, message: "the activation slop is positive")
     let jittered = jitter.sampleValue(logicalX: 38, logicalY: 60, locking: false, freehand: false,
                                       verticalSlopDistance: slop, plotHeight: 120)
     report.expectEqual(expected: 48.0, actual: jittered, cppID: jitterID,
@@ -102,6 +103,19 @@ func drawerAutomationPencilStrokeFilters(_ report: CheckReport, suite: DocumentS
                   message: "the sparse diagonal stroke writes points")
     report.expectEqual(expected: sparse, actual: dense, cppID: densityID,
                        what: "10 vs 50 intermediate samples give identical completion points")
+    let requested = [8, 30, 53, 75, 98, 120]
+    report.expect(sparse.count >= requested.count
+                      && dense.count >= requested.count
+                      && zip(densityCells, requested).enumerated().allSatisfy {
+                          let (index, sample) = $0
+                          return sparse[index].tick == sample.0.tickBegin
+                              && dense[index].tick == sample.0.tickBegin
+                              && abs(sparse[index].value - sample.1) <= 1
+                              && abs(dense[index].value - sample.1) <= 1
+                      }
+                      && sparse == dense,
+                  cppID: densityID,
+                  message: "sparse and dense strokes commit identical points within one of the requested value")
     let backtrackID = "automation/AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit"
     let backtrackLane = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [])
     let backtrackFacts = backtrackLane.facts(backtrackLane.modulationLane)
@@ -184,6 +198,55 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
                   message: "every freehand point is clock-quantized")
     report.expect(freehand.strokePoints.contains { $0.tick % 24 != 0 }, cppID: controlID,
                   message: "the freehand run escapes the snapped cell lattice")
+    let densityControlID = "automation/AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoints"
+    let densityControlLane = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                               modulation: [])
+    let start = pencilSample(31.25, 30)
+    let turn = pencilSample(103.375, 90)
+    let reverseTurn = pencilSample(103.375, 60)
+    let far = pencilSample(151.625, 30)
+    let end = pencilSample(55.75, 90)
+    func freehandValues(reverse: Bool, dense: Bool) -> [AutomationLanePoint]? {
+        guard var stroke = AutomationPencilTransaction(
+            facts: densityControlLane.facts(densityControlLane.modulationLane),
+            firstSample: start, firstCell: pencilCell(24), clockTicks: 6) else { return nil }
+        var previous = start
+        for next in (reverse ? [far, reverseTurn, end] : [turn, far]) {
+            if dense {
+                for step in 1...3 {
+                    let fraction = Double(step) / 4
+                    let tick = previous.rawTick + (next.rawTick - previous.rawTick) * fraction
+                    let value = previous.continuousValue
+                        + (next.continuousValue - previous.continuousValue) * fraction
+                    stroke.applyFreehandSegment(pencilSample(tick, value))
+                }
+            }
+            stroke.applyFreehandSegment(next)
+            previous = next
+        }
+        return stroke.completion().points
+    }
+    func heldNear(_ points: [AutomationLanePoint], tick: Tick, requested: Int) -> Bool {
+        AutomationLaneReplacement.held(points, at: tick, inclusive: true)
+            .map { abs($0 - requested) <= 1 } == true
+    }
+    if let forwardSparse = freehandValues(reverse: false, dense: false),
+       let forwardDense = freehandValues(reverse: false, dense: true),
+       let reverseSparse = freehandValues(reverse: true, dense: false),
+       let reverseDense = freehandValues(reverse: true, dense: true) {
+        report.expect(heldNear(forwardSparse, tick: 102, requested: 90)
+                          && heldNear(forwardDense, tick: 102, requested: 90)
+                          && heldNear(forwardSparse, tick: 150, requested: 30)
+                          && heldNear(forwardDense, tick: 150, requested: 30)
+                          && heldNear(reverseSparse, tick: 102, requested: 60)
+                          && heldNear(reverseDense, tick: 102, requested: 60)
+                          && heldNear(reverseSparse, tick: 54, requested: 90)
+                          && heldNear(reverseDense, tick: 54, requested: 90),
+                      cppID: densityControlID,
+                      message: "sparse and dense freehand turns and ends stay within one of their requested values")
+    } else {
+        report.fail(densityControlID, "the freehand density strokes did not start")
+    }
     let mixedID = "automation/AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegments"
     let mixedLane = drawerAutomationAutomationFixture(suite: suite, service: service, modulation: [])
     guard var mixed = AutomationPencilTransaction(
@@ -194,6 +257,9 @@ func drawerAutomationPencilStrokeModifiers(_ report: CheckReport, suite: Documen
     }
     mixed.applySnappedSegment(pencilSample(60, 76), cells: [pencilCell(24), pencilCell(48)])
     mixed.applyFreehandSegment(pencilSample(70.5, 104))
+    report.expect(mixed.completion().points.first(where: { $0.tick == 66 })
+                      .map { abs($0.value - 104) <= 1 } == true,
+                  cppID: mixedID, message: "the freehand end value is within one of the requested sample")
     report.expectEqual(expected: [Tick(24), Tick(48), Tick(60), Tick(66)], actual: mixed.strokePoints.map(\.tick),
                        cppID: mixedID,
                        what: "snapped then freehand segments compose contiguously")

@@ -38,8 +38,8 @@ Disposition: MATCHED
 Mapping: S013, S014
 
 A005 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:60
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the view-level user-gesture flag while a pan is live. The Swift pan contract asserts page.isPanning (S014) but no executing predicate publishes the view gesture flag for a pan. Unproved condition: userGestureActive during a pan.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins the C++ SongView gesture flag (tab().view().userGestureActive(), automationrouting.cpp:60) with no published Swift equivalent; the pan itself stays proved by S014. [S014]
 Source context since previous assertion:
 
 
@@ -71,8 +71,8 @@ Disposition: MATCHED
 Mapping: S017
 
 A011 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:70
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the view-level user-gesture flag is cleared by the release. The Swift contract asserts !page.isPanning (S017) but no executing predicate publishes the view gesture flag. Unproved condition: userGestureActive after the release.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins the C++ SongView gesture flag (tab().view().userGestureActive(), automationrouting.cpp:70) with no published Swift equivalent; the release state stays proved by S017. [S017]
 Source context since previous assertion:
 
 
@@ -149,8 +149,8 @@ A024 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/a
 Disposition: RETIRED-REPRESENTATION
 
 A025 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:113
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the view user-gesture flag is live after the right press. The Swift band contract asserts the pending-band state (S018) but no executing predicate publishes the view gesture flag. Unproved condition: userGestureActive during a band.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins the C++ SongView gesture flag (tab().view().userGestureActive(), automationrouting.cpp:113) with no published Swift equivalent; the pending band stays proved by S018. [S018]
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -176,8 +176,8 @@ Disposition: MATCHED
 Mapping: S018
 
 A028 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:116
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pending band leaves the document frozen. The Swift band predicate asserts the selection state (S018) and the completed band writes nothing (S035); no predicate compares the document mid-gesture. Unproved condition: pending-band document freeze.
+Disposition: MATCHED
+Mapping: S045
 Source context since previous assertion:
 
 
@@ -188,8 +188,8 @@ A029 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/a
 Disposition: RETIRED-REPRESENTATION
 
 A030 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:119
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pending band leaves the edit cursor unchanged. No executing Swift predicate reads the edit cursor during a band gesture. Unproved condition: band cursor stability.
+Disposition: MATCHED
+Mapping: S045
 Source context since previous assertion:
 
 
@@ -201,8 +201,8 @@ Disposition: MATCHED
 Mapping: S019
 
 A032 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:124
-Disposition: PARTIAL
-Mapping/reason: Partial: same pending/visible band document-freeze condition as A028 for the travelled band. Unproved condition: visible-band document freeze.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
 
 
@@ -213,8 +213,8 @@ A033 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/a
 Disposition: RETIRED-REPRESENTATION
 
 A034 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:127
-Disposition: PARTIAL
-Mapping/reason: Partial: same band cursor-stability condition as A030 after the travel. Unproved condition: band cursor stability.
+Disposition: MATCHED
+Mapping: S046
 Source context since previous assertion:
 
 
@@ -241,8 +241,8 @@ A039 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automati
 Disposition: RETIRED-REPRESENTATION
 
 A040 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:149
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native obligation: the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins QQuick hit delivery (automationInput().bounds().contains(deliveredViewport), automationrouting.cpp:149); a presenter predicate cannot establish converted-window delivery. [S021, S022]
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -266,8 +266,8 @@ Disposition: MATCHED
 Mapping: S021, S022
 
 A043 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:167
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts a pencil press does not start a pan. No executing Swift predicate reads page.isPanning during a pencil press. Unproved condition: isPanning during a pencil stroke.
+Disposition: MATCHED
+Mapping: S050
 Source context since previous assertion:
 
 
@@ -284,8 +284,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:169
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pencil press leaves the document frozen. The Swift pencil contract asserts the stroke commits one revision (S024) and a display-range preparation writes nothing; no predicate compares the document mid-press. Unproved condition: pencil mid-press document freeze.
+Disposition: MATCHED
+Mapping: S052
 Source context since previous assertion:
 
 
@@ -296,8 +296,8 @@ A046 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automati
 Disposition: RETIRED-REPRESENTATION
 
 A047 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:172
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pencil press leaves the edit cursor unchanged. No executing Swift predicate reads the edit cursor during a pencil press. Unproved condition: pencil cursor stability.
+Disposition: MATCHED
+Mapping: S052
 Source context since previous assertion:
 
 
@@ -329,8 +329,8 @@ Disposition: MATCHED
 Mapping: S028
 
 A054 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:182
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the LFO lane values are untouched by the pencil stroke. No executing Swift predicate compares a second lane in the pencil fixture (the committed fixture holds the Modulation lane only). Unproved condition: LFO lane isolation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
 
 
@@ -338,8 +338,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kLfoController) == lfoBefore);
 
 A055 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:183
-Disposition: PARTIAL
-Mapping/reason: Partial: same second-lane isolation condition for the Volume lane. Unproved condition: Volume lane isolation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
 
 
@@ -347,8 +347,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kVolumeController) == volumeBefore);
 
 A056 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:184
-Disposition: PARTIAL
-Mapping/reason: Partial: same second-lane isolation condition for the Voice lane. Unproved condition: Voice lane isolation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
 
 
@@ -356,8 +356,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_VOICE) == voiceBefore);
 
 A057 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:185
-Disposition: PARTIAL
-Mapping/reason: Partial: same second-lane isolation condition for the pitch-bend lane. Unproved condition: Bend lane isolation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
 
 
@@ -365,8 +365,8 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_BEND) == bendBefore);
 
 A058 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:186
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the tempo stream is untouched by the pencil stroke. No executing Swift predicate compares the tempo stream in a pencil scenario. Unproved condition: tempo isolation.
+Disposition: MATCHED
+Mapping: S054
 Source context since previous assertion:
 
 
@@ -386,8 +386,8 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A061 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:190
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the pencil gesture ends on release. The Swift contract asserts the release commits (S023) but no predicate reads a gesture-active flag after it. Unproved condition: userGestureActive after the pencil release.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins the C++ SongView gesture flag (tab().view().userGestureActive(), automationrouting.cpp:190) with no published Swift equivalent; the release commit stays proved by S023. [S023]
 Source context since previous assertion:
 
 
@@ -431,8 +431,8 @@ Disposition: MATCHED
 Mapping: S029
 
 A069 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:216
-Disposition: PARTIAL
-Mapping/reason: Partial: the original asserts the body press does not start a pan. No executing Swift predicate reads page.isPanning for a left body press (S013/S017 cover middle-button pans). Unproved condition: isPanning during a body press.
+Disposition: MATCHED
+Mapping: S049
 Source context since previous assertion:
 
 
@@ -518,8 +518,8 @@ A085 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automa
 Disposition: RETIRED-REPRESENTATION
 
 A086 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:250
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationrouting.cpp) no longer builds or runs. Previous native note: Retained native obligation (native input delivery): the original asserts the delivered window point lies inside the QQuick automation input item (automationInput().bounds().contains(deliveredViewport)). A Swift presenter predicate cannot establish converted-window hit delivery. The retired C++ check is absent from the checkout (deleted at 31ea635f) and is compiled into no current target.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the clause pins QQuick hit delivery (automationInput().bounds().contains(deliveredViewport), automationrouting.cpp:250); a presenter predicate cannot establish converted-window delivery. [S020, S025]
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -703,3 +703,36 @@ Anchor: message "no pan owns the band scenario"
 
 S043 | drawerAutomationBandEscape | src/checks/automation/automationcanvasediting.swift
 Anchor: message "no gesture owns the band scenario"
+
+S044 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a pending band belongs to the active Tempo lane"
+
+S045 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a pending band leaves the document revision and edit cursor untouched"
+
+S046 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a travelled band leaves the document revision and edit cursor untouched"
+
+S047 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a pending band belongs to the active Pan lane"
+
+S048 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a pan press publishes its pan and no band"
+
+S049 | drawerAutomationBandIsolatesTempoAndCc | src/checks/automation/automationselection.swift
+Anchor: message "a body press starts no pan and no band"
+
+S050 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+Anchor: message "a pencil press owns the stroke and starts no pan or band"
+
+S051 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+Anchor: message "the stroke runs in pencil mode"
+
+S052 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+Anchor: message "a pencil press leaves the document revision and edit cursor untouched"
+
+S053 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+Anchor: message "a pending pencil stroke leaves the document revision and edit cursor untouched"
+
+S054 | drawerAutomationPencilOwnershipAndShift | src/checks/automation/automationselection.swift
+Anchor: message "a pencil stroke leaves the LFO, Volume, Voice, bend and tempo lanes untouched"

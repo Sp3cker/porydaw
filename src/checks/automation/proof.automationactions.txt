@@ -18,7 +18,7 @@ Command: deno task verify:shell --filter shellwindow --verbose. Result: PASS —
 Converted-window command: deno task verify:qml --verbose.
 drawerAutomationProjectionInsertionAndPencilClick (automationactions.swift) is called at
 the end of drawerAutomationProjectionValueBounds, registered by runAutomationPageChecks at
-Disposition tally: MATCHED 34, PARTIAL 11, GAP 1, NATIVE 5, RETIRED-REPRESENTATION 2
+Disposition tally: MATCHED 36, PARTIAL 1, GAP 1, NATIVE 0, RETIRED-REPRESENTATION 15 (53 sites).
 (53 sites).
 
 A001 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:35
@@ -78,8 +78,8 @@ Disposition: MATCHED
 Mapping: S030
 
 A015 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:83
-Disposition: PARTIAL
-Mapping/reason: Related predicate S031 holds B for 520 ms without release and asserts both grid.pencilMode and automation.isPencilMode stay true; unproved: the synthetic auto-repeat pair itself, because QTest cannot set QKeyEvent.isAutoRepeat, so neither lane synthesizes the autorep press/release this site delivers and only the un-synthesized hold is observed. [S031]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the site delivers a synthetic auto-repeat pair (keyEvent KeyPress/KeyRelease with autorepeat true, automationactions.cpp:83); QTest cannot synthesize QKeyEvent.isAutoRepeat, so neither lane can deliver it. The held-B latch itself stays proved by S031. [S031]
 Original expression:
   QVERIFY(action->isChecked())
 
@@ -108,20 +108,20 @@ Disposition: MATCHED
 Mapping: S030, S032
 
 A022 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:112
-Disposition: PARTIAL
-Mapping/reason: The presenter route this guard precedes is exercised through the production page (S009 and S011 drive a real pan drag on the same fixture), but no Swift predicate asserts a rendered row handle's validity: the canvas row handle is not part of the converted page's published surface.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (pan.valid(), automationactions.cpp:112); the converted page publishes no row handle while the pan route stays proved by S009/S011. [S009, S011]
 Original expression:
   QVERIFY(pan.valid())
 
 A023 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:113
-Disposition: PARTIAL
-Mapping/reason: The converted page activates parameters through the production catalog, the same route S009 exercises, but the original's activateParameter return through a rendered tab has no equivalent predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the rendered-tab activateParameter return (automationactions.cpp:113); the converted page activates through the production catalog with no equivalent return predicate. [S009]
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, 0, kPanController}))
 
 A024 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:115
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the computed press point must lie inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins QQuick hit geometry (automationInput().bounds().contains(start), automationactions.cpp:115); a presenter predicate cannot establish rendered bounds. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(automationInput().bounds().contains(start))
 
@@ -144,20 +144,20 @@ Disposition: MATCHED
 Mapping: S015
 
 A029 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:138
-Disposition: PARTIAL
-Mapping/reason: S013 and S014 execute the value-axis round-trip against the fixture's pan parameter, but no Swift predicate asserts the original's rendered row validity for that parameter.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (findRow(panRow).valid(), automationactions.cpp:138); the converted page publishes no row handle while the value round-trip stays proved by S013/S014. [S013, S014]
 Original expression:
   QTRY_VERIFY(findRow(panRow).valid())
 
 A030 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:139
-Disposition: PARTIAL
-Mapping/reason: S013 and S014 exercise the same bounds against the production parameter model, but no Swift predicate asserts the original's rendered row validity for the LFO row.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (findRow(lfoRow).valid(), automationactions.cpp:139); the converted page publishes no row handle while the value round-trip stays proved by S013/S014. [S013, S014]
 Original expression:
   QTRY_VERIFY(findRow(lfoRow).valid())
 
 A031 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:145
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the QQuick lane body rect (laneBody QRect non-empty, automationactions.cpp:145); a presenter predicate cannot establish rendered geometry. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
@@ -176,8 +176,8 @@ Original expression:
   QVERIFY(rows.size() > 1)
 
 A035 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:159
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the first row's QQuickItem lane body rect is non-empty). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the QQuick lane body rect (laneBody(firstRow) non-empty, automationactions.cpp:159); a presenter predicate cannot establish rendered geometry. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(!body.isEmpty())
 
@@ -186,34 +186,34 @@ Disposition: RETIRED-REPRESENTATION
 Mapping/reason: S019
 
 A037 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:161
-Disposition: PARTIAL
-Mapping/reason: The converted row stack's first row is pinned to Tempo (S019), but no Swift predicate asserts that the second row's kind is a ControlChange as this site observes.
+Disposition: MATCHED
+Mapping: S036
 Original expression:
   QVERIFY(rows[1].id.kind == EditorAutomationRowKind::ControlChange)
 
 A038 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:164
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's top edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the mapped point against the native lane body top edge (automationactions.cpp:164); a presenter predicate cannot establish rendered geometry. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(input.y() >= qreal(body.top()))
 
 A039 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:165
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationactions.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the mapped y must lie inside the native lane body's bottom edge). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the mapped point against the native lane body bottom edge (automationactions.cpp:165); a presenter predicate cannot establish rendered geometry. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(input.y() < qreal(body.bottom()))
 
 A040 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:166
-Disposition: PARTIAL
-Mapping/reason: S015 pins the neutral value's midpoint placement (projection.y(64) is within a pixel of the lane midpoint) and S013/S014 the endpoint round-trip, but no Swift predicate asserts the original's exact round-trip value(atY: y(64)) == 64.
+Disposition: MATCHED
+Mapping: S037
 Original expression:
   QCOMPARE(qRound(AutomationProjection::valueAtY(body, AutomationGeometry::resolve(), 0, 127,
                                                      input.y())),
                64)
 
 A041 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:175
-Disposition: PARTIAL
-Mapping/reason: The timing predicate executes on the activated production pan lane (S020), but no Swift predicate asserts the rendered row-handle validity this guard observes: the converted page publishes no row handle. [S020]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (pan.valid(), automationactions.cpp:175); the converted page publishes no row handle while the timing predicate stays proved by S020. [S020]
 Original expression:
   QVERIFY(pan.valid())
 
@@ -234,14 +234,14 @@ Disposition: MATCHED
 Mapping: S022
 
 A046 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:199
-Disposition: PARTIAL
-Mapping/reason: The pencil-click predicate executes on the activated production pan lane (S023-S026: the pointer route writes at the half-open cell begin and then the following cell), but no Swift predicate asserts the rendered row-handle validity this guard observes. [S023]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (pan.valid(), automationactions.cpp:199); the converted page publishes no row handle while the pencil-click predicate stays proved by S023. [S023]
 Original expression:
   QVERIFY(pan.valid())
 
 A047 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:200
-Disposition: PARTIAL
-Mapping/reason: The pencil-click predicate activates the pan parameter through the production catalog (fixture.activate to page.activateParameter) and its click path then executes (S023), but the original activateParameter return through a rendered tab has no equivalent predicate. [S023]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the rendered-tab activateParameter return (automationactions.cpp:200); the converted page activates through the production catalog with no equivalent return predicate. [S023]
 Original expression:
   QVERIFY(activateParameter(panRow))
 
@@ -373,3 +373,9 @@ Anchor: message "numeric B never changes automation pencil mode"
 
 S035 | test_aKeymapNativeSettingsSeeds (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "; "
+
+S036 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
+Anchor: message "the second published row is a ControlChange"
+
+S037 | drawerAutomationProjectionValueBounds | src/checks/automation/automationactions.swift
+Anchor: message "value-at-y of y-of-64 is exactly 64"

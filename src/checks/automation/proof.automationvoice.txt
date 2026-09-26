@@ -22,8 +22,8 @@ evidence (build/proof-evidence/swiftcore-projectsession.json) carries both rows.
 A-row of this ledger cites S046/S270, S194 or S195; no disposition changed here.
 
 A001 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:73
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice input item's QQuick bounds (voiceChangeInput().bounds(), automationvoice.cpp:73); the production Swift VoiceChangesPage replaces that canvas and its pointer route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -102,8 +102,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A002 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:75
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice row handle (findRow pan valid, automationvoice.cpp:75); Swift publishes no row handle and the page route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -253,8 +253,8 @@ Disposition: MATCHED
 Mapping: S174
 
 A032 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:134
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice input item's QQuick bounds (voiceChangeInput().bounds(), automationvoice.cpp:134); the production Swift VoiceChangesPage replaces that canvas and its pointer route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
   }
@@ -267,8 +267,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A033 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:136
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice row handle (findRow pan valid, automationvoice.cpp:136); Swift publishes no row handle and the page route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -334,8 +334,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:175
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice input item's QQuick bounds (voiceChangeInput().bounds(), automationvoice.cpp:175); the production Swift VoiceChangesPage replaces that canvas and its pointer route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
   }
@@ -430,8 +430,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A062 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:226
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice input item's QQuick bounds (voiceChangeInput().bounds(), automationvoice.cpp:226); the production Swift VoiceChangesPage replaces that canvas and its pointer route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
   }
@@ -444,8 +444,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A063 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:228
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice row handle (findRow pan valid, automationvoice.cpp:228); Swift publishes no row handle and the page route stays proved by S001/S002. [S001, S002]
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
@@ -694,8 +694,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A109 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:336
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice input item's QQuick bounds (voiceChangeInput().bounds(), automationvoice.cpp:336); the production Swift VoiceChangesPage replaces that canvas and its pointer route stays proved by S074/S075. [S074, S075]
 Source context since previous assertion:
 
   }
@@ -708,8 +708,8 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A110 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:338
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationvoice.cpp) no longer builds or runs. Previous native note: The retired AutomationCanvas voice row handle/body and its input-item bounds are replaced by the production Swift VoiceChangesPage in the drawerpresentation fixture; the Swift predicates drive that page's own pointer route. This is not a native rendering assertion.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at c17d966f: the guard pins the retired AutomationCanvas voice row handle (findRow pan valid, automationvoice.cpp:338); Swift publishes no row handle and the page route stays proved by S074/S075. [S074, S075]
 Source context since previous assertion:
 
       const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});

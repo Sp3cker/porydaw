@@ -16,7 +16,7 @@ swiftcore (9.85s) — ********* Finished testing of SwiftCoreTest *********; ver
 (9.87s, 13 skipped); run_checks: PASS (all harnesses in 9.87s). The controller ran it in
 this worktree on HEAD 19aca868 plus the uncommitted automationcanvasediting.swift,
 Converted-window command: deno task verify:qml --verbose.
-Disposition tally: MATCHED 53, PARTIAL 21, NATIVE 3 (77 sites).
+Disposition tally: MATCHED 55, PARTIAL 6, GAP 0, NATIVE 0, RETIRED-REPRESENTATION 16 (77 sites).
 
 A001 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:45
 Disposition: RETIRED-REPRESENTATION
@@ -34,15 +34,15 @@ Disposition: MATCHED
 Mapping: S018
 
 A005 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:58
-Disposition: PARTIAL
-Mapping/reason: The live preview content is asserted mid-gesture (S028: a sub-threshold move previews the untouched target), but the original's transient-layer revision counter has no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer (quickScene->layer(AutomationTransient).revision, tst_automationediting.cpp:58); Swift publishes no transient-layer revision while the preview content stays proved by S028. [S028]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                   arm->transientRevisionBefore)
 
 A006 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:60
-Disposition: PARTIAL
-Mapping/reason: The live preview content is asserted mid-gesture (S028), but the original's rendered transient layer containing a node at the target viewport has no Swift predicate: the transient layer is scene-graph rendering.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer node lookup (transientLayerContainsNodeAt, tst_automationediting.cpp:60); the transient layer is scene-graph rendering with no Swift equivalent. [S028]
 Original expression:
   QTRY_VERIFY(transientLayerContainsNodeAt(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient), arm->targetViewport))
@@ -72,14 +72,14 @@ Disposition: MATCHED
 Mapping: S031
 
 A013 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:74
-Disposition: PARTIAL
-Mapping/reason: Public history availability for one gesture is asserted (S025 and S032), but Swift exposes no history-depth counter, so the C++ undoStack()->count() delta is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the C++ undo-stack counter (undoStack()->count(), tst_automationediting.cpp:74); Swift exposes no history-depth counter while availability stays proved by S025/S032. [S025, S032]
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), frozen.undoCount + 1)
 
 A014 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:75
-Disposition: PARTIAL
-Mapping/reason: Public history availability for one gesture is asserted (S025 and S032), but Swift exposes no undo-stack index, so the C++ undoStack()->index() delta is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the C++ undo-stack index (undoStack()->index(), tst_automationediting.cpp:75); Swift exposes no undo-stack index while availability stays proved by S025/S032. [S025, S032]
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), frozen.undoIndex + 1)
 
@@ -179,15 +179,15 @@ Disposition: MATCHED
 Mapping: S018
 
 A036 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:113
-Disposition: PARTIAL
-Mapping/reason: The live preview content is asserted mid-gesture (S028), but the original's transient-layer revision counter has no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer (quickScene->layer(AutomationTransient).revision, tst_automationediting.cpp:113); Swift publishes no transient-layer revision while the preview content stays proved by S028. [S028]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                   arm->transientRevisionBefore)
 
 A037 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:115
-Disposition: PARTIAL
-Mapping/reason: The live preview content is asserted mid-gesture (S028), but the original's rendered transient layer containing a node at the target viewport has no Swift predicate.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer node lookup (transientLayerContainsNodeAt, tst_automationediting.cpp:115); the transient layer is scene-graph rendering with no Swift equivalent. [S028]
 Original expression:
   QTRY_VERIFY(transientLayerContainsNodeAt(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient), arm->targetViewport))
@@ -205,14 +205,14 @@ Disposition: MATCHED
 Mapping: S029
 
 A041 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:122
-Disposition: PARTIAL
-Mapping/reason: S020 asserts Escape claims the live gesture and S021 that the cancel ends it synchronously in the model, but the original's rendered transient layer holding no rects has no Swift predicate: the transient layer is scene-graph rendering, and no predicate asserts the presenter-equivalent preview state (page.previewPoints) is cleared by handleEscape. [S020][S021]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer rects (layer(...).rects.empty(), tst_automationediting.cpp:122); the transient layer is scene-graph rendering with no Swift equivalent. [S020, S021]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A042 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:123
-Disposition: PARTIAL
-Mapping/reason: S020 asserts Escape claims the live gesture and S021 that the cancel ends it synchronously in the model, but the original's rendered transient layer holding no triangles has no Swift predicate: no predicate asserts the presenter-equivalent preview state (page.previewPoints) is cleared by handleEscape. [S020][S021]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer triangles (layer(...).triangles.empty(), tst_automationediting.cpp:123); the transient layer is scene-graph rendering with no Swift equivalent. [S020, S021]
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
@@ -230,14 +230,14 @@ Disposition: MATCHED
 Mapping: S029, S022
 
 A046 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:132
-Disposition: PARTIAL
-Mapping/reason: S021 asserts the model ends the gesture synchronously and S040 asserts a cancelled gesture never writes on release, but the original's rendered transient layer still holding no rects after the post-cancel move has no Swift predicate: no predicate asserts the preview state (page.previewPoints) stays cleared. [S021][S040]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer rects after the post-cancel move (layer(...).rects.empty(), tst_automationediting.cpp:132); the transient layer is scene-graph rendering with no Swift equivalent. [S021, S040]
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A047 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:133
-Disposition: PARTIAL
-Mapping/reason: S021 asserts the model ends the gesture synchronously and S040 asserts a cancelled gesture never writes on release, but the original's rendered transient layer still holding no triangles after the post-cancel move has no Swift predicate: no predicate asserts the preview state (page.previewPoints) stays cleared. [S021][S040]
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the scene-graph transient layer triangles after the post-cancel move (layer(...).triangles.empty(), tst_automationediting.cpp:133); the transient layer is scene-graph rendering with no Swift equivalent. [S021, S040]
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
@@ -255,14 +255,14 @@ Disposition: MATCHED
 Mapping: S029, S022
 
 A051 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:144
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/tst_automationediting.cpp) no longer builds or runs. Previous native note: Original native QQuickWindow/QQuickItem/scene-graph obligation (the staged blank press point lies inside the automation input item's bounds). No presenter-level Swift check can establish this rendered observation; the converted-window lane (deno task verify:qml) is the only place it could be observed.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the QQuick input item bounds (m_automationInput->bounds().contains(blank), tst_automationediting.cpp:144); a presenter predicate cannot establish rendered bounds. The converted-window lane is the only place it could be observed.
 Original expression:
   QVERIFY(m_automationInput->bounds().contains(blank))
 
 A052 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:145
-Disposition: PARTIAL
-Mapping/reason: Absent lane points are compared through the shared document accessor throughout the suite (S006 restores exactly the staged points), but no Swift predicate asserts that a specific unwritten tick has no point.
+Disposition: MATCHED
+Mapping: S041
 Original expression:
   QCOMPARE(laneValue(kBlankTick), -1)
 
@@ -287,14 +287,14 @@ Disposition: MATCHED
 Mapping: S026
 
 A058 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:164
-Disposition: PARTIAL
-Mapping/reason: The snapshot equality (S026) carries history availability, but Swift exposes no history-depth counter, so the C++ undoStack()->count() equality is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the C++ undo-stack counter (undoStack()->count(), tst_automationediting.cpp:164); Swift exposes no history-depth counter while snapshot equality stays proved by S026. [S026]
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoCountBefore)
 
 A059 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:165
-Disposition: PARTIAL
-Mapping/reason: The snapshot equality (S026) carries history availability, but Swift exposes no undo-stack index, so the C++ undoStack()->index() equality is unproved.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the clause pins the C++ undo-stack index (undoStack()->index(), tst_automationediting.cpp:165); Swift exposes no undo-stack index while snapshot equality stays proved by S026. [S026]
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), undoIndexBefore)
 
@@ -315,8 +315,8 @@ Disposition: MATCHED
 Mapping: S026
 
 A064 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:170
-Disposition: PARTIAL
-Mapping/reason: Absent lane points are compared through the shared document accessor throughout the suite (S026 keeps exactly the staged points), but no Swift predicate asserts that the blank tick has no point.
+Disposition: MATCHED
+Mapping: S041
 Original expression:
   QCOMPARE(laneValue(kBlankTick), -1)
 
@@ -337,8 +337,8 @@ Disposition: MATCHED
 Mapping: S039
 
 A069 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:271
-Disposition: PARTIAL
-Mapping/reason: The converted presentations publish a row for every catalog parameter (S039), but no Swift predicate asserts a rendered row handle's validity.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Fork-verified at f3069ef6: the guard pins the retired C++ canvas row handle (page().canvas()->parameterRow(index), tst_automationediting.cpp:271); the converted presentations publish a row per catalog parameter instead (S039). [S039]
 Original expression:
   QVERIFY(row.has_value())
 
@@ -493,3 +493,6 @@ Anchor: message "the row stack carries one row per catalog parameter"
 
 S040 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift
 Anchor: message "a cancelled stale gesture never writes on release"
+
+S041 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationediting.swift
+Anchor: message "an unwritten tick holds no point"

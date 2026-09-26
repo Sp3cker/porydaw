@@ -189,8 +189,18 @@ func drawerAutomationBandIsolatesTempoAndCc(_ report: CheckReport, suite: Docume
     fixture.activate(.tempo)
     let page = fixture.page
     let before = fixture.snapshot
+    let pendingRevision = page.documentRevision
+    let pendingCursor = fixture.session.editCursor
     _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    report.expect(page.hasBand && page.activeParameter == .tempo,
+                  cppID: id, message: "a pending band belongs to the active Tempo lane")
+    report.expect(page.documentRevision == pendingRevision
+                      && fixture.session.editCursor == pendingCursor,
+                  cppID: id, message: "a pending band leaves the document revision and edit cursor untouched")
     _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
+    report.expect(page.documentRevision == pendingRevision
+                      && fixture.session.editCursor == pendingCursor,
+                  cppID: id, message: "a travelled band leaves the document revision and edit cursor untouched")
     _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
     report.expect(page.selection?.tempo == true
                       && page.selection?.lanes.isEmpty == true,
@@ -209,11 +219,28 @@ func drawerAutomationBandIsolatesTempoAndCc(_ report: CheckReport, suite: Docume
 
     fixture.activate(fixture.panLane)
     _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    report.expect(page.hasBand && page.activeParameter == fixture.panLane,
+                  cppID: id, message: "a pending band belongs to the active Pan lane")
     _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
     _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
     report.expect(page.selection?.tempo == false
                       && page.selection?.lanes == Set([fixture.panLane]),
                   cppID: id, message: "a band on Pan selects the Pan lane alone")
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                          surface: AutomationInputSurface.plot.rawValue,
+                          button: AutomationQtButton.middle)
+    report.expect(page.isPanning && !page.hasBand, cppID: id,
+                  message: "a pan press publishes its pan and no band")
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                            button: AutomationQtButton.middle)
+    let bodyX = fixture.x(144)
+    let bodyY = fixture.y(fixture.panLane, 64)
+    report.expect(page.pointerPress(x: bodyX, y: bodyY,
+                                    surface: AutomationInputSurface.plot.rawValue,
+                                    button: AutomationQtButton.left)
+                      && !page.isPanning && !page.hasBand,
+                  cppID: id, message: "a body press starts no pan and no band")
+    _ = page.pointerRelease(x: bodyX, y: bodyY, button: AutomationQtButton.left)
 }
 
 @MainActor
@@ -286,16 +313,52 @@ func drawerAutomationGhostViewOnlyAndSurvives(_ report: CheckReport, suite: Docu
 func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: DocumentSession,
                                              service: ProjectService) {
     let id = "automation/AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection"
-    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    volume: [(48, 80)], pan: [(24, 64)],
+                                                    modulation: [(48, 70)])
     fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let otherLanes = [fixture.volumeLane, fixture.modulationLane,
+                      .controlChange(track: 0, controller: TimeDefaults.ccLFOSpeed),
+                      fixture.bendLane]
+    fixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccLFOSpeed),
+                               from: 48, through: 48, points: [LaneWrite(tick: 48, value: 45)])
+    fixture.document.writeLane(track: 0, lane: .voice,
+                               from: 48, through: 48, points: [LaneWrite(tick: 48, value: 2)])
+    fixture.document.writeLane(track: 0, lane: .pitchBend,
+                               from: 48, through: 48, points: [LaneWrite(tick: 48, value: 100)])
+    let otherBefore = otherLanes.map { fixture.values($0) }
+    let voiceBefore = fixture.document.lanePoints(track: 0, lane: .voice)
+    let tempoBefore = fixture.tempoValues
+    let cursorBefore = fixture.session.editCursor
+    let revisionBefore = page.documentRevision
     fixture.page.selectRange(from: 20, to: 60, lanes: [fixture.panLane])
     fixture.page.isPencilMode = true
     report.expect(fixture.page.pointerPress(x: fixture.x(120), y: 60, surface: 1,
                                              button: AutomationQtButton.left),
                   cppID: id, message: "a pencil press outside the selection starts")
+    report.expect(page.isPainting && page.isPencilMode && !page.isPanning && !page.hasBand,
+                  cppID: id, message: "a pencil press owns the stroke and starts no pan or band")
+    report.expect(page.isPainting && page.isPencilMode, cppID: id,
+                  message: "the stroke runs in pencil mode")
+    report.expect(page.documentRevision == revisionBefore
+                      && page.frozenRevision == revisionBefore
+                      && fixture.session.editCursor == cursorBefore,
+                  cppID: id, message: "a pencil press leaves the document revision and edit cursor untouched")
+    _ = page.pointerMove(x: fixture.x(144), y: fixture.y(fixture.panLane, 90),
+                         buttons: AutomationQtButton.left)
+    report.expect(page.documentRevision == revisionBefore
+                      && page.frozenRevision == revisionBefore
+                      && fixture.session.editCursor == cursorBefore,
+                  cppID: id, message: "a pending pencil stroke leaves the document revision and edit cursor untouched")
     report.expect(fixture.page.selection == nil, cppID: id,
                   message: "starting a pencil stroke outside clears the selection")
-    _ = fixture.page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.left)
+    _ = page.pointerRelease(x: fixture.x(144), y: fixture.y(fixture.panLane, 90),
+                            button: AutomationQtButton.left)
+    report.expect(otherLanes.map { fixture.values($0) } == otherBefore
+                      && fixture.document.lanePoints(track: 0, lane: .voice) == voiceBefore
+                      && fixture.tempoValues == tempoBefore,
+                  cppID: id, message: "a pencil stroke leaves the LFO, Volume, Voice, bend and tempo lanes untouched")
 
     let lockID = "automation/AutomationEditingTest::nodeDragShiftAxisLocks"
     let horizontal = drawerAutomationAutomationFixture(suite: suite, service: service,

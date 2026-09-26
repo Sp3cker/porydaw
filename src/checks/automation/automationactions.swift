@@ -74,6 +74,17 @@ func drawerAutomationProjectionValueBounds(_ report: CheckReport, suite: Documen
     let id = "automation/AutomationEditingTest::projectionValueBounds"
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     let metadata = AutomationParameterMetadata(parameter: fixture.panLane)
+    let tabs = fixture.page.publishedTabs
+    let catalog = AutomationCatalog.parameters(track: 0)
+    let secondIsControlChange: Bool
+    if tabs.count > 1, catalog.indices.contains(tabs[1].index),
+       case .controlChange = catalog[tabs[1].index] {
+        secondIsControlChange = true
+    } else {
+        secondIsControlChange = false
+    }
+    report.expect(secondIsControlChange, cppID: id,
+                  message: "the second published row is a ControlChange")
     let projection = AutomationProjection(
         camera: fixture.session.camera,
         bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
@@ -88,6 +99,9 @@ func drawerAutomationProjectionValueBounds(_ report: CheckReport, suite: Documen
                        what: "the value axis maximum maps back to full scale")
     report.expect(abs(projection.y(64, metadata: metadata) - 60) < 1.0, cppID: id,
                   message: "the neutral value maps within a pixel of the lane midpoint")
+    report.expectEqual(expected: 64, actual: projection.value(
+        atY: projection.y(64, metadata: metadata), metadata: metadata), cppID: id,
+        what: "value-at-y of y-of-64 is exactly 64")
     drawerAutomationProjectionInsertionAndPencilClick(report, suite: suite, service: service)
 }
 

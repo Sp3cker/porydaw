@@ -639,6 +639,22 @@ func drawerAutomationKeyboardIngress(_ report: CheckReport, suite: DocumentSessi
                   message: "Escape clears the explicit time selection")
     report.expectEqual(expected: selected, actual: fixture.snapshot, cppID: selID,
                        what: "clearing the selection writes nothing")
+    fixture.page.refreshFromDocument()
+    report.expect(fixture.page.selection == nil
+                      && fixture.session.timeSelection == nil
+                      && fixture.page.projection?.points.allSatisfy({ !$0.selected }) == true,
+                  cppID: selID, message: "Escape clears the selection and the rebuilt selection is empty")
+    let outside = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64)])
+    outside.activate(outside.panLane)
+    outside.page.selectRange(from: 20, to: 60, lanes: [outside.panLane])
+    _ = outside.page.pointerPress(x: outside.x(120), y: outside.y(outside.panLane, 64),
+                                  surface: AutomationInputSurface.plot.rawValue,
+                                  button: AutomationQtButton.left)
+    report.expect(outside.page.selection == nil && outside.session.timeSelection == nil,
+                  cppID: selID, message: "a plain left press clears the time selection")
+    _ = outside.page.pointerRelease(x: outside.x(120), y: outside.y(outside.panLane, 64),
+                                    button: AutomationQtButton.left)
 
     let precedence = drawerAutomationAutomationFixture(suite: suite, service: service,
                                                        pan: [(24, 64)])

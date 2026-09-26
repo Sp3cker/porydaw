@@ -19,12 +19,9 @@ public struct AutomationLaneEdit: Equatable, Sendable {
 
 /// `NodeLaneEdit`: canonicalization, held-value lookup and range comparison.
 public enum AutomationLaneReplacement {
-    /// Sort by tick, keep the last at each tick, drop anything outside
-    /// `[begin, end]`, clamp into the parameter's domain, and drop runs that
-    /// repeat the value already in effect.
     public static func canonical(_ points: [AutomationLanePoint], begin: Tick, end: Tick,
-                                 minimum: Int, maximum: Int,
-                                 priorValue: Int?) -> [AutomationLanePoint] {
+                                 minimum: Int, maximum: Int, priorValue: Int?,
+                                 preserveEqualValues: Bool = false) -> [AutomationLanePoint] {
         let ordered = points.enumerated().sorted(by: {
             $0.element.tick == $1.element.tick ? $0.offset < $1.offset
                                                : $0.element.tick < $1.element.tick
@@ -42,7 +39,7 @@ public enum AutomationLaneReplacement {
             }
             if point.tick < begin || point.tick > end { continue }
             let value = min(max(point.value, minimum), maximum)
-            if prior == value { continue }
+            if !preserveEqualValues && prior == value { continue }
             result.append(AutomationLanePoint(tick: point.tick, value: value))
             prior = value
         }
@@ -333,7 +330,7 @@ public enum AutomationRangeEditor {
             songEndTick: facts.songEndTick, original: facts.writtenPoints)
         let clamped = AutomationLaneReplacement.canonical(
             points, begin: 0, end: TimeDefaults.noTick, minimum: facts.metadata.minimum,
-            maximum: facts.metadata.maximum, priorValue: nil)
+            maximum: facts.metadata.maximum, priorValue: nil, preserveEqualValues: true)
         return AutomationLaneReplacement.pointRange(written, begin: 0, end: TimeDefaults.noTick,
                                                     points: clamped)
     }

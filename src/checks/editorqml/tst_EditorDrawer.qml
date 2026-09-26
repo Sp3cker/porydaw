@@ -7811,4 +7811,85 @@ TestCase {
                 "hover leave clears the ring")
     }
 
+    function test_productionAutomationClearRowClick() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-clear-row-click")
+        var volume = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volume))
+        testCase.openAutomationTabMenu(volume)
+        verify(testCase.clickAutomationMenuRow(5), "the published Clear row receives a real click")
+        tryVerify(function() {
+            return !bootstrap.automationMenuOpen() && bootstrap.automationLaneEventCount() === 0
+        }, 2000, "a real click on the published Clear row clears")
+    }
+
+    function test_productionAutomationRange64RowClick() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-range64-row-click")
+        var volume = bootstrap.automationVolumeIndex()
+        testCase.clickAutomationTab(volume)
+        testCase.openAutomationTabMenu(volume)
+        var parentPanel = findChild(testCase.surface, "automationMenuPanel")
+        var childPanel = findChild(testCase.surface, "automationMenuSubmenu")
+        var range = testCase.menuRowByAction(parentPanel, 12)
+        verify(range && testCase.isEffectivelyVisible(range))
+        mouseMove(range, range.width / 2, range.height / 2)
+        tryVerify(function() {
+            return !!testCase.menuRowByAction(childPanel, 16)
+        }, 1000, "the rendered range submenu opens")
+        var range64 = testCase.menuRowByAction(childPanel, 16)
+        verify(range64 && testCase.isEffectivelyVisible(range64))
+        mouseClick(range64, range64.width / 2, range64.height / 2, Qt.LeftButton)
+        tryVerify(function() { return !bootstrap.automationMenuOpen() }, 2000,
+                  "a real click on the published Range64 row rescales and closes")
+        testCase.openAutomationTabMenu(volume)
+        range = testCase.menuRowByAction(parentPanel, 12)
+        mouseMove(range, range.width / 2, range.height / 2)
+        tryVerify(function() {
+            var selected = testCase.menuRowByAction(childPanel, 16)
+            return !!selected && selected.model.checked
+        }, 1000, "the drawn range choice remains 64")
+        var full = testCase.menuRowByAction(childPanel, 17)
+        verify(full && testCase.isEffectivelyVisible(full))
+        mouseClick(full, full.width / 2, full.height / 2, Qt.LeftButton)
+        testCase.awaitAutomationModal("automationMenu", false)
+    }
+
+    function test_productionAutomationCopyRowClick() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-copy-row-click")
+        var volume = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volume))
+        testCase.openAutomationTabMenu(volume)
+        verify(testCase.clickAutomationMenuRow(3), "the published Copy row receives a real click")
+        tryVerify(function() {
+            return !bootstrap.automationMenuOpen() && bootstrap.automationLaneClipAvailable()
+        }, 2000, "a real click on the published Copy row copies")
+    }
+
+    function test_productionAutomationPasteRowClick() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation("automation-paste-row-click")
+        var volume = bootstrap.automationVolumeIndex()
+        verify(testCase.writeVolumeLanePoints(volume))
+        var copiedValues = bootstrap.automationLaneValues()
+        var copiedTicks = bootstrap.automationLaneTicks()
+        testCase.openAutomationTabMenu(volume)
+        verify(testCase.clickAutomationMenuRow(3))
+        testCase.awaitAutomationModal("automationMenu", false)
+        testCase.openAutomationTabMenu(volume)
+        verify(testCase.clickAutomationMenuRow(5))
+        tryVerify(function() { return bootstrap.automationLaneEventCount() === 0 }, 2000,
+                  "the click on Clear empties the destination before paste")
+        testCase.openAutomationTabMenu(volume)
+        verify(testCase.clickAutomationMenuRow(4), "the published Paste row receives a real click")
+        tryVerify(function() {
+            return !bootstrap.automationMenuOpen() && bootstrap.automationLaneEventCount() > 0
+        }, 2000, "a real click on the published Paste row pastes")
+        compare(bootstrap.automationLaneValues(), copiedValues,
+                "lane paste restores every copied value")
+        compare(bootstrap.automationLaneTicks(), copiedTicks,
+                "lane paste restores every copied absolute tick")
+    }
+
 }
