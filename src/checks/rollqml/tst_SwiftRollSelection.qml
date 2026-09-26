@@ -79,7 +79,7 @@ TestCase {
         item.height += surface.gridModel.rulerHeight
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
-        drawer.presenter.restoreStoredPreferences()
+        session.configurePersistence()
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")

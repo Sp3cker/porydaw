@@ -102,7 +102,7 @@ TestCase {
         verify(overlay, "production composition loaded")
         verify(waitForNative(function() { return surface() !== null }, 5000),
                "the mounted editor loaded")
-        findChild(surface(), "editorDrawer").presenter.restoreStoredPreferences()
+        session.configurePersistence()
         verify(waitForNative(function() {
             return bar(false) && bar(true) && bar(false).visible && bar(true).visible
                 && bar(false).thumbTravel > 0 && bar(true).thumbTravel > 0

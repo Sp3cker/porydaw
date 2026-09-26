@@ -61,7 +61,7 @@ TestCase {
         }, 5000))
         var drawer = findChild(mounted, "editorDrawer")
         verify(drawer !== null)
-        drawer.presenter.restoreStoredPreferences()
+        session.configurePersistence()
     }
 
     function cleanup() {
@@ -144,7 +144,7 @@ TestCase {
         var h = s.headersModel
         var drawer = item("editorDrawer")
         bootstrap.seedDrawerPreferences(true, false, false, 1)
-        drawer.presenter.restoreStoredPreferences()
+        session.configurePersistence()
         try {
             var ruler = item("timelineQuickRuler")
             var rulerInput = item("timelineRulerInput")
@@ -228,7 +228,7 @@ TestCase {
             verify(s.Screen.devicePixelRatio > 0)
         } finally {
             bootstrap.seedDrawerPreferences(false, true, true, 0)
-            drawer.presenter.restoreStoredPreferences()
+            session.configurePersistence()
         }
     }
 
