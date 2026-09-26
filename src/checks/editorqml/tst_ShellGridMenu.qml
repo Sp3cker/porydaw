@@ -1106,4 +1106,88 @@ TestCase {
                "the rendered time panel reserves a visible shortcut column")
     }
 
+    function stageAutomationMenuPoint() {
+        var view = surface()
+        var toggle = findChild(view, "drawerToggle_automation")
+        verify(toggle && toggle.visible, "the automation drawer toggle is mounted")
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(view, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the automation page is mounted")
+        var plot = findChild(page, "automationPlotInput")
+        verify(plot && plot.width > 0 && plot.height > 0, "the automation plot accepts a pointer")
+        var y = plot.height / 2
+        mousePress(plot, plot.width * 0.3, y, Qt.LeftButton)
+        mouseMove(plot, plot.width * 0.45, y, -1, Qt.LeftButton)
+        mouseRelease(plot, plot.width * 0.45, y, Qt.LeftButton)
+        tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
+                  "the plotted gesture writes a point")
+        function writtenNode(item) {
+            if (item.objectName === "automationNode" && item.model
+                && !item.model.projected && !item.model.phantom)
+                return item.model
+            for (var index = 0; index < item.children.length; ++index) {
+                var node = writtenNode(item.children[index])
+                if (node)
+                    return node
+            }
+            return null
+        }
+        var node = writtenNode(page)
+        verify(node !== null, "the written point has a plotted hit target")
+        return { page: page, plot: plot, node: node }
+    }
+
+    function test_automationPointMenuYieldsToPublishedDivisionMenu() {
+        openSong()
+        var staged = stageAutomationMenuPoint()
+        var model = staged.page.pageModel
+        var grid = surface().gridModel
+        var revision = grid.appliedRevisionText
+        mouseClick(staged.plot, staged.node.x, staged.node.y, Qt.RightButton)
+        tryCompare(model, "menuOpen", true)
+        compare(model.menuRowCount, 2, "the point menu captures the written node")
+        mouseClick(control("timelineRulerDivisionControl"))
+        tryCompare(grid, "gridMenuKind", 1)
+        tryCompare(model, "menuOpen", false, 3000,
+                   "the published division menu dismisses the open point menu")
+        var menu = panel()
+        var pickedId = alternateGridMenuId(grid.gridSelectionMenuId)
+        clickRow(menu, [-1, 4, 8, 16, 32, 0].indexOf(pickedId))
+        tryCompare(grid, "gridSelectionMenuId", pickedId)
+        tryCompare(control("timelineRulerInput"), "activeFocus", true, 3000,
+                   "the division pick returns focus to the publishing control")
+        compare(grid.appliedRevisionText, revision, "the takeover and grid pick write no MIDI")
+        compare(model.promptOpen, false, "a displaced point target cannot open a late prompt")
+    }
+
+    function test_automationBandMissFallsThroughToTimeMenu() {
+        openSong()
+        var staged = stageAutomationMenuPoint()
+        var plot = staged.plot
+        var model = staged.page.pageModel
+        var startX = plot.width * 0.25
+        var endX = plot.width * 0.65
+        var midX = (startX + endX) / 2
+        var y = plot.height * 0.15
+        var revision = surface().gridModel.appliedRevisionText
+        mousePress(plot, startX, y, Qt.RightButton)
+        mouseMove(plot, endX, y, -1, Qt.RightButton)
+        mouseRelease(plot, endX, y, Qt.RightButton)
+        mouseClick(plot, midX, y, Qt.RightButton)
+        tryCompare(surface().rulerMenu, "menuKind", 2, 3000,
+                   "the fallback time menu opens from the automation band")
+        var menu = panel()
+        compare(menu.rowItem(0).itemData.actionId, 11,
+                "the fallback menu renders the shared time-selection commands")
+        keyClick(Qt.Key_Escape)
+        tryCompare(surface().rulerMenu, "isOpen", false, 3000,
+                   "Escape closes the band's fallback menu")
+        compare(model.menuOpen, false, "the band miss never publishes an automation menu")
+        compare(surface().gridModel.appliedRevisionText, revision,
+                "the time selection and fallback dismissal write no MIDI")
+    }
+
 }

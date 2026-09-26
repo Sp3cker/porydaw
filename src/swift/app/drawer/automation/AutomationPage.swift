@@ -181,6 +181,8 @@ public final class AutomationPage: EditorDrawerPage {
     public var menuX: Double = 0
     public var menuY: Double = 0
     public var menuRows: QListModel<AutomationMenuRowHandle> = QListModel()
+    @QtIgnored public var onMenuOpened: (() -> Void)?
+    @QtIgnored public var onRequestTimeMenu: ((Tick, Double) -> Void)?
     public var menuChildRows: QListModel<AutomationMenuRowHandle> = QListModel()
     public var menuRowCount: Int = 0
     public var menuChildRowCount: Int = 0

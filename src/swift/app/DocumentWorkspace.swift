@@ -96,7 +96,19 @@ public final class DocumentWorkspace {
         let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
-        rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
+        let rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
+        self.rulerMenu = rulerMenu
+        grid.onGridMenuOpened = { [weak automationPage, weak rulerMenu] in
+            if rulerMenu?.isOpen == true { rulerMenu?.close() }
+            if automationPage?.hasMenu == true { automationPage?.dismissMenu() }
+        }
+        automationPage.onMenuOpened = { [weak rulerMenu, weak grid] in
+            if rulerMenu?.isOpen == true { rulerMenu?.close() }
+            if let grid, grid.gridMenuKind != 0 { grid.dismissGridMenu() }
+        }
+        automationPage.onRequestTimeMenu = { [weak rulerMenu] tick, _ in
+            rulerMenu?.openTimeSelection(tick: tick)
+        }
         drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
@@ -195,6 +207,10 @@ public final class DocumentWorkspace {
         voiceChangesPage.cancelSectionInteraction()
         drawer.inputCancelled(reason: reason)
         otherEventsBand.inputCancelled()
+        if reason == GridCancelReason.windowDeactivated.rawValue
+            || reason == GridCancelReason.hidden.rawValue {
+            pitchBend.settleAndClose()
+        }
     }
 
     /// Stops every session callback before the host tears the scene down.

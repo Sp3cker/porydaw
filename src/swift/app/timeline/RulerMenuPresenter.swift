@@ -108,7 +108,7 @@ public final class RulerMenuPresenter {
         guard contentX.isFinite, pointerY.isFinite else { return }
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
-        close()
+        if isOpen { close() }
         let chip = signatureTick(at: contentX)
         rulerPress = (raw, chip)
     }
@@ -151,6 +151,8 @@ public final class RulerMenuPresenter {
             let explicit = session.document.timeSignatures.contains { $0.tick == tick }
             items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, explicit))
         }
+        if automation.hasMenu { automation.dismissMenu() }
+        if grid.gridMenuKind != 0 { grid.dismissGridMenu() }
         publish(items)
         menuKind = 1
     }
@@ -164,10 +166,22 @@ public final class RulerMenuPresenter {
               let selection = session.timeSelection, selection.isActive,
               selection.contains(TimeDefaults.tick(from: max(0, raw)))
         else { return }
-        capturedTick = snapped(raw)
+        publishTimeSelection(selection: selection, tick: snapped(raw))
+    }
+
+    public func openTimeSelection(tick: Tick) {
+        guard let selection = session.timeSelection, selection.isActive,
+              selection.contains(tick) else { return }
+        publishTimeSelection(selection: selection, tick: tick)
+    }
+
+    private func publishTimeSelection(selection: AutomationTimeSelection, tick: Tick) {
+        capturedTick = tick
         capturedRevision = session.document.revision
         capturedCursor = session.editCursor
         capturedSelection = selection
+        if automation.hasMenu { automation.dismissMenu() }
+        if grid.gridMenuKind != 0 { grid.dismissGridMenu() }
         publish([RulerMenuRow(Action.copy.rawValue,
                               automation.selectionCommandAvailable(command: .copy)),
                  RulerMenuRow(Action.cut.rawValue,
@@ -198,6 +212,7 @@ public final class RulerMenuPresenter {
     }
 
     public func close() {
+        guard isOpen else { return }
         isOpen = false
         menuKind = 0
         rowSnapshot = []
@@ -298,7 +313,7 @@ public final class RulerMenuPresenter {
 
     public func beginSweep(contentX: Double, pointerY: Double, modifiers: Int = 0) {
         guard contentX.isFinite, pointerY.isFinite else { return }
-        close()
+        if isOpen { close() }
         rulerPress = nil
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }

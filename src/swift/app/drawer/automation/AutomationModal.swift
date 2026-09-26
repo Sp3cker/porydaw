@@ -117,6 +117,7 @@ extension AutomationPage {
     func openMenu(facts: AutomationFrozenFacts, target: AutomationMenuTarget,
                           x: Double, y: Double) -> Bool {
         guard session != nil else { return false }
+        let wasOpen = menu != nil
         var state = AutomationMenuState(facts: facts, target: target,
                                         anchorX: max(0, x), anchorY: max(0, y), rows: [])
         state.rows = menuRows(for: target, facts: facts)
@@ -124,6 +125,7 @@ extension AutomationPage {
         menu = state
         menuX = state.anchorX
         menuY = state.anchorY
+        if !wasOpen { onMenuOpened?() }
         publishMenuRows()
         publishInteractionState()
         return true

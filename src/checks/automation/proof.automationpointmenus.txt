@@ -5,13 +5,14 @@ Original: src/checks/automation/automationpointmenus.cpp
 Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c090755355325
 Swift counterpart: src/checks/automation/automationpointmenus.swift
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellGridMenu.qml
 
 
 
-Verification: deno task verify --filter swiftcore --verbose (runAutomationPageChecks -> runProjectSessionSuite, swiftcore-projectsession) — PASS, covering the new drawerAutomationSelectionInvalidation and drawerAutomationTrackSwitchInvalidation entries and the extended two-point tail of drawerAutomationDuplicatePromptAndParameterSwitch; deno task verify:qml --verbose (editorqml-drawer) — run_checks PASS with all four drawer production cases green (test_productionAutomationPointMenuDeleteAndDismiss, test_productionAutomationSetValuePromptFocusRoute, test_productionAutomationTempoPromptFocusRoute, test_productionAutomationSyntheticDefaultMenuRoute), including test_productionAutomationMenusAndLaneCommands' rendered Cancel leg and the unwritten-lane projection anchor. Recorded by the lane controller from the runs on the settled tree; this proof-only reconciliation did not re-run the build or the lanes, and checked the ledger against the refreshed evidence in build/proof-evidence (editorqml-drawer.json and swiftcore-projectsession.json, refreshed 2026-09-26 11:52/11:53, carrying every new predicate message as a passed row).
+Verification: deno task verify --filter swiftcore --verbose (runAutomationPageChecks -> runProjectSessionSuite, swiftcore-projectsession) — PASS, covering the new drawerAutomationSelectionInvalidation and drawerAutomationTrackSwitchInvalidation entries and the extended two-point tail of drawerAutomationDuplicatePromptAndParameterSwitch; deno task verify:qml --verbose (editorqml-drawer) — run_checks PASS with all four drawer production cases green (test_productionAutomationPointMenuDeleteAndDismiss, test_productionAutomationSetValuePromptFocusRoute, test_productionAutomationTempoPromptFocusRoute, test_productionAutomationSyntheticDefaultMenuRoute), including test_productionAutomationMenusAndLaneCommands' rendered Cancel leg and the unwritten-lane projection anchor. Recorded by the lane controller from the runs on the settled tree; this proof-only reconciliation did not re-run the build or the lanes, and checked the ledger against the refreshed evidence in build/proof-evidence (editorqml-drawer.json and swiftcore-projectsession.json, refreshed 2026-09-26 11:52/11:53, carrying every new predicate message as a passed row). Task 50b (shared-popup arbitration), same frozen tree: deno task build:checks PASS; deno task verify --filter swiftcore --verbose PASS 12/37 selected — the six new fallback/takeover predicates were RED before the seam landed; deno task verify --filter swiftcore-projectsession --verbose PASS 1/37, and the refreshed swiftcore-projectsession.json (2026-09-26 13:12) carries all 18 drawerAutomationSharedPopupArbitration predicate messages as passed rows, the task-50b fix's fallback-menu target-tick predicate among them; deno task verify:shell --filter shell-grid-menu --verbose PASS 1/26, and the refreshed shell-grid-menu.json (2026-09-26 13:00) lists test_automationPointMenuYieldsToPublishedDivisionMenu and test_automationBandMissFallsThroughToTimeMenu among its executed functions; deno task verify:qml --verbose (editorqml-drawer) PASS 1/1 with the four drawer production cases green. Recorded from the implementer's task-50b and task-50b-fix runs; this reconciliation did not re-run the build or the lanes and matched every new anchor message against that evidence (S223's fallback-menu target message included).
 Reference revision pin: the recovered original at the recorded revision hashes to the recorded Original SHA-256; the counterpart paths above are the files this reconciliation read, uncommitted lane edits included.
-Registered run path: src/checks/editorqml/tst_EditorDrawer.qml (EditorDrawerLane :: run_checks, the drawer lane) carries the rendered menu rows, enablement, accessible role and focus entries; src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10) carries the presenter and document entries; the Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
-Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. The drawer lane drives the production QML surface with real pointer and key delivery, so the rendered menu rows, enablement, accessible role, focus facts, the accepted prompt's own closure, the lane-delete confirmation's rendered Cancel click and the unwritten lane's projected node are cited from it; A131 stays PARTIAL because the stale journey is presenter-dispatched and renders no row of its own, alongside retired representation and the rows left GAP. Parser success is not semantic parity.
+Registered run path: src/checks/editorqml/tst_EditorDrawer.qml (EditorDrawerLane :: run_checks, the drawer lane) carries the rendered menu rows, enablement, accessible role and focus entries; src/checks/editorqml/tst_ShellGridMenu.qml (ShellGridMenu :: run_checks, the shell-grid-menu lane) carries the shared-popup takeover and band-fallthrough journeys with real pointer and key delivery; src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10) carries the presenter and document entries; the Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
+Execution boundary: MATCHED identifies equivalent executing predicates at the cited S entries. The drawer lane drives the production QML surface with real pointer and key delivery, so the rendered menu rows, enablement, accessible role, focus facts, the accepted prompt's own closure, the lane-delete confirmation's rendered Cancel click and the unwritten lane's projected node are cited from it; the mounted shell-grid-menu lane supplies the shared-popup deliveries (a real click on timelineRulerDivisionControl, a real rendered-row click and real Escape), so A148-A155 and A161-A162 cite it beside the presenter anchors; the fork's native re-entrancy staging (A170-A171) and its division-item focus target (A155, Swift returns focus to timelineRulerInput) are recorded inside those mapping lines; A131 and A181 stay PARTIAL because the stale journey is presenter-dispatched and renders no row of its own, and because the survival tail has no separate late no-prompt predicate; with every remaining original row either MATCHED or RETIRED-REPRESENTATION, those two PARTIAL rows are the only open items. Parser success is not semantic parity.
 
 A001 | AutomationEditingTest::pointMenuDeleteCommitsEdit | src/checks/automation/automationpointmenus.cpp:109
 Disposition: MATCHED
@@ -346,15 +347,15 @@ A069 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/a
 Disposition: RETIRED-REPRESENTATION
 
 A070 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:332
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The time-selection fallback rows belong to the shared native popup model; no Swift predicate in this family covers them.
+Disposition: MATCHED
+Mapping: S206, S221, S223 (the fallback menu's offered Clear row, its rendered time-selection rows and the band press tick it opened at; the miss press that opens it is S204/S220)
 Original expression:
   QVERIFY2(fallback.model->rowForId(int(songview::TimeSelectionAction::Clear)) >= 0,
                "the fallback menu offered no time-selection rows")
 
 A071 | AutomationEditingTest::outsideRightClickDismissesPointMenu | src/checks/automation/automationpointmenus.cpp:336
-Disposition: GAP
-Mapping/reason: GAP-retain: the fallback time-selection menu has no Swift ingress: a Swift miss press closes the menu and opens nothing ([S088], [S089], [S090]), and the time-selection surface is owned by another lane. The shared Escape-into-open-menu route is proven on the point menu: handleEscape claims it ([S112]) and closes it ([S113]) with nothing written ([S114]).
+Disposition: MATCHED
+Mapping: S222, S205 (the band's fallback menu is dismissed by real Escape and by the presenter's own Escape route)
 Original expression:
   QVERIFY2(!fallback.session->isOpen(), "Escape did not dismiss the fallback menu")
 
@@ -733,20 +734,20 @@ A147 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget |
 Disposition: RETIRED-REPRESENTATION
 
 A148 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:591
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: MATCHED
+Mapping: S216 (the mounted takeover journey resolves and clicks control(timelineRulerDivisionControl) at tst_ShellGridMenu.qml:1152; that control's lookup is the publication ingress it asserts)
 Original expression:
   QVERIFY(division)
 
 A149 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:596
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session pointer is retired native popup rendering.
+Disposition: MATCHED
+Mapping: S207 (the retired shared-session pointer is re-expressed as the grid menu's live publication state)
 Original expression:
   QVERIFY(live)
 
 A150 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:597
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu publication over the pending point menu is native popup rendering.
+Disposition: MATCHED
+Mapping: S207, S216 (the division menu publishes over the open point menu: the mounted journey captures the point menu first, then asserts its dismissal)
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -755,34 +756,34 @@ Original expression:
                "the foreign ruler menu did not publish over the pending point menu")
 
 A151 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:608
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign division menu rows belong to the shared native popup model.
+Disposition: MATCHED
+Mapping: S209 (the offered denominator: activateGridMenuRow accepts only a row the open menu carries, and the pick lands)
 Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator")
 
 A152 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:609
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
+Disposition: MATCHED
+Mapping: S209, S218 (the production row pick; the mounted lane's real rendered-row click is clickRow at tst_ShellGridMenu.qml:1158, and the grid pick writes no MIDI)
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the foreign division row did not receive a real click")
 
 A153 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:612
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: MATCHED
+Mapping: S209 (the pick closes the foreign menu: gridMenuKind returns to zero)
 Original expression:
   QVERIFY2(!live->isOpen(), "the foreign division pick left the shared menu open")
 
 A154 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:613
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign division pick grid selection has no Swift predicate in this family; the ruler division route is native.
+Disposition: MATCHED
+Mapping: S209 (the pick changes the grid selection: gridSelectionMenuId is the picked denominator)
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
 
 A155 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:615
-Disposition: GAP
-Mapping/reason: GAP-retain, feature-not-ported: the ruler-division menu and ruler focus have no Swift ingress: no openDivisionMenu/GridSelection anywhere in src/swift, zero Ruler/Division references in the automation drawer QML (AutomationPage.qml, AutomationMenu.qml, AutomationPrompt.qml); openDivisionMenu lives only in src/ui/songview/quick/RulerControls.qml outside the automation scope. The displaced-target no-write observations stay recorded per site.
+Disposition: MATCHED
+Mapping: S217 (the division pick returns focus to the publishing control; deviation: Swift returns focus to timelineRulerInput, not the fork's timelineRulerDivisionControl item)
 Original expression:
   QTRY_VERIFY2(division->hasActiveFocus(),
                    "the foreign pick did not return focus to the ruler control")
@@ -808,14 +809,14 @@ Disposition: MATCHED
 Mapping: S079, S038
 
 A161 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:625
-Disposition: PARTIAL
-Mapping/reason: The earlier no-prompt-visible claim is obsolete: [S176] is exactly that guard in the Swift stale-target journey, whose no-write rows this test already cites ([S037], [S038]). It stays PARTIAL because no Swift predicate stages this foreign ruler division-menu takeover (A148-A155 remain GAP), so the late-prompt absence after that displacement is unproved.
+Disposition: MATCHED
+Mapping: S210, S219 (no prompt surfaces after the takeover in the presenter state and no late prompt from the displaced mounted target; the test's own no-write pair stays cited by A156-A160)
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
 A162 | AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget | src/checks/automation/automationpointmenus.cpp:626
-Disposition: PARTIAL
-Mapping/reason: The shared popup session is retired native rendering; its Swift re-expression ([S175] dismisses the stale point menu, [S176] opens no prompt) covers the stale-target journey but not this test's foreign takeover, which still has no Swift ingress (A148-A155 remain GAP). PARTIAL stands for the takeover sequence.
+Disposition: MATCHED
+Mapping: S208, S209, S210 (the displaced target never returns, the foreign pick closes the menu and no prompt opens: the retired shared popup session is exactly that empty page state)
 Original expression:
   QVERIFY(!quick_popup::popupSession(songTab.view())->isOpen())
 
@@ -844,52 +845,52 @@ A169 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives |
 Disposition: RETIRED-REPRESENTATION
 
 A170 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:664
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: MATCHED
+Mapping: S211 (the native division-control lookup is the publication ingress the mounted journey still drives; the re-entrant publication itself is S211)
 Original expression:
   QVERIFY(division)
 
 A171 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:676
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The re-entrant foreign publication is the native popup reset seam; the Swift presenter has no shared popup session to publish over.
+Disposition: MATCHED
+Mapping: S211 (the modelReset connection staging is retired native re-entrancy; the Swift counterpart is the seam's onMenuOpened redirect, whose displacing publication is S211)
 Original expression:
   QVERIFY(foreignPublication)
 
 A172 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:690
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign menu open state is native popup rendering.
+Disposition: MATCHED
+Mapping: S211 (the callback-published division menu survives the node open: the grid menu is the live publication afterwards)
 Original expression:
   QVERIFY2(live && live->isOpen(),
                "the callback-published division menu did not survive the open")
 
 A173 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:693
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving rendered panel is native rendering.
+Disposition: MATCHED
+Mapping: S212 (the surviving menu carries its own rows; the rendered panel is the mounted lane's QuickMenuPanel, whose rows its takeover journey clicks)
 Original expression:
   QVERIFY2(survivor, "the surviving division menu lost its rendered panel")
 
 A174 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:699
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign division rows belong to the shared native popup model.
+Disposition: MATCHED
+Mapping: S212 (the surviving menu offers the chosen denominator)
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A175 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:700
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
+Disposition: MATCHED
+Mapping: S212 (the production row pick of the surviving menu)
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A176 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:703
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: MATCHED
+Mapping: S212 (the surviving pick closes the menu: gridMenuKind returns to zero)
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A177 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:704
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign pick grid selection has no Swift predicate in this family.
+Disposition: MATCHED
+Mapping: S212 (the surviving pick changes the grid selection: gridSelectionMenuId is the chosen denominator)
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
@@ -908,7 +909,7 @@ Mapping: S038
 
 A181 | AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives | src/checks/automation/automationpointmenus.cpp:712
 Disposition: PARTIAL
-Mapping/reason: The earlier no-prompt-visible claim is obsolete: [S176] is exactly that guard in the Swift stale-target journey, which the sibling no-write rows cite ([S037], [S038]). It stays PARTIAL because the foreign popup published during the open has no Swift predicate or ingress (A170-A177 remain GAP), so the late-prompt absence after it is unproved.
+Mapping/reason: The earlier no-prompt-visible claim is obsolete: [S176] is exactly that guard in the Swift stale-target journey, which the sibling no-write rows cite ([S037], [S038]). It stays PARTIAL because the survival journey's own tail has no separate no-prompt predicate: the no-prompt anchors sit on the takeover stage ([S210], [S219]), before the ruler-menu and re-entrancy stages, so the late-prompt absence after the re-entrant publication is unproved.
 Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()))
 
@@ -961,20 +962,20 @@ A191 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A192 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:752
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: Native rendering and view ownership only; the converted Swift presenter has no predicate for this observation.
+Disposition: MATCHED
+Mapping: S213 (the foreign grid menu publishes over the pending value prompt and spares it)
 Original expression:
   QVERIFY(division)
 
 A193 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:756
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared popup session pointer is retired native popup rendering.
+Disposition: MATCHED
+Mapping: S213, S214 (the live foreign publication and its survival of the parameter switch)
 Original expression:
   QVERIFY(live)
 
 A194 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:757
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu publication over the pending prompt is native popup rendering.
+Disposition: MATCHED
+Mapping: S213 (the foreign ruler menu publishes over the pending value prompt)
 Original expression:
   QVERIFY2(QTest::qWaitFor([&live] {
                    QQuickItem *const panel = quick_popup::menuPanel(*live);
@@ -999,8 +1000,8 @@ Disposition: MATCHED
 Mapping: S047
 
 A199 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:774
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign ruler menu survival across the switch is native popup rendering.
+Disposition: MATCHED
+Mapping: S214 (the parameter switch spares the foreign menu: gridMenuKind stays at one)
 Original expression:
   QVERIFY2(live->isOpen(), "the parameter switch cancelled the foreign ruler menu")
 
@@ -1009,27 +1010,27 @@ Disposition: MATCHED
 Mapping: S047, S051
 
 A201 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:784
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The surviving foreign division rows belong to the shared native popup model.
+Disposition: MATCHED
+Mapping: S215 (the post-switch surviving menu offers the chosen denominator and the pick lands)
 Original expression:
   QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator")
 
 A202 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:785
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The rendered foreign row click is native pointer delivery.
+Disposition: MATCHED
+Mapping: S215 (the post-switch production row pick)
 Original expression:
   QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
                "the surviving division row did not receive a real click")
 
 A203 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:788
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The shared menu open state after the foreign pick is native popup rendering.
+Disposition: MATCHED
+Mapping: S215 (the post-switch pick closes the menu: gridMenuKind returns to zero)
 Original expression:
   QVERIFY2(!live->isOpen(), "the division pick left the shared menu open")
 
 A204 | AutomationEditingTest::parameterSwitchInvalidatesValuePrompt | src/checks/automation/automationpointmenus.cpp:789
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpointmenus.cpp) no longer builds or runs. Previous native note: The foreign pick grid selection has no Swift predicate in this family.
+Disposition: MATCHED
+Mapping: S215 (the post-switch pick changes the grid selection: gridSelectionMenuId is the chosen denominator)
 Original expression:
   QCOMPARE(songTab.view().viewState().gridSelection,
                songview::GridSelection::musical(uint32_t(targetDenom)))
@@ -1149,6 +1150,12 @@ test_productionAutomationSetValuePromptFocusRoute, S151-S155 plus S178, S180-S18
 test_productionAutomationTempoPromptFocusRoute, S156-S172 plus S179, S182, S187 and S203
 test_productionAutomationSyntheticDefaultMenuRoute, and S202
 test_productionAutomationMenusAndLaneCommands.
+S204-S215 plus S223 index drawerAutomationSharedPopupArbitration in
+src/checks/automation/automationpointmenus.swift.
+S216-S222 index the mounted shell-grid-menu journeys in
+src/checks/editorqml/tst_ShellGridMenu.qml: S216-S219
+test_automationPointMenuYieldsToPublishedDivisionMenu and S220-S222
+test_automationBandMissFallsThroughToTimeMenu.
 
 S001 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
 Anchor: message "a prompt opens on a written node"
@@ -1752,3 +1759,63 @@ Anchor: message "the confirmation's rendered Cancel button closes it"
 
 S203 | test_productionAutomationSyntheticDefaultMenuRoute | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the unwritten lane projects its engine-default node"
+
+S204 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "a miss press inside the selection opens the time menu"
+
+S205 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "Escape dismisses the fallback menu"
+
+S206 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the fallback menu offers the time-selection rows"
+
+S207 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the division menu publishes over the open point menu"
+
+S208 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the displaced point menu never returns"
+
+S209 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the division pick changes the grid selection"
+
+S210 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "no prompt surfaces after the takeover"
+
+S211 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "a menu published during another's open displaces it"
+
+S212 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the surviving menu still picks a denominator"
+
+S213 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the foreign menu spares the open value prompt"
+
+S214 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the foreign menu survives the parameter switch"
+
+S215 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the post-switch pick still changes the grid selection"
+
+S216 | test_automationPointMenuYieldsToPublishedDivisionMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the published division menu dismisses the open point menu"
+
+S217 | test_automationPointMenuYieldsToPublishedDivisionMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the division pick returns focus to the publishing control"
+
+S218 | test_automationPointMenuYieldsToPublishedDivisionMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the takeover and grid pick write no MIDI"
+
+S219 | test_automationPointMenuYieldsToPublishedDivisionMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a displaced point target cannot open a late prompt"
+
+S220 | test_automationBandMissFallsThroughToTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the fallback time menu opens from the automation band"
+
+S221 | test_automationBandMissFallsThroughToTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the fallback menu renders the shared time-selection commands"
+
+S222 | test_automationBandMissFallsThroughToTimeMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape closes the band's fallback menu"
+
+S223 | drawerAutomationSharedPopupArbitration | src/checks/automation/automationpointmenus.swift
+Anchor: message "the fallback time menu targets the band press tick"

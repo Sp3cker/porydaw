@@ -64,6 +64,7 @@ public final class PianoGrid {
     /// like the shared playhead's policy entries: no QML surface sees it.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored public var onPitchBendRequested: (() -> Bool)?
+    @QtIgnored public var onGridMenuOpened: (() -> Void)?
     private var lastCommandAvailability: [Bool] = []
     private var lastCommandGestureActive = false
     private var keyboardAuditionKey: Int?
@@ -545,11 +546,13 @@ public final class PianoGrid {
 
     public func openGridMenu(kind: Int) {
         guard kind == 1 || kind == 2 else { return }
+        if gridMenuKind != kind { onGridMenuOpened?() }
         gridMenuKind = kind
         refreshGridMenuPresentation()
     }
 
     public func dismissGridMenu() {
+        guard gridMenuKind != 0 else { return }
         gridMenuKind = 0
     }
 

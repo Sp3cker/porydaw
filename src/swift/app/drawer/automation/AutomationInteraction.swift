@@ -285,9 +285,6 @@ extension AutomationPage {
         return committed
     }
 
-    /// One right press's release: a travelled band publishes the selection it
-    /// covered, and a stationary one opens the node menu it hit or the range menu
-    /// the press started inside. A miss opens nothing.
     func releaseBand(_ live: AutomationRangeBand, x: Double, y: Double) {
         guard let session, live.revision == session.document.revision,
               live.parameter == activeParameter else { return }
@@ -305,7 +302,13 @@ extension AutomationPage {
             openPointMenu(hit: hit, facts: facts, x: x, y: y)
             return
         }
-        if live.insideSelection { openRangeMenu(x: x, y: y) }
+        if live.insideSelection {
+            if let onRequestTimeMenu, selection?.scope == .lanes {
+                onRequestTimeMenu(live.anchorTick, live.pressY)
+            } else {
+                openRangeMenu(x: x, y: y)
+            }
+        }
     }
 
     func endPan() {

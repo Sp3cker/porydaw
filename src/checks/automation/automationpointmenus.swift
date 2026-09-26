@@ -449,3 +449,122 @@ func drawerAutomationTrackSwitchInvalidation(_ report: CheckReport, suite: Docum
     report.expectEqual(expected: before, actual: fixture.snapshot, cppID: id,
                        what: "the switched prompt leaves both tracks and history untouched")
 }
+
+@MainActor
+func drawerAutomationSharedPopupArbitration(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let id = "automation/AutomationEditingTest::sharedPopupArbitration"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    let audio: NativeAudio
+    do {
+        audio = try NativeAudio()
+    } catch {
+        report.fail(id, "the shared-popup fixture cannot create audio: \(error)")
+        return
+    }
+    let playhead = SharedPlayheadPresenter()
+    let guides = PlayheadGuidesPresenter()
+    let eventList = EventListPresenter()
+    let workspace = DocumentWorkspace(
+        session: fixture.session, audio: audio, playhead: playhead,
+        playheadGuides: guides, eventList: eventList, palette: GridPalette(),
+        typography: Typography(baseFontPx: 13), callbacks: DocumentWorkspace.Callbacks(
+            changeTrackVoiceRequested: { _ in },
+            gridCommandAvailabilityChanged: {}, sessionStateChanged: {},
+            publicationFailed: { _ in }, timeSignaturePromptInvalidated: { _, _ in }))
+    defer {
+        workspace.teardown()
+        withExtendedLifetime((audio, playhead, guides, eventList)) {}
+    }
+    workspace.activate()
+    let page = workspace.automationPage
+    page.configureBody(width: 480, height: 120, gutter: workspace.grid.trackHeaderWidth
+                       + workspace.grid.keyboardWidth, devicePixelRatio: 1,
+                       baseFontPx: 13, dragDistance: 10)
+    _ = page.activateParameter(index: page.catalogIndex(of: fixture.panLane))
+    let before = fixture.snapshot
+    let undoCount = fixture.document.history.undoCount
+    let bytes = try? fixture.document.state.file.encoded()
+    let selection = AutomationTimeSelection(
+        range: TimeRange(startTick: 20, endTick: 100), scope: .lanes,
+        lanes: [fixture.panLane], tempo: false)
+    fixture.session.applyTimeSelection(selection)
+    let missX = fixture.x(48)
+    let missY = fixture.y(fixture.panLane, 20)
+    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: missX, y: missY, button: AutomationQtButton.right)
+    report.expect(workspace.rulerMenu.isOpen && workspace.rulerMenu.menuKind == 2,
+                  cppID: id, message: "a miss press inside the selection opens the time menu")
+    report.expect(page.plotOrigin > 0 && workspace.rulerMenu.targetTick() == 48,
+                  cppID: id, message: "the fallback time menu targets the band press tick")
+    workspace.rulerMenu.close()
+    report.expect(!workspace.rulerMenu.isOpen, cppID: id,
+                  message: "Escape dismisses the fallback menu")
+    _ = page.pointerPress(x: missX, y: missY, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: missX, y: missY, button: AutomationQtButton.right)
+    _ = workspace.rulerMenu.activate(actionId: 8)
+    report.expect(fixture.session.timeSelection == nil && !workspace.rulerMenu.isOpen,
+                  cppID: id, message: "the fallback menu offers the time-selection rows")
+
+    let pointX = fixture.x(24)
+    let pointY = fixture.y(fixture.panLane, 64)
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    workspace.grid.openGridMenu(kind: 1)
+    report.expect(workspace.grid.gridMenuKind == 1 && !page.hasMenu,
+                  cppID: id, message: "the division menu publishes over the open point menu")
+    report.expect(!page.consumeMenuAction(actionId: AutomationMenuAction.setValue.rawValue)
+                  && !page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the displaced point menu never returns")
+    workspace.grid.activateGridMenuRow(actionId: 8)
+    report.expect(workspace.grid.gridSelectionMenuId == 8 && workspace.grid.gridMenuKind == 0,
+                  cppID: id, message: "the division pick changes the grid selection")
+    report.expect(DocumentSnapshot(fixture.document) == before
+                  && fixture.document.history.undoCount == undoCount
+                  && (try? fixture.document.state.file.encoded()) == bytes,
+                  cppID: id, message: "the takeover writes nothing")
+    report.expect(!page.hasPrompt, cppID: id,
+                  message: "no prompt surfaces after the takeover")
+
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    workspace.rulerMenu.captureRulerPress(contentX: fixture.x(120), pointerY: 0)
+    workspace.rulerMenu.openRulerAtRelease()
+    report.expect(workspace.rulerMenu.isOpen && !page.hasMenu,
+                  cppID: id, message: "the ruler menu replaces the open point menu")
+    workspace.grid.openGridMenu(kind: 1)
+    report.expect(!workspace.rulerMenu.isOpen && workspace.grid.gridMenuKind == 1,
+                  cppID: id, message: "the division menu replaces the open ruler menu")
+    workspace.grid.dismissGridMenu()
+
+    let dismissForAutomation = page.onMenuOpened
+    page.onMenuOpened = { [weak workspace] in
+        dismissForAutomation?()
+        workspace?.grid.openGridMenu(kind: 1)
+    }
+    _ = page.pointerPress(x: pointX, y: pointY, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: pointX, y: pointY, button: AutomationQtButton.right)
+    page.onMenuOpened = dismissForAutomation
+    report.expect(workspace.grid.gridMenuKind == 1 && !page.hasMenu,
+                  cppID: id, message: "a menu published during another's open displaces it")
+    workspace.grid.activateGridMenuRow(actionId: 16)
+    report.expect(workspace.grid.gridSelectionMenuId == 16 && workspace.grid.gridMenuKind == 0,
+                  cppID: id, message: "the surviving menu still picks a denominator")
+    report.expect(page.openPrompt(tick: 24, value: 64), cppID: id,
+                  message: "the value prompt opens beside a foreign menu")
+    workspace.grid.openGridMenu(kind: 1)
+    report.expect(page.hasPrompt && page.promptKind == AutomationPromptKind.value.rawValue,
+                  cppID: id, message: "the foreign menu spares the open value prompt")
+    _ = page.activateParameter(index: page.catalogIndex(of: .tempo))
+    report.expect(!page.hasPrompt && !page.acceptPrompt(displayedValue: 100),
+                  cppID: id, message: "the parameter switch invalidates the prompt beside a foreign menu")
+    report.expect(workspace.grid.gridMenuKind == 1,
+                  cppID: id, message: "the foreign menu survives the parameter switch")
+    workspace.grid.activateGridMenuRow(actionId: 8)
+    report.expect(workspace.grid.gridSelectionMenuId == 8 && workspace.grid.gridMenuKind == 0
+                  && DocumentSnapshot(fixture.document) == before
+                  && fixture.document.history.undoCount == undoCount
+                  && (try? fixture.document.state.file.encoded()) == bytes,
+                  cppID: id, message: "the post-switch pick still changes the grid selection")
+}

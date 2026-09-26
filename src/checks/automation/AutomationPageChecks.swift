@@ -319,6 +319,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationHitGeometry(report, suite: session, service: service)
     drawerAutomationPromptTransactions(report, suite: session, service: service)
     drawerAutomationPointMenuDeleteAndStale(report, suite: session, service: service)
+    drawerAutomationSharedPopupArbitration(report, suite: session, service: service)
     drawerAutomationDuplicatePromptAndParameterSwitch(report, suite: session, service: service)
     drawerAutomationLaneDeleteConfirmation(report, suite: session, service: service)
     drawerAutomationOutsidePressRetarget(report, suite: session, service: service)
