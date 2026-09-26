@@ -82,7 +82,7 @@ TestCase {
     }
 
     function findLine(image, dpr, winLeft, naturalWinY, accidentalWinY,
-                      visibleLeft, visibleRight, expectedNatural, expectedAccidental) {
+                      visibleLeft, visibleRight, excluded, expectedNatural, expectedAccidental) {
         var left = winLeft + visibleLeft
         var right = winLeft + visibleRight
         var first = Math.ceil(Math.min(left, right) * dpr - 0.5)
@@ -91,6 +91,9 @@ TestCase {
         var accidentalRow = Math.round(accidentalWinY * dpr - 0.5)
         for (var col = first; col <= final; ++col) {
             if (col < 0 || col >= image.width)
+                continue
+            var plotX = (col + 0.5) / dpr - winLeft
+            if (excluded.some(function(span) { return plotX >= span[0] && plotX <= span[1] }))
                 continue
             var n = [image.red(col, naturalRow), image.green(col, naturalRow),
                      image.blue(col, naturalRow)]
@@ -224,14 +227,41 @@ TestCase {
                && !Helpers.colorsNear(expectedBeatAccidental, accidental),
                "the theme keeps beat lines distinguishable from both row roles")
         var winLeft = win(plot, 0, 0).x
-        var naturalWinY = win(plot, 0, naturalY).y
-        var accidentalWinY = win(plot, 0, accidentalY).y
-        verify(findLine(image, dpr, winLeft, naturalWinY, accidentalWinY, visibleLeft,
-                        visibleRight, expectedBarNatural, expectedBarAccidental),
-               "a visible bar line composites the grid role over both rows")
-        verify(findLine(image, dpr, winLeft, naturalWinY, accidentalWinY, visibleLeft,
-                        visibleRight, expectedBeatNatural, expectedBeatAccidental),
-               "a visible beat line composites the relative-alpha grid role over both rows")
+        var startMarker = findChild(surface, "loopStartMarker")
+        var endMarker = findChild(surface, "loopEndMarker")
+        var excluded = []
+        if (startMarker || endMarker) {
+            var startX = startMarker
+                ? startMarker.mapToItem(plot, startMarker.width / 2, 0).x : 0
+            var endX = endMarker
+                ? endMarker.mapToItem(plot, endMarker.width / 2, 0).x : plot.width
+            var glowWidth = Math.min(2 * grid.baseFontPx, endX - startX)
+            var edge = 1 / dpr
+            if (startMarker)
+                excluded.push([startX - edge, startX + glowWidth + edge])
+            if (endMarker)
+                excluded.push([endX - glowWidth - edge, endX + edge])
+        }
+        var barLineFound = false
+        var beatLineFound = false
+        for (var pitch = 0; pitch < 127; pitch += 12) {
+            var naturalCenter = rowCenter(pitch, rowHeight) - scrollY
+            var accidentalCenter = rowCenter(pitch + 1, rowHeight) - scrollY
+            if (naturalCenter < 0 || naturalCenter >= plot.height
+                    || accidentalCenter < 0 || accidentalCenter >= plot.height)
+                continue
+            var rowNaturalY = win(plot, 0, naturalCenter).y
+            var rowAccidentalY = win(plot, 0, accidentalCenter).y
+            barLineFound = barLineFound || findLine(
+                image, dpr, winLeft, rowNaturalY, rowAccidentalY, visibleLeft, visibleRight,
+                excluded, expectedBarNatural, expectedBarAccidental)
+            beatLineFound = beatLineFound || findLine(
+                image, dpr, winLeft, rowNaturalY, rowAccidentalY, visibleLeft, visibleRight,
+                excluded, expectedBeatNatural, expectedBeatAccidental)
+        }
+        verify(barLineFound, "an unglowed bar line composites the grid role over both rows")
+        verify(beatLineFound,
+               "an unglowed beat line composites the relative-alpha grid role over both rows")
 
         var initialScrollY = grid.cameraScrollY
         var maximumScrollY = grid.cameraMaxVScroll
