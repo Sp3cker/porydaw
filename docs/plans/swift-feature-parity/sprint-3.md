@@ -1,11 +1,13 @@
 # Sprint-3 plan: existing-surface parity after task 51
 
-Status: **planning evidence for the controller.** Ordered queue, tasks 52 onward, for the
-authorized existing-surface scope. Individual briefs are frozen one at a time by the
-controller. Fork oracle: `fceecd88` (`git show fceecd88:<path>`). In flight as of this
-writing: task-41b (pitch-bend proof anchors; owns uncommitted `EditorSurface.qml`,
-`PianoGrid.swift`, `AutomationPage.qml`/`AutomationMenu.qml` edits) and task-50a (menu
-press ownership). Sprint-3 dispatch begins after both settle.
+Status: **in execution.** Landed: 52 (32aa160d), 53 (e7c58e06) + 53b (342dc379), 54 (8d27003d),
+55 (c34ccff6), 56 (92db95fc), 57 (153804d7), 58 (374bc21f), 59a (e833eaa6), 59b (3df72bba),
+60 (df33f77e), 61 (089652fc), 62 (d4fd8b3b), 63 (83af818e), 64 (74134e8d), 66 (8a6f2e21),
+66b (f8b4dc68), 67 (1cbfa737). In flight: 65 (window state). Proof files: 155 → 141.
+Open decisions for the user: blank-token rebase across external same-section source edits
+(conflicts with tested E10 blanket token expiry); catalog-outage status path (Swift scan has
+none). Feature gaps logged: keyboard-transpose audition (coreediting A004/A006/A008). Fork
+oracle: `fceecd88` (`git show fceecd88:<path>`).
 
 ## 1. Objective and success criteria
 
