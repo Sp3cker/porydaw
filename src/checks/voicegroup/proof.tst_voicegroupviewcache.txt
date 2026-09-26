@@ -12,6 +12,9 @@ Additional Swift counterpart: src/checks/voicelist/voicelist_session.swift
 Command: deno task verify --filter swiftcore --verbose.
 Result: PASS for Swift predicates; the retained C++ cache suite is not Swift parity evidence.
 
+Command: deno task proof check --executed
+Result: PASS for this ledger pass — 0 errors, no not-executed entry in this file; A069's S009 classifies executed from build/proof-evidence/swiftcore-bankhistory.json (task-37 lane run, not re-run here).
+
 A001 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:126
 Disposition: GAP
 Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
@@ -577,7 +580,7 @@ Mapping: S010
 
 A046 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:278
 Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Mapping/reason: Fork law not ported, and partly divergent: the origin-aware close gate (voicegroupviewcache.cpp:93-96 closeEnabledFor) refuses close only for the pending transition's tab and leaves another tab closable whatever its bank dirt; no Swift predicate exposes that gate. Registered divergence (bank-only close prompt): Swift's per-tab gate refuses close on bank-only dirt (SongTabSession.isDirty = document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66, rendered by the strip at src/ui/songview/quick/swiftroll/SongTabs.qml:185-187) where the fork's requestCloseTab closes a document-clean tab immediately (workspaceui_tabs.cpp:485-500, "Known limitation: users must save bank-only edits before closing the tab"), and Swift refuses no tab for a pending transition. The divergent Swift gate is observed mounted at src/checks/editorqml/tst_ShellTabs.qml test_uSharedBankTwoTabJourney, message "bank-only dirty tab B raises its own close gate".
 Source context since previous assertion:
 
 
@@ -587,7 +590,7 @@ Original expression:
 
 A047 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:282
 Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Mapping/reason: Fork law not ported: the fork keeps the pending bank transition bound to its origin tab through resolutions addressed to another identity (voicegroupviewcache.cpp resolveConflict/resolveApplied only match the pending voicegroup, and the origin tab's history owns the transition), so pendingOrigin() stays set; no Swift predicate exposes a pending origin. Registered divergence (queued editor commit drop): Swift drops a queued editor commit when its origin tab loses selection (src/swift/app/voicelist/VoiceEditorController.swift:79,99 isCurrentEditOrigin guards), asserted by src/checks/voicelist/voicelist_session.swift ("discarded queued edits leave the original document history unchanged", cppID swiftcore/VoiceEditorController::queuedOriginSurvivesTabRebind), where the fork resolves the queued work through the origin tab's history.
 Source context since previous assertion:
 
     cache.resolveConflict({*other}, history);
@@ -787,7 +790,7 @@ Original expression:
 
 A068 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:318
 Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Mapping/reason: Fork law not ported: a hard worker error for another voicegroup does not clear the origin tab's pending transition (voicegroupviewcache.cpp resolveHardError only resets when the failure's voicegroup matches the pending one), so pendingOrigin() survives; no Swift predicate exposes that pending state. Registered divergence (queued editor commit drop): Swift drops a queued editor commit when its origin tab loses selection (src/swift/app/voicelist/VoiceEditorController.swift:79,99), so the origin-bound queued work this row keeps alive has no Swift counterpart; the hard-failure law for the erroring origin is the separate row A069.
 Source context since previous assertion:
 
     cache.resolveHardError({*other, QStringLiteral("other")});
@@ -796,8 +799,8 @@ Original expression:
     QVERIFY(cache.pendingOrigin());
 
 A069 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:320
-Disposition: GAP
-Mapping/reason: No Swift assertion establishes this site's original condition and setup; the predicate remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 (src/checks/workspace/bank_history_probes.swift historyTransitionRegressions) asserts a hard bank failure keeps the entry available and does not cross it: after the failure the document state is unchanged and a second attempt reaches the same bank action, the observable half of this row's law that the origin tab's hard error ends its transition without crossing. Unproved: this row's coordinator-state conjuncts themselves (cache.bankActionsEnabled() and !cache.pendingOrigin()) — Swift ends the in-flight transition by dropping the pending task, and no Swift value exposes the coordinator gate or a pending origin.
 Source context since previous assertion:
 
     cache.resolveHardError({*identity, QStringLiteral("boom")});

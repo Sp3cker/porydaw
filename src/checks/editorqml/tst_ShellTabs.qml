@@ -1594,4 +1594,176 @@ TestCase {
         compare(fileProbe.fileFingerprint(songPath), songBytes,
                 "the cancelled close walk wrote no song bytes")
     }
+    function test_uSharedBankTwoTabJourney() {
+        var ids = openShell(["mus_route101", "mus_route102"])
+        var a = ids[0]
+        var b = ids[1]
+        var bankBefore = fileProbe.fileFingerprint(bankPath())
+        verify(bankBefore.length > 0, "the shared bank starts readable")
+        clickSelectTab(a)
+        var controller = session().voiceListController()
+        verify(waitForNative(function() {
+            return controller.isBound && controller.bankLoadName === "fixture_rich"
+        }, 15000), "tab A binds the shared bank")
+        var voiceRows = findChild(shell, "voicegroupRows")
+        verify(voiceRows !== null && voiceRows.count === 128,
+               "the mounted voicegroup dock publishes all shared bank rows")
+        controller.revealSlot(4)
+        voiceRows.positionViewAtIndex(4, ListView.Contain)
+        verify(waitForNative(function() {
+            return voiceRows.itemAtIndex(4) !== null
+        }, 5000), "slot four renders in the mounted voicegroup dock")
+        var voiceRow = voiceRows.itemAtIndex(4)
+        var originalAdsr = voiceRow.adsr
+        var draft = controller.editorModel()
+        var original = draft.release
+        var changed = original === 7 ? 6 : original + 1
+        draft.change("release", changed)
+        verify(waitForNative(function() {
+            return controller.bankDirty && draft.release === changed
+                && String(selectButton(a).text).slice(-1) === "*"
+                && String(selectButton(b).text).slice(-1) === "*"
+                && session().documentDirty
+        }, 15000), "mounted edit stars both shared-bank captions and the window")
+        var editedAdsr = voiceRow.adsr
+        verify(editedAdsr !== originalAdsr, "the selected dock row renders the edited ADSR")
+        compare(fileProbe.fileFingerprint(bankPath()), bankBefore,
+                "the mounted edit has not written bank bytes")
+        verify(session().canUndo, "tab A owns the bank edit's undo")
+
+        clickSelectTab(b)
+        verify(waitForNative(function() {
+            controller.selectSlot(4)
+            return controller.bankLoadName === "fixture_rich"
+                && controller.bankDirty && controller.panelTitle === "Voicegroup*"
+                && controller.editorModel().release === changed && session().documentDirty
+        }, 5000), "tab B's dock rebind displays the peer's edited bank")
+        verify(waitForNative(function() {
+            var peerRow = voiceRows.itemAtIndex(4)
+            return peerRow !== null && peerRow.adsr === editedAdsr
+        }, 5000), "tab B's mounted voicegroup row displays the edited ADSR")
+        verify(!session().canUndo, "tab B does not inherit tab A's undo history")
+        var close = closeButton(b)
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() { return tabs().pendingCloseId === b }, 5000),
+               "bank-only dirty tab B raises its own close gate")
+        verify(awaitGateButtons(), "tab B's gate offers Save, Discard and Cancel")
+        var cancel = dialogButton("songTabCancel")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        verify(waitForNative(function() { return tabs().pendingCloseId === -1 }, 5000),
+               "Cancel lowers tab B's gate")
+        compare(tabs().tabCount, 2, "Cancel retains both shared-bank tabs")
+        tabs().requestClose(b)
+        verify(waitForNative(function() { return tabs().pendingCloseId === b }, 5000),
+               "tab B asks again after Cancel")
+        verify(awaitGateButtons(), "the reopened tab B gate presents its answers")
+        var discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedId === a
+                && String(selectButton(a).text).slice(-1) === "*"
+        }, 5000), "Discard closes tab B but leaves tab A's shared bank dirty")
+        compare(fileProbe.fileFingerprint(bankPath()), bankBefore,
+                "discarding the peer writes no bank bytes")
+
+        session().openSong("mus_route102")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabs().selectedId !== a
+        }, 30000), "tab B reopens while the bank is dirty")
+        b = tabs().selectedId
+        waitForPage(b)
+        verify(waitForNative(function() {
+            controller.selectSlot(4)
+            return controller.bankDirty && controller.editorModel().release === changed
+                && String(selectButton(b).text).slice(-1) === "*"
+        }, 15000), "reopened tab B adopts the unwritten shared voice and dirty star")
+        clickSelectTab(a)
+        session().requestUndo()
+        verify(waitForNative(function() {
+            return controller.editorModel().release === original && !controller.bankDirty
+                && String(selectButton(a).text).slice(-1) !== "*"
+                && String(selectButton(b).text).slice(-1) !== "*"
+        }, 15000), "only tab A's undo restores the voice and clears both captions")
+        compare(fileProbe.fileFingerprint(bankPath()), bankBefore,
+                "undoing the shared edit writes no bank bytes")
+
+        draft.change("release", changed)
+        verify(waitForNative(function() {
+            return controller.bankDirty && String(selectButton(b).text).slice(-1) === "*"
+        }, 15000), "tab A's next mounted edit reaches the live peer")
+        close = closeButton(a)
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() { return tabs().pendingCloseId === a }, 5000),
+               "tab A's bank-only close raises its own gate")
+        verify(awaitGateButtons(), "tab A's bank gate shows its answers")
+        discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedId === b
+                && String(selectButton(b).text).slice(-1) === "*"
+        }, 5000), "tab A's Discard keeps tab B's shared bank dirty")
+        session().openSong("mus_route101")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabs().selectedId !== b
+        }, 30000), "tab A reopens without saving the bank")
+        a = tabs().selectedId
+        waitForPage(a)
+        verify(waitForNative(function() {
+            controller.selectSlot(4)
+            return controller.bankDirty && controller.editorModel().release === changed
+                && String(selectButton(a).text).slice(-1) === "*"
+        }, 15000), "reopened tab A adopts the dirty shared bank")
+        compare(fileProbe.fileFingerprint(bankPath()), bankBefore,
+                "reopening the shared bank does not write it")
+
+        clickSelectTab(b)
+        close = closeButton(b)
+        mouseClick(close, close.width / 2, close.height / 2)
+        verify(waitForNative(function() { return tabs().pendingCloseId === b }, 5000),
+               "tab B raises its gate for bank Save")
+        verify(awaitGateButtons(), "tab B's bank Save gate shows its answers")
+        var save = dialogButton("songTabSave")
+        mouseClick(save, save.width / 2, save.height / 2)
+        verify(waitForNative(function() {
+            return tabs().tabCount === 1 && tabs().selectedId === a
+                && String(selectButton(a).text).slice(-1) !== "*"
+                && !controller.bankDirty
+        }, 30000), "peer Save closes tab B and clears tab A's shared dirty caption")
+        var bankSaved = fileProbe.fileFingerprint(bankPath())
+        verify(bankSaved.length > 0 && bankSaved !== bankBefore,
+               "peer Save persists the edited shared bank")
+
+        controller.selectSlot(4)
+        draft = controller.editorModel()
+        draft.change("release", original)
+        verify(waitForNative(function() { return controller.bankDirty }, 15000),
+               "a later mounted edit dirties the shared bank for the close walk")
+        session().openSong("mus_route102")
+        verify(waitForNative(function() { return tabs().tabCount === 2 }, 30000),
+               "the close walk has two tabs over the same dirty bank")
+        b = tabs().selectedId
+        waitForPage(b)
+        shell.close()
+        verify(waitForNative(function() { return tabs().pendingCloseId === a }, 5000),
+               "the window close walk asks tab A first")
+        verify(awaitGateButtons(), "the close walk shows tab A's answers")
+        discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() { return tabs().pendingCloseId === b }, 5000),
+               "the window close walk asks tab B second")
+        verify(awaitGateButtons(), "the close walk shows tab B's answers")
+        discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() {
+            return tabs().pendingCloseBankTitle === "fixture_rich"
+        }, 5000), "the close walk asks the shared bank once after both tabs")
+        verifyBankGate("the shared-bank close walk")
+        discard = dialogButton("songTabDiscard")
+        mouseClick(discard, discard.width / 2, discard.height / 2)
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
+               "the answered shared bank completes the close walk without a second bank gate")
+        compare(tabs().pendingCloseBankTitle, "", "the bank gate stays lowered")
+        compare(fileProbe.fileFingerprint(bankPath()), bankSaved,
+                "discarding the walk's unsaved edit preserves the last saved bank bytes")
+    }
 }

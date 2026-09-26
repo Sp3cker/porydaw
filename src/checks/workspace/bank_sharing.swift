@@ -446,6 +446,112 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
 }
 
 @MainActor
+internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/DocumentWorkspace::mountedEditReachesPeerTabAudio"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-mounted-peer-audio")
+    do {
+        for label in ["mus_session_test", "mus_session_test2"] {
+            let path = URL(fileURLWithPath: root)
+                .appendingPathComponent("sound/songs/midi/\(label).mid")
+            var file = try MidiFile.decode(Array(Data(contentsOf: path)))
+            guard let chunk = file.engineTracks().tracks.first?.midiChunk else {
+                report.fail(id, "\(label) has no playable MIDI track")
+                return
+            }
+            file.chunks[chunk].events.insert(.channel(tick: 0, status: 0xC0, data0: 0), at: 0)
+            try Data(file.encoded()).write(to: path)
+        }
+    } catch {
+        report.fail(id, "could not stage sounding shared-bank fixture: \(error)")
+        return
+    }
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    guard let audio = app.transportAudio else {
+        report.fail(id, "native audio unavailable: \(app.lastSaveError)")
+        return
+    }
+    func until(_ predicate: () -> Bool, seconds: TimeInterval = 5) -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    app.openProjectAndSong(path: root, label: "mus_session_test")
+    guard until({ app.songOpen || !app.lastSaveError.isEmpty }, seconds: 25),
+          app.songOpen, let first = app.selectedDocument else {
+        report.fail(id, "selected song failed to open: \(app.lastSaveError)")
+        return
+    }
+    let a = app.songTabs.selectedId
+    app.openSong(label: "mus_session_test2")
+    guard until({ app.songTabs.tabCount == 2 && app.songTabs.selectedId != a
+                  || !app.lastSaveError.isEmpty }, seconds: 25),
+          app.songTabs.tabCount == 2, let peer = app.selectedDocument else {
+        report.fail(id, "peer song failed to open: \(app.lastSaveError)")
+        return
+    }
+    let b = app.songTabs.selectedId
+    app.songTabs.selectTab(tabId: a)
+    guard app.selectedDocument === first,
+          let original = first.bankSlots.first?.voice,
+          original.macro == BankVoiceMacro.square1,
+          peer.bankSlots.first?.voice == original else {
+        report.fail(id, "tabs do not share the fixture's original square voice")
+        return
+    }
+    func soundingChannel(_ document: DocumentSession) -> Int? {
+        let start = document.timeline.sample(for: 10)
+        let end = document.timeline.sample(for: 20)
+        app.play()
+        guard until({ audio.playheadSamples >= start && audio.transport == 2 }),
+              audio.playheadSamples < end else {
+            app.stop()
+            return nil
+        }
+        let channel = audio.polySnapshot().cgb.enumerated().first {
+            $0.element.on && !$0.element.releasing && $0.element.track == 0
+                && $0.element.midiKey == 60
+        }?.offset
+        app.stop()
+        guard until({ audio.playheadSamples == 0 }) else { return nil }
+        return channel
+    }
+    guard let squareChannel = soundingChannel(first) else {
+        report.fail(id, "tab A's original square voice did not produce native CGB telemetry")
+        return
+    }
+    let dock = app.voiceListController()
+    dock.selectSlot(slot: 0)
+    dock.editorModel().changeType(macro: Int(BankVoiceMacro.noise), symbol: "")
+    guard until({ first.bankSlots.first?.voice?.macro == BankVoiceMacro.noise },
+                seconds: 15) else {
+        report.fail(id, "mounted voicegroup type edit did not commit on tab A")
+        return
+    }
+    guard peer.bankSlots.first?.voice?.macro == BankVoiceMacro.noise && peer.bankDirty else {
+        report.fail(id, "tab B did not adopt the mounted editor's dirty Noise voice")
+        return
+    }
+    app.songTabs.selectTab(tabId: b)
+    guard app.selectedDocument === peer else {
+        report.fail(id, "tab B did not activate after the mounted edit")
+        return
+    }
+    guard let noiseChannel = soundingChannel(peer) else {
+        report.fail(id, "tab B's edited noise voice did not produce native CGB telemetry")
+        return
+    }
+    report.expect(squareChannel == 0 && noiseChannel == 3, cppID: id,
+                  message: "mounted voicegroup edit reaches the peer tab's audio "
+                      + "as Sq1 then Noise native channels (\(squareChannel) -> \(noiseChannel))")
+}
+
+@MainActor
 internal func bankReleaseBoundsAndSharedBank(report: CheckReport, session: DocumentSession,
                                              service: ProjectService) {
     // Case-level UI/benchmark rows are ledger exclusions; retain only

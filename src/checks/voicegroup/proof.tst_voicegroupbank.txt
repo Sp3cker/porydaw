@@ -18,6 +18,22 @@ Result: controller-observed 2026-09-24 for this tree — verify: 1/49 ok, no fai
 Command: deno task verify --verbose
 Result: controller-observed 2026-09-24 for this tree — verify: 49/49 ok (full unfiltered gate).
 
+Note: task-37 VG05 ledger pass (shared-bank two-tab journey). Rows adjudicated
+individually, none moved. A001/A003/A014/A015/A017/A022 keep PARTIAL: the SongName and
+fixture-copy ingress guards have no Swift value predicate (Swift derives labels through
+store.songMeta and creates no SongName), and the mounted journey does not observe them.
+A019-A021 keep MATCHED: the executed lease-reuse predicate still covers them — the
+initial load and reload inside bankFixture/bankLeaseIsReusedAcrossSharedVoicegroup (a
+failed load throws out of bankCase) and runBankLeasesSuite's "shared voicegroup did not
+reuse the original bank and identity" for the repeated and shared bank identity. A019's
+non-null guard has no distinct message-anchored predicate of its own, and the
+lease-reuse message literal covers A020's reload success and A021's identity equality at
+once, so a message-anchored re-index would put one boolean under two ids; that ambiguity
+is reported rather than papered over. No disposition, sequence or expression changed.
+
+Command: deno task proof check --executed
+Result: PASS for this ledger pass — 0 errors, 0 not-executed entries in this file.
+
 A001 | VoicegroupBankTest::init | src/checks/voicegroup/tst_voicegroupbank.cpp:78
 Disposition: PARTIAL
 Mapping/reason: Related predicates S001 and S002 (src/checks/projectstore/BankLeasesChecks.swift and :53 bankFixture). The Swift fixture requires CheckEnvironment.fixtureRoot and the staged sound/voicegroups/fixture_rich.inc and copies the staged root into an isolated temporary scratch before opening it; unproved: no value predicate for the copy result itself (a failed copy fails the row) and the copy target is a scratch directory rather than the staged root.

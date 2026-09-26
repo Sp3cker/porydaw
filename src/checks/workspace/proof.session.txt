@@ -13,16 +13,36 @@ Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
 QML counterpart: src/checks/editorqml/tst_ShellWindow.qml (window-title rows A002/A005, S186-S188)
+QML counterpart: src/checks/editorqml/tst_ShellTabs.qml (mounted two-tab shared-bank journey S194-S200, shell-tabs lane)
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
 Shared SHA-256: 79d2a5010d685bd2a2ec6547db1c7430319c5006b18827f97fed1d49239ac306
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
+Note: task 37 (VG05 shared-bank two-tab journey) registers three accepted Swift/fork
+divergences. They are not repair targets and no row here is MATCHED on them.
+(1) Caption stars: Swift stars a tab on bank dirt (SongTabSession.isDirty =
+document.isDirty || bankDirty, src/swift/app/SongTabsController.swift:63-66 displayed by
+the strip at src/ui/songview/quick/swiftroll/SongTabs.qml:185-187) where the fork stars
+tab captions on document dirt only (workspaceui_tabs.cpp:150-161 refreshTabTitle); S194
+records the Swift behavior, and no fork row in this ledger asserts the fork caption law.
+(2) Bank-only close prompt: Swift's per-tab gate asks on bank-only dirt where the fork
+closes a document-clean tab immediately (workspaceui_tabs.cpp:485-500 requestCloseTab,
+"Known limitation: users must save bank-only edits before closing the tab"); S196 records
+the Swift gate. (3) Queued editor commit: Swift drops a queued commit whose origin tab
+loses selection (src/swift/app/voicelist/VoiceEditorController.swift:79,99
+isCurrentEditOrigin guards) where the fork keeps the pending transition bound to its origin
+tab and resolves it through that tab's history; that fork law is the GAP recorded at
+src/checks/voicegroup/proof.tst_voicegroupviewcache.txt A047/A068.
+
 Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run.
+
+Command: deno task proof check --executed
+Result: PASS — 185 proof files, 9306 anchors resolved, 0 errors, the same 10 pre-existing not-executed entries as before this pass. S189-S193 classify executed from build/proof-evidence/swiftcore-bankhistory.json and S194-S200 from build/proof-evidence/shell-tabs.json (task-37 lane runs; this ledger pass re-ran only the proof reader, no lane, build or formatter).
 
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS for the shellwindow lane (1/1) on the task-24 settled sources; implementer-run per the task-24 handoff, not re-run by the ledger agent. The same handoff records the full shell sweep failing the typography static-title pin (deleted by task 24; focused rerun green) and shell-chrome-visuals (controller-owned scope).
@@ -956,3 +976,39 @@ Anchor: message "the empty shell names the application"
 
 S188 | test_zWindowTitleAndStatusMeter (shellwindow lane) | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "the selected song and project appear in the window title; actual="
+
+S189 | twoOpenSessionsShareBankEdit | src/checks/workspace/bank_sharing.swift
+Anchor: message "already-open peer sees the edited voice without reopening"
+
+S190 | twoOpenSessionsShareBankEdit | src/checks/workspace/bank_sharing.swift
+Anchor: message "already-open peer sees the dirty bank"
+
+S191 | twoOpenSessionsShareBankEdit | src/checks/workspace/bank_sharing.swift
+Anchor: message "late subscriber catches up to the latest bank view"
+
+S192 | bankBackgroundEditReachesSelectedAudio | src/checks/workspace/bank_sharing.swift
+Anchor: message "selected workspace sounds Sq1 then Noise native channels "
+
+S193 | mountedEditReachesPeerTabAudio | src/checks/workspace/bank_sharing.swift
+Anchor: message "mounted voicegroup edit reaches the peer tab's audio "
+
+S194 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "mounted edit stars both shared-bank captions and the window"
+
+S195 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "tab B's dock rebind displays the peer's edited bank"
+
+S196 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "bank-only dirty tab B raises its own close gate"
+
+S197 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "Discard closes tab B but leaves tab A's shared bank dirty"
+
+S198 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "peer Save closes tab B and clears tab A's shared dirty caption"
+
+S199 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopened tab B adopts the unwritten shared voice and dirty star"
+
+S200 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the close walk asks the shared bank once after both tabs"

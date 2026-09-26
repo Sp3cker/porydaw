@@ -105,6 +105,7 @@ internal func runBankHistorySuite(_ report: CheckReport) {
     bankBindingIdentityIsolation(report: report, fixtureRoot: fixtureRoot)
     bankSharedFailedSaveAndStaleReceipt(report: report, fixtureRoot: fixtureRoot)
     bankBackgroundEditReachesSelectedAudio(report: report, fixtureRoot: fixtureRoot)
+    mountedEditReachesPeerTabAudio(report: report, fixtureRoot: fixtureRoot)
     releaseEditorBankHistorySemantics(report, fixtureRoot: fixtureRoot)
     bankSaveMergeBoundaryParity(report: report, fixtureRoot: fixtureRoot)
     bankSwitchingParity(report: report, fixtureRoot: fixtureRoot)
