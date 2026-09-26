@@ -22,7 +22,7 @@ Item {
                 return false
             if (focus === root)
                 return false
-            if (focus.activeFocusOnTab || focus.modal || focus.text !== undefined)
+            if (focus.modal || focus.displayText !== undefined)
                 return true
             focus = focus.parent
         }

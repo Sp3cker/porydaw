@@ -594,8 +594,16 @@ ThemedWindow {
             active: shell.sceneActive
             focus: true
             onActiveFocusChanged: {
-                if (item && !activeFocus)
-                    shell.session.cancelGridInput(0)
+                if (!item || activeFocus)
+                    return
+                let focus = root.activeFocusItem
+                while (focus) {
+                    if (focus.objectName === "drawerModalLayer"
+                            && focus.parent === root.contentItem && focus.visible)
+                        return
+                    focus = focus.parent
+                }
+                shell.session.cancelGridInput(0)
             }
             sourceComponent: SongTabs {
                 objectName: "shellSongTabs"

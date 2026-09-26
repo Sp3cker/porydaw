@@ -12,6 +12,11 @@ Scope: numericPromptOwnsKeys and velocityPromptOwnsKeys. Other historical text-s
 Production Swift: drawerOriginalNumericPromptTransaction reuses the original CC10 rows48=32,96=64, inserted prompt144 with initial64 and selected note24/key60/duration24/velocity100. It checks draft12, no document mutation, preserved selection, and cancellation, plus the row-stack lane presence, inserted-note ID resolution, the windowtier_keyboard volume-lane insertion prompt at tick5808 value48 and the windowtier_lifetime pan-lane insertion prompt at tick5760 value64 with document-switch cancellation and late-acceptance no-op. The original selected-note velocity prompt remains PARTIAL: its fixture lacks the parsed voice/program needed by the production prompt, so it must not be claimed through an unrelated synthetic fixture. Actual keyboard delivery, clipboard, focus, modal close and window routing require production host verification, not a fake Swift keyboard model.
 
 Swift verification: deno task verify --filter swiftcore PASS (1 selected harness, 23 skipped). This runs drawerOriginalNumericPromptTransaction including the numeric-lane and document-switch predicates. Native keyboard delivery still requires the production host.
+Command: deno task verify:shell --filter shellwindow --verbose (implementer-observed, 50a)
+Result: PASS; build ok (1.33 s); ok shellwindow (11.06 s); 1/26 selected. That run executes
+the mounted automation label/plot/prompt predicates S033-S047 through the shellwindow entry of
+ShellQmlTests.swift (src/checks/editorqml/ShellQmlTests.swift).
+
 
 Original 272
 Disposition: PARTIAL
@@ -19,60 +24,60 @@ Mapping: No Swift predicate: the binding registry (keymap::Registry::singleStrok
 QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings")
 
 Original 284
-Disposition: PARTIAL
-Mapping: No Swift predicate: the QML Quick window and the timelineAutomationInput item are native surfaces the model check does not mount.
+Disposition: MATCHED
+Mapping: S033, S035
 QVERIFY2(quickWindow && automation, "the automation canvas surface is unavailable")
 
 Original 289
-Disposition: PARTIAL
-Mapping: No Swift predicate: AutomationProbe locates the parameter through the QML input item's geometry; no model counterpart exists.
+Disposition: MATCHED
+Mapping: S034
 QVERIFY2(probe.has_value(), qUtf8Printable(coordinateDiagnostics))
 
 Original 290
-Disposition: PARTIAL
-Mapping: No Swift predicate: the probe activates through the native QML input item; the page's activateParameter route is exercised by the fixture but does not prove the native activation path.
+Disposition: MATCHED
+Mapping: S034, S036
 QVERIFY2(probe->activateParameter(&coordinateDiagnostics),
              qUtf8Printable(coordinateDiagnostics))
 
 Original 295
-Disposition: PARTIAL
-Mapping: No Swift predicate: the QML AutomationCanvas object is a native surface; the Swift AutomationPage is the model counterpart, not the canvas itself.
+Disposition: MATCHED
+Mapping: S035
 QVERIFY(canvas)
 
 Original 304
 Disposition: MATCHED
-
+Mapping: S009
 Original 309
 Disposition: MATCHED
-
+Mapping: S001, S010
 Original 322
 Disposition: MATCHED
-
+Mapping: S002
 Original 323
-Disposition: PARTIAL
-Mapping: Related predicates S002, S006 (prompt open/closed model flags); unproved: QML chrome prompt visibility, which the model flag does not observe.
+Disposition: MATCHED
+Mapping: S037
 QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
 
 Original 325
-Disposition: PARTIAL
-Mapping: No Swift predicate: active-focus routing to the QML text input is a native window observation.
+Disposition: MATCHED
+Mapping: S037
 QTRY_VERIFY2((prompt = automation_valueprompt::focusedTextInput(*quickWindow)),
                  "the value prompt did not take active focus")
 
 Original 332
 Disposition: PARTIAL
-Mapping: Related predicate S003 (the prompt retains draft "12"); unproved: native digit key delivery into the focused QML field versus updatePromptDraft.
+Mapping: Related predicate S047 (:1472) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt opens with its drafted Volume value. Unproved: native digit key delivery into the focused QML field (the mounted lane never types digits — it drafts from the production insert path, then Select All/Copy/Delete/Paste) and the exact fixture draft "12".
 QVERIFY2(prompt && prompt->property("text").toString() == QStringLiteral("12"),
              "the delivered digits did not land in the value prompt")
 
 Original 339
-Disposition: PARTIAL
-Mapping: No Swift predicate: QMetaObject selectAll on the QML field has no model counterpart.
+Disposition: MATCHED
+Mapping: S038
 QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
 
 Original 345
 Disposition: PARTIAL
-Mapping: No Swift predicate: native Copy-key delivery, the QML selectedText property, and the system clipboard are native observations.
+Mapping: Related predicates S039 (:1476, S040 (:1477) and S041 (:1478) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted field keeps its whole selection through the Copy key, the window Copy shortcut never activates, and no song clip is published. Unproved: the system clipboard text bytes (the mounted probe reads the song clip only) and the exact fixture text "12".
 QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
                  copiedText == copiedFrom,
              qPrintable(QStringLiteral("numeric Copy mismatch: field='%1' selected='%2' "
@@ -81,30 +86,30 @@ QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
 
 Original 357
 Disposition: PARTIAL
-Mapping: Related predicate S006 (prompt open state); unproved: prompt visibility after native Up/Down key delivery.
+Mapping: Related predicates S037 (:1470) and S044 (:1483) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt keeps its focus and visibility through the text keys it does receive. Unproved: native Up/Down arrow delivery into the prompt field (the mounted lane delivers Down/Return to the automation menu and Delete/Escape to the prompt, never arrows to the field).
 QVERIFY2(automation_valueprompt::promptVisible(chrome),
              "the value prompt closed while arrow keys were delivered")
 
 Original 359
 Disposition: PARTIAL
-Mapping: Related predicate S005 (selection preserved); unproved: note selection after native arrow-key delivery to the focused prompt.
+Mapping: Related predicate S044 (:1483) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt journey leaves the full grid note summary unchanged across its text keys. Unproved: the note selection after native arrow-key delivery into the focused prompt field (the mounted lane delivers no arrows to the field).
 QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
              "prompt arrow keys leaked into the note selection")
 
 Original 361
 Disposition: PARTIAL
-Mapping: Related predicates S004, S007 (snapshot unchanged); unproved: song bytes after native arrow-key delivery leaking shared edit commands.
+Mapping: Related predicate S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): Escape never commits a document write from the mounted prompt. Unproved: the song bytes after native arrow-key delivery into the prompt field (the mounted no-write evidence is the applied-revision text for Delete and Escape, not arrows).
 QVERIFY2(document.smf().write() == before,
              "prompt arrow keys leaked a shared edit command into the song")
 
 Original 368
-Disposition: PARTIAL
-Mapping: No Swift predicate: QMetaObject selectAll on the QML field has no model counterpart.
+Disposition: MATCHED
+Mapping: S038
 QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
 
 Original 380
 Disposition: PARTIAL
-Mapping: Related predicate S003 (draft text); unproved: field text after native Solo-key delivery through the QML validator contract.
+Mapping: Related predicates S042 (:1480) and S043 (:1482) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt's own Delete and Paste deliveries clear and restore the numeric draft (S044 bounds the surrounding staged state). Unproved: native Solo-key delivery into the field through the QML validator contract and the exact post-Solo text.
 QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
              qPrintable(QStringLiteral("numeric Solo-key contract mismatch: expected='%1' "
                                        "actual='%2'")
@@ -113,7 +118,7 @@ QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
 
 Original 385
 Disposition: PARTIAL
-Mapping: No Swift predicate: the window action counter (m_counts.solo) and view track-solo state after native Solo delivery are native routing observations.
+Mapping: Related predicates S040 (:1477) and S041 (:1478) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted lane proves a window command never activates while the prompt owns its text keys (the Copy case). Unproved: the Solo-in-field case — no mounted predicate delivers S to the focused prompt field, and no predicate reads a track-solo or window-action state.
 QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
              qPrintable(QStringLiteral("Solo escaped the value prompt: action-delta=%1 "
                                        "track-soloed=%2")
@@ -122,18 +127,18 @@ QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
 
 Original 390
 Disposition: PARTIAL
-Mapping: Related predicates S004, S007 (snapshot unchanged); unproved: song bytes after native Solo-key delivery.
+Mapping: Related predicates S044 (:1483) and S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): the mounted prompt text keys leave the staged note state and the applied revision unchanged. Unproved: byte-level song identity — no mounted predicate compares the SMF bytes.
 QVERIFY2(document.smf().write() == before,
              "value prompt typing mutated the automation lane or the song")
 
 Original 396
-Disposition: PARTIAL
-Mapping: Related predicate S006 (prompt closed); unproved: prompt visibility after native Escape delivery.
+Disposition: MATCHED
+Mapping: S045
 QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 Original 397
 Disposition: PARTIAL
-Mapping: Related predicates S007, S008 (cancel leaves snapshot and song unchanged); unproved: song bytes after native Escape delivery.
+Mapping: Related predicate S046 (:1486) in src/checks/editorqml/tst_ShellWindow.qml (test_mLabelCommandsAndPromptTextOwnership): Escape never commits a document write from the mounted prompt. Unproved: byte-level song identity — the mounted predicate pins the applied-revision text and the staged note state, not the SMF bytes.
 QVERIFY2(document.smf().write() == before, "cancelling the value prompt mutated the song")
 
 Original 399
@@ -390,3 +395,48 @@ Anchor: message "native Copy is registered as a window shortcut"
 
 S032 | setVelocityCommand | src/checks/editorqml/ShellQmlTests.swift
 Anchor: function
+S033 | test_mLabelCommandsAndPromptTextOwnership automation page | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the automation page mounts"
+
+S034 | test_mLabelCommandsAndPromptTextOwnership parameter label | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the real parameter label is available"
+
+S035 | test_mLabelCommandsAndPromptTextOwnership mounted plot | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the real plot is mounted to open the value prompt"
+
+S036 | test_nLabelTimeSelectionCommands Volume lane capture | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "window Copy over label focus captures the selected Volume lane; bytes="
+
+S037 | test_mLabelCommandsAndPromptTextOwnership prompt focus | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the mounted prompt owns focus in its real numeric field"
+
+S038 | test_mLabelCommandsAndPromptTextOwnership prompt Select All | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Select All selects the drafted text"
+
+S039 | test_mLabelCommandsAndPromptTextOwnership prompt Copy keeps the selection | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Copy leaves the draft selected"
+
+S040 | test_mLabelCommandsAndPromptTextOwnership prompt Copy window action | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Copy never activates the window Copy shortcut"
+
+S041 | test_mLabelCommandsAndPromptTextOwnership prompt Copy clip | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Copy never publishes a song clip"
+
+S042 | test_mLabelCommandsAndPromptTextOwnership prompt Delete draft | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Delete clears only the numeric draft"
+
+S043 | test_mLabelCommandsAndPromptTextOwnership prompt Paste draft | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt Paste restores the copied numeric draft"
+
+S044 | test_mLabelCommandsAndPromptTextOwnership prompt staged note state | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "prompt text keys preserve the staged note state"
+
+S045 | test_mLabelCommandsAndPromptTextOwnership prompt Escape | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape closes the prompt without a write"
+
+S046 | test_mLabelCommandsAndPromptTextOwnership prompt Escape no write | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "Escape never commits a document write"
+
+S047 | test_mLabelCommandsAndPromptTextOwnership prompt draft value | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the prompt opens with its drafted Volume value"
+

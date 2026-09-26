@@ -18,6 +18,7 @@ TestCase {
     readonly property var settings: bootstrap.preferences
 
     ShellQmlBootstrap { id: bootstrap }
+    GridInputClipProbe { id: clipProbe }
     SignalSpy { id: copyActivatedSpy; signalName: "activated" }
     SignalSpy { id: soloActivatedSpy; signalName: "activated" }
 
@@ -1248,16 +1249,19 @@ TestCase {
         tryCompare(secondLabel, "checked", true, 3000,
                    "Return activates the focused second label")
         compare(firstLabel.checked, false, "Return retargets activation exactly once")
+        var secondActivationChanges = 0
+        firstLabel.checkedChanged.connect(function() { ++secondActivationChanges })
+        secondLabel.checkedChanged.connect(function() { ++secondActivationChanges })
+        keyClick(Qt.Key_Return)
+        compare(secondActivationChanges, 0, "a second activation never stacks")
         compare(session.documentDirty, false, "label Return never edits the song")
         compare(grid.noteSummary, notesBefore, "label Return never moves the selection")
         compare(grid.editCursorTick, cursorBefore, "label Return never moves the cursor")
-        keyClick(Qt.Key_Up)
-        compare(secondLabel.checked, true, "Up never retargets the active label")
-        compare(session.documentDirty, false, "Up on a label never edits the song")
-        compare(grid.noteSummary, notesBefore, "Up on a label never moves the selection")
         tapButton.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(tapButton, "activeFocus", true, 3000,
                    "the tempo Tap button takes keyboard focus")
+        var revisionBeforeTap = grid.appliedRevisionText
+        var undoBeforeTap = session.canUndo
         keyClick(Qt.Key_Enter)
         tryCompare(model, "tapTempoTapCount", 1, 3000,
                    "Enter on the focused Tap button registers exactly one tap")
@@ -1268,6 +1272,9 @@ TestCase {
         var draft = findChild(page, "automationTempoTapDraft")
         verify(draft && draft.visible, "the two-tap session shows the draft readout")
         verify(draft.text.indexOf("BPM") >= 0, "the two-tap draft names a tempo")
+        verify(grid.appliedRevisionText === revisionBeforeTap && session.canUndo === undoBeforeTap,
+               "tap keys never change the revision or undo availability")
+        compare(secondLabel.checked, true, "Return never retargets the active parameter")
         compare(session.documentDirty, false, "tap keys never edit the song")
         compare(grid.noteSummary, notesBefore, "tap keys never move the selection")
         keyClick(Qt.Key_Return, Qt.ShiftModifier)
@@ -1278,12 +1285,297 @@ TestCase {
         compare(model.tapTempoTapCount, 2, "transport Space never taps")
         compare(session.documentDirty, false, "tap Space never edits the song")
         compare(grid.noteSummary, notesBefore, "tap Space never moves the selection")
+        verify(grid.appliedRevisionText === revisionBeforeTap && session.canUndo === undoBeforeTap,
+               "tap Space never changes the revision or undo availability")
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
                    "the second tap Space stops transport")
         model.resetTapTempo()
         compare(model.tapTempoTapCount, 0, "resetTapTempo drops the draft")
     }
+
+    function test_lChromeArrowsAndUnknownKey() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var session = shell.shellPresenter.session
+        var grid = surface.gridModel
+        selectDrawnVelocityNote(surface)
+        var selected = JSON.parse(grid.noteSummary).find(function(item) { return item.selected })
+        verify(selected, "the real roll click selects a note")
+        function note() {
+            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === selected.id })
+        }
+        var drawer = findChild(surface, "editorDrawer")
+        var grip = findChild(drawer, "drawerHandle_automation")
+        var toggle = findChild(drawer, "drawerToggle_automation")
+        verify(grip && toggle && toggle.visible, "the automation section exposes its focused chrome")
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        tryCompare(surface.drawerPresenter.automationSection, "visible", true, 3000)
+        var section = surface.drawerPresenter.automationSection
+        grip.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(grip, "activeFocus", true, 3000)
+        var beforeHeight = section.bodyHeight
+        var beforeNote = note()
+        var beforeRevision = grid.appliedRevisionText
+        var beforeSummary = grid.noteSummary
+        var beforeUndo = session.canUndo
+        keyClick(Qt.Key_F24)
+        verify(section.bodyHeight === beforeHeight && grid.noteSummary === beforeSummary
+               && grid.appliedRevisionText === beforeRevision && session.canUndo === beforeUndo,
+               "an unrecognized key changes nothing")
+        keyClick(Qt.Key_Up)
+        compare(section.bodyHeight, beforeHeight + shell.chromeSpacing.two,
+                "the automation grip grows by one step on Up")
+        keyClick(Qt.Key_Down)
+        compare(section.bodyHeight, beforeHeight, "grip Down restores the automation height")
+        keyClick(Qt.Key_Left)
+        keyClick(Qt.Key_Right)
+        compare(section.bodyHeight, beforeHeight,
+                "cross-axis grip arrows never resize the automation section")
+        compare(grid.appliedRevisionText, beforeRevision,
+                "grip arrows never trigger window actions")
+        verify(note().tick === beforeNote.tick && note().pitch === beforeNote.pitch,
+               "the automation grip keeps the selected note unchanged")
+
+        toggle.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(toggle, "activeFocus", true, 3000)
+        var snap = grid.snapTicks
+        keyClick(Qt.Key_Right)
+        verify(note().tick === selected.tick + snap && note().pitch === selected.pitch,
+               "toggle arrows route to the selected note by one grid step")
+        keyClick(Qt.Key_Up)
+        verify(note().tick === selected.tick + snap && note().pitch === selected.pitch + 1,
+               "toggle Up transposes the selected note")
+        var beforeActivation = note()
+        keyClick(Qt.Key_Enter)
+        tryCompare(section, "visible", false, 3000,
+                   "Enter toggles the focused drawer section")
+        toggle.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(toggle, "activeFocus", true, 3000)
+        keyClick(Qt.Key_Return)
+        tryCompare(section, "visible", true, 3000,
+                   "Return restores the focused drawer section")
+        verify(note().tick === beforeActivation.tick && note().pitch === beforeActivation.pitch,
+               "toggle activation keys never mutate the selected note")
+    }
+    function test_mLabelCommandsAndPromptTextOwnership() {
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        selectDrawnVelocityNote(surface)
+        var selected = JSON.parse(grid.noteSummary).find(function(item) { return item.selected })
+        verify(selected, "the mounted roll provides a selected note")
+        function note() {
+            return JSON.parse(grid.noteSummary).find(function(item) { return item.id === selected.id })
+        }
+        var toggle = findChild(surface, "drawerToggle_automation")
+        if (!surface.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the automation page mounts")
+        var model = page.pageModel
+        var volumeTab = null
+        for (var index = 0; index < model.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.text === "Volume") {
+                volumeTab = candidate
+                break
+            }
+        }
+        verify(volumeTab && volumeTab.enabled, "the real parameter label is available")
+        var tabPress = findChild(volumeTab, "automationParameterTabPress" + volumeTab.model.index)
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
+        tryCompare(volumeTab, "checked", true, 3000)
+        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(volumeTab, "activeFocus", true, 3000)
+        var shortcut = windowShortcut("shellShortcut_roll.copy")
+        verify(shortcut, "the window Copy shortcut is mounted")
+        copyActivatedSpy.target = shortcut
+        copyActivatedSpy.clear()
+        keySequence(StandardKey.Copy)
+        compare(copyActivatedSpy.count, 1,
+                "window Copy over a focused parameter label captures the selected note")
+        compare(JSON.parse(clipProbe.readClipJson()).tracks[0].notes[0].key, selected.pitch,
+                "window Copy over label focus preserves the selected note")
+        var original = note()
+        keyClick(Qt.Key_Right)
+        verify(note().tick === original.tick + grid.snapTicks
+               && note().pitch === original.pitch,
+               "label-focus arrows advance the selected note one grid step")
+        keyClick(Qt.Key_Up)
+        verify(note().tick === original.tick + grid.snapTicks
+               && note().pitch === original.pitch + 1,
+               "label-focus Up transposes the selected note")
+        compare(volumeTab.checked, true, "the active parameter survives label-focus commands")
+
+        var notesBefore = grid.noteSummary
+        var revisionBefore = grid.appliedRevisionText
+        var plot = findChild(page, "automationPlotInput")
+        tryVerify(function() { return plot && plot.width > 0 && plot.height > 0 }, 3000,
+                  "the real plot is mounted to open the value prompt")
+        var row = plot.height / 2
+        mousePress(plot, plot.width / 4, row, Qt.LeftButton)
+        mouseMove(plot, plot.width / 3, row, -1, Qt.LeftButton)
+        mouseMove(plot, plot.width / 2, row, -1, Qt.LeftButton)
+        mouseRelease(plot, plot.width / 2, row, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return model.nodeCount > 1 && grid.appliedRevisionText !== revisionBefore
+        }, 3000), "the pointer sweep commits a written Volume point before the menu press")
+        mousePress(plot, plot.width / 5, row, Qt.RightButton)
+        mouseMove(plot, plot.width * 3 / 5, row, -1, Qt.RightButton)
+        mouseRelease(plot, plot.width * 3 / 5, row, Qt.RightButton)
+        var insertTime = findChild(shell, "shellAction_edit.insert_time")
+        tryCompare(insertTime, "enabled", true, 3000,
+                   "the point prompt starts with a selected Volume time range")
+        var node = null
+        function findWritten(item) {
+            if (item.objectName === "automationNode" && item.model
+                    && item.model.tick > 0 && !item.model.phantom && !item.model.projected) {
+                node = item
+                return
+            }
+            for (var child = 0; child < item.children.length && !node; ++child)
+                findWritten(item.children[child])
+        }
+        findWritten(page)
+        verify(node, "a written node has a drawn point-menu target")
+        notesBefore = grid.noteSummary
+        revisionBefore = grid.appliedRevisionText
+        var fill = findChild(node, "automationNodeFill")
+        verify(fill && fill.visible, "the written node exposes its rendered hit target")
+        var point = fill.mapToItem(plot, fill.width / 2, fill.height / 2)
+        mouseClick(plot, point.x, point.y, Qt.RightButton)
+        tryCompare(model, "menuOpen", true, 3000,
+                   "the real node press publishes its Set Value menu")
+        var menu = page.menu
+        verify(waitForNative(function() {
+            return menu && menu.showing && model.menuOpen
+        }, 3000), "the node opens the real automation point menu")
+        var menuPanel = findChild(menu, "automationMenuPanel")
+        tryVerify(function() { return menuPanel && menuPanel.rowItem(0) }, 3000,
+                  "the mounted menu realizes its Set Value row")
+        keyClick(Qt.Key_Down)
+        tryVerify(function() { return menu.currentActionId() === 1 }, 3000,
+                  "the menu keyboard selects its enabled Set Value action")
+        keyClick(Qt.Key_Return)
+        var prompt = null
+        var field = null
+        verify(waitForNative(function() {
+            prompt = page.prompt
+            field = prompt ? findChild(prompt, "automationPromptInput") : null
+            return prompt && prompt.showing && field && field.activeFocus
+        }, 3000), "the mounted prompt owns focus in its real numeric field")
+        var originalDraft = field.text
+        verify(originalDraft.length > 0, "the prompt opens with its drafted Volume value")
+        keySequence(StandardKey.SelectAll)
+        compare(field.selectedText, originalDraft, "prompt Select All selects the drafted text")
+        keySequence(StandardKey.Copy)
+        compare(field.selectedText, originalDraft, "prompt Copy leaves the draft selected")
+        compare(copyActivatedSpy.count, 1, "prompt Copy never activates the window Copy shortcut")
+        compare(clipProbe.readClipJson(), "", "prompt Copy never publishes a song clip")
+        keyClick(Qt.Key_Delete)
+        compare(field.text, "", "prompt Delete clears only the numeric draft")
+        keySequence(StandardKey.Paste)
+        compare(field.text, originalDraft, "prompt Paste restores the copied numeric draft")
+        compare(grid.noteSummary, notesBefore, "prompt text keys preserve the staged note state")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "promptOpen", false, 3000, "Escape closes the prompt without a write")
+        compare(grid.appliedRevisionText, revisionBefore, "Escape never commits a document write")
+        compare(grid.noteSummary, notesBefore, "Escape keeps the staged note state unchanged")
+        compare(insertTime.enabled, true, "Escape keeps the selected time range unchanged")
+    }
+
+    function test_nLabelTimeSelectionCommands() {
+        settings.setString("windowState", "")
+        settings.setString("windowGeometry", "")
+        openTwoSongShell()
+        var surface = selectedSurface()
+        var grid = surface.gridModel
+        var toggle = findChild(surface, "drawerToggle_automation")
+        if (!surface.drawerPresenter.automationSection.visible)
+            mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        var page = null
+        tryVerify(function() {
+            page = findChild(surface, "automationPage")
+            return page && page.visible && page.height > 0
+        }, 3000, "the automation page mounts for the time selection")
+        var volumeTab = null
+        for (var index = 0; index < page.pageModel.tabCount; ++index) {
+            var candidate = findChild(page, "automationParameterTab" + index)
+            if (candidate && candidate.text === "Volume") {
+                volumeTab = candidate
+                break
+            }
+        }
+        verify(volumeTab && volumeTab.enabled, "the Volume label is available")
+        var tabPress = findChild(volumeTab, "automationParameterTabPress" + volumeTab.model.index)
+        mouseClick(tabPress, tabPress.width / 2, tabPress.height / 2)
+        tryCompare(volumeTab, "checked", true, 3000)
+        var plot = findChild(page, "automationPlotInput")
+        tryVerify(function() {
+            return plot && plot.width > 0 && plot.height > 0
+        }, 3000, "the mounted plot can stage a range by pointer; shell="
+                 + shell.width + "x" + shell.height + "; surface="
+                 + surface.width + "x" + surface.height
+                 + "; page=" + page.width + "x" + page.height + "; plot="
+                 + (plot ? plot.width + "x" + plot.height : "missing")
+                 + "; modelPlot=" + page.plotWidth
+                 + "; sectionVisible=" + surface.drawerPresenter.automationSection.visible
+                 + "; debugger=" + shell.shellPresenter.polyphonyVisible
+                 + "; dock=" + shell.shellPresenter.dockColumnWidth)
+        var row = plot.height / 2
+        mousePress(plot, plot.width / 4, row, Qt.LeftButton)
+        mouseMove(plot, plot.width / 3, row, -1, Qt.LeftButton)
+        mouseMove(plot, plot.width / 2, row, -1, Qt.LeftButton)
+        mouseRelease(plot, plot.width / 2, row, Qt.LeftButton)
+        tryVerify(function() { return page.pageModel.nodeCount > 1 }, 3000,
+                  "a real plot sweep writes Volume events")
+        var beforeCount = page.pageModel.nodeCount
+        var beforeNotes = grid.noteSummary
+        var revisionBeforeSelection = grid.appliedRevisionText
+        mousePress(plot, plot.width / 5, row, Qt.RightButton)
+        mouseMove(plot, plot.width * 3 / 5, row, -1, Qt.RightButton)
+        mouseRelease(plot, plot.width * 3 / 5, row, Qt.RightButton)
+        var insertTime = findChild(shell, "shellAction_edit.insert_time")
+        tryCompare(insertTime, "enabled", true, 3000, "the right-band selects Volume time")
+        compare(grid.appliedRevisionText, revisionBeforeSelection,
+                "the right-band alone never writes a lane")
+        volumeTab.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(volumeTab, "activeFocus", true, 3000)
+        var shortcut = windowShortcut("shellShortcut_roll.copy")
+        copyActivatedSpy.target = shortcut
+        copyActivatedSpy.clear()
+        keySequence(StandardKey.Copy)
+        var copied = JSON.parse(clipProbe.readClipJson())
+        verify(copyActivatedSpy.count === 1 && copied.lanes.length === 1
+               && copied.lanes[0].cc === 7 && copied.lanes[0].points.length > 0,
+               "window Copy over label focus captures the selected Volume lane; bytes="
+               + clipProbe.readClipJson() + "; activations=" + copyActivatedSpy.count)
+        compare(grid.appliedRevisionText, revisionBeforeSelection,
+                "window Copy over label focus never writes the document")
+        keyClick(Qt.Key_Delete)
+        verify(page.pageModel.nodeCount < beforeCount,
+               "Delete over label focus removes the selected Volume points")
+        compare(grid.noteSummary, beforeNotes, "Volume range Delete preserves the notes")
+        compare(insertTime.enabled, true, "Delete keeps the selected time range")
+        keySequence(StandardKey.SelectAll)
+        compare(insertTime.enabled, false, "Select All over label focus clears the time range")
+        var activeNotes = JSON.parse(grid.noteSummary).filter(function(note) {
+            return note.track === grid.trackIndex && !note.ghost
+        })
+        verify(activeNotes.length > 0 && activeNotes.every(function(note) { return note.selected }),
+               "Select All over label focus selects the active track's notes")
+        grid.setEditCursorTick(7680)
+        keySequence(StandardKey.Paste)
+        tryVerify(function() {
+            return page.pageModel.nodeCount > 0 && grid.editCursorTick > 7680
+        }, 3000, "Paste over label focus writes the copied Volume lane at the edit cursor")
+    }
+
+
 
     function test_yCleanSessionClosesWithoutPrompt() {
         settings.setString("lastProjectDir", "")

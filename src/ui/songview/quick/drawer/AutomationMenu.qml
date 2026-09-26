@@ -29,9 +29,9 @@ FocusScope {
         childOpen = false
         currentRow = -1
         childRow = -1
-        if (showing) {
-            forceActiveFocus(Qt.PopupFocusReason)
-        }
+        if (showing) Qt.callLater(function() {
+            if (root.showing) root.forceActiveFocus(Qt.PopupFocusReason)
+        })
         else closed()
     }
     function firstEnabled(level, start, step) {
