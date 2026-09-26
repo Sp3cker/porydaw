@@ -71,6 +71,19 @@ public final class PreferencesStore: QmlInstantiableStatus {
         }
         return fallback
     }
+    func storedBool(key: String) -> Bool? {
+        guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFBooleanGetTypeID(),
+              let number = raw as? NSNumber else { return nil }
+        return number.boolValue
+    }
+
+    func storedPositiveInt(key: String) -> Int? {
+        guard let raw = value(key), CFGetTypeID(raw as CFTypeRef) == CFNumberGetTypeID(),
+              let number = raw as? NSNumber, number.intValue > 0,
+              number.doubleValue == Double(number.intValue) else { return nil }
+        return number.intValue
+    }
+
 
     public func hasValue(key: String) -> Bool { value(key) != nil }
 

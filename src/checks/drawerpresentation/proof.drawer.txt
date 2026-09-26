@@ -50,6 +50,7 @@ Command: PORYDAW_EDITOR_QML_PHASE=container deno task verify:qml --verbose --qt 
 Result: PASS for the container drawer cases re-run. Both re-runs are lane-owner observations; this bookkeeping pass ran neither command.
 Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose (task-27 other-events band revision)
 Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations; this bookkeeping pass ran no lane. A139 maps to S113/S114 (tst_EditorDrawer.qml test_otherEventsBandMountsBetweenDrawerAndScrollbar, the revision pinned above); the other_events_band.swift predicates the swiftcore lane runs are indexed in src/checks/host/proof.tst_hostadapter.txt S017-S020 and src/checks/rollcheck/proof.keyboard.txt S085-S086.
+Task 65 note (ledger pass, no lane re-run): Task65 deleted tst_EditorDrawer.qml test_preferencesRoundTrip as obsolete (the direct presenter-to-store writer is gone; the session hub owns persistence). Its S101 anchor ("mounting writes nothing back") no longer resolves and no A row cited it, so S101 is removed with no disposition change. The successor persistence behavior is indexed in the workspace ledgers (proof.session.txt S201-S210 session hub, proof.selftest_workspace.txt S194-S199 chrome codec). This pass ran only deno task proof check variants.
 
 A001 | makeDrawerFixture | src/checks/drawerpresentation/drawer.cpp:36
 Disposition: RETIRED-REPRESENTATION
@@ -1241,9 +1242,6 @@ Anchor: message "the stored voice-changes height is restored"
 
 S100 | test_focusReturnAndPageCancellation | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "hiding the only visible section returns focus to the roll input"
-
-S101 | test_preferencesRoundTrip | src/checks/editorqml/tst_EditorDrawer.qml
-Anchor: message "mounting writes nothing back"
 
 S102 | test_parameterLabelsFitGutterAtDerivedMinimum | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the requested height is clamped to the derived minimum"

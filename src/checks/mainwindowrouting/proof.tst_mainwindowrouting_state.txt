@@ -20,18 +20,7 @@ Additional Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Additional Swift counterpart: src/checks/editcheck/DocumentTrackChecks.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-PARTIAL: the move-undo remap publication (S206) is model-level only, with SMF
-byte equality unproved; A143 and A154 stay PARTIAL on the save-lifecycle dirty
-predicates (S030, S057, S060–S063) with the Qt undo-stack dirtiness wiring
-unproved. A069–A072 and A082–A085 stay NATIVE pure-QAction pointer-identity
-rows; A087–A091 stay GAP because no explicit unbind seam exists in the Swift
-app; the session-open fixture rows A100, A121, A155 and A172 are NATIVE native
-harness obligations. A122 stays GAP (track-count guard with no Swift
-predicate); A182–A183 stay GAP (no Swift remapEngineTracks method). The
-remaining drawer, EditorViewState fanout/persistence, signal-count, byte,
-revision and snapshot rows stay GAP: cross-tab fanout plus QSettings
-persistence are not yet ported (the Swift app has no EditorViewState), and the
-single-layout drawer harness has no tab projection or key/action delivery.
+Task 65a note (application-wide drawer chrome landed; covering lanes GREEN on the frozen tree — evidence build/proof-evidence/swiftcore-projectsession.json + shellwindow.json, both newer than the cited sources): seed A007–A012 MATCHED (S213/S214 seeded session predicates + S227 chrome round-trip); fanout A015/A016/A020/A022–A024/A026 MATCHED (S215/S218/S219/S222); gating A030–A033 MATCHED (mounted S223/S224); hub A101/A102/A104/A120 MATCHED (change-notification-count ports S225/S226/S216/S217); all-hidden terminal A058 MATCHED (S203). PARTIAL: A019/A021/A025 (same-key sibling half at S222; origin-side tryCompare executes without a message anchor), A053–A055 (origin retention half at S220; sibling-tab page/height mirror unproved), A105–A107 (drawer-chrome half at S216/S221; lane members unproved), A117–A119 (value-silence half at S217; signal counts unproved), A160 (persist legs at S216/S228; sibling lane mirror and combined load-vs-live unproved). RETIRED-REPRESENTATION with fork evidence at the Reference revision: fixture guards A001/A013/A029/A037/A049/A056, QAction shortcut/objectName/context A002–A006, pointer identity/stability A069–A072/A082–A085, band-focus setter A038, focusWidget A047/A048/A061/A062/A065/A066, workspace-selection/band-focus Qt plumbing A059/A060/A063/A064. GAP kept: A014/A057 (no hide-all cross-tab journey), A017/A018/A027/A028 (no A/P active-page predicate), A034–A036 (menu re-enablement unobserved), A039/A040/A042/A043 (QAction-trigger delivery; hide-voice/velocity journeys absent), A103/A111–A114 (no hub/lane-range count predicates), A108–A110/A115/A116/A121–A154 reform (lane identity/remap; deferred to the document engine-track remap ingress), A156–A159/A161–A171 (lane-mutation fanout and doc-purity unproved), A173–A183 (rejected remap incl. A182–A183 with no Swift remapEngineTracks method), A094–A099 (no-workspace edit commands; the mounted no-workspace predicate covers drawer ids only), A087–A091 (no explicit unbind seam), A122 (track-count guard). The move-undo remap publication (S206) stays model-level with SMF byte equality unproved; A143 and A154 stay PARTIAL on the save-lifecycle dirty predicates (S030, S057, S060–S063) with the Qt undo-stack dirtiness wiring unproved.
 
 Task 46 note (fork menu surface landed; ledger re-verification only, no lane run): the mounted
 menu-topology predicates added under test_forkMenuTopologyAndLabels in
@@ -60,8 +49,8 @@ failed sibling lanes in the same run were repaired separately. Controller-run; t
 agent did not run it.
 
 A001 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:52
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
 #include "mainwindowroutingfixture.h"
 
@@ -118,8 +107,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A002 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:56
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QAction shortcut observation (m_automationDrawerAction->shortcut() == Key_A at the Reference revision); the Swift app has one shared shellAction_ set with real-key delivery proved mounted — shortcut() identity pins Qt internals.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -128,24 +117,24 @@ Original expression:
         QCOMPARE(window.m_automationDrawerAction->shortcut(), QKeySequence(Qt::Key_A))
 
 A003 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:57
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QAction shortcut observation (m_velocityDrawerAction->shortcut() == Key_V at the Reference revision); one shared shellAction_ set with real-key delivery proved mounted — shortcut() identity pins Qt internals.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_velocityDrawerAction->shortcut(), QKeySequence(Qt::Key_V))
 
 A004 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:58
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QAction shortcut observation (m_voiceChangesDrawerAction->shortcut() == Key_P at the Reference revision); one shared shellAction_ set with real-key delivery proved mounted — shortcut() identity pins Qt internals.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_voiceChangesDrawerAction->shortcut(), QKeySequence(Qt::Key_P))
 
 A005 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:59
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QAction objectName observation (voiceChangesDrawerWindowAction at the Reference revision); objectName identity pins Qt internals — key delivery is the fanout behavior matched below.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -153,8 +142,8 @@ Original expression:
                  QStringLiteral("voiceChangesDrawerWindowAction"))
 
 A006 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:63
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QAction shortcutContext observation (Qt::WindowShortcut at the Reference revision); shortcutContext pins Qt internals — delivery scope is proved by the mounted key journeys.
 Source context since previous assertion:
         for (QAction *action : {window.m_automationDrawerAction, window.m_velocityDrawerAction,
                                 window.m_voiceChangesDrawerAction})
@@ -162,56 +151,56 @@ Original expression:
             QCOMPARE(action->shortcutContext(), Qt::WindowShortcut)
 
 A007 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:64
-Disposition: GAP
-Mapping/reason: Seeded single-view drawer geometry (Velocity section visible) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
+Disposition: MATCHED
+Mapping: S213, S227
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(a.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A008 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:65
-Disposition: GAP
-Mapping/reason: Seeded single-view drawer geometry (Automations section hidden) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
+Disposition: MATCHED
+Mapping: S213, S227
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!a.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A009 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:66
-Disposition: GAP
-Mapping/reason: Seeded single-view drawer geometry (VoiceChanges section hidden) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
+Disposition: MATCHED
+Mapping: S213, S227
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!a.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A010 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:67
-Disposition: GAP
-Mapping/reason: Seeded single-view drawer geometry (Velocity active page) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights and models no MainWindow seed.
+Disposition: MATCHED
+Mapping: S213, S227
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A011 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:68
-Disposition: GAP
-Mapping/reason: Seeded single-view drawer geometry (Velocity stored height 173) under the Qt MainWindow; GAP: MainWindow seed projection with no Swift counterpart — the Swift drawer harness starts from explicit stored heights (60/50/100) and models no MainWindow seed.
+Disposition: MATCHED
+Mapping: S213, S227
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerSectionHeight(EditorDrawerPage::Velocity), 173)
 
 A012 | MainWindowRoutingStateTest::drawerSeedProjection | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:69
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping: S214
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.editorViewState().drawerState(), b.editorViewState().drawerState())
 
 A013 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:75
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
     }
 
@@ -223,7 +212,7 @@ Original expression:
 
 A014 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:82
 Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Mapping/reason: No hide-all cross-tab journey exists; the single-layout terminal is modeled by S203 (uncited: cross-tab half unproved).
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -235,16 +224,16 @@ Original expression:
         QVERIFY(!b.hasVisibleDrawerSection())
 
 A015 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:84
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S215
 Source context since previous assertion:
         sendKey(window, Qt::Key_A);
 Original expression:
         QVERIFY(a.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A016 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:85
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S215
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -252,7 +241,7 @@ Original expression:
 
 A017 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:86
 Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Mapping/reason: No automation-active-page predicate exists; nearest is the velocity-active-page predicate S218 (uncited: different page).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -260,71 +249,71 @@ Original expression:
 
 A018 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:87
 Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Mapping/reason: No automation-active-page predicate exists; nearest is the velocity-active-page predicate S218 (uncited: different page).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Automations)
 
 A019 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:89
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S222 (same A-key journey, sibling half executes anchored); unproved: origin-side hide observation — the mounted loop's origin tryCompare carries no message anchor.
 Source context since previous assertion:
         sendKey(window, Qt::Key_A);
 Original expression:
         QVERIFY(!a.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A020 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:90
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S219
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!b.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A021 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:92
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S222 (same V-key journey, sibling half executes anchored); unproved: origin-side visibility observation — the mounted loop's origin tryCompare carries no message anchor.
 Source context since previous assertion:
         sendKey(window, Qt::Key_V);
 Original expression:
         QVERIFY(a.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A022 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:93
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S222
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(b.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A023 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:94
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S218
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A024 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:95
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S218
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A025 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:97
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S222 (same P-key journey, sibling half executes anchored); unproved: origin-side visibility observation — the mounted loop's origin tryCompare carries no message anchor.
 Source context since previous assertion:
         sendKey(window, Qt::Key_P);
 Original expression:
         QVERIFY(a.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A026 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:98
-Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Disposition: MATCHED
+Mapping: S222
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -332,7 +321,7 @@ Original expression:
 
 A027 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:99
 Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Mapping/reason: No voiceChanges-active-page predicate exists; the voice mirror predicate S221 proves visibility only (uncited: page half absent).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -340,15 +329,15 @@ Original expression:
 
 A028 | MainWindowRoutingStateTest::drawerFanout | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:100
 Disposition: GAP
-Mapping/reason: MainWindow key-routing and cross-tab drawer fanout observation; GAP: the Swift drawer harness models a single layout with no tab projection and no key delivery, so no counterpart asserts this routed state.
+Mapping/reason: No voiceChanges-active-page predicate exists; the voice mirror predicate S221 proves visibility only (uncited: page half absent).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.drawerActivePage(), EditorDrawerPage::VoiceChanges)
 
 A029 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:106
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
     }
 
@@ -359,8 +348,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A030 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:110
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S223
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &b = session->b->view();
@@ -369,24 +358,24 @@ Original expression:
         QVERIFY(!window.m_automationDrawerAction->isEnabled())
 
 A031 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:111
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S223
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_velocityDrawerAction->isEnabled())
 
 A032 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:112
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping: S223
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!window.m_voiceChangesDrawerAction->isEnabled())
 
 A033 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:116
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping: S224
 Source context since previous assertion:
         const EditorViewState blocked = b.editorViewState();
         sendKey(window, Qt::Key_V);
@@ -396,7 +385,7 @@ Original expression:
 
 A034 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:118
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
 Source context since previous assertion:
         b.setEventListVisible(false);
 Original expression:
@@ -404,7 +393,7 @@ Original expression:
 
 A035 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:119
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -412,15 +401,15 @@ Original expression:
 
 A036 | MainWindowRoutingStateTest::eventListGating | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:120
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Menu re-enablement after the event list hides is unobserved; only the disable half is matched at S223 (uncited here: re-enable half absent).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(window.m_voiceChangesDrawerAction->isEnabled())
 
 A037 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:126
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
     }
 
@@ -431,8 +420,8 @@ Original expression:
         QVERIFY(session.has_value())
 
 A038 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:134
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Explicit band-focus setter verification (focusTimelineBand(VoiceChanges, MouseFocusReason) then focusedTimelineBand() == VoiceChanges at the Reference revision) pins SongView C++ focus internals; Swift models drawer-level focusTarget only.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &b = session->b->view();
@@ -446,7 +435,7 @@ Original expression:
 
 A039 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:136
 Disposition: GAP
-Mapping/reason: QAction-triggered drawer visibility transition (VoiceChanges hide); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
+Mapping/reason: QAction-object trigger delivery pins Qt internals; real-key delivery is proved mounted (S222 loop) but no hide-voice journey exists — the layout end-state is modeled by S201 (uncited: trigger half unported).
 Source context since previous assertion:
         window.m_voiceChangesDrawerAction->trigger();
 Original expression:
@@ -454,7 +443,7 @@ Original expression:
 
 A040 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:137
 Disposition: GAP
-Mapping/reason: QAction-triggered drawer visibility transition (Velocity still visible); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
+Mapping/reason: QAction-object trigger delivery pins Qt internals; the still-visible end-state is modeled by S201 (uncited: trigger half unported).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -466,7 +455,7 @@ Mapping: S198
 
 A042 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:141
 Disposition: GAP
-Mapping/reason: QAction-triggered drawer visibility transition (Velocity hide); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
+Mapping/reason: QAction-object trigger delivery pins Qt internals; real-key delivery is proved mounted (S222 loop) but no hide-velocity journey exists — the layout end-state is modeled by S201 (uncited: trigger half unported).
 Source context since previous assertion:
         b.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
         window.m_velocityDrawerAction->trigger();
@@ -475,7 +464,7 @@ Original expression:
 
 A043 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:142
 Disposition: GAP
-Mapping/reason: QAction-triggered drawer visibility transition (Automations still visible); GAP: MainWindow action delivery has no Swift counterpart — the layout end-state is modeled by S201, but the routed trigger observation is not asserted.
+Mapping/reason: QAction-object trigger delivery pins Qt internals; the still-visible end-state is modeled by S201 (uncited: trigger half unported).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -494,24 +483,24 @@ Disposition: MATCHED
 Mapping: S199
 
 A047 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:149
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
         QWidget *focus = QApplication::focusWidget();
 Original expression:
         QVERIFY(focus)
 
 A048 | MainWindowRoutingStateTest::drawerFocusFollowsFallback | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:150
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(focus == session->b || session->b->isAncestorOf(focus))
 
 A049 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:156
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
     }
 
@@ -534,32 +523,32 @@ Disposition: MATCHED
 Mapping: S204
 
 A053 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:169
-Disposition: GAP
-Mapping/reason: Cross-tab mirror of the origin-tab hide (active page stays Velocity on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A054 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:170
-Disposition: GAP
-Mapping/reason: Cross-tab mirror of the origin-tab hide (Velocity stored height on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerSectionHeight(EditorDrawerPage::Velocity), velocityHeight)
 
 A055 | MainWindowRoutingStateTest::hideRetains | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:171
-Disposition: GAP
-Mapping/reason: Cross-tab mirror of the origin-tab hide (VoiceChanges stored height on the projection tab); GAP: no Swift counterpart projects drawer state across tabs.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S220 (origin-tab retention half); unproved: sibling-tab page/height mirror.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
 
 A056 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:177
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Qt session-open harness guard (openSession + QVERIFY(session.has_value()) at the Reference revision); the Swift session predicates open two workspaces and report.fail on open failure instead — no QWidget session exists to observe.
 Source context since previous assertion:
     }
 
@@ -571,7 +560,7 @@ Original expression:
 
 A057 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:185
 Disposition: GAP
-Mapping/reason: Cross-tab mirror of the all-hidden state on the origin tab; GAP: no Swift counterpart projects drawer state across tabs.
+Mapping/reason: Cross-tab mirror of the all-hidden state (same class as A014); no hide-all cross-tab journey — the terminal is modeled by S203 (uncited: cross-tab half unproved).
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -584,24 +573,24 @@ Original expression:
         QVERIFY(!a.hasVisibleDrawerSection())
 
 A058 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:186
-Disposition: GAP
-Mapping/reason: All-hidden drawer state at the end of the cross-tab hide sequence; GAP: MainWindow routing test with no Swift routing counterpart (the same terminal layout is asserted at model level by S203).
+Disposition: MATCHED
+Mapping: S203
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(!b.hasVisibleDrawerSection())
 
 A059 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:188
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Workspace selected-tab pointer-identity observations (selectedSongTab() == session->a/b at the Reference revision) pin C++ object identity; tab switching over the shared state is proved mounted (the S222 loop selects both tabs).
 Source context since previous assertion:
         window.m_workspace->selectSongTab(session->a);
 Original expression:
         QCOMPARE(window.m_workspace->selectedSongTab(), session->a)
 
 A060 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:194
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Timeline-band focus observations (processEvents + focusActiveSurface + focusedTimelineBand() == Roll at the Reference revision) pin Qt event-loop and view-focus plumbing; Swift has no band-focus model.
 Source context since previous assertion:
         QCoreApplication::processEvents();
         a.focusActiveSurface();
@@ -612,24 +601,24 @@ Original expression:
         QCOMPARE(a.focusedTimelineBand(), songview::TimelineBand::Roll)
 
 A061 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
         QWidget *focus = QApplication::focusWidget();
 Original expression:
         QVERIFY(focus)
 
 A062 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:197
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(focus == session->a || session->a->isAncestorOf(focus))
 
 A063 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:200
-Disposition: GAP
-Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Workspace selected-tab pointer-identity observations (selectedSongTab() == session->a/b at the Reference revision) pin C++ object identity; tab switching over the shared state is proved mounted (the S222 loop selects both tabs).
 Source context since previous assertion:
 
         window.m_workspace->selectSongTab(session->b);
@@ -637,8 +626,8 @@ Original expression:
         QCOMPARE(window.m_workspace->selectedSongTab(), session->b)
 
 A064 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:204
-Disposition: GAP
-Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Timeline-band focus observations (processEvents + focusActiveSurface + focusedTimelineBand() == Roll at the Reference revision) pin Qt event-loop and view-focus plumbing; Swift has no band-focus model.
 Source context since previous assertion:
         QCoreApplication::processEvents();
         QCoreApplication::sendPostedEvents();
@@ -647,16 +636,16 @@ Original expression:
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll)
 
 A065 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:206
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
         focus = QApplication::focusWidget();
 Original expression:
         QVERIFY(focus)
 
 A066 | MainWindowRoutingStateTest::tabSwitchRefocus | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:207
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: QApplication::focusWidget() identity/ancestry observations at the Reference revision pin the QWidget focus tree; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -671,32 +660,32 @@ Disposition: MATCHED
 Mapping: S188, S197, S195, S196
 
 A069 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:225
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer identity between the window member and the canonical edit-action set for Copy, with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.copy serves both tabs. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer identity (window member == canonical edit-action object at the Reference revision) with no user-observable effect beyond the retarget rows at A080/A081; one shared shellAction_ set serves both tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(copy, window.m_editActions->action(SongView::EditCommand::Copy))
 
 A070 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:226
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer identity between the window member and the canonical edit-action set for Solo, with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.solo_tracks serves both tabs. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer identity (window member == canonical edit-action object at the Reference revision) with no user-observable effect beyond the retarget rows at A080/A081; one shared shellAction_ set serves both tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(solo, window.m_editActions->action(SongView::EditCommand::SoloTracks))
 
 A071 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:227
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer identity between the window member and the canonical edit-action set for InsertTime; the command now has a real Time-menu row (S195, S197), but the window-member-to-canonical-object identity itself has no Swift-app observation. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer identity (window member == canonical edit-action object at the Reference revision) with no user-observable effect beyond the retarget rows at A080/A081; one shared shellAction_ set serves both tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(insertTime, window.m_editActions->action(SongView::EditCommand::InsertTime))
 
 A072 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:228
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer identity between the window member and the canonical edit-action set for DeleteTime; the command now has a real Time-menu row (S195, S197), but the window-member-to-canonical-object identity itself has no Swift-app observation. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer identity (window member == canonical edit-action object at the Reference revision) with no user-observable effect beyond the retarget rows at A080/A081; one shared shellAction_ set serves both tabs.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -739,32 +728,32 @@ Disposition: MATCHED
 Mapping: S190
 
 A082 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:245
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer stability across the tab switch (the window member still equals the projected object), with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.copy serves both tabs. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer stability across the tab switch (window member == projected object at the Reference revision) with no user-observable effect beyond A080/A081; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_copyAction, copy)
 
 A083 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer stability across the tab switch (the window member still equals the projected object), with no user-observable effect beyond the retarget rows now matched by A080/A081; the same QML Edit-menu item shellAction_roll.solo_tracks serves both tabs. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer stability across the tab switch (window member == projected object at the Reference revision) with no user-observable effect beyond A080/A081; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_soloAction, solo)
 
 A084 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:247
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer stability for InsertTime across the tab switch; the command now has a real Time-menu row (S195, S197), but window-member-to-projected-object stability has no Swift-app observation. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer stability across the tab switch (window member == projected object at the Reference revision) with no user-observable effect beyond A080/A081; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_insertTimeAction, insertTime)
 
 A085 | MainWindowRoutingStateTest::editActionProjectionAndIdentity | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:248
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp) no longer builds or runs. Previous native note: Pure QAction pointer stability for DeleteTime across the tab switch; the command now has a real Time-menu row (S195, S197), but window-member-to-projected-object stability has no Swift-app observation. No QWidget layer exists in the Swift app.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: Pure QAction pointer stability across the tab switch (window member == projected object at the Reference revision) with no user-observable effect beyond A080/A081; no QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -882,8 +871,8 @@ A100 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoops
 Disposition: RETIRED-REPRESENTATION
 
 A101 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:297
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: MATCHED
+Mapping: S225
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongView &a = session->a->view();
@@ -903,8 +892,8 @@ Original expression:
         QCOMPARE(origin.count(), 1)
 
 A102 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:298
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: MATCHED
+Mapping: S226
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -912,39 +901,39 @@ Original expression:
 
 A103 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:299
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: No workspace-hub emission count exists; sibling fanout (S221/S222) and persist-once (S216) are proved (uncited: hub-signal half absent).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(hub.count(), 1)
 
 A104 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:300
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: MATCHED
+Mapping: S216
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(persisted.count(), 1)
 
 A105 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:301
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S221 (drawer-chrome half: full chromeState mirror selected == background); unproved: lane members (hiddenLanes/laneRanges/emptyLanes) of the complete seed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(a.editorViewState(), state)
 
 A106 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:302
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S221 (drawer-chrome half via the sibling mirror); unproved: full-seed equality on the origin tab including lane members.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.editorViewState(), state)
 
 A107 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:303
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S216 (drawer-chrome persist half: loadChrome == changed); unproved: lane-blob members of the persisted state.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -952,7 +941,7 @@ Original expression:
 
 A108 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:304
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -960,7 +949,7 @@ Original expression:
 
 A109 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:305
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -968,7 +957,7 @@ Original expression:
 
 A110 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:306
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Lane-identity observations with no lane-fanout predicate in this ledger's registry (deferred: document engine-track remap ingress per the task-65 brief).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -976,7 +965,7 @@ Original expression:
 
 A111 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:313
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
 Source context since previous assertion:
 
         const int originBeforeRange = origin.count();
@@ -989,7 +978,7 @@ Original expression:
 
 A112 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:314
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -997,7 +986,7 @@ Original expression:
 
 A113 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:315
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1005,7 +994,7 @@ Original expression:
 
 A114 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:316
 Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Mapping/reason: Lane-range mutation signal counts with no lane-range fanout predicate in this ledger's registry (updateEditorLaneRange fans out in production, unproved).
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1013,7 +1002,7 @@ Original expression:
 
 A115 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:317
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Lane-range value observation with no lane-range predicate in this ledger's registry.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1021,15 +1010,15 @@ Original expression:
 
 A116 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:318
 Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Mapping/reason: Lane-range value observation with no lane-range predicate in this ledger's registry.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(b.editorViewState().laneRanges.at(lane), uint8_t{80})
 
 A117 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:331
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
 Source context since previous assertion:
 
         const int originBeforeNoop = origin.count();
@@ -1047,24 +1036,24 @@ Original expression:
         QCOMPARE(origin.count(), originBeforeNoop)
 
 A118 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:332
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(projection.count(), projectionBeforeNoop)
 
 A119 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:333
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S217 (value-silence half: live chrome and store unchanged on the drawer no-op); unproved: signal-emission counts.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(hub.count(), hubBeforeNoop)
 
 A120 | MainWindowRoutingStateTest::nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:334
-Disposition: GAP
-Mapping/reason: Qt signal-emission count on a model/view signal with no corresponding SessionChecks predicate; establishable in principle, so GAP rather than NATIVE.
+Disposition: MATCHED
+Mapping: S217
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1393,8 +1382,8 @@ Original expression:
         QCOMPARE(a.editorViewState(), b.editorViewState())
 
 A160 | MainWindowRoutingStateTest::viewOnlyLaneMutationsPersistWithoutDocumentMutation | src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp:435
-Disposition: GAP
-Mapping/reason: Qt EditorViewState value, fanout, or persistence observation with no corresponding SessionChecks predicate; GAP.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S228 (lane-blob persist leg) and S216 (chrome persist leg); unproved: sibling-tab lane mirror and the combined store-load-vs-live comparison.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2995,3 +2984,51 @@ Anchor: message "the Time submenu retains the fork actions"
 
 S212 | test_forkMenuTopologyAndLabels | src/checks/editorqml/tst_ShellMenus.qml
 Anchor: message "the Tracks submenu retains the fork actions"
+
+S213 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a fresh tab carries the shared view state before it is ready"
+
+S214 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the shared view state starts identically on two song tabs"
+
+S215 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "one automation key shows the section on every open tab"
+
+S216 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the shared view state persists once per change"
+
+S217 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "an unchanged view state writes nothing"
+
+S218 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the velocity drawer becomes the active page on every tab"
+
+S219 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a hidden section stays hidden on the sibling tab"
+
+S220 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "hiding one section retains the other sections and the active page"
+
+S221 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a non-selected tab's mutation reaches the selected tab silently"
+
+S222 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message " key restores the shared state on the sibling tab"
+
+S223 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "drawer menu items disable while the event list shows: "
+
+S224 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the gated keys leave the drawer state unchanged"
+
+S225 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the initiating drawer publishes one preference change per key"
+
+S226 | test_sharedDrawerWindowShortcutsFanOut | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the projected sibling never republishes a preference change"
+
+S227 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "the combined chrome and lane state round-trips through preferences"
+
+S228 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "application preferences retain one lane blob"

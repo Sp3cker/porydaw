@@ -40,6 +40,8 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
     savedMidiCompilesAfterDocumentSave(report, fixtureRoot: fixtureRoot)
 
     let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-session-test")
+    runSessionViewStateChecks(report, store: store, fixtureRoot: fixtureRoot)
+
 
     guard let opened = sessionOpenAndRecovery(report: report, projectDir: projectDir) else {
         return

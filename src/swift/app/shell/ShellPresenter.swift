@@ -264,9 +264,10 @@ public final class ShellPresenter: QmlInstantiableStatus {
             return session.songOpen && session.transportBarPresenter().state > 1
         case "transport.loop":
             return session.songOpen && session.transportBarPresenter().state != 0
-        case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
-            "view.voice_changes_drawer":
+        case "view.event_list":
             return session.songTabs.selectedPage != nil
+        case "view.automation_drawer", "view.velocity_drawer", "view.voice_changes_drawer":
+            return session.songTabs.selectedPage != nil && !session.songTabs.selectedTabShowsEvents
         default: return true // open project and quit were always enabled
         }
     }
@@ -343,13 +344,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
                 !session.songTabs.selectedTabShowsEvents)
         case "view.automation_drawer":
             session.songTabs.selectedPage?.drawerPresenter()
-                .toggleSection(kind: DrawerSectionKind.automation.rawValue, drawerOwnsFocus: false)
+                .toggleSection(kind: DrawerSectionKind.automation.rawValue, drawerOwnsFocus: true)
         case "view.velocity_drawer":
             session.songTabs.selectedPage?.drawerPresenter()
-                .toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: false)
+                .toggleSection(kind: DrawerSectionKind.velocity.rawValue, drawerOwnsFocus: true)
         case "view.voice_changes_drawer":
             session.songTabs.selectedPage?.drawerPresenter()
-                .toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: false)
+                .toggleSection(kind: DrawerSectionKind.voiceChanges.rawValue, drawerOwnsFocus: true)
         case "view.velocity_colors":
             session.setVelocityColorMode(enabled: !session.velocityColorMode)
         case "view.note_names":

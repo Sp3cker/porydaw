@@ -23,6 +23,7 @@ Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS, swiftcore 1/31 ok (30 skipped); the seven cited codec predicates executed.
+Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/workspace/editor_view_state_checks.swift chrome block :75-99 (sha256 22c9238a5cfcd4f60d3044c7ddd41dd2d5249bc9bb27f5d1699d7f9fb8db0c45). Indexed S194-S199 (combined round-trip, chrome-leaves-lanes, active-page round-trip, missing-members default, wrong-typed height, lanes-survive-missing-chrome); all are executed (swiftcore-projectsession.json passes). No disposition flipped: the open codec rows assert single-object full-state save/reload, persisted poison/write paths and full-state drawer survival with no exact combined single-object predicate, so they stay GAP with refreshed reasons (A003/A004/A006/A013 now cite S194-S199 as related and name the unproved single-object half). The ledger is NOT deleted. Lane evidence is the controller-provided frozen task-65 result (all covering lanes passed). This pass ran only read-only evidence queries and deno task proof check variants.
 
 No native execution remains: the QtTest suites declared in
 src/checks/workspace/tst_workspacesessions.h (WorkspaceEditorCodecSelfTest)
@@ -40,7 +41,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A003 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:155
 Disposition: GAP
-Mapping/reason: Still GAP: the native codec default predicate includes the entire EditorViewState (drawer chrome and camera); the Swift lane decoder defaults only lane preferences, and drawer chrome now persists through the same shared PreferencesStore but is restored by the drawer presenter, not this decoder. No equivalent full-state predicate is executed.
+Mapping/reason: Still GAP: the native empty-default predicate covers the entire EditorViewState (drawer chrome and camera) as one object; the Swift lane decoder defaults only lane preferences (S186-S192) and drawer chrome now defaults per-member through the same shared PreferencesStore (related S197 missing-members default, S198 wrong-typed height), restored by the drawer presenter rather than this decoder. No equivalent full-state single-object predicate is executed.
 Source context since previous assertion:
   ;
       QSettings store(directory.filePath(QStringLiteral("editorviewstate.ini")),
@@ -58,7 +59,7 @@ Original expression:
 
 A004 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:167
 Disposition: GAP
-Mapping/reason: Still GAP: full EditorViewState save/reload includes all three drawer pages and active page in one object; Swift persists the lane blob and the drawer chrome as separate keys of the same shared PreferencesStore, never as one object.
+Mapping/reason: Still GAP: full EditorViewState save/reload covers all three drawer pages and active page in one object; Swift persists the lane blob and the drawer chrome as separate keys of the same shared PreferencesStore (related S194 combined round-trip, S196 active-page round-trip), never as one object.
 Source context since previous assertion:
   ;
           return;
@@ -85,7 +86,7 @@ Original expression:
 
 A006 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:176
 Disposition: GAP
-Mapping/reason: Still GAP: the optional drawer section heights and active page now persist through the same shared PreferencesStore as the Swift lane codec, so they are no longer QML-owned, but no predicate saves and reloads the whole combined full state in one object. No equivalent combined full-state save/reload predicate is executed.
+Mapping/reason: Still GAP: the optional drawer section heights and active page now persist through the same shared PreferencesStore as the Swift lane codec (related S194 combined chrome-and-lane round-trip, S195 chrome-leaves-lanes, S199 lanes-survive-missing-chrome), so they are no longer QML-owned, but no predicate saves and reloads the whole combined full state in one object. No equivalent combined full-state save/reload predicate is executed.
 Source context since previous assertion:
   ;
           }
@@ -176,7 +177,7 @@ Original expression:
 
 A013 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:212
 Disposition: GAP
-Mapping/reason: Still GAP: the historical full-state reader preserves drawer chrome after valid lane JSON; Swift's lane codec and the drawer presenter read separate keys of the same shared PreferencesStore, and no single persisted read has been exercised for the combined state.
+Mapping/reason: Still GAP: the historical full-state reader preserves drawer chrome after valid lane JSON; Swift's lane codec and the drawer presenter read separate keys of the same shared PreferencesStore (related S195 chrome-leaves-lanes, S199 lanes-survive-missing-chrome), and no single persisted read has been exercised for the combined state.
 Source context since previous assertion:
   ;
           const EditorViewState decoded = loadEditorViewState(store);
@@ -967,3 +968,15 @@ Anchor: message "non-object or invalid JSON defaults lane fields"
 
 S193 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
 Anchor: message "resetPreferences clears every stored key"
+S194 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "the combined chrome and lane state round-trips through preferences"
+S195 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "saving chrome leaves the lane members unchanged"
+S196 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "the active page string round-trips"
+S197 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "missing drawer members default without losing the lane members"
+S198 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "a wrong-typed height defaults to the layout default"
+S199 | runEditorViewStateChecks | src/checks/workspace/editor_view_state_checks.swift
+Anchor: message "the lane members survive missing chrome fields"

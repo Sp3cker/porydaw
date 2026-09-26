@@ -7,6 +7,7 @@ Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
 QML SHA-256: 848e371907adccb3f995842183c2ceb278a9cf1898553a5e7e27d1239a6e8884
+Additional QML counterpart: src/checks/editorqml/tst_ShellWindow.qml (seeded event-list restore S102-S103, shellwindow lane)
 Task 39 note (ledger pass, no lane re-run): tst_ShellEventList.qml gained the row-menu, drag and drawer-focus tests and EventListPageChecks.swift gained eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract; the QML counterpart hash above is re-pinned for that write set. The typography rows S003-S007, S009 and S014 and every disposition in this ledger are unchanged, and no font or geometry behaviour moved.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
@@ -58,6 +59,7 @@ tree, with build/proof-evidence/swiftcore-projectsession.json and build/proof-ev
 that evidence is what classifies S003 and S032-S036 executed. This bookkeeping pass ran no lane, no build, no formatter and no
 project check: it ran `deno task proof check` and `deno task proof check --executed` only. No semantic parity is claimed from
 parser success.
+Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/editorqml/tst_ShellWindow.qml test_seededEventListRestoresBothStates (sha256 59556ed1fd597cae30f13af6f00ea86245e8a17b77b560b718476df9763ccb08). The reload carries showsEvents from the old tab (ApplicationSession openTab restoring) and EditorSurface showEvents drives presenter visibility, the Swift applyViewState port. Indexed S102-S103; flipped A048/A050 PARTIAL to MATCHED. Twelve other PARTIAL rows (A016/A018/A071/A073/A075/A078/A079/A080/A084/A106/A116/A132) stay open with unproved halves named, so the ledger is NOT deleted. Lane evidence is the controller-provided task-65 frozen result (all covering lanes passed); shellwindow evidence lists test_seededEventListRestoresBothStates among its functions. This pass ran only read-only evidence queries and deno task proof check variants.
 
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
 Disposition: RETIRED-REPRESENTATION
@@ -584,8 +586,8 @@ Original expression:
 QVERIFY(state.eventList)
 
 A048 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:283
-Disposition: PARTIAL
-Mapping/reason: S088 pins the flag and the hidden list when the View action toggles visibility, but no predicate applies a seeded view state whose event-list flag is false (the fork's applyViewState path); the persistence/apply wiring is task 65's.
+Disposition: MATCHED
+Mapping: S102 proves a seeded hidden event-list flag restores hidden across a fresh-timeline reload (test_seededEventListRestoresBothStates, shellwindow lane): the reload carries showsEvents from the old tab (ApplicationSession openTab restoring, tabSession.showsEvents = tab?.showsEvents) and EditorSurface showEvents drives eventListPresenter.setVisible/eventListHost.visible/eventPage.active, the Swift applyViewState port for the fork applyViewState(false) hidden clause.
 Source context since previous assertion:
 ;
     state.eventList = false;
@@ -606,8 +608,8 @@ Original expression:
 QVERIFY(!state.eventList)
 
 A050 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:289
-Disposition: PARTIAL
-Mapping/reason: S089 pins the flag and the visible list when the View action shows it, but no predicate applies a seeded view state whose event-list flag is true (the fork's applyViewState path); the persistence/apply wiring is task 65's.
+Disposition: MATCHED
+Mapping: S103 proves a seeded visible event-list flag restores visible across a fresh-timeline reload (test_seededEventListRestoresBothStates, shellwindow lane): the reload carries showsEvents from the old tab (ApplicationSession openTab restoring, tabSession.showsEvents = tab?.showsEvents) and EditorSurface showEvents drives eventListPresenter.setVisible/eventListHost.visible/eventPage.active, the Swift applyViewState port for the fork applyViewState(true) visible clause.
 Source context since previous assertion:
 ;
     state.eventList = true;
@@ -1706,3 +1708,7 @@ S100 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "end-of-track-only delete leaves document and cursor unchanged"
 S101 | eventListRowMenuContract | src/checks/eventviews/EventListPageChecks.swift
 Anchor: message "row-menu Insert copies the source at its own tick in one step"
+S102 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a seeded hidden event list restores hidden" #2
+S103 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a seeded visible event list restores visible"

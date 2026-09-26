@@ -12,8 +12,10 @@ Additional Swift counterpart: src/checks/workspace/session_editor_semantics.swif
 Additional Swift counterpart: src/checks/workspace/session_io.swift
 Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift counterpart: src/checks/workspace/session_save.swift
+Additional Swift counterpart: src/checks/workspace/session_view_state.swift
 Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift counterpart: src/checks/editorqml/tst_ShellTabs.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
@@ -73,7 +75,7 @@ Original expression:
 
 A002 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:48
 Disposition: PARTIAL
-Mapping/reason: Related predicates S186 and S187 in src/checks/editorqml/tst_ShellWindow.qml (test_dCopyFromOneSongTabPastesIntoAnother drives the real close walk: tabCount holds at 2 while the dirty gate pauses the walk, then reaches 0 with pendingCloseId back to -1 after Discard); unproved: closing exactly one of two tabs while the sibling stays open — the walk closes both, so no predicate observes openTabCount() == 1. [S186][S187]
+Mapping/reason: Related predicates S190 and S191 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen closes one of two tabs: unanchored tryCompare observes tabCount 1, message-anchored compares prove the sibling stays selected and the song bytes are unchanged); unproved: a message-anchored openTabCount() == 1 predicate — the count observation carries no anchor message and shell-tabs evidence predates the journey. [S190][S191]
 Source context since previous assertion:
         MainWindow &window = *session->window;
         const EditorViewState state = completeSeed();
@@ -94,16 +96,16 @@ Original expression:
         QVERIFY(window.m_workspace->songTabFor(name) == nullptr)
 
 A004 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:50
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S191 and S194 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: fileProbe.fileFingerprint of the song file is unchanged across close and reopen); unproved: the Qt fixture-root porydawSnapshot sidecar comparison — Swift fingerprints one song file, never the fixture root; shell-tabs evidence predates the journey. [S191][S194]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot)
 
 A005 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:53
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (tab reopen): reopened Qt tab object/timeline observation after requestSongOpen; no Swift predicate reopens a Qt tab.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S193 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen reopens the closed song: tabCount returns to 2 under a fresh selected id with waitForPage); unproved: the Qt SongTab* object observation — Swift observes the QML tab, never the Qt tab object; shell-tabs evidence predates the journey. [S193]
 Source context since previous assertion:
         window.m_workspace->requestSongOpen(name, true);
         SongTab *reopened = window.m_workspace->selectedSongTab();
@@ -119,16 +121,16 @@ Original expression:
         QVERIFY(waitForTabReady(*window.m_workspace, reopened))
 
 A007 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:55
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192 and S195 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: the reopened tab restores automation-hidden and retains velocity-visible from the sibling); unproved: full EditorViewState equality (lane blob, heights, active page) and the Qt SongView representation — Swift observes two drawer sections only; shell-tabs evidence predates the journey. [S192][S195]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(reopened->view().editorViewState(), state)
 
 A008 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:56
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (tab reopen): reopened Qt tab object/timeline observation after requestSongOpen; no Swift predicate reopens a Qt tab.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S193 in src/checks/editorqml/tst_ShellTabs.qml ("the closed song opens on a fresh timeline": tabCount 2 under a fresh selected id with waitForPage); unproved: the Qt MidiTimeline object identity — Swift observes the QML fresh page, never the C++ timeline pointer; shell-tabs evidence predates the journey. [S193]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -143,8 +145,8 @@ Original expression:
         QVERIFY(hasCanonicalFreshViewState(reopened->view(), *reopened->timeline()))
 
 A010 | MainWindowRoutingLifecycleTest::closeAndReopenProjectsGlobalState | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:58
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S191 and S194 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: fileProbe.fileFingerprint of the song file is unchanged across close and reopen); unproved: the Qt fixture-root porydawSnapshot sidecar comparison — Swift fingerprints one song file, never the fixture root; shell-tabs evidence predates the journey. [S191][S194]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -253,8 +255,7 @@ A019 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/chec
 Disposition: RETIRED-REPRESENTATION
 
 A020 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:109
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         tabBar->setFocusPolicy(Qt::StrongFocus);
         tabBar->setFocus(Qt::OtherFocusReason);
@@ -262,8 +263,7 @@ Original expression:
         QCOMPARE(QApplication::focusWidget(), tabBar)
 
 A021 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:112
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         QSignalSpy eventListTraffic(&view, &SongView::eventListVisibilityChanged);
         view.applyViewState(seeded);
@@ -310,16 +310,16 @@ Original expression:
         QVERIFY(reopened->isReady())
 
 A027 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:135
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (in-place reload): Qt tab readiness/timeline-identity observation across in-place requestSongOpen reload; no Swift predicate reloads a Qt tab in place.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S198 in src/checks/editorqml/tst_ShellWindow.qml (test_seededEventListRestoresBothStates reloads in place: "the reloaded tab installs a fresh timeline" observes tabs.selectedPage !== original with tabCount 2); unproved: the C++ MidiTimeline pointer inequality across the swap — Swift observes the QML page swap, never the timeline pointer; shellwindow evidence predates the journey. [S198]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(reopened->timeline().get() != beforeReload)
 
 A028 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:136
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192, S195 and S199 in src/checks/editorqml/tst_ShellTabs.qml and tst_ShellWindow.qml (reopened-tab drawer restore plus seeded visible event-list restore across a fresh timeline); unproved: full SongView::ViewState equality (camera pxPerBeat/keyHeight/scroll, track, cursor, grid) — Swift observes drawer sections and event-list visibility only; shell evidence predates the journeys. [S192][S195][S199]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -334,16 +334,15 @@ Original expression:
         QCOMPARE(eventListTraffic.count(), 0)
 
 A030 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(QApplication::focusWidget(), tabBar)
 
 A031 | MainWindowRoutingLifecycleTest::readyReloadPreservesTransients | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:139
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (porydawSnapshot sidecars): fixture-root byte snapshot observation; no Swift predicate snapshots the Qt fixture root or sidecar bytes.
+Disposition: PARTIAL
+Mapping/reason: Related predicates S191 and S194 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: fileProbe.fileFingerprint of the song file is unchanged across close and reopen); unproved: the Qt fixture-root porydawSnapshot sidecar comparison — Swift fingerprints one song file, never the fixture root; shell-tabs evidence predates the journey. [S191][S194]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -508,8 +507,8 @@ Original expression:
         QVERIFY(probe.timeline())
 
 A049 | MainWindowRoutingLifecycleTest::freshBind | src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp:191
-Disposition: GAP
-Mapping/reason: GAP awaiting swift-project-store (view-state store): Qt EditorViewState value/fanout observation; no Swift predicate observes the Qt SongView view state. Verified: neighboring camera/track/drawer/eventlist suites observe EditorCamera/header/drawer/row types, never SongView ViewState; not cited.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S189 in src/checks/workspace/session_view_state.swift (runSessionViewStateChecks: "a fresh tab carries the shared view state before it is ready" — seeded chrome equals the fresh workspace chrome; evidence-confirmed in the swiftcore-projectsession pass rows); unproved: full Qt EditorViewState equality (lane blob, heights) and the Qt SongView representation — Swift observes drawer chrome only. [S189]
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -2179,3 +2178,36 @@ Anchor: message "songTabDiscard"
 
 S188 | test_eTimeAndTracksMenuContainment (with test_d retarget rows) | src/checks/editorqml/tst_ShellWindow.qml
 Anchor: message "the active song offers Solo"
+
+S189 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a fresh tab carries the shared view state before it is ready"
+
+S190 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #1
+
+S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #2
+
+S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening restores the shared drawer state on a fresh timeline"
+
+S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the closed song opens on a fresh timeline"
+
+S194 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening never rewrites the project song bytes"
+
+S195 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab carries the retained sibling drawer section"
+
+S196 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a seeded hidden event list restores hidden" #1
+
+S197 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a seeded hidden event list restores hidden" #2
+
+S198 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "the reloaded tab installs a fresh timeline"
+
+S199 | test_seededEventListRestoresBothStates | src/checks/editorqml/tst_ShellWindow.qml
+Anchor: message "a seeded visible event list restores visible"

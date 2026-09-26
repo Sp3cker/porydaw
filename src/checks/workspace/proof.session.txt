@@ -12,8 +12,10 @@ Swift counterpart: src/checks/workspace/bank_edits.swift
 Swift counterpart: src/checks/workspace/bank_history_probes.swift
 Swift counterpart: src/checks/workspace/bank_saves.swift
 Swift counterpart: src/checks/workspace/bank_sharing.swift
+Swift counterpart: src/checks/workspace/session_view_state.swift
+Swift counterpart: src/checks/workspace/editor_view_state_checks.swift
 QML counterpart: src/checks/editorqml/tst_ShellWindow.qml (window-title rows A002/A005, S186-S188)
-QML counterpart: src/checks/editorqml/tst_ShellTabs.qml (mounted two-tab shared-bank journey S194-S200, shell-tabs lane)
+QML counterpart: src/checks/editorqml/tst_ShellTabs.qml (mounted two-tab shared-bank journey S194-S200 and shared-drawer close/reopen S211-S217, shell-tabs lane)
 Shared helper: src/checks/workspace/session_fixtures.swift
 Shared SHA-256: bad9687a1301619c8bee2268a96a52ac104fe34ebe1eccd6b05a38ffb11ac741
 Shared helper: src/checks/workspace/session_support.swift
@@ -43,6 +45,7 @@ Result: pending integrated run.
 
 Command: deno task proof check --executed
 Result: PASS — 185 proof files, 9306 anchors resolved, 0 errors, the same 10 pre-existing not-executed entries as before this pass. S189-S193 classify executed from build/proof-evidence/swiftcore-bankhistory.json and S194-S200 from build/proof-evidence/shell-tabs.json (task-37 lane runs; this ledger pass re-ran only the proof reader, no lane, build or formatter).
+Task 65 note (ledger pass, no lane re-run): the frozen counterpart write set is src/checks/workspace/session_view_state.swift (sha256 10266bc4650d53a0d7f3b61af5a640bb4bff9456b7d0cf4d3f22c892d117879f, runSessionViewStateChecks :35-81) plus src/checks/editorqml/tst_ShellTabs.qml test_sharedDrawerCloseAndReopen (sha256 9c89b6d2a36e5892de2f8e66b33e5fa18094fbc9b7015b0a2eb269bc40346eeb, :789-821). Indexed S201-S210 (swiftcore editorViewState) and S211-S217 (shell-tabs drawer journey); all are executed (swiftcore-projectsession.json passes; shell-tabs.json functions). No disposition flipped to MATCHED: the session open rows assert windowGeometry, lastProjectDir/lastSongLabel/lastOpenSongs/songFilterText, song-list, sidecar, sessionAndEditorSettings and single-object full-state equalities with no exact Task65 predicate, so they stay GAP/PARTIAL with refreshed reasons (A011/A012/A028/A033/A034 now cite the new drawer/round-trip predicates as related and name the unproved single-object half). The ledger is NOT deleted. Lane evidence is the controller-provided frozen task-65 result (all covering lanes passed). This pass ran only read-only evidence queries and deno task proof check variants.
 
 Command: deno task verify:shell --filter shellwindow --verbose
 Result: PASS for the shellwindow lane (1/1) on the task-24 settled sources; implementer-run per the task-24 handoff, not re-run by the ledger agent. The same handoff records the full shell sweep failing the typography static-title pin (deleted by task 24; focused rerun green) and shell-chrome-visuals (controller-owned scope).
@@ -173,7 +176,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A011 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:178
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: drawer chrome and the lane blob now persist via separate shared-PreferencesStore keys (related S204 persists-once and S210 background-persist, session_view_state lane; codec round-trip is indexed at proof.selftest_workspace.txt), but no single-object loadEditorViewState(settings)==complete predicate establishes this exact full-state equality; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 
@@ -183,7 +186,7 @@ Original expression:
 
 A012 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:179
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: the session hub now fans drawer chrome out to every open workspace (related S203 automation fanout, S201 fresh-tab carry), but no predicate sets a complete full state on one view and reads the identical single object back on that view; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -288,7 +291,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A028 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:220
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: the mounted close/reopen journey now restores shared drawer chrome on a fresh timeline (related S215 reopening-restore and S216 fresh-tab carry, shell-tabs lane; session S201 fresh-tab carry), but no predicate restores the exact complete full state (drawer plus lanes) as one object on the restored tab; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -324,7 +327,7 @@ Original expression:
 
 A033 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:230
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: the mounted close/reopen journey now restores shared drawer chrome on a fresh timeline (related S215 reopening-restore, shell-tabs lane; session S201 fresh-tab carry), but no predicate restores the exact complete full state as one object on the restored tab; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -332,7 +335,7 @@ Original expression:
 
 A034 | WorkspaceSessionTest::closeReopenPreservesSession | src/checks/workspace/session.cpp:231
 Disposition: GAP
-Mapping/reason: feature not yet ported: editor view-state persistence (no Swift EditorViewState/lane-blob codec; DocumentSession.camera is live session state, not a persistence codec); no equivalent Swift/QML predicate established; native harness unexecuted (uncompiled, unregistered).
+Mapping/reason: Behavior gap, not proof: hidden-lane decode order is proved (S190) and drawer chrome now restores on a fresh timeline (related S215/S216), but no predicate restores this exact hiddenLanes equality on the restored tab; native harness unexecuted (uncompiled, unregistered).
 Source context since previous assertion:
   ;
 Original expression:
@@ -1012,3 +1015,37 @@ Anchor: message "reopened tab B adopts the unwritten shared voice and dirty star
 
 S200 | test_uSharedBankTwoTabJourney (shell-tabs lane) | src/checks/editorqml/tst_ShellTabs.qml
 Anchor: message "the close walk asks the shared bank once after both tabs"
+S201 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a fresh tab carries the shared view state before it is ready"
+S202 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the shared view state starts identically on two song tabs"
+S203 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "one automation key shows the section on every open tab"
+S204 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the shared view state persists once per change"
+S205 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "an unchanged view state writes nothing"
+S206 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "the velocity drawer becomes the active page on every tab"
+S207 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a hidden section stays hidden on the sibling tab"
+S208 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "hiding one section retains the other sections and the active page"
+S209 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "a non-selected tab's mutation reaches the selected tab silently"
+S210 | runSessionViewStateChecks | src/checks/workspace/session_view_state.swift
+Anchor: message "background drawer changes persist without selecting that tab"
+S211 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "hiding one section retains the other sections and the active page"
+S212 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the hidden section stays hidden when the sibling tab becomes active"
+S213 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #1
+S214 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "the closed song opens on a fresh timeline"
+S215 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening restores the shared drawer state on a fresh timeline"
+S216 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "a fresh tab carries the retained sibling drawer section"
+S217 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening never rewrites the project song bytes"

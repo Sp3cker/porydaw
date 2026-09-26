@@ -786,6 +786,41 @@ TestCase {
                "both pages survive the reorder")
     }
 
+    function test_sharedDrawerCloseAndReopen() {
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        var firstId = ids[0]
+        var closingId = ids[1]
+        var path = fileProbe.songPath(bootstrap.projectRoot, "mus_littleroot_test")
+        var bytes = fileProbe.fileFingerprint(path)
+        var section = surfaceOf(closingId).drawerPresenter.automationSection
+        var firstSection = surfaceOf(firstId).drawerPresenter.automationSection
+        shell.shellPresenter.activate("view.automation_drawer")
+        compare(section.visible, false,
+                "hiding one section retains the other sections and the active page")
+        tabs().selectTab(firstId)
+        tryCompare(firstSection, "visible", false, 3000,
+                   "the hidden section stays hidden when the sibling tab becomes active")
+        tabs().selectTab(closingId)
+        shell.shellPresenter.activate("file.close_tab")
+        tryCompare(tabs(), "tabCount", 1, 5000)
+        compare(tabs().selectedId, firstId,
+                "closing one tab keeps its sibling and the project bytes")
+        compare(fileProbe.fileFingerprint(path), bytes,
+                "closing one tab keeps its sibling and the project bytes")
+        session().openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabs().selectedId !== closingId
+        }, 30000), "the closed song opens on a fresh timeline")
+        var reopenedId = tabs().selectedId
+        waitForPage(reopenedId)
+        compare(surfaceOf(reopenedId).drawerPresenter.automationSection.visible, false,
+                "reopening restores the shared drawer state on a fresh timeline")
+        compare(surfaceOf(reopenedId).drawerPresenter.velocitySection.visible, true,
+                "a fresh tab carries the retained sibling drawer section")
+        compare(fileProbe.fileFingerprint(path), bytes,
+                "reopening never rewrites the project song bytes")
+    }
+
     function test_gBackgroundClosePreservesActive() {
         var ids = openShell(["mus_route101", "mus_littleroot_test", "mus_route102"])
         var firstId = ids[0]

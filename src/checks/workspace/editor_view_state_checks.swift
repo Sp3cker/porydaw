@@ -72,13 +72,43 @@ func runEditorViewStateChecks(_ report: CheckReport, store: PreferencesStore) {
     report.expect(FileManager.default.fileExists(atPath: CheckEnvironment.fixturePath("settings.plist") ?? ""),
                   cppID: codec, message: "preferences land in the staged scratch plist")
 
+    let chrome = "workspace/EditorViewStateCodec::chrome"
+    var seededChrome = EditorDrawerChromeState()
+    seededChrome.velocity = DrawerChromeSection(visible: true, height: 173)
+    seededChrome.automation = DrawerChromeSection(visible: false, height: 197)
+    seededChrome.voiceChanges.height = 201
+    seededChrome.activePage = .velocity
+    EditorViewStateCodec.saveChrome(seededChrome, store: store)
+    report.expectEqual(expected: seededChrome,
+                       actual: EditorViewStateCodec.loadChrome(store: store),
+                       cppID: chrome, what: "the combined chrome and lane state round-trips through preferences")
+    report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
+                       cppID: chrome, what: "saving chrome leaves the lane members unchanged")
+    report.expectEqual(expected: DrawerSectionKind.velocity,
+                       actual: EditorViewStateCodec.loadChrome(store: store).activePage,
+                       cppID: chrome, what: "the active page string round-trips")
+    store.remove(key: "editorDrawer.velocityVisible")
+    store.setString(key: "editorDrawer.automationHeight", value: "wrong")
+    let partialChrome = EditorViewStateCodec.loadChrome(store: store)
+    report.expectEqual(expected: false, actual: partialChrome.velocity.visible, cppID: chrome,
+                       what: "missing drawer members default without losing the lane members")
+    report.expectEqual(expected: nil as Int?, actual: partialChrome.automation.height, cppID: chrome,
+                       what: "a wrong-typed height defaults to the layout default")
+    report.expectEqual(expected: decoded, actual: EditorViewStateCodec.loadLanes(store: store),
+                       cppID: chrome, what: "the lane members survive missing chrome fields")
+    EditorViewStateCodec.saveChrome(seededChrome, store: store)
+
     let reset = "swiftcore/PreferencesStore::reset"
     store.setString(key: "windowState", value: "debugger")
     store.setInt(key: "songFilterSort", value: 1)
     store.setBool(key: "followPlayhead", value: false)
     store.synchronize()
     let keys = ["lastProjectDir", "lastOpenSongs", "lastSongLabel",
-                "editorDrawer.automationLanes", "windowState", "songFilterSort",
+                "editorDrawer.automationLanes", "editorDrawer.velocityVisible",
+                "editorDrawer.velocityHeight", "editorDrawer.automationVisible",
+                "editorDrawer.automationHeight", "editorDrawer.voiceChangesVisible",
+                "editorDrawer.voiceChangesHeight", "editorDrawer.activePage",
+                "windowState", "songFilterSort",
                 "followPlayhead"]
     let seeded = keys.allSatisfy { store.hasValue(key: $0) }
     let resetSucceeded = store.resetPreferences()

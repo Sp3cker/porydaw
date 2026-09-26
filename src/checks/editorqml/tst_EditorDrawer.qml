@@ -413,7 +413,7 @@ TestCase {
     function resetChrome(location, values) {
         testCase.seedStore(location, testCase.chromeState(values))
         wait(0)
-        testCase.drawer().presenter.restoreStoredPreferences()
+        session.configurePersistence()
         testCase.awaitRenderedLayout()
     }
 
@@ -1471,7 +1471,7 @@ TestCase {
 
         var location = "focus"
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.resetChrome(location, { "automationVisible": true, "activePage": "automation" })
+        testCase.resetChrome(location, { "automationVisible": true, "activePage": "automations" })
 
         var cancels = bootstrap.pageCancelCount
         var automationKind = testCase.automationKind
@@ -1536,105 +1536,6 @@ TestCase {
         compare(bootstrap.pageCancelCount, cancels + 4, "and so does the remaining release")
     }
 
-    // The store is the historical one: the mount restores every value and writes
-    // nothing back, interactive calls write that kind's two keys and the chosen
-    // page name in the historical formats, sync() makes them readable, and the
-    // scratch file is the only store touched.
-    function test_preferencesRoundTrip() {
-        // This phase's own process: the production page keeps its slot in the lane's own run.
-        if (testCase.productionPhase) skip("the container cases run in the lane's container child")
-
-        var location = "round-trip"
-        bootstrap.preferences.setString("lastImportDir", "/fixture/unowned")
-        verify(testCase.attachPage(testCase.velocityKind), "the velocity page attaches")
-        verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
-        verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
-        testCase.resetChrome(location, { "automationVisible": true, "automationHeight": 110,
-                                         "velocityVisible": true, "velocityHeight": 130,
-                                         "voiceChangesVisible": true, "voiceChangesHeight": 150,
-                                         "activePage": "velocity" })
-        var seeded = testCase.snapshotStore(location)
-
-        var presenter = testCase.presenter()
-        var velocityKind = testCase.velocityKind
-        var voiceKind = testCase.voiceChangesKind
-        var automationKind = testCase.automationKind
-        testCase.compareSnapshots(testCase.snapshotStore(location), seeded,
-                                 "mounting writes nothing back")
-        compare(testCase.section(velocityKind).visible, true, "the stored visibility applies")
-        compare(testCase.section(voiceKind).visible, true, "the stored voice visibility applies")
-        compare(testCase.section(automationKind).visible, true, "the stored automation visibility applies")
-        fuzzyCompare(testCase.section(velocityKind).bodyHeight, 130, 0.01, "the stored velocity height")
-        fuzzyCompare(testCase.section(voiceKind).bodyHeight, 150, 0.01, "the stored voice height")
-        fuzzyCompare(testCase.section(automationKind).bodyHeight, 110, 0.01, "the stored automation height")
-
-        // The restored active page decides the focus request: with the drawer
-        // owning focus, hiding a section targets the stored page, not a fallback.
-        testCase.focusControl(testCase.toggle(voiceKind))
-        presenter.setSectionVisible(voiceKind, false, true)
-        compare(testCase.section(voiceKind).visible, false, "the hidden section releases its height")
-        tryVerify(function() { return testCase.focusIsIn(testCase.pageItem(velocityKind)) }, 1000,
-                  "the restored active page answers the focus request")
-
-        // Hiding writes that kind's own two keys, in the historical formats,
-        // and no other kind's keys. The drawer writes from a preference signal
-        // that arrives on the pass after the call, so the store is polled through
-        // the staged store until the write lands.
-        var beforeHide = testCase.snapshotStore(location)
-        testCase.clickToggle(velocityKind)
-        compare(testCase.section(velocityKind).visible, false, "the click hides velocity")
-        testCase.awaitStoreKey(location, "velocityVisible", "boolean:false")
-        testCase.awaitStoreKey(location, "velocityHeight", "number:130")
-        var written = testCase.snapshotStore(location)
-        compare(written.velocityVisible, "boolean:false", "visibility is written as a bool")
-        compare(written.velocityHeight, "number:130", "the height is written as an integer")
-        compare(written.activePage, "string:velocity", "the page keeps its historical name")
-        compare(written.voiceChangesHeight, beforeHide.voiceChangesHeight,
-                "another kind's height is not written")
-        compare(written.voiceChangesVisible, beforeHide.voiceChangesVisible,
-                "another kind's visibility is not written")
-        compare(written.automationHeight, beforeHide.automationHeight,
-                "a third kind's height is not written")
-        compare(written.automationVisible, beforeHide.automationVisible,
-                "a third kind's visibility is not written")
-
-        // An unset height is the historical 0, and the body falls back to the
-        // page's own default instead of the forgotten value.
-        presenter.setSectionBodyHeight(velocityKind, 0)
-        testCase.awaitStoreKey(location, "velocityHeight", "number:0")
-        compare(testCase.snapshotStore(location).velocityHeight, "number:0",
-                "an unset height is written as 0")
-        testCase.clickToggle(velocityKind)
-        var fallback = testCase.section(velocityKind).bodyHeight
-        verify(fallback > 0, "an unset height falls back to the page's default")
-        verify(Math.abs(fallback - 130) > 0.5, "and not to the forgotten stored height")
-
-        // A resize writes the resized kind's height and visibility alone.
-        var beforeResize = testCase.snapshotStore(location)
-        testCase.pressGrip(automationKind)
-        testCase.dragGripTo(automationKind, testCase.dragSceneY - 30)
-        testCase.releaseGrip(automationKind)
-        var resized = testCase.section(automationKind).bodyHeight
-        testCase.awaitStoreKey(location, "automationHeight", "number:" + Math.round(resized))
-        var afterResize = testCase.snapshotStore(location)
-        compare(afterResize.automationHeight, "number:" + Math.round(resized),
-                "a resize writes the resized height")
-        compare(afterResize.automationVisible, "boolean:true", "and its visibility")
-        compare(afterResize.velocityHeight, beforeResize.velocityHeight,
-                "the resize writes no other height")
-        compare(afterResize.voiceChangesHeight, beforeResize.voiceChangesHeight,
-                "the resize writes no third height")
-
-        // Choosing another section writes the page name.
-        testCase.clickToggle(voiceKind)
-        testCase.awaitStoreKey(location, "activePage", "string:voiceChanges")
-        compare(testCase.snapshotStore(location).activePage, "string:voiceChanges",
-                "the chosen page is written under its historical name")
-
-        compare(bootstrap.preferences.string("lastImportDir", ""),
-                "/fixture/unowned", "drawer changes preserve unowned preferences")
-    }
-
     // ---- the shared playhead ------------------------------------------------
 
     // The production composition renders one playhead: a segment clipped to the
@@ -1651,7 +1552,7 @@ TestCase {
         verify(testCase.attachPage(testCase.voiceChangesKind), "the voice-changes page attaches")
         verify(testCase.attachPage(testCase.automationKind), "the automation page attaches")
         testCase.resetChrome(location, { "velocityVisible": true, "voiceChangesVisible": true,
-                                         "automationVisible": true, "activePage": "automation" })
+                                         "automationVisible": true, "activePage": "automations" })
         verify(bootstrap.pausePlayheadPolling(),
                "the lane holds the production polling task for a deterministic position")
 

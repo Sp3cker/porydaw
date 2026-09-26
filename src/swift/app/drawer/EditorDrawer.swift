@@ -1,18 +1,5 @@
 import QtBridge
 
-// The editor drawer container: three independently visible sections stacked in the
-// fixed order Velocity, Voice Changes, Automations, one bottom chrome bar holding
-// one toggle per attached section, one resize handle directly above each visible
-// body, and one active page. Behaviour follows the production reference
-// `src/ui/editordrawer/{editordrawer,drawersections,drawerchrome}.{h,cpp}`.
-//
-// `EditorDrawerLayout` owns every rule — section state, metrics, stacking, the host
-// clamp, resizing (including the Voice-Changes→Automations spill), focus decisions,
-// synchronous cancellation and the preference-change records. `EditorDrawerPresenter`
-// only mirrors one layout value into published primitives and applies the container's
-// cancel-before-publish order; it holds no policy of its own. The bridge never sees
-// the layout type, the page protocol or a Core value.
-
 // MARK: - Page seam
 
 /// A page's declared body sizing. Re-read on every layout pass; the page owns its
@@ -116,6 +103,8 @@ public final class EditorDrawerPresenter {
 
     /// Swift-only hook for pages that were hidden during shared-playhead publication.
     @QtIgnored public var onSectionVisibilityChanged: ((DrawerSectionKind, Bool) -> Void)?
+    @QtIgnored public var onChromeChanged: ((EditorDrawerChromeState) -> Void)?
+
 
     private var layout = EditorDrawerLayout()
     private let unresolvedSection = EditorDrawerSectionState()
@@ -143,43 +132,91 @@ public final class EditorDrawerPresenter {
                                      gutterWidth: gutterWidth))
     }
 
-    public func restoreStoredPreferences() {
-        let store = PreferencesStore()
-        func visibility(_ key: String) -> Int {
-            guard store.hasValue(key: key) else { return -1 }
-            return store.bool(key: key, fallback: false) ? 1 : 0
-        }
-        let page: Int
-        switch store.string(key: "editorDrawer.activePage", fallback: "") {
-        case "velocity": page = DrawerSectionKind.velocity.rawValue
-        case "voiceChanges": page = DrawerSectionKind.voiceChanges.rawValue
-        case "automations": page = DrawerSectionKind.automation.rawValue
-        default: page = -1
-        }
+    @QtIgnored
+    public var chromeState: EditorDrawerChromeState {
+        var state = EditorDrawerChromeState()
+        state.velocity = .init(visible: layout.isVisible(.velocity),
+                               height: layout.storedBodyHeight(.velocity))
+        state.automation = .init(visible: layout.isVisible(.automation),
+                                 height: layout.storedBodyHeight(.automation))
+        state.voiceChanges = .init(visible: layout.isVisible(.voiceChanges),
+                                   height: layout.storedBodyHeight(.voiceChanges))
+        state.activePage = layout.activePage
+        return state
+    }
+
+    @QtIgnored
+    public func applyChrome(_ state: EditorDrawerChromeState) {
         publish(layout.restorePreferences(
-            velocityVisible: visibility("editorDrawer.velocityVisible"),
-            velocityHeight: store.int(key: "editorDrawer.velocityHeight", fallback: 0),
-            automationVisible: visibility("editorDrawer.automationVisible"),
-            automationHeight: store.int(key: "editorDrawer.automationHeight", fallback: 0),
-            voiceChangesVisible: visibility("editorDrawer.voiceChangesVisible"),
-            voiceChangesHeight: store.int(key: "editorDrawer.voiceChangesHeight", fallback: 0),
-            activePage: page))
+            velocityVisible: state.velocity.visible ? 1 : 0,
+            velocityHeight: state.velocity.height ?? 0,
+            automationVisible: state.automation.visible ? 1 : 0,
+            automationHeight: state.automation.height ?? 0,
+            voiceChangesVisible: state.voiceChanges.visible ? 1 : 0,
+            voiceChangesHeight: state.voiceChanges.height ?? 0,
+            activePage: state.activePage.rawValue))
     }
 
     public func toggleSection(kind: Int, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            switch section {
+            case .automation: state.automation.visible.toggle()
+            case .velocity: state.velocity.visible.toggle()
+            case .voiceChanges: state.voiceChanges.visible.toggle()
+            }
+            state.activePage = section
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.toggleSection(section, drawerOwnsFocus: drawerOwnsFocus))
     }
 
     public func setSectionVisible(kind: Int, visible: Bool, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            switch section {
+            case .automation: state.automation.visible = visible
+            case .velocity: state.velocity.visible = visible
+            case .voiceChanges: state.voiceChanges.visible = visible
+            }
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.setSectionVisible(section, visible: visible,
                                          drawerOwnsFocus: drawerOwnsFocus))
     }
 
     public func setSectionBodyHeight(kind: Int, height: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
+        if !layout.isAvailable(section), onChromeChanged != nil {
+            var state = chromeState
+            let stored = height > 0 ? height : nil
+            switch section {
+            case .automation: state.automation.height = stored
+            case .velocity: state.velocity.height = stored
+            case .voiceChanges: state.voiceChanges.height = stored
+            }
+            publishDetachedChange(state, section: section)
+            return
+        }
         publish(layout.setSectionBodyHeight(section, height: height))
+    }
+
+    private func publishDetachedChange(_ state: EditorDrawerChromeState,
+                                       section: DrawerSectionKind) {
+        guard state != chromeState else { return }
+        let preference: DrawerChromeSection
+        switch section {
+        case .automation: preference = state.automation
+        case .velocity: preference = state.velocity
+        case .voiceChanges: preference = state.voiceChanges
+        }
+        drawerSectionPreferenceChanged(kind: section.rawValue, visible: preference.visible,
+                                       height: preference.height ?? 0)
+        onChromeChanged?(state)
     }
 
     public func beginResize(kind: Int) {
@@ -246,18 +283,7 @@ public final class EditorDrawerPresenter {
             return current == preference.visible ? nil : (preference.kind, preference.visible)
         }
         if change.published { apply(change.snapshot) }
-        let store = PreferencesStore()
         for preference in change.sectionPreferences {
-            let name: String
-            switch preference.kind {
-            case .velocity: name = "velocity"
-            case .automation: name = "automation"
-            case .voiceChanges: name = "voiceChanges"
-            }
-            store.setBool(key: "editorDrawer.\(name)Visible", value: preference.visible)
-            store.setInt(key: "editorDrawer.\(name)Height",
-                         value: preference.storedBodyHeight ?? 0)
-            store.synchronize()
             drawerSectionPreferenceChanged(kind: preference.kind.rawValue,
                                            visible: preference.visible,
                                            height: preference.storedBodyHeight ?? 0)
@@ -265,15 +291,8 @@ public final class EditorDrawerPresenter {
         for (kind, visible) in visibilityChanges {
             onSectionVisibilityChanged?(kind, visible)
         }
-        if let page = change.activePagePreference {
-            let name: String
-            switch page {
-            case .velocity: name = "velocity"
-            case .automation: name = "automations"
-            case .voiceChanges: name = "voiceChanges"
-            }
-            store.setString(key: "editorDrawer.activePage", value: name)
-            store.synchronize()
+        if !change.sectionPreferences.isEmpty || change.activePagePreference != nil {
+            onChromeChanged?(chromeState)
         }
         // The target is published before the revision so a handler that runs on the
         // revision change reads the matching target.

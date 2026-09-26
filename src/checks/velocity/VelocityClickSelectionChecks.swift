@@ -389,7 +389,7 @@ func drawerVelocityLifecycleCancellation(_ report: CheckReport, session: Documen
         let page = fixture.page
         let drawer = EditorDrawerPresenter()
         drawer.attachSection(page)
-        drawer.restoreStoredPreferences()
+        drawer.applyChrome(EditorViewStateCodec.loadChrome(store: preferences))
         if route == "page-switch" {
             drawer.attachSection(AutomationPage(baseFontPx: 13))
         }

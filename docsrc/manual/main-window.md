@@ -59,6 +59,8 @@ See [Working with Tracks](tracks.md) for more details.
 
 <!-- TODO: Explain opening, switching, dirty state, and closing for song tabs. -->
 
+The Automations, Velocity, and Voice Changes drawer sections share their visibility, heights, and active page across song tabs as application preferences rather than song data.
+
 ## Navigation cheat-sheet
 
 <!-- TODO: Explain scroll and zoom gestures, playhead navigation, playback following, and the shortcuts link. -->

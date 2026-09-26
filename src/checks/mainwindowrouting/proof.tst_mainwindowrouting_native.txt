@@ -447,8 +447,7 @@ A060 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/
 Disposition: RETIRED-REPRESENTATION
 
 A061 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:265
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *closing = session->b;
@@ -458,16 +457,14 @@ Original expression:
         QCOMPARE(window.m_editActions->target(), &view)
 
 A062 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:267
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         QAction *solo = window.m_soloAction;
 Original expression:
         QVERIFY(solo && solo->isEnabled())
 
 A063 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:269
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         window.m_workspace->selectSongTab(closing);
 Original expression:
@@ -475,16 +472,14 @@ Original expression:
                  "the Roll band could not take focus before the Insert Time prompt")
 
 A064 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:271
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
 
 A065 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:274
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         window.m_insertTimeAction->trigger();
         songview::QuickPopupSession *popup = quick_popup::popupSession(view);
@@ -492,8 +487,7 @@ Original expression:
         QTRY_VERIFY(popup && popup->isOpen())
 
 A066 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:281
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
         bool observed = false;
         QSignalSpy soloTriggered(solo, &QAction::triggered);
@@ -506,35 +500,32 @@ Original expression:
                  "closing a clean tab produced an unexpected modal prompt")
 
 A067 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:283
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY2(observed, "the open popup was not cancelled during the bound view's teardown")
 
 A068 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:284
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(soloTriggered.count(), 0)
 
 A069 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:285
-Disposition: MATCHED
+Disposition: PARTIAL
+Mapping/reason: Related predicates S192 and S193 in src/checks/editorqml/tst_ShellTabs.qml (test_sharedDrawerCloseAndReopen: message-anchored fileProbe.fileFingerprint compares prove the song bytes are unchanged across close and reopen); unproved: resolving the closed song NAME back to an absent tab — no Swift predicate performs the named lookup; shell-tabs evidence predates the journey. [S192][S193]
 
 A070 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:287
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(window.m_editActions->target(), &session->a->view())
 
 A071 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:288
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp) no longer builds or runs. Previous native note: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -1177,3 +1168,12 @@ Anchor: message "failed project replacement preserves the document label"
 
 S190 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift
 Anchor: message "failed replacement keeps the open document session and its label"
+
+S191 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #1
+
+S192 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "closing one tab keeps its sibling and the project bytes" #2
+
+S193 | test_sharedDrawerCloseAndReopen | src/checks/editorqml/tst_ShellTabs.qml
+Anchor: message "reopening never rewrites the project song bytes"

@@ -45,8 +45,69 @@ public struct EditorLaneState: Equatable, Sendable {
     public init() {}
 }
 
+public struct DrawerChromeSection: Equatable, Sendable {
+    public var visible: Bool
+    public var height: Int?
+
+    public init(visible: Bool, height: Int? = nil) {
+        self.visible = visible
+        self.height = height
+    }
+}
+
+public struct EditorDrawerChromeState: Equatable, Sendable {
+    public var velocity = DrawerChromeSection(visible: false)
+    public var automation = DrawerChromeSection(visible: true)
+    public var voiceChanges = DrawerChromeSection(visible: false)
+    public var activePage: DrawerSectionKind = .automation
+
+    public init() {}
+}
+
 public enum EditorViewStateCodec {
     private static let lanesKey = "editorDrawer.automationLanes"
+    private static let chromePrefix = "editorDrawer."
+
+    @MainActor
+    public static func loadChrome(store: PreferencesStore) -> EditorDrawerChromeState {
+        var state = EditorDrawerChromeState()
+        state.velocity = loadSection("velocity", defaultVisible: state.velocity.visible, store: store)
+        state.automation = loadSection("automation", defaultVisible: state.automation.visible, store: store)
+        state.voiceChanges = loadSection("voiceChanges", defaultVisible: state.voiceChanges.visible, store: store)
+        switch store.string(key: chromePrefix + "activePage", fallback: "") {
+        case "velocity": state.activePage = .velocity
+        case "voiceChanges": state.activePage = .voiceChanges
+        case "automations": state.activePage = .automation
+        default: break
+        }
+        return state
+    }
+
+    @MainActor
+    private static func loadSection(_ name: String, defaultVisible: Bool,
+                                    store: PreferencesStore) -> DrawerChromeSection {
+        DrawerChromeSection(
+            visible: store.storedBool(key: chromePrefix + name + "Visible") ?? defaultVisible,
+            height: store.storedPositiveInt(key: chromePrefix + name + "Height"))
+    }
+
+    @MainActor
+    public static func saveChrome(_ state: EditorDrawerChromeState, store: PreferencesStore) {
+        for (name, section) in [("velocity", state.velocity),
+                                ("automation", state.automation),
+                                ("voiceChanges", state.voiceChanges)] {
+            store.setBool(key: chromePrefix + name + "Visible", value: section.visible)
+            let heightKey = chromePrefix + name + "Height"
+            if let height = section.height, height > 0 {
+                store.setInt(key: heightKey, value: height)
+            } else {
+                store.remove(key: heightKey)
+            }
+        }
+        store.setString(key: chromePrefix + "activePage", value: state.activePage.name)
+        store.synchronize()
+    }
+
 
     @MainActor
     public static func loadTabs(store: PreferencesStore) -> WorkspaceTabRecipe {
@@ -81,10 +142,6 @@ public enum EditorViewStateCodec {
         store.synchronize()
     }
 
-    /// Decodes the native lane-row grammar; an invalid member does not discard
-    /// other valid members, and malformed JSON defaults only this blob.
-    /// - Parameter bytes: QSettings' automationLanes QByteArray.
-    /// - Returns: The valid lane members.
     public static func decodeLanes(_ bytes: Data) -> EditorLaneState {
         guard case let .object(root) = try? JSONDecoder().decode(JSONValue.self, from: bytes) else {
             return EditorLaneState()

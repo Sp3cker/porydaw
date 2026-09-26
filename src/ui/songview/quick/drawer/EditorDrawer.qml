@@ -512,5 +512,4 @@ FocusScope {
         }
     }
 
-    Component.onCompleted: drawerScope.presenter.restoreStoredPreferences()
 }

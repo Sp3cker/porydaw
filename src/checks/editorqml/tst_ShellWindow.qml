@@ -21,6 +21,8 @@ TestCase {
     GridInputClipProbe { id: clipProbe }
     SignalSpy { id: copyActivatedSpy; signalName: "activated" }
     SignalSpy { id: soloActivatedSpy; signalName: "activated" }
+    SignalSpy { id: drawerOriginPreferenceSpy; signalName: "drawerSectionPreferenceChanged" }
+    SignalSpy { id: drawerSiblingPreferenceSpy; signalName: "drawerSectionPreferenceChanged" }
 
     Component { id: shellComponent; ShellWindow { width: 960; height: 640; visible: true } }
     Component { id: intrinsicShellComponent; ShellWindow { visible: true } }
@@ -172,6 +174,99 @@ TestCase {
         }
         return null
     }
+
+    function test_sharedDrawerWindowShortcutsFanOut() {
+        bootstrap.resetPreferences()
+        var firstId = openTwoSongShell(function() {
+            for (var id of ["view.automation_drawer", "view.velocity_drawer",
+                            "view.voice_changes_drawer"]) {
+                verify(!shell.shellPresenter.actionEnabled(id),
+                       "drawer menu actions disable without a workspace: " + id)
+            }
+        })
+        var tabs = shell.shellPresenter.session.songTabs
+        var secondId = tabs.selectedId
+        var firstPage = findChild(shell.sceneLoader.item, "songTab_" + firstId)
+        var first = findChild(firstPage, "swiftRollOverlay")
+        var second = selectedSurface()
+        var shortcut = windowShortcut("shellShortcut_view.velocity_drawer")
+        verify(first && second && shortcut && shortcut.enabled)
+        drawerOriginPreferenceSpy.target = second.drawerPresenter
+        drawerSiblingPreferenceSpy.target = first.drawerPresenter
+        drawerOriginPreferenceSpy.clear()
+        drawerSiblingPreferenceSpy.clear()
+        var kinds = [bootstrap.velocitySectionKind(), 0, 2]
+        var keys = [Qt.Key_V, Qt.Key_A, Qt.Key_P]
+        var names = ["V", "A", "P"]
+        var roll = findChild(second, "swiftRollInput")
+        verify(roll && roll.visible, "the real roll receives window shortcut keys")
+        for (var i = 0; i < kinds.length; ++i) {
+            roll.forceActiveFocus(Qt.OtherFocusReason)
+            tryCompare(roll, "activeFocus", true, 3000)
+            var kind = kinds[i]
+            var before = second.drawerPresenter.section(kind).visible
+            keyClick(keys[i])
+            tryCompare(second.drawerPresenter.section(kind), "visible", !before, 3000)
+            compare(second.drawerPresenter.focusTarget, i === 0 ? -1 : kind,
+                    "toggling a section follows its focus fallback")
+            compare(drawerOriginPreferenceSpy.count, i + 1,
+                    "the initiating drawer publishes one preference change per key")
+            compare(drawerSiblingPreferenceSpy.count, 0,
+                    "the projected sibling never republishes a preference change")
+            tabs.selectTab(firstId)
+            tryCompare(first.drawerPresenter.section(kind), "visible", !before, 3000,
+                       "the " + names[i] + " key restores the shared state on the sibling tab")
+            tabs.selectTab(secondId)
+        }
+        var beforeGated = kinds.map(function(kind) {
+            return second.drawerPresenter.section(kind).visible
+        })
+        tabs.setSelectedTabEventsVisible(true)
+        var menu = findChild(shell, "shellViewMenu")
+        verify(menu && windowShortcut("shellShortcut_view.velocity_drawer"))
+        menu.open()
+        for (var id of ["view.automation_drawer", "view.velocity_drawer",
+                        "view.voice_changes_drawer"]) {
+            var item = findChild(menu, "shellAction_" + id)
+            verify(item && !item.enabled,
+                   "drawer menu items disable while the event list shows: " + id)
+        }
+        menu.close()
+        keyClick(Qt.Key_V)
+        keyClick(Qt.Key_P)
+        tabs.setSelectedTabEventsVisible(false)
+        for (var j = 0; j < kinds.length; ++j) {
+            compare(second.drawerPresenter.section(kinds[j]).visible, beforeGated[j],
+                    "the gated keys leave the drawer state unchanged")
+        }
+        compare(drawerOriginPreferenceSpy.count, keys.length,
+                "gated drawer shortcuts publish no preference changes")
+    }
+
+    function test_seededEventListRestoresBothStates() {
+        bootstrap.resetPreferences()
+        openTwoSongShell()
+        var session = shell.shellPresenter.session
+        var tabs = session.songTabs
+        var original = tabs.selectedPage
+        compare(tabs.selectedTabShowsEvents, false,
+                "a seeded hidden event list restores hidden")
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return tabs.selectedPage !== original && tabs.tabCount === 2
+        }, 30000), "the reloaded tab installs a fresh timeline")
+        compare(tabs.selectedTabShowsEvents, false,
+                "a seeded hidden event list restores hidden")
+        tabs.setSelectedTabEventsVisible(true)
+        original = tabs.selectedPage
+        session.openSong("mus_littleroot_test")
+        verify(waitForNative(function() {
+            return tabs.selectedPage !== original && tabs.tabCount === 2
+        }, 30000), "the visible event list survives a fresh timeline")
+        compare(tabs.selectedTabShowsEvents, true,
+                "a seeded visible event list restores visible")
+    }
+
 
     function test_savedWindowFrameRestoresAcrossShellSessions() {
         bootstrap.resetPreferences()

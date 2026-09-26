@@ -53,6 +53,8 @@ public final class DocumentWorkspace {
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
     public let otherEventsBand: OtherEventsBandPresenter
+    public var onEditorChromeChanged: ((EditorDrawerChromeState) -> Void)?
+
 
     private unowned let audio: NativeAudio
     private unowned let playhead: SharedPlayheadPresenter
@@ -133,6 +135,10 @@ public final class DocumentWorkspace {
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
         }
+        drawer.onChromeChanged = { [weak self] state in
+            self?.onEditorChromeChanged?(state)
+        }
+
 
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)

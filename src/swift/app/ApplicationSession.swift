@@ -5,14 +5,6 @@ import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
 
-/// The application behind the mounted surface: the project service, the one
-/// audio engine and playhead, and the strip of open songs.
-///
-/// Each open song is one `DocumentWorkspace` behind one tab; the selected tab's
-/// workspace is the one bound to the shared engine, and every document-bound
-/// accessor below reads through it, so the window's actions follow the
-/// selection. The session's palette is the one instance the whole surface
-/// reads, and the tabs are the model the strip and its pages bind.
 @MainActor
 @QtBridgeable
 public final class ApplicationSession: QmlInstantiableStatus {
@@ -37,8 +29,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var timeSigPromptMaximumDenominatorPow2 = 5
     @QtTracked public var timeSigPromptTitle = "Time Signature"
     @QtTracked public var timeSigPromptLabel = "Numerator (1-32):"
-    /// The one palette for the whole surface. The host pushes the window theme
-    /// into it once; the strip and every page read their roles from it.
     @QtTracked public var palette: GridPalette
     public private(set) var typography = Typography(baseFontPx: 13)
     @QtTracked public var typographyFonts = [String: QVariantSettable]()
@@ -46,11 +36,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var baseFontPx = 0
     @QtTracked public var bodyFontPx = 0
     private var hasCapturedTypography = false
-    /// View menu display modes (app-wide): velocity-hue note fills and
-    /// pitch-name labels on roll notes. Runtime state only — QSettings
-    /// persistence lives in the shell layer. The setters below push each mode
-    /// to every open tab's grid immediately; tabs opened later receive the
-    /// current values in openTab.
     @QtTracked public var velocityColorMode = false
     @QtTracked public var noteNameMode = false
     /// The open songs. Constructed with the session and never nil: the surface
@@ -96,6 +81,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private let preferences = PreferencesStore()
     private var persistenceConfigured = false
     private var editorLanes = EditorLaneState()
+    public private(set) var editorChrome = EditorDrawerChromeState()
+
     private var isRestoringTabs = false
     private var isHostCloseWalk = false
     private var isReplacingProject = false
@@ -662,10 +649,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     // MARK: - Project and song opens
-    @QtIgnored
-    func configurePersistence() {
+    public func configurePersistence() {
         persistenceConfigured = true
+        editorChrome = EditorViewStateCodec.loadChrome(store: preferences)
         editorLanes = EditorViewStateCodec.loadLanes(store: preferences)
+        for tab in songTabs.allTabs {
+            tab.workspace.drawer.applyChrome(editorChrome)
+        }
     }
 
     public func restoreDisplayModes() {
@@ -1044,6 +1034,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 session: session, audio: audio, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
+            workspace.onEditorChromeChanged = { [weak self] state in
+                self?.updateEditorChrome(state)
+            }
+            workspace.drawer.applyChrome(editorChrome)
             if let tab {
                 // The first viewport normally homes the roll to the song's
                 // pitches. Complete that one-time initialization before
@@ -1321,6 +1315,17 @@ public final class ApplicationSession: QmlInstantiableStatus {
               pendingProjectSwitch == nil else { return }
         EditorViewStateCodec.saveTabs(songTabs.recipe(projectPath: projectRoot),
                                       store: preferences)
+    }
+
+    private func updateEditorChrome(_ state: EditorDrawerChromeState) {
+        guard editorChrome != state else { return }
+        editorChrome = state
+        for tab in songTabs.allTabs where tab.workspace.drawer.chromeState != state {
+            tab.workspace.drawer.applyChrome(state)
+        }
+        if persistenceConfigured {
+            EditorViewStateCodec.saveChrome(state, store: preferences)
+        }
     }
 
     private func updateEditorLaneRange(parameter: AutomationParameter, range: Int) {
