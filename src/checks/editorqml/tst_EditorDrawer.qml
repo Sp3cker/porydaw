@@ -5456,6 +5456,104 @@ TestCase {
                    "the page republishes the plot as the automation band's focus after the miss")
     }
 
+    function test_productionAutomationTempoPromptPresentation() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.mountProductionAutomation("automation-prompt-presentation")
+        var model = testCase.automationModel()
+        var plot = testCase.automationPlot()
+        var tempoTab = model.tabCount - 1
+        testCase.clickAutomationTab(tempoTab)
+        tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab },
+                  2000, "the Tempo tab is active for its prompt")
+        var revision = bootstrap.automationDocumentRevision()
+        var history = session.canUndo
+        var originalBpm = bootstrap.automationTempoBpm()
+        var typedBpm = originalBpm === 90 ? 91 : 90
+        var original = bootstrap.automationLaneValues()
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()),
+               "the written tempo point opens its menu")
+        verify(testCase.clickAutomationMenuRow(1), "the rendered Set Value row opens the form")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        compare(model.promptOpen && bootstrap.automationDocumentRevision() === revision
+                && session.canUndo === history && bootstrap.automationLaneValues() === original, true,
+                "the tempo node prompt opens without a write")
+        compare(model.promptTitle === "Set tempo" && model.promptLabel === "BPM:"
+                && model.promptMinimum === 20 && model.promptMaximum === 255
+                && model.promptDraft === String(originalBpm), true,
+                "the tempo prompt shows its title, label and bounds")
+        var prompt = findChild(testCase.surface, "automationPrompt")
+        testCase.auditVisibleTextInk(prompt, "tempo value prompt")
+        var field = findChild(prompt, "automationPromptInput")
+        tryCompare(field, "activeFocus", true)
+        compare(field.selectedText, String(originalBpm), "the tempo draft opens selected")
+        keyClick(Qt.Key_9)
+        keyClick(typedBpm === 90 ? Qt.Key_0 : Qt.Key_1)
+        compare(field.text, String(typedBpm), "the rendered tempo input took the typed BPM")
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        compare(bootstrap.automationTempoBpm() === typedBpm
+                && bootstrap.automationDocumentRevision() === revision + 1
+                && session.canUndo && !model.promptOpen, true,
+                "the typed tempo draft replaces the written tempo")
+        tryCompare(plot, "activeFocus", true, 1000,
+                   "the tempo prompt acceptance returns focus to the plot")
+        verify(bootstrap.requestAutomationUndo(), "the tempo edit undoes")
+        compare(bootstrap.automationLaneValues(), original, "undo restores the written tempo")
+    }
+
+    function test_productionAutomationCenteredPromptOffset() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.mountProductionAutomation("automation-centered-prompt")
+        var model = testCase.automationModel()
+        var panTab = bootstrap.automationPanIndex()
+        verify(panTab >= 0, "the catalog publishes Pan")
+        testCase.clickAutomationTab(panTab)
+        var free = testCase.automationFreePoint()
+        verify(free, "the Pan plot has a clear sweep start")
+        var input = testCase.automationPlotInput()
+        testCase.dragAutomationPlot(free.x, free.y,
+                                    Math.min(input.width - 4, free.x + 120), free.y)
+        tryVerify(function() { return testCase.automationWrittenNodeIndex() >= 0 }, 2000,
+                  "the Pan sweep drew a written node")
+        var written = testCase.automationWrittenNodeIndex()
+        var node = testCase.automationLaneNodes()[written].model
+        var tick = node.tick
+        var stored = node.value
+        verify(testCase.openAutomationNodeMenu(written), "the Pan node opens its menu")
+        verify(testCase.clickAutomationMenuRow(1), "the rendered Set Value row opens Pan")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var field = findChild(testCase.surface, "automationPromptInput")
+        tryCompare(field, "activeFocus", true)
+        compare(model.promptMinimum === -64 && model.promptMaximum === 63
+                && model.promptDraft === String(stored - 64), true,
+                "the centered parameter's prompt opens in displayed units")
+        testCase.auditVisibleTextInk(findChild(testCase.surface, "automationPrompt"),
+                                     "centered Pan prompt")
+        field.selectAll()
+        keyClick(Qt.Key_Minus)
+        keyClick(Qt.Key_6)
+        keyClick(Qt.Key_4)
+        compare(field.text, "-64", "the centered lower-bound text is accepted for entry")
+        compare(field.acceptableInput, true, "the centered lower-bound text is in the field's domain")
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        compare(bootstrap.automationLaneValues().split(",").indexOf(tick + ":0") >= 0, true,
+                "the centered draft's lower bound stores zero")
+        written = testCase.automationWrittenNodeIndex()
+        verify(testCase.openAutomationNodeMenu(written), "the lower-bound Pan node opens its menu")
+        verify(testCase.clickAutomationMenuRow(1), "the Set Value row reopens Pan")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        field = findChild(testCase.surface, "automationPromptInput")
+        tryCompare(field, "activeFocus", true)
+        field.selectAll()
+        keyClick(Qt.Key_6)
+        keyClick(Qt.Key_3)
+        keyClick(Qt.Key_Return)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        compare(bootstrap.automationLaneValues().split(",").indexOf(tick + ":127") >= 0, true,
+                "the centered draft's upper bound stores one twenty-seven")
+    }
+
     // The Set Value row's rendered click opens the lane's own value prompt with
     // focus on the draft field: Escape cancels focus-clean, a typed draft's
     // Return commits and unwinds through the document's own undo, and a
@@ -5578,6 +5676,44 @@ TestCase {
                    "the page republishes the plot as the automation band's focus after the switch")
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === tempoTab }, 2000,
                   "the Tempo lane is active after the switch")
+        testCase.clickAutomationTab(volumeTab)
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+        verify(testCase.clickAutomationMenuRow(1))
+        testCase.awaitAutomationModal("automationPrompt", true)
+        field = findChild(testCase.automationPageItem(), "automationPromptInput")
+        tryCompare(field, "activeFocus", true, 1000,
+                   "the reopened prompt owns focus before blur")
+        revisionBefore = bootstrap.automationDocumentRevision()
+        valuesBefore = bootstrap.automationLaneValues()
+        testCase.rollInput().forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(testCase.rollInput(), "activeFocus", true, 1000,
+                   "the roll receives focus outside the prompt")
+        tryCompare(field, "activeFocus", false, 1000,
+                   "the draft field really lost focus to the roll")
+        tryCompare(model, "promptOpen", false, 1000,
+                   "moving focus off the open prompt cancels it without a write")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore)
+        compare(bootstrap.automationLaneValues(), valuesBefore)
+
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+        verify(testCase.clickAutomationMenuRow(1))
+        testCase.awaitAutomationModal("automationPrompt", true)
+        keyClick(Qt.Key_Escape)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        compare(!model.acceptPromptDraft() && bootstrap.automationDocumentRevision() === revisionBefore
+                && bootstrap.automationLaneValues() === valuesBefore, true,
+                "a late acceptance after the close writes nothing")
+
+        verify(testCase.openAutomationNodeMenu(testCase.automationWrittenNodeIndex()))
+        verify(testCase.clickAutomationMenuRow(1))
+        testCase.awaitAutomationModal("automationPrompt", true)
+        testCase.presenter().toggleSection(testCase.automationKind, true)
+        tryCompare(model, "promptOpen", false, 1000,
+                   "switching the drawer's visible page cancels the open prompt")
+        compare(bootstrap.automationDocumentRevision(), revisionBefore)
+        compare(bootstrap.automationLaneValues(), valuesBefore)
+        compare(testCase.section(testCase.automationKind).visible, false,
+                "the production toggleSection entry hid the automation page")
     }
 
     // The Tempo lane's own node menu and value prompt run the same focus route
@@ -5840,6 +5976,14 @@ TestCase {
         var cancel = findChild(testCase.surface, "automationPromptCancel")
         tryVerify(function() { return cancel && cancel.activeFocus }, 1000,
                   "the destructive confirmation initially focuses Cancel")
+        var message = findChild(testCase.surface, "automationPromptMessage")
+        verify(message && message.visible, "the confirmation draws its written-event question")
+        var counts = String(message.text).match(/\d+/g)
+        compare(counts !== null && counts.indexOf(String(beforeConfirmation)) >= 0
+                && counts.indexOf(String(beforeConfirmation + 1)) < 0, true,
+                "the confirmation advertises the lane's written events")
+        testCase.auditVisibleTextInk(findChild(testCase.surface, "automationPrompt"),
+                                     "automation delete confirmation")
         var revision = bootstrap.automationDocumentRevision()
         keyClick(Qt.Key_Return)
         tryVerify(function() { return !bootstrap.automationPromptOpen() }, 2000,
@@ -5848,6 +5992,8 @@ TestCase {
                 "initial Return preserves every written event")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "initial Return records no document change")
+        tryCompare(testCase.automationPlot(), "activeFocus", true, 1000,
+                   "the cancelled confirmation keeps the band's focus")
         testCase.openAutomationTabMenu(volumeTab)
         verify(testCase.triggerAutomationMenuRow(6),
                "the Delete automation events row reopens the confirmation for Cancel")
@@ -5863,8 +6009,26 @@ TestCase {
                 "the rendered Cancel preserves every written event")
         compare(bootstrap.automationDocumentRevision(), revision,
                 "the rendered Cancel records no document change")
+        tryCompare(testCase.automationPlot(), "activeFocus", true, 1000,
+                   "the rendered Cancel keeps the band's focus")
+        testCase.openAutomationTabMenu(volumeTab)
+        verify(testCase.triggerAutomationMenuRow(6),
+               "the Delete automation events row reopens for outside dismissal")
+        testCase.awaitAutomationModal("automationPrompt", true)
+        var underlay = findChild(testCase.surface, "automationPromptUnderlay")
+        verify(underlay, "the confirmation has its absorbing underlay")
+        mousePress(underlay, 4, 4, Qt.RightButton)
+        tryCompare(testCase.automationModel(), "promptOpen", false, 1000,
+                   "an outside right press dismisses the confirmation without a write")
+        mouseRelease(input, input.width / 2, input.height / 2, Qt.RightButton)
+        compare(bootstrap.automationMenuOpen(), false,
+                "the swallowed right release opens no replacement menu")
+        compare(bootstrap.automationDocumentRevision(), revision)
+        compare(bootstrap.automationLaneEventCount(), beforeConfirmation)
         verify(testCase.clearAutomationLane(volumeTab),
                "an explicit Delete pointer activation empties the lane")
+        tryCompare(testCase.automationPlot(), "activeFocus", true, 1000,
+                   "accepting through the rendered Delete button returns focus to the plot")
 
         // A projected engine node: the case writes a lane whose first occurrence
         // is after tick zero, so the visible tick-zero column draws the engine's
@@ -5916,6 +6080,36 @@ TestCase {
                 "a disabled Delete row performs nothing")
         testCase.automationModel().dismissMenu()
         wait(0)
+        verify(testCase.writeVolumeLanePoints(volumeTab),
+               "the sibling Volume lane is written for the scoped deletion")
+        var sibling = bootstrap.automationLaneValues()
+        var panTab = bootstrap.automationPanIndex()
+        testCase.clickAutomationTab(panTab)
+        var panFree = testCase.automationFreePoint()
+        verify(panFree, "the Pan lane has a clear sweep start")
+        testCase.dragAutomationPlot(panFree.x, panFree.y,
+                                    Math.min(input.width - 4, panFree.x + 120), panFree.y)
+        tryVerify(function() { return bootstrap.automationLaneEventCount() > 0 }, 2000,
+                  "the Pan lane has written events")
+        testCase.clickAutomationTab(volumeTab)
+        compare(bootstrap.automationLaneValues(), sibling,
+                "writing Pan leaves the sibling Volume values unchanged")
+        testCase.clickAutomationTab(panTab)
+        var panBefore = bootstrap.automationLaneValues()
+        var panRevision = bootstrap.automationDocumentRevision()
+        verify(testCase.clearAutomationLane(panTab), "the rendered Delete empties only Pan")
+        compare(bootstrap.automationDocumentRevision(), panRevision + 1)
+        testCase.awaitAutomationModal("automationPrompt", false)
+        wait(0)
+        testCase.clickAutomationTab(volumeTab)
+        compare(bootstrap.automationActiveParameterIndex(), volumeTab,
+                "the sibling tab is active after deleting Pan")
+        compare(bootstrap.automationLaneValues(), sibling,
+                "the accepted deletion spares the sibling lane")
+        verify(bootstrap.requestAutomationUndo(), "undo restores the deleted Pan events")
+        testCase.clickAutomationTab(panTab)
+        compare(bootstrap.automationLaneValues(), panBefore,
+                "undo restores the deleted Pan events byte-identically")
     }
 
     // The Tempo row's Tap control through real input: a pointer tap and a
@@ -5947,6 +6141,9 @@ TestCase {
         var undoBefore = session.canUndo
         compare(String(tapControl.Accessible.name).length > 0, true,
                 "the Tap control publishes its accessible name ('" + tapControl.Accessible.name + "')")
+        var inlineDraft = testCase.collectByName(tempoTab, "automationTempoTapDraft", [])[0]
+        verify(inlineDraft, "the Tempo tab has an inline draft readout")
+        compare(inlineDraft.visible, false, "the draft readout starts hidden")
 
         // A real pointer press on the Tap control registers one tap at the event
         // boundary, and the panel publishes the live session.
@@ -6018,7 +6215,7 @@ TestCase {
         verify(bootstrap.automationTapCadence(500, 3), "the production tap route took 500 ms gaps")
         compare(model.tapTempoTapCount, 3, "the panel publishes the live tap count")
         compare(model.tapTempoActive, true, "the panel publishes the live session")
-        var inlineDraft = testCase.collectByName(tempoTab, "automationTempoTapDraft", [])[0]
+        inlineDraft = testCase.collectByName(tempoTab, "automationTempoTapDraft", [])[0]
         tryVerify(function() { return inlineDraft && inlineDraft.visible }, 1000,
                   "the live cadence is drawn inside the Tempo tab")
         tryCompare(inlineDraft, "text", "120 BPM", 1000,
@@ -6031,6 +6228,12 @@ TestCase {
                 "live BPM draft uses the minimum caption weight")
         compare(bootstrap.automationTempoBpm(), expectedDraft,
                 "a live session writes nothing until its idle window")
+        testCase.resetAutomationTap()
+        verify(bootstrap.automationTapCadence(750, 3),
+               "the production tap route took 750 ms gaps")
+        tryCompare(inlineDraft, "text", "80 BPM", 1000,
+                   "the readout recomputes on every tap")
+        compare(bootstrap.automationTempoBpm(), expectedDraft)
         testCase.resetAutomationTap()
         verify(bootstrap.automationTapCadence(500, 1), "the production tap route took a lone tap")
         compare(bootstrap.automationTapCount(), 1, "the lone tap stands in the session")

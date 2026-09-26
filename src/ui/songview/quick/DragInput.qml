@@ -439,8 +439,12 @@ Item {
             } else if (event.text.length === 1
                        && ((event.text >= "0" && event.text <= "9")
                            || (event.text === "-" && control.minimumValue < 0
-                               && input.cursorPosition === 0
-                               && input.text.indexOf("-") < 0))) {
+                               && (input.cursorPosition === 0
+                                   || (input.selectionStart === 0
+                                       && input.selectedText.length > 0))
+                               && (input.text.indexOf("-") < 0
+                                   || (input.selectionStart === 0
+                                       && input.selectedText.indexOf("-") >= 0))))) {
                 // The IntValidator accepts digits and a leading minus; the
                 // editor's own insert API applies the same characters without
                 // routing the key event through the input.

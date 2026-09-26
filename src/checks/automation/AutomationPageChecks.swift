@@ -317,6 +317,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationParameterSwitchAndGhosts(report, suite: session, service: service)
     drawerAutomationPencilCursorKind(report, suite: session, service: service)
     drawerAutomationHitGeometry(report, suite: session, service: service)
+    drawerAutomationTempoPromptInsertion(report, suite: session, service: service)
     drawerAutomationPromptTransactions(report, suite: session, service: service)
     drawerAutomationPointMenuDeleteAndStale(report, suite: session, service: service)
     drawerAutomationSharedPopupArbitration(report, suite: session, service: service)
@@ -349,6 +350,8 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationXcmdParity(report, suite: session, service: service)
     drawerAutomationXcmdLaneEdits(report)
     drawerAutomationTapTempoCadenceAndCommit(report, suite: session, service: service)
+    drawerAutomationTapTempoForkBoundaries(report, suite: session, service: service)
+    drawerAutomationTapHintCatalog(report)
     drawerAutomationTapTempoStrayAndEmptyStream(report, suite: session, service: service)
     drawerAutomationQtModifierMapping(report, suite: session, service: service)
     drawerAutomationProjectionValueBounds(report, suite: session, service: service)
@@ -375,6 +378,50 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     } catch {
         report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
     }
+}
+
+@MainActor
+func drawerAutomationTapHintCatalog(_ report: CheckReport) {
+    let id = "swiftcore/AutomationPage::tapHintCatalog"
+    let hints = MouseHints()
+    let token = hints.allocateSourceToken()
+    hints.setWindowActive(active: true)
+    hints.claim(sourceToken: token, profile: 27)
+    let tap = hints.text
+    report.expect(!tap.isEmpty, cppID: id,
+                  message: "the tap hint publishes its catalog text")
+    hints.claim(sourceToken: token, profile: 25)
+    report.expect(!hints.text.isEmpty && hints.text != tap, cppID: id,
+                  message: "the tap and ghost hints stay distinct")
+}
+
+@MainActor
+func drawerAutomationTempoPromptInsertion(_ report: CheckReport, suite: DocumentSession,
+                                          service: ProjectService) {
+    let id = "swiftcore/AutomationPage::tempoPromptInsertion"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service)
+    fixture.activate(.tempo)
+    let before = fixture.snapshot
+    let originalTempo = fixture.tempoValues
+    let undoCount = fixture.document.history.undoCount
+    report.expect(fixture.page.openPrompt(tick: 96, value: 120)
+                  && fixture.page.promptOpen && fixture.snapshot == before, cppID: id,
+                  message: "the tempo insertion prompt opens without a write")
+    report.expect(fixture.page.promptTitle == "Set tempo"
+                  && fixture.page.promptLabel == "BPM:"
+                  && fixture.page.promptMinimum == TimeDefaults.minimumTempoBPM
+                  && fixture.page.promptMaximum == TimeDefaults.maximumTempoBPM
+                  && fixture.page.promptDraft == "120", cppID: id,
+                  message: "the tempo insertion prompt publishes its displayed domain")
+    report.expect(fixture.page.acceptPrompt(displayedValue: 90)
+                  && fixture.tempoValues.contains("96:90")
+                  && fixture.document.revision == before.revision + 1
+                  && fixture.document.history.undoCount == undoCount + 1
+                  && fixture.document.history.canUndo, cppID: id,
+                  message: "the typed tempo draft commits at the prompt's tick")
+    let undone = fixture.undo()
+    report.expect(undone && fixture.tempoValues == originalTempo, cppID: id,
+                  message: "undo restores the pre-insertion tempo")
 }
 
 

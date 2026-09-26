@@ -4,136 +4,24 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/drawerpresentation/valueprompt.cpp
 Original SHA-256: fe22f6c7cc53ff6c156e216811a8e2d45196b6518017a165a687212a213ea8f0
 Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
+Additional Swift counterpart: src/checks/automation/automationpointmenus.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Result: PASS on this worktree (1/14 harnesses selected, 13 skipped; swiftcore green, including
+drawerAutomationTempoPromptInsertion). Recorded by the lane controller from the implementer's
+settled run at the frozen source snapshot; this proof-only reconciliation did not re-run it.
+Converted-window result: PASS on this worktree (editorqml-drawer 1/1) at the same snapshot;
+the mounted prompt, offset, focus-loss, page-switch and late-accept predicates cited below
+re-ran green in that lane's settled run.
 Converted-window command: deno task verify:qml --verbose
 
 A001 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:117
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  // Inline Quick value prompt coverage for the automation drawer (drawer plan
-  // Cleanup phase 4): the Tempo and CC prompt families behind NodeLane publish
-  // through DrawerChrome, both canvas entry points open without writing, Enter
-  // commits the displayed value through the stored offset, and Escape, focus
-  // loss, document change, window deactivation, page hide, and a late accept all
-  // resolve the pending edit without touching the song.
-
-  #include "checks/drawerpresentation/tst_drawerpresentation.h"
-
-  #include <QtTest>
-
-  #include <algorithm>
-  #include <cmath>
-  #include <cstdint>
-
-  #include <QCoreApplication>
-  #include <QEvent>
-  #include <QKeySequence>
-  #include <QQuickItem>
-  #include <QQuickWindow>
-
-  #include "checks/automation/automationvalueprompt.h"
-  #include "checks/drawerpresentation/fixtures.h"
-  #include "checks/selectionkey/automationprobe.h"
-  #include "checks/support/timelinequickcheck.h"
-  #include "core/timedefaults.h"
-  #include "ui/editordrawer/automationcanvas.h"
-  #include "ui/editordrawer/automationpage.h"
-  #include "ui/editordrawer/drawerchrome.h"
-  #include "ui/editordrawer/editordrawer.h"
-  #include "ui/editordrawer/nodelane/nodelane.h"
-  #include "ui/songview.h"
-  #include "ui/songview/quick/timelineinputitem.h"
-  #include "ui/songview/quick/timelinequickview.h"
-
-  using namespace checks::drawerpresentation;
-
-  namespace {
-
-  constexpr uint8_t kController = 10;
-  constexpr Tick kNodeTick = 24;
-  constexpr Tick kEmptyTick = 96;
-
-  Snapshot snapshot(SongDocument &document)
-  {
-      return {document.smf().write(), document.revision(), document.undoStack()->index()};
-  }
-
-  AutomationCanvas *canvasOf(const DrawerFixture &fixture)
-  {
-      return fixture.view->editorDrawer()->automationPage()->canvas();
-  }
-
-  songview::TimelineInputItem *automationInput(const DrawerFixture &fixture)
-  {
-      return fixture.quickRoot->findChild<songview::TimelineInputItem *>(
-          QStringLiteral("timelineAutomationInput"));
-  }
-
-  LaneHandle ccLaneHandle(const AutomationCanvas &canvas)
-  {
-      const auto &rows = canvas.rows();
-      for (int index = 0; index < int(rows.size()); ++index) {
-          if (rows[std::size_t(index)].id ==
-              EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController})
-              return LaneHandle{index};
-      }
-      return {};
-  }
-
-  // Parameter selection is a real click on the live visual label; node probes
-  // only project the already-active lane's geometry.
-  bool activateParameter(DrawerFixture &fixture, AutomationCanvas &canvas,
-                         const EditorAutomationRowId &row)
-  {
-      const int index = checks::support::automationParameterIndex(canvas, row);
-      if (index < 0 ||
-          !checks::support::clickVisibleTab(fixture.quickRoot,
-                                            QStringLiteral("automationParameterTab%1").arg(index))) {
-          return false;
-      }
-      return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
-  }
-
-  const TempoPoint *tempoPointAt(const SongDocument &document, Tick tick)
-  {
-      const auto &points = document.tempoPoints();
-      const auto found = std::find_if(points.cbegin(), points.cend(),
-                                      [tick](const TempoPoint &point) { return point.tick == tick; });
-      return found == points.cend() ? nullptr : &*found;
-  }
-
-  int tempoBpmAt(const SongDocument &document, Tick tick)
-  {
-      const TempoPoint *const point = tempoPointAt(document, tick);
-      Q_ASSERT(point);
-      return int(std::lround(CoreTimeDefaults::tempoBpm(point->microsecondsPerQuarterNote)));
-  }
-
-  // Opens the Set-Value prompt on an existing CC node and waits until the chrome
-  // publishes it.
-  bool openCcNodePrompt(DrawerFixture &fixture, LaneHandle cc, Tick tick, int storedValue)
-  {
-      AutomationCanvas *const canvas = canvasOf(fixture);
-      if (!canvas || !canvas->openValuePromptForNode(cc, NodePoint{tick, storedValue}))
-          return false;
-      DrawerChrome &chrome = fixture.chrome();
-      return QTest::qWaitFor([&chrome] { return automation_valueprompt::promptVisible(chrome); });
-  }
-
-  } // namespace
-
-  void DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp()
-  {
-      DrawerFixture fixture;
-      QString error;
-
-Original expression:
-  QVERIFY2(fixture.create(error), qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S071
 
 A002 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:120
 Disposition: RETIRED-REPRESENTATION
@@ -145,95 +33,44 @@ A004 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks
 Disposition: RETIRED-REPRESENTATION
 
 A005 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:131
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture.tab->document();
-
-      // The insertion entry point publishes the BPM domain with the displayed
-      // insertion value and writes nothing by opening.
-      const uint64_t revision = document.revision();
-      const int undoIndex = document.undoStack()->index();
-
-Original expression:
-  QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{0}, kNodeTick, 140))
+Disposition: MATCHED
+Mapping: S063
 
 A006 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:132
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift; unproved: QML chrome visibility flag versus the Swift presenter promptOpen flag.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S063
 
 A007 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:133
-Disposition: PARTIAL
-Mapping/reason: Related predicates S004, S008 in src/checks/selectionkey/localinputtier_text.swift (draft editing preserves snapshot and full song state); unproved: different document/surface and QML chrome path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), revision)
+Disposition: MATCHED
+Mapping: S063
 
 A008 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:134
-Disposition: PARTIAL
-Mapping/reason: Related predicates S004, S008 in src/checks/selectionkey/localinputtier_text.swift (draft editing preserves snapshot and full song state); unproved: different document/surface and QML chrome path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->index(), undoIndex)
+Disposition: MATCHED
+Mapping: S063
 
 A009 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:135
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptTitle(), QStringLiteral("Set tempo"))
+Disposition: MATCHED
+Mapping: S064
 
 A010 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:136
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptLabel(), QStringLiteral("BPM:"))
+Disposition: MATCHED
+Mapping: S064
 
 A011 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:137
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptMinimum(), CoreTimeDefaults::kMinTempoBpm)
+Disposition: MATCHED
+Mapping: S064
 
 A012 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:138
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptMaximum(), CoreTimeDefaults::kMaxTempoBpm)
+Disposition: MATCHED
+Mapping: S064
 
 A013 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:139
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003 in src/checks/selectionkey/localinputtier_text.swift (prompt opens with value 64; draft retained); unproved: displayed-unit offset mapping and differing tick/value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptInitialValue(), 140)
+Disposition: MATCHED
+Mapping: S064, S083
 
 A014 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:144
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the mounted half stays unproved - the Swift insertion seam openPrompt(tick:value:) is not QML-exposed and no user insertion gesture exists, so no mounted predicate can drive the insertion prompt's focus ingress; the presenter seam proves the open, displayed domain and commit ([S063], [S064], [S065]) but not focus. The written-node route's ingress executes at [S081].
 Source context since previous assertion:
   ;
 
@@ -245,8 +82,8 @@ Original expression:
   QVERIFY2(prompt, "the tempo prompt did not take active focus")
 
 A015 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:145
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the mounted half stays unproved - the Swift insertion seam openPrompt(tick:value:) is not QML-exposed and no user insertion gesture exists, so no mounted predicate can drive the insertion draft's selected text; the written-node route proves the stored draft opens selected ([S083]).
 Source context since previous assertion:
   ;
 
@@ -254,15 +91,8 @@ Original expression:
   QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("140"))
 
 A016 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:148
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      QTest::keySequence(window, QKeySequence(Qt::Key_9, Qt::Key_0));
-      QTest::keyClick(window, Qt::Key_Return);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S065, S069
 
 A017 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:149
 Disposition: MATCHED
@@ -277,8 +107,8 @@ Disposition: MATCHED
 Mapping: S012
 
 A020 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:152
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the mounted half stays unproved - the Swift insertion seam openPrompt(tick:value:) is not QML-exposed and no user insertion gesture exists, so no mounted predicate can drive the insertion route's focus return; the written-node route's close-route return executes at [S075].
 Source context since previous assertion:
   ;
 
@@ -286,66 +116,32 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(*window, *input))
 
 A021 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:155
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      // Acceptance clamps out-of-domain displayed values into the lane limits.
-
-Original expression:
-  QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{0}, kNodeTick + 8, 120))
+Disposition: MATCHED
+Mapping: S063
 
 A022 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:156
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift; unproved: QML chrome visibility flag versus the Swift presenter promptOpen flag.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S063
 
 A023 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:158
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      canvas->acceptNodeValuePrompt(CoreTimeDefaults::kMaxTempoBpm + 1000);
-
-Original expression:
-  QVERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S014, S015
 
 A024 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:159
 Disposition: MATCHED
 Mapping: S015
 
 A025 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:160
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{0}, kNodeTick + 16, 120))
+Disposition: MATCHED
+Mapping: S063
 
 A026 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:161
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift; unproved: QML chrome visibility flag versus the Swift presenter promptOpen flag.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S063
 
 A027 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:163
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      canvas->acceptNodeValuePrompt(CoreTimeDefaults::kMinTempoBpm - 1000);
-
-Original expression:
-  QVERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S017, S018
 
 A028 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:164
 Disposition: MATCHED
@@ -360,19 +156,8 @@ Disposition: MATCHED
 Mapping: S027
 
 A031 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:173
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-  }
-
-  void DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit()
-  {
-      DrawerFixture fixture;
-      QString error;
-
-Original expression:
-  QVERIFY2(fixture.create(error), qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S071
 
 A032 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:176
 Disposition: RETIRED-REPRESENTATION
@@ -381,85 +166,36 @@ A033 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/ch
 Disposition: RETIRED-REPRESENTATION
 
 A034 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:182
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      SongDocument &document = fixture.tab->document();
-      document.addLanePoint(0, kController, kNodeTick, 64);
-      pump();
-
-Original expression:
-  QVERIFY2(activateParameter(fixture, *canvas,
-                                 {EditorAutomationRowKind::ControlChange, 0, kController}),
-               "the Pan parameter label did not activate")
+Disposition: MATCHED
+Mapping: S074
 
 A035 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:186
 Disposition: MATCHED
 Mapping: S028
 
 A036 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:192
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      // Entry point B: the insertion entry point opens at an empty CC-10 plot
-      // tick in displayed (stored-64) units and writes nothing.
-      const uint64_t revision = document.revision();
-      const int undoIndex = document.undoStack()->index();
-
-Original expression:
-  QVERIFY(canvas->openValuePromptForInsertion(cc, kEmptyTick, 64))
+Disposition: MATCHED
+Mapping: S063
 
 A037 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:193
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift; unproved: QML chrome visibility flag versus the Swift presenter promptOpen flag.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S063
 
 A038 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:194
-Disposition: PARTIAL
-Mapping/reason: Related predicates S004, S008 in src/checks/selectionkey/localinputtier_text.swift (draft editing preserves snapshot and full song state); unproved: different document/surface and QML chrome path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.revision(), revision)
+Disposition: MATCHED
+Mapping: S063
 
 A039 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:195
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptMinimum(), -64)
+Disposition: MATCHED
+Mapping: S070
 
 A040 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:196
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptMaximum(), 63)
+Disposition: MATCHED
+Mapping: S070
 
 A041 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:201
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-
-      // Displayed 0 commits as the stored center 64 on the new insertion tick.
-      QTest::keySequence(window, QKeySequence(Qt::Key_0));
-      QTest::keyClick(window, Qt::Key_Return);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S030
 
 A042 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:202
 Disposition: MATCHED
@@ -478,36 +214,16 @@ Disposition: MATCHED
 Mapping: S033
 
 A046 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:211
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      // The Set-Value entry point shows the same node in displayed units, and
-      // the typed bounds round-trip through the stored offset on both ends.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, inserted.tick, 64))
+Disposition: MATCHED
+Mapping: S034
 
 A047 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:212
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003 in src/checks/selectionkey/localinputtier_text.swift (prompt opens with value 64; draft retained); unproved: displayed-unit offset mapping and differing tick/value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptInitialValue(), 0)
+Disposition: MATCHED
+Mapping: S034, S035
 
 A048 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:215
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      QTest::keySequence(window, QKeySequence(Qt::Key_Minus, Qt::Key_6, Qt::Key_4));
-      QTest::keyClick(window, Qt::Key_Return);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S035
 
 A049 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:217
 Disposition: MATCHED
@@ -518,33 +234,16 @@ Disposition: MATCHED
 Mapping: S037
 
 A051 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:219
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, inserted.tick, 0))
+Disposition: MATCHED
+Mapping: S038
 
 A052 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:220
-Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S003 in src/checks/selectionkey/localinputtier_text.swift (prompt opens with value 64; draft retained); unproved: displayed-unit offset mapping and differing tick/value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(chrome.valuePromptInitialValue(), -64)
+Disposition: MATCHED
+Mapping: S038, S039
 
 A053 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:223
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      QTest::keySequence(window, QKeySequence(Qt::Key_6, Qt::Key_3));
-      QTest::keyClick(window, Qt::Key_Return);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S039
 
 A054 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:224
 Disposition: MATCHED
@@ -563,74 +262,38 @@ Disposition: MATCHED
 Mapping: S050
 
 A058 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:234
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-  }
-
-  void DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus()
-  {
-      DrawerFixture fixture;
-      QString error;
-
-Original expression:
-  QVERIFY2(fixture.create(error), qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S071
 
 A059 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:237
 Disposition: RETIRED-REPRESENTATION
 
 A060 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:239
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      auto *const input = automationInput(fixture);
-
-Original expression:
-  QVERIFY(input)
+Disposition: MATCHED
+Mapping: S072
 
 A061 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:245
 Disposition: RETIRED-REPRESENTATION
 
 A062 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:246
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY2(activateParameter(fixture, *canvas,
-                                 {EditorAutomationRowKind::ControlChange, 0, kController}),
-               "the Pan parameter label did not activate")
+Disposition: MATCHED
+Mapping: S074
 
 A063 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:250
 Disposition: MATCHED
 Mapping: S051
 
 A064 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:253
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      const Snapshot before = snapshot(document);
-
-Original expression:
-  QVERIFY(canvas->openValuePromptForInsertion(escapeCc, kEmptyTick, 64))
+Disposition: MATCHED
+Mapping: S063
 
 A065 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:254
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift; unproved: QML chrome visibility flag versus the Swift presenter promptOpen flag.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S063
 
 A066 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:256
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the mounted half stays unproved - the Swift insertion seam openPrompt(tick:value:) is not QML-exposed and no user insertion gesture exists, so no mounted predicate can drive the insertion prompt's focus ingress; the presenter seam proves the open, displayed domain and commit ([S063], [S064], [S065]) but not focus. The written-node route's ingress executes at [S081].
 Source context since previous assertion:
   ;
       QQuickItem *const prompt = automation_valueprompt::focusedTextInput(*window);
@@ -639,28 +302,16 @@ Original expression:
   QVERIFY2(prompt, "the insertion prompt did not take active focus")
 
 A067 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:259
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-      QTest::keyClick(window, Qt::Key_Escape);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S006, S075
 
 A068 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:260
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), before)
+Disposition: MATCHED
+Mapping: S007, S008
 
 A069 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:261
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the mounted half stays unproved - the Swift insertion seam openPrompt(tick:value:) is not QML-exposed and no user insertion gesture exists, so no mounted predicate can drive the insertion route's focus return; the written-node route's close-route return executes at [S075].
 Source context since previous assertion:
   ;
 
@@ -668,102 +319,43 @@ Original expression:
   QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(*window, *input))
 
 A070 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:268
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-  }
-
-  void DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel()
-  {
-      DrawerFixture fixture;
-      QString error;
-
-Original expression:
-  QVERIFY2(fixture.create(error), qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S071
 
 A071 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:271
 Disposition: RETIRED-REPRESENTATION
 
 A072 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:273
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      auto *const input = automationInput(fixture);
-
-Original expression:
-  QVERIFY(input)
+Disposition: MATCHED
+Mapping: S072
 
 A073 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:278
 Disposition: MATCHED
 Mapping: S052
 
 A074 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-      const Snapshot before = snapshot(document);
-
-      // Focus loss cancels: forcing the roll band to take active focus closes
-      // the pending prompt without a write.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
+Disposition: MATCHED
+Mapping: S082
 
 A075 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:286
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      auto *const roll = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
-          QStringLiteral("timelineRollInput"));
-
-Original expression:
-  QVERIFY(roll)
+Disposition: MATCHED
+Mapping: S076
 
 A076 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:288
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      roll->forceActiveFocus(Qt::OtherFocusReason);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S077
 
 A077 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:289
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), before)
+Disposition: MATCHED
+Mapping: S078
 
 A078 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:293
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      // A document change during the prompt cancels it: the only document delta
-      // is the added point, and the pending node edit never commits.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
+Disposition: MATCHED
+Mapping: S082
 
 A079 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:296
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      document.addLanePoint(0, kController, kNodeTick + 24, 32);
-      pump();
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S054
 
 A080 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:298
 Disposition: MATCHED
@@ -794,161 +386,70 @@ Disposition: MATCHED
 Mapping: S061
 
 A087 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:308
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-      const Snapshot afterLaneGrew = snapshot(document);
-
-      // Quick-window deactivation cancels without a write.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
+Disposition: MATCHED
+Mapping: S082
 
 A088 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:311
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      QEvent deactivation(QEvent::WindowDeactivate);
-      QCoreApplication::sendEvent(window, &deactivation);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S079 - the page-level outcome (the open prompt is cancelled without a write when the drawer hides its page) executes; the window-deactivation trigger is wired shell-side (src/ui/shell/ShellWindow.qml:176-178 onActiveChanged -> cancelGridInput(3)) and has no page-level predicate of its own, so the trigger wiring is recorded, not re-proved.
 
 A089 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:312
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), afterLaneGrew)
+Disposition: MATCHED
+Mapping: S078, S079
 
 A090 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:315
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-
-      // Hiding the automations page cancels without a write.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
+Disposition: MATCHED
+Mapping: S082
 
 A091 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:317
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      fixture.view->setDrawerSectionVisible(EditorDrawerPage::Automations, false);
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S079
 
 A092 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:318
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), afterLaneGrew)
+Disposition: MATCHED
+Mapping: S078, S079
 
 A093 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:325
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-  }
-
-  void DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing()
-  {
-      DrawerFixture fixture;
-      QString error;
-
-Original expression:
-  QVERIFY2(fixture.create(error), qUtf8Printable(error))
+Disposition: MATCHED
+Mapping: S071
 
 A094 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:328
 Disposition: RETIRED-REPRESENTATION
 
 A095 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:330
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-      auto *const input = automationInput(fixture);
-
-Original expression:
-  QVERIFY(input)
+Disposition: MATCHED
+Mapping: S072
 
 A096 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:335
 Disposition: MATCHED
 Mapping: S062
 
 A097 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:340
-Disposition: PARTIAL
-Mapping/reason: Related predicate S002 in src/checks/selectionkey/localinputtier_text.swift (the numeric prompt opens); unproved: AutomationCanvas QML insertion/node entry, lane/tick/value mapping, and native window delivery versus the Swift page prompt at tick 144 value 64.
-Source context since previous assertion:
-  ;
-      const Snapshot before = snapshot(document);
-
-      // The chrome cancel invokable - the Escape path's entry point - clears the
-      // pending edit, writes nothing, and returns focus to the automation input.
-
-Original expression:
-  QVERIFY(openCcNodePrompt(fixture, cc, kNodeTick, 64))
+Disposition: MATCHED
+Mapping: S082
 
 A098 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:342
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      QMetaObject::invokeMethod(&chrome, "cancelNodeValuePrompt");
-
-Original expression:
-  QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S006, S075
 
 A099 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:343
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), before)
+Disposition: MATCHED
+Mapping: S007, S008
 
 A100 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:344
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/drawerpresentation/valueprompt.cpp) no longer builds or runs. Previous native note: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(*window, *input))
+Disposition: MATCHED
+Mapping: S075
 
 A101 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:349
 Disposition: RETIRED-REPRESENTATION
 
 A102 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Related predicate S006 in src/checks/selectionkey/localinputtier_text.swift (cancellation closes the prompt); unproved: native close trigger (Return commit, clamp accept, Escape, focus loss, deactivation, page hide, chrome invokable) versus page.cancelPrompt; any commit write itself is unproved.
-Source context since previous assertion:
-  ;
-      canvas->acceptNodeValuePrompt(50);
-
-Original expression:
-  QVERIFY(!automation_valueprompt::promptVisible(chrome))
+Disposition: MATCHED
+Mapping: S080
 
 A103 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:352
-Disposition: PARTIAL
-Mapping/reason: Related predicates S007, S008 in src/checks/selectionkey/localinputtier_text.swift (cancel leaves snapshot and song state unchanged); unproved: different document/surface and native cancel path.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(snapshot(document), before)
+Disposition: MATCHED
+Mapping: S080
 
 Remaining original source (closing sequence and helper bodies):
   ;
@@ -956,6 +457,26 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
+S001-S062 index drawerOriginalNumericPromptTransaction in
+src/checks/selectionkey/localinputtier_text.swift, the presenter prompt transaction, its
+tempo bounds and clamps, and the CC center-offset insertion journey. S063-S066 index
+drawerAutomationTempoPromptInsertion in src/checks/automation/AutomationPageChecks.swift, the
+insertion-prompt seam (open without a write, displayed domain, typed commit, undo). S067-S070
+and S083 index the mounted drawer lane's written-node tempo prompt, centered-offset prompt and
+selected-draft predicates of src/checks/editorqml/tst_EditorDrawer.qml. S071-S074, S076-S081
+index that lane's mount/render, activation, focus-route, focus-loss, page-switch and
+late-accept predicates. S075 indexes the node-prompt open of drawerAutomationPromptTransactions
+in src/checks/automation/automationpointmenus.swift.
+S001-S062 index drawerOriginalNumericPromptTransaction in
+src/checks/selectionkey/localinputtier_text.swift, the presenter prompt transaction, its
+tempo bounds and clamps, and the CC center-offset insertion journey. S063-S066 index
+drawerAutomationTempoPromptInsertion in src/checks/automation/AutomationPageChecks.swift, the
+insertion-prompt seam (open without a write, displayed domain, typed commit, undo). S067-S070
+and S083 index the mounted drawer lane's written-node tempo prompt, centered-offset prompt and
+selected-draft predicates of src/checks/editorqml/tst_EditorDrawer.qml. S071-S074, S076-S081
+index that lane's mount/render, activation, focus-route, focus-loss, page-switch and
+late-accept predicates. S075 indexes the node-prompt open of drawerAutomationPromptTransactions
+in src/checks/automation/automationpointmenus.swift.
 
 S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "the original selected fixture note exists"
@@ -1142,3 +663,66 @@ Anchor: message "A086 document change records one history entry"
 
 S062 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift
 Anchor: message "A096 CC10 lane present in the cancel fixture row stack"
+
+S063 | drawerAutomationTempoPromptInsertion | src/checks/automation/AutomationPageChecks.swift
+Anchor: message "the tempo insertion prompt opens without a write"
+
+S064 | drawerAutomationTempoPromptInsertion | src/checks/automation/AutomationPageChecks.swift
+Anchor: message "the tempo insertion prompt publishes its displayed domain"
+
+S065 | drawerAutomationTempoPromptInsertion | src/checks/automation/AutomationPageChecks.swift
+Anchor: message "the typed tempo draft commits at the prompt's tick"
+
+S066 | drawerAutomationTempoPromptInsertion | src/checks/automation/AutomationPageChecks.swift
+Anchor: message "undo restores the pre-insertion tempo"
+
+S067 | test_productionAutomationTempoPromptPresentation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tempo prompt shows its title, label and bounds"
+
+S068 | test_productionAutomationTempoPromptPresentation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tempo prompt acceptance returns focus to the plot"
+
+S069 | test_productionAutomationTempoPromptPresentation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the typed tempo draft replaces the written tempo"
+
+S070 | test_productionAutomationCenteredPromptOffset | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the centered parameter's prompt opens in displayed units"
+
+S071 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the hosted item is the production page"
+
+S072 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the page composed its selector column and plot"
+
+S073 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the plot spans the body beside the selector"
+
+S074 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tab click switched the active parameter (index "
+
+S075 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the value prompt's Escape close returns focus to the automation band's plot"
+
+S076 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the roll receives focus outside the prompt"
+
+S077 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "moving focus off the open prompt cancels it without a write"
+
+S078 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the cancelled value prompt leaves the lane byte-identical"
+
+S079 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "switching the drawer's visible page cancels the open prompt"
+
+S080 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "a late acceptance after the close writes nothing"
+
+S081 | test_productionAutomationSetValuePromptFocusRoute | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the value prompt's draft field holds focus on open"
+
+S082 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift
+Anchor: message "a prompt opens on a written node"
+
+S083 | test_productionAutomationTempoPromptPresentation | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the tempo draft opens selected"

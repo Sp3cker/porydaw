@@ -149,6 +149,43 @@ func drawerAutomationTapTempoCadenceAndCommit(_ report: CheckReport, suite: Docu
 }
 
 @MainActor
+func drawerAutomationTapTempoForkBoundaries(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let id = "swiftcore/AutomationPage::tapTempoForkBoundaries"
+    var cadence = AutomationTapTempoSession()
+    for tap in 0...3 { cadence.registerTap(nowMs: Int64(tap) * 300) }
+    report.expect((170...235).contains(cadence.draftBpm), cppID: id,
+                  message: "a 300-millisecond cadence drafts in the fork's band")
+
+    let held = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                 tempo: [(0, 235_294)])
+    held.activate(.tempo)
+    let heldBefore = held.snapshot
+    held.page.tapTempoTap(atMilliseconds: 1000)
+    held.page.tapTempoTap(atMilliseconds: 1000)
+    report.expectEqual(expected: TimeDefaults.maximumTempoBPM,
+                       actual: held.page.tapTempoSession.draftBpm, cppID: id,
+                       what: "sub-millisecond intervals clamp to the maximum tempo")
+    report.expect(!held.page.tapTempoIdleElapsed() && held.snapshot == heldBefore
+                  && !held.document.history.canUndo, cppID: id,
+                  message: "tapping the tempo the song already holds stays silent")
+
+    let later = drawerAutomationAutomationFixture(
+        suite: suite, service: service,
+        tempo: [(0, 500_000), (192, 428_571), (384, 400_000)])
+    later.activate(.tempo)
+    let revision = later.document.revision
+    for tap in 0...3 { later.page.tapTempoTap(atMilliseconds: 20_000 + Int64(tap) * 400) }
+    let committed = later.page.tapTempoIdleElapsed()
+    report.expect(committed && later.document.revision == revision + 1
+                  && later.tempoValues == ["0:150", "192:140", "384:150"], cppID: id,
+                  message: "the commit replaces only the tick-zero tempo")
+    let undone = later.undo()
+    report.expect(undone && later.tempoValues == ["0:120", "192:140", "384:150"], cppID: id,
+                  message: "undo restores tick zero without changing either later point")
+}
+
+@MainActor
 func drawerAutomationTapTempoStrayAndEmptyStream(_ report: CheckReport, suite: DocumentSession,
                                                  service: ProjectService) {
     let id = "swiftcore/AutomationPage::tapTempoStrayAndEmptyStream"
