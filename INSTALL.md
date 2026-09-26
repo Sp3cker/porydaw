@@ -73,6 +73,13 @@ deno task format:check
 deno task setup:check
 ```
 
+Swift targets compile in batches on Debug builds, so a target's C++-interop frontend startup is paid
+once per batch instead of once per source file. Swift's incremental driver reuses an object whenever
+the sources and their dependencies are unchanged — the compile command included — so a build drops
+the objects of any Swift target whose compile command no longer matches the one its objects were
+built with, and prints the targets it dropped. That happens once per flag change (a CMake option
+edit, or a flip between `build:app` and `build:checks`), not on unchanged builds.
+
 Launch the built application with the platform-appropriate command:
 
 ```bash

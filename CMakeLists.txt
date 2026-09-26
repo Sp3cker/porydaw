@@ -63,6 +63,15 @@ function(porydaw_enable_project_warnings target)
     )
 endfunction()
 
+# Batch mode keeps one frontend process per batch of sources, so C++ interop's
+# per-process ClangImporter startup is paid once per batch instead of once per
+# source file. The driver ignores the flag outside incremental compilation, so
+# it stays gated on Debug — the only incremental configuration here.
+function(porydaw_enable_swift_batch_mode target)
+    target_compile_options(${target} PRIVATE
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>")
+endfunction()
+
 # Optimize the audio path even in debug builds: the miniaudio converter and
 # engine callbacks dominate audio-thread cost, and profile/listening sessions
 # with a debug app must not measure inflated audio DSP. -g stays on.
@@ -388,8 +397,7 @@ set_target_properties(porydaw_shell_entry PROPERTIES
     AUTOUIC OFF
     AUTORCC OFF
 )
-target_compile_options(porydaw_shell_entry PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
+porydaw_enable_swift_batch_mode(porydaw_shell_entry)
 target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
 
 set(shell_qml

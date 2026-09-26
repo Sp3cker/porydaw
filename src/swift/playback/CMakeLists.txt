@@ -32,6 +32,7 @@ target_compile_options(PorydawPlayback PUBLIC
 target_include_directories(PorydawPlayback INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawPlayback,Swift_MODULE_DIRECTORY>>"
 )
+porydaw_enable_swift_batch_mode(PorydawPlayback)
 
 target_link_libraries(PorydawPlayback
     PUBLIC PorydawCore

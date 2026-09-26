@@ -243,6 +243,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(swift_core_check)
     target_compile_options(swift_core_check PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
@@ -334,6 +335,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(editor_qml_lane)
     # The Swift module-map compile options the core check sets, so this lane
     # sees the app module's Clang headers through the same contract. QtBridge
     # and PorydawApp also hand their Swift modules to this compile.
@@ -396,6 +398,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(roll_qml_lane)
     target_compile_options(roll_qml_lane PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
@@ -443,6 +446,7 @@ if(APPLE)
         AUTOUIC OFF
         AUTORCC OFF
     )
+    porydaw_enable_swift_batch_mode(shell_qml_lane)
     target_compile_options(shell_qml_lane PRIVATE
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"

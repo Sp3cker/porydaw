@@ -137,8 +137,7 @@ if(PORYDAW_BUILD_CHECKS)
         "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
 endif()
 
-target_compile_options(PorydawApp PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
+porydaw_enable_swift_batch_mode(PorydawApp)
 
 target_include_directories(PorydawApp INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawApp,Swift_MODULE_DIRECTORY>>"
@@ -179,8 +178,7 @@ set_target_properties(PorydawAppCommands PROPERTIES
 target_include_directories(PorydawAppCommands INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppCommands,Swift_MODULE_DIRECTORY>>"
 )
-target_compile_options(PorydawAppCommands PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
+porydaw_enable_swift_batch_mode(PorydawAppCommands)
 target_compile_options(PorydawAppCommands PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
@@ -211,8 +209,7 @@ set_target_properties(PorydawAppAudio PROPERTIES
 target_include_directories(PorydawAppAudio INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppAudio,Swift_MODULE_DIRECTORY>>"
 )
-target_compile_options(PorydawAppAudio PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
+porydaw_enable_swift_batch_mode(PorydawAppAudio)
 target_compile_options(PorydawAppAudio PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
@@ -238,8 +235,7 @@ set_target_properties(PorydawAppEventList PROPERTIES
 target_include_directories(PorydawAppEventList INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawAppEventList,Swift_MODULE_DIRECTORY>>"
 )
-target_compile_options(PorydawAppEventList PRIVATE
-    "$<$<COMPILE_LANGUAGE:Swift>:-enable-batch-mode>")
+porydaw_enable_swift_batch_mode(PorydawAppEventList)
 target_compile_options(PorydawAppEventList PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"

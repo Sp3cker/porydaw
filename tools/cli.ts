@@ -239,27 +239,141 @@ async function ensureConfigured(
   printDiagnosticLines(err);
 }
 
-async function runBuild(
+// Swift's incremental driver reuses an object whenever the sources and their
+// dependency graph are unchanged — compile flags included. Ninja re-runs a
+// target's compile edge after a reconfigure, but the driver then reports no
+// work and the stale objects survive, so a CMake flag edit would keep the old
+// binary. Dropping the edge's objects is what makes the flag edit land; the
+// stamp records the commands the objects on disk were built with.
+interface SwiftCompileEdge {
+  readonly rule: string;
+  readonly objects: string[];
+  readonly signature: string;
+}
+
+interface SwiftCompileState {
+  readonly signatures: Record<string, string>;
+  readonly objects: Record<string, string[]>;
+}
+
+const SWIFT_COMMAND_STAMP = join(BUILD_DIR, ".porydaw-swift-commands.json");
+
+async function swiftCompileEdges(): Promise<SwiftCompileEdge[]> {
+  const ninjaPath = join(BUILD_DIR, "build.ninja");
+  if (!(await exists(ninjaPath))) return [];
+  const marker = ": Swift_COMPILER__";
+  const lines = (await Deno.readTextFile(ninjaPath)).split(/\r?\n/);
+  const edges: SwiftCompileEdge[] = [];
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    if (!line.startsWith("build ")) continue;
+    const colon = line.indexOf(marker);
+    if (colon === -1) continue;
+    const directives: string[] = [];
+    for (
+      let next = index + 1;
+      next < lines.length && lines[next].startsWith("  ");
+      next++
+    ) {
+      const directive = lines[next].slice(2);
+      if (/^(?:FLAGS|INCLUDES|DEFINES|CONFIG) = /.test(directive)) {
+        directives.push(directive);
+      }
+    }
+    edges.push({
+      rule: line.slice(colon + marker.length).trim().split(/\s+/)[0],
+      objects: line.slice("build ".length, colon)
+        .split(/\s+/)
+        .filter((output) => output.endsWith(".o"))
+        .map((output) => join(BUILD_DIR, output)),
+      signature: directives.join("\n"),
+    });
+  }
+  return edges;
+}
+
+async function swiftCompileState(): Promise<SwiftCompileState> {
+  const signatures: Record<string, string> = {};
+  const objects: Record<string, string[]> = {};
+  for (const edge of await swiftCompileEdges()) {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(edge.signature),
+    );
+    signatures[edge.rule] = Array.from(
+      new Uint8Array(digest),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
+    objects[edge.rule] = edge.objects;
+  }
+  return { signatures, objects };
+}
+
+async function recordedSwiftCommands(): Promise<
+  Record<string, string> | undefined
+> {
+  try {
+    const recorded: unknown = JSON.parse(
+      await Deno.readTextFile(SWIFT_COMMAND_STAMP),
+    );
+    return recorded && typeof recorded === "object"
+      ? recorded as Record<string, string>
+      : undefined;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound || error instanceof SyntaxError) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+async function reconcileSwiftObjects(): Promise<string[]> {
+  const state = await swiftCompileState();
+  const rules = Object.keys(state.signatures);
+  if (rules.length === 0) return [];
+  const recorded = await recordedSwiftCommands();
+  const dropped: string[] = [];
+  for (const rule of rules) {
+    if (recorded?.[rule] === state.signatures[rule]) continue;
+    let removed = 0;
+    for (const object of state.objects[rule]) {
+      try {
+        await Deno.remove(object);
+        removed++;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) throw error;
+      }
+    }
+    if (removed > 0) dropped.push(rule);
+  }
+  await Deno.writeTextFile(
+    SWIFT_COMMAND_STAMP,
+    JSON.stringify(state.signatures, null, 2) + "\n",
+  );
+  return dropped;
+}
+
+async function cmakeBuild(
   targets: string[],
-  release = false,
-  buildChecks?: boolean,
+  release: boolean,
 ): Promise<void> {
-  const started = performance.now();
-  await ensureConfigured(release, buildChecks);
-  const nproc = String(navigator.hardwareConcurrency);
-  const args = ["--build", BUILD_DIR, "-j", nproc];
+  const args = [
+    "--build",
+    BUILD_DIR,
+    "-j",
+    String(navigator.hardwareConcurrency),
+  ];
   if (release || (await usesMultiConfigBuild())) {
     args.push("--config", "Release");
   }
   if (targets.length > 0) {
     args.push("--target", ...targets);
   }
-  const child = new Deno.Command("cmake", {
+  const result = await new Deno.Command("cmake", {
     args,
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const result = await child;
   const out = decoder.decode(result.stdout);
   const err = decoder.decode(result.stderr);
   const combined = out + err;
@@ -269,6 +383,31 @@ async function runBuild(
     Deno.exit(result.code || 1);
   }
   printDiagnosticLines(combined);
+}
+
+async function runBuild(
+  targets: string[],
+  release = false,
+  buildChecks?: boolean,
+): Promise<void> {
+  const started = performance.now();
+  await ensureConfigured(release, buildChecks);
+  const dropped = await reconcileSwiftObjects();
+  if (dropped.length > 0) {
+    console.log(
+      `build: dropped Swift objects for ${dropped.join(", ")}`,
+    );
+  }
+  await cmakeBuild(targets, release);
+  // A reconfigure inside the build rewrites compile commands after the
+  // reconcile above, so the objects it left behind can still be stale.
+  const reconfigured = await reconcileSwiftObjects();
+  if (reconfigured.length > 0) {
+    console.log(
+      `build: reconfigure dropped Swift objects for ${reconfigured.join(", ")}`,
+    );
+    await cmakeBuild(targets, release);
+  }
   const ms = performance.now() - started;
   const sec = (ms / 1000).toFixed(2);
   // Filter progress noise: only show summary, not per-target [%] lines

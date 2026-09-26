@@ -54,5 +54,6 @@ target_compile_options(PorydawProject PUBLIC
 target_include_directories(PorydawProject INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawProject,Swift_MODULE_DIRECTORY>>"
 )
+porydaw_enable_swift_batch_mode(PorydawProject)
 
 target_link_libraries(PorydawProject PUBLIC PorydawCore)
