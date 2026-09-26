@@ -82,6 +82,7 @@ public final class SongTabSession {
     public func trackHeadersPresenter() -> TrackHeadersPresenter { workspace.trackHeaders }
 
     public func drawerPresenter() -> EditorDrawerPresenter { workspace.drawer }
+    public func otherEventsBand() -> OtherEventsBandPresenter { workspace.otherEventsBand }
 
     public func velocityPage() -> VelocityPage { workspace.velocityPage }
 

@@ -61,6 +61,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// it is the stable object QML may hold before the first open and after the
     /// last close.
     private let emptyDrawerPresenter: EditorDrawerPresenter
+    private let emptyOtherEventsBand: OtherEventsBandPresenter
     /// One shared playhead for the whole surface. A document workspace binds it
     /// to its own document while that workspace is active and detaches it before
     /// that workspace is deactivated or released.
@@ -108,11 +109,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
         self.palette = palette
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
+        emptyOtherEventsBand = OtherEventsBandPresenter()
         playhead = SharedPlayheadPresenter()
         playheadGuides = PlayheadGuidesPresenter()
         eventList = EventListPresenter(palette: palette)
         transportBar = TransportBarPresenter()
         polyphony = PolyphonyPanelPresenter()
+        emptyOtherEventsBand.configure(session: nil, palette: palette,
+                                      baseFontPx: GridCameraPolicy.seedBaseFontPx,
+                                      appFontLineSpacing: 0, plotWidth: 0)
         do {
             audio = try NativeAudio()
         } catch {
@@ -380,6 +385,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// song and never fails.
     public func drawerPresenter() -> EditorDrawerPresenter {
         workspace?.drawer ?? emptyDrawerPresenter
+    }
+
+    public func otherEventsBand() -> OtherEventsBandPresenter {
+        workspace?.otherEventsBand ?? emptyOtherEventsBand
     }
 
     /// The document-bound Velocity page. Like `gridPresenter()` it exists only

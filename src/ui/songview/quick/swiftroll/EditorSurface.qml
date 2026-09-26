@@ -15,6 +15,7 @@ Item {
     readonly property var gridModel: applicationSession.gridPresenter()
     readonly property var headersModel: applicationSession.trackHeadersPresenter()
     readonly property var drawerPresenter: applicationSession.drawerPresenter()
+    readonly property var otherEventsPresenter: applicationSession.otherEventsBand()
     readonly property var pitchBendPresenter: applicationSession.pitchBendPresenter()
     readonly property var eventListPresenter: applicationSession.eventListPresenter()
     readonly property bool showEvents: applicationSession.showsEvents
@@ -170,8 +171,8 @@ Item {
         id: rollBandContent
         objectName: "swiftRollBand"
         width: root.width
-        height: Math.max(root.height - editorDrawer.height - hintStatus.height
-                         - root.scrollbarBreadth, 0)
+        height: Math.max(root.height - editorDrawer.height - otherEventsBand.height
+                         - hintStatus.height - root.scrollbarBreadth, 0)
         z: 1
 
         TrackHeaderBand {
@@ -960,7 +961,7 @@ Item {
         id: editorDrawer
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: horizontalScrollBar.top
+        anchors.bottom: otherEventsBand.top
         z: 2
 
         applicationSession: root.applicationSession
@@ -969,6 +970,23 @@ Item {
         drawerPalette: root.gridModel.palette
         preferenceLocation: root.drawerPreferenceLocation
     }
+    OtherEventsBand {
+        id: otherEventsBand
+        objectName: "timelineOtherEventsBand"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: horizontalScrollBar.top
+        z: 2
+        presenter: root.otherEventsPresenter
+        colors: root.gridModel.palette
+        gridModel: root.gridModel
+        overlayRoot: root
+        timelineSplitX: root.timelineSplitX
+        plotWidth: rollPlot.width
+        applicationFont: root.applicationFont
+        onHeightChanged: root.configureViewport()
+    }
+
 
     MouseHintStatus {
         id: hintStatus
@@ -1017,10 +1035,13 @@ Item {
         // the container still spans the full surface behind that chrome.
         root.drawerPresenter.configureLayout(Math.max(0, root.width - root.scrollbarBreadth),
                                              Math.max(0, root.height - hintStatus.height
-                                                      - root.scrollbarBreadth),
+                                                      - root.scrollbarBreadth - otherEventsBand.height),
                                              root.timelineSplitX,
                                              root.gridModel.baseFontPx,
                                              applicationFontMetrics.lineSpacing)
+        root.otherEventsPresenter.configureViewport(
+            Math.max(0, rollPlot.width), root.gridModel.baseFontPx,
+            applicationFontMetrics.lineSpacing)
     }
 
     function deliverWheel(event, overGutter) {

@@ -18,7 +18,9 @@ Command: deno task verify:shell --verbose
 Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
 Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808 (camera.swift)
 Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
-Converted-window case cited: src/checks/rollqml/tst_SwiftRollPlots.qml (sha256 4b6f582c6bf9e4ee8b15166f6e631167171421b1a454b413198c398531aef519).
+Converted-window case cited: src/checks/rollqml/tst_SwiftRollPlots.qml (sha256 b5d3e154b76f6c4a523667124d7d46c08a5dff9d62f5b30d918d674596c1118d, re-pinned for the task-27 other-events band revision: the canonical band layout now subtracts the mounted other-events band height).
+Command: deno task verify:qml-roll --verbose (task-27 other-events band revision)
+Result: PASS; 1/1 ok. Lane-owner observation on the revision now pinned; this bookkeeping pass ran no lane.
 
 A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
 Disposition: RETIRED-REPRESENTATION

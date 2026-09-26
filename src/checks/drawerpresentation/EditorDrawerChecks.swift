@@ -227,4 +227,5 @@ func runEditorDrawerChecks(_ report: CheckReport) {
     drawerLayoutCheckDrawerFocusRequests(report)
     drawerLayoutCheckDrawerCancellation(report)
     drawerLayoutCheckDrawerRestoreAndPreferenceRecords(report)
+    runOtherEventsBandChecks(report)
 }

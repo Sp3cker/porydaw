@@ -38,6 +38,7 @@ public final class DocumentWorkspace {
     /// Drawer chrome belongs to the document: this workspace owns the presenter
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
+    public let otherEventsBand: OtherEventsBandPresenter
 
     private unowned let audio: NativeAudio
     private unowned let playhead: SharedPlayheadPresenter
@@ -68,6 +69,11 @@ public final class DocumentWorkspace {
         // same object.
         let grid = PianoGrid(session: session, palette: palette)
         self.grid = grid
+        let otherEventsBand = OtherEventsBandPresenter()
+        otherEventsBand.configure(session: session, palette: grid.palette,
+                                  baseFontPx: grid.baseFontPx, appFontLineSpacing: 0,
+                                  plotWidth: session.camera.snapshot.viewportWidth)
+        self.otherEventsBand = otherEventsBand
         let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
         self.pitchBend = pitchBend
         grid.onPitchBendRequested = { [weak pitchBend] in
@@ -183,6 +189,7 @@ public final class DocumentWorkspace {
         trackHeaders.inputCancelled(reason: reason)
         voiceChangesPage.cancelSectionInteraction()
         drawer.inputCancelled(reason: reason)
+        otherEventsBand.inputCancelled()
     }
 
     /// Stops every session callback before the host tears the scene down.
@@ -285,6 +292,7 @@ public final class DocumentWorkspace {
         // an x scroll uses their projection-only seams, while camera zoom still
         // needs the existing full scene path.
         guard change.contains(.scrollX) || change.contains(.zoom) else { return }
+        otherEventsBand.refreshCamera()
         if change.contains(.zoom) {
             velocityPage.refreshCamera()
             voiceChangesPage.refreshCamera()
@@ -312,6 +320,7 @@ public final class DocumentWorkspace {
 
         if documentChanged {
             trackHeaders.documentDidChange(change)
+            otherEventsBand.refreshDocument()
             if isActive { playhead.refreshImmediate() }
         } else if !change.domains.intersection(headerDomains).isEmpty {
             trackHeaders.refreshFromDocument()

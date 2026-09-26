@@ -157,15 +157,14 @@ TestCase {
         return item
     }
 
-    // The roll band reserves a horizontal scrollbar below it, and the plot
-    // reserves the vertical track beside its right edge.
     function canonicalBand() {
         var s = surface()
         var drawer = findChild(s, "editorDrawer")
         var hint = findChild(s, "mouseHintStatus")
-        verify(drawer && hint, "the drawer and hint strip are mounted")
+        var other = findChild(s, "timelineOtherEventsBand")
+        verify(drawer && hint && other, "the drawer, event band and hint strip are mounted")
         return Qt.rect(0, 0, s.width,
-                       Math.max(s.height - drawer.height - hint.height
+                       Math.max(s.height - drawer.height - other.height - hint.height
                                 - s.headersModel.scrollbarWidth, 0))
     }
 

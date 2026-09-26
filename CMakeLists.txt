@@ -257,6 +257,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/docks/VoiceEditor.qml
         src/ui/songview/quick/docks/SamplePicker.qml
         src/ui/songview/quick/drawer/EditorDrawer.qml
+        src/ui/songview/quick/drawer/OtherEventsBand.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml

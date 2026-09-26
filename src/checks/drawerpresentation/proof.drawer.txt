@@ -7,8 +7,9 @@ Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
 Swift counterpart: src/checks/drawerpresentation/drawer_resize.swift
 Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
+Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
 QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
+QML SHA-256: fa9dda3207620129d309453dfc31da7912d87401a962c87a7148ced7d648cd83
 
 
 
@@ -23,6 +24,8 @@ Command: deno task verify --filter swiftcore --verbose (lane-owner re-run on thi
 Result: PASS (1 of 14 ok; swiftcore 10.17s); the lane owner confirmed the new predicate strings in the test binary. This ledger's S112 records that predicate.
 Command: PORYDAW_EDITOR_QML_PHASE=container deno task verify:qml --verbose --qt (lane-owner targeted re-run after the QML comment deletions)
 Result: PASS for the container drawer cases re-run. Both re-runs are lane-owner observations; this bookkeeping pass ran neither command.
+Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose (task-27 other-events band revision)
+Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations; this bookkeeping pass ran no lane. A139 maps to S113/S114 (tst_EditorDrawer.qml test_otherEventsBandMountsBetweenDrawerAndScrollbar, the revision pinned above); the other_events_band.swift predicates the swiftcore lane runs are indexed in src/checks/host/proof.tst_hostadapter.txt S017-S020 and src/checks/rollcheck/proof.keyboard.txt S085-S086.
 
 A001 | makeDrawerFixture | src/checks/drawerpresentation/drawer.cpp:36
 Disposition: RETIRED-REPRESENTATION
@@ -694,10 +697,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Roll))
 
 A139 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:510
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band layout; the Swift drawer surface publishes only the drawer sections and no OtherEvents band geometry.
-Original expression:
-  QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents))
+Disposition: MATCHED
+Mapping: S113, S114
 
 A140 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:516
 Disposition: MATCHED
@@ -1252,3 +1253,9 @@ Anchor: message "a host narrower than the plot origin publishes no plot width"
 
 S112 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer_basics.swift
 Anchor: message "an attached velocity section keeps its hidden default until restored or shown"
+
+S113 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band starts at the drawer bottom"
+
+S114 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the band remains mounted when every drawer section is collapsed"

@@ -19,7 +19,9 @@ Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit 
 Command: deno task verify:shell --verbose
 Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
 Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
-Verified QML SHA-256: 7a11ea7ca9a6f0450bdc2db5ef318ffedd325c4d527d488a4dded0349dfd5397 (src/checks/rollqml/tst_TimelinePan.qml); 4b6f582c6bf9e4ee8b15166f6e631167171421b1a454b413198c398531aef519 (src/checks/rollqml/tst_SwiftRollPlots.qml)
+Verified QML SHA-256: 7a11ea7ca9a6f0450bdc2db5ef318ffedd325c4d527d488a4dded0349dfd5397 (src/checks/rollqml/tst_TimelinePan.qml, last recorded hash); b5d3e154b76f6c4a523667124d7d46c08a5dff9d62f5b30d918d674596c1118d (src/checks/rollqml/tst_SwiftRollPlots.qml, re-pinned for the task-27 other-events band revision: the canonical band layout now subtracts the mounted other-events band height)
+Command: deno task verify:qml-roll --verbose (task-27 other-events band revision)
+Result: PASS; 1/1 ok. Lane-owner observation on the revision now pinned; this bookkeeping pass ran no lane. The roll lane runs tst_SwiftRollPlots.qml test_rollBandGeometryAndLifecycle, recorded in build/proof-evidence/swiftroll-window.json.
 Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
 
 A001 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:70

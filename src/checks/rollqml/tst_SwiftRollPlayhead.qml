@@ -99,6 +99,8 @@ TestCase {
         verify(waitForNative(function() {
             return surface.visible && surface.width > 0 && surface.height > 0
         }, 5000), "the mounted surface is drawn")
+        testCase.height += findChild(surface, "timelineOtherEventsBand").height
+        item.height = testCase.height
     }
 
     function selectedSurface() {

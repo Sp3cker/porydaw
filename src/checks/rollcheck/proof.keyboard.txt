@@ -5,6 +5,8 @@ Original: src/checks/rollcheck/keyboard.cpp
 Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
 Swift counterpart: src/checks/rollcheck/keyboard.swift
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 Retired in: 4d7fa617 Delete C++ window host, main.cpp and legacy keymap/layout/typography/theme C++; the pinned SHA is the 5f0924e8 blob, resolvable via git show 5f0924e8:src/checks/swiftrollgated/gesturechecks.cpp. S001-S028 index that pinned revision and close no A entry.
@@ -14,6 +16,8 @@ Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted n
 Command: deno task verify --filter projectstore --filter swiftcore --verbose
 Result: PASS — 24 applicable entries, 7 filtered skips; runtime swiftcore 20.39s (controller-recorded run; frozen keyboard.swift source unchanged).
 The swiftcore lane executes the four checkKeyboardSkipsGhosts report.expect predicates indexed as S078–S081 under cppID swiftcore/PianoRoll::keyboardTranspose, and build/proof-evidence/swiftcore.json records all four anchor literals.
+Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose
+Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/editorqml-drawer.json, swiftcore-projectsession.json and swiftroll-window.json record the predicates anchored as S083–S086.
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -397,115 +401,32 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A040 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:317
-Disposition: GAP
-Mapping/reason: GAP — no OtherEvents band in the Swift roll; so this strip-slot seed guard has no executing counterpart.
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::timelineOtherEventsStrip()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane seeded its resize fixture through makeResizeSeed; the Swift roll builds its own synthetic document, so the native strip-slot seed guard has no counterpart.
 
 A041 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:326
-Disposition: GAP
-Mapping/reason: GAP — no timeline band layout in the Swift roll: the OtherEvents band geometry lookup is unmodelled.
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      const std::optional<songview::TimelineBandGeometry> otherEvents =
-          view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
-Original expression:
-  QVERIFY2(otherEvents, "could not find the canonical other-events band");
+Disposition: MATCHED
+Mapping: S083, S084
 
 A042 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:334
-Disposition: GAP
-Mapping/reason: GAP — no OtherEvents strip model in the Swift roll: the track-colored marker fixture is unmodelled.
-Source context since previous assertion:
-      const StripItem *trackEvent = nullptr;
-      for (const StripItem &item : view.model().strip) {
-          if (item.track >= 0) {
-              trackEvent = &item;
-              break;
-          }
-      }
-Original expression:
-  QVERIFY2(trackEvent, "timeline fixture has no track-colored other-events marker");
+Disposition: MATCHED
+Mapping: S085
 
 A043 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:351
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — strip framebuffer pixel invariance: Swift asserts model state, never band pixels.
-Source context since previous assertion:
-      view.selectionModel().setTimeSelection({d.tick + snapCell,
-                                              d.tick + 2 * snapCell,
-                                              songview::EditorSelectionModel::TimeSelection::Tracks,
-                                              {}});
-      QCoreApplication::processEvents();
-      const double originalScroll = view.camera().scrollX();
-      const qreal visibleContentX = std::max<qreal>(1.0, otherEvents->plotRect.width() / 3.0);
-      view.setEditorHorizontalScroll(
-          originalScroll + view.camera().contentX(double(trackEvent->tick)) - visibleContentX);
-      QCoreApplication::processEvents();
-      const QImage beforeStripImage = check.captureQuickBand(otherEvents->rect);
-      auto movedSelection = view.selectionModel().timeSelection();
-      ++movedSelection.endTick;
-      view.selectionModel().setTimeSelection(movedSelection);
-      QCoreApplication::processEvents();
-      const QImage afterStripImage = check.captureQuickBand(otherEvents->rect);
-Original expression:
-  QVERIFY2(!beforeStripImage.isNull() && !afterStripImage.isNull() &&
-                   beforeStripImage == afterStripImage,
-               "moving a time selection changed the other-events strip pixels");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane compared two captured other-events band rasters around a moved time selection; the Swift surface asserts the strip projection (S085, S086), never band pixels.
 
 A044 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:371
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — strip framebuffer marker positioning at device pixels: Swift has no rendered-strip observation.
-Source context since previous assertion:
-      const qreal stripDpr = afterStripImage.devicePixelRatioF();
-      const qreal plotOffset = otherEvents->plotRect.left() - otherEvents->rect.left();
-      const int markerX = qRound(
-          (plotOffset + view.camera().displayX(double(trackEvent->tick), 0.0, stripDpr)) * stripDpr);
-      const int plotLeft = qRound(plotOffset * stripDpr);
-      const int markerY = afterStripImage.height() / 2;
-      const QRgb expected = SongView::trackColor(trackEvent->track).rgba();
-      bool foundMarker = false;
-      for (int y = markerY - 2; y <= markerY + 2 && !foundMarker; ++y) {
-          for (int x = markerX - 2; x <= markerX + 2; ++x) {
-              if (x >= plotLeft && y >= 0 && x < afterStripImage.width() &&
-                  y < afterStripImage.height() && afterStripImage.pixel(x, y) == expected) {
-                  foundMarker = true;
-                  break;
-              }
-          }
-      }
-Original expression:
-  QVERIFY2(markerX >= plotLeft && markerX < afterStripImage.width(),
-               "track-colored other-events marker was not positioned in the plot");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane searched the captured band raster for the projected marker x; the projected marker position is now asserted by S086 (src/checks/drawerpresentation/other_events_band.swift) and no Swift predicate captures band pixels.
 
 A045 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:373
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — rendered diamond pixel search in the strip framebuffer: Swift has no rendered-strip observation.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(foundMarker, "other-events strip did not render a visible track-colored diamond");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane searched the captured band raster for the rendered track-colored diamond; the marker color is now asserted by S085 (src/checks/drawerpresentation/other_events_band.swift) and no Swift predicate captures band pixels.
 
 A046 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:378
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the strip slot SMF restoration is unproved.
-Source context since previous assertion:
-      view.setEditorHorizontalScroll(originalScroll);
-      QCoreApplication::processEvents();
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane unwound its seeded strip slot and compared the fixture's SMF bytes; the Swift roll seeds no native slot, so the harness restore has no counterpart.
 
 A047 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:385
 Disposition: GAP
@@ -1452,3 +1373,15 @@ Anchor: message "keyboard remaps leave other-track ghost notes untouched"
 
 S082 | checkRulerSweepSingleTrackScope | src/checks/rollcheck/note_rendering.swift
 Anchor: message "single-track sweep fixture cannot seed the intersecting other-track note"
+
+S083 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band mounts in the production editor"
+
+S084 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band starts at the drawer bottom"
+
+S085 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "track markers use the stable track-identity fill"
+
+S086 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "marker x is the shared camera content position of its tick"

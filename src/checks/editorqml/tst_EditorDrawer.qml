@@ -204,6 +204,96 @@ TestCase {
         compare(monoFont.name, "Atkinson Hyperlegible Mono")
     }
 
+    function test_otherEventsBandMountsBetweenDrawerAndScrollbar() {
+        var band = findChild(testCase.surface, "timelineOtherEventsBand")
+        verify(band, "the other-events band mounts in the production editor")
+        testCase.resetChrome(bootstrap.preferencesUrl("other-events-collapsed"), {})
+        verify(band.visible, "the band remains mounted when every drawer section is collapsed")
+        compare(testCase.section(testCase.velocityKind).visible, false,
+                "the Velocity section is collapsed")
+        compare(testCase.section(testCase.voiceChangesKind).visible, false,
+                "the Voice changes section is collapsed")
+        compare(testCase.section(testCase.automationKind).visible, false,
+                "the Automation section is collapsed")
+        var drawer = testCase.drawer()
+        var timeline = findChild(testCase.surface, "timelineHorizontalScrollBar")
+        compare(band.y, drawer.y + drawer.height,
+                "the other-events band starts at the drawer bottom")
+        compare(band.y + band.height, timeline.y,
+                "the other-events band ends at the horizontal scrollbar")
+        compare(band.height, testCase.surface.otherEventsPresenter.bandHeight,
+                "the mounted band uses its presenter's font-derived height")
+    }
+
+    function test_otherEventsProjectionHoverAndWheel() {
+        var band = findChild(testCase.surface, "timelineOtherEventsBand")
+        var presenter = testCase.surface.otherEventsPresenter
+        var grid = testCase.surface.gridModel
+        var markers = findChild(band, "timelineOtherEventsMarkers")
+        var input = findChild(band, "timelineOtherEventsInput")
+        var gutter = findChild(band, "timelineOtherEventsGutterInput")
+        var label = findChild(band, "timelineOtherEventsLabel")
+        verify(markers && input && gutter && label, "the band exposes its rendered marker and pointer surfaces")
+        grid.setCameraHScroll(0)
+        tryCompare(presenter, "labelCount", 3)
+        compare(label.text, "Other events (3)", "the route101 fixture publishes the full strip count")
+        compare(String(label.color).toLowerCase(), String(grid.palette.windowText).toLowerCase(),
+                "the label uses the live palette text role")
+        compare(gutter.width, testCase.surface.timelineSplitX,
+                "the gutter input spans the shared header and keyboard width")
+        compare(input.width, testCase.surface.width - testCase.surface.timelineSplitX
+                - testCase.surface.scrollbarBreadth, "the marker input spans the roll plot")
+        tryVerify(function() { return markers.count > 0 })
+        compare(markers.count, presenter.markerCount, "visible markers match the camera projection")
+        var marker = null
+        for (var i = 0; i < markers.count; ++i) {
+            var candidate = markers.itemAt(i)
+            if (candidate.model.x > presenter.markerHalfWidth
+                && candidate.model.x < input.width - presenter.markerHalfWidth) {
+                marker = candidate
+                break
+            }
+        }
+        verify(marker, "route101 has a marker fully visible inside the plot")
+        fuzzyCompare(marker.x + presenter.markerHalfWidth,
+                     marker.model.tick * grid.beatWidth / grid.ticksPerBeat - grid.cameraScrollX,
+                     0.01, "the marker follows the same tick projection as the roll")
+        verify(marker.model.color !== "", "the marker receives a track or file palette color")
+        mouseMove(input, marker.model.x, band.height / 2)
+        tryCompare(presenter, "toolTipVisible", true)
+        verify(presenter.toolTipText.includes(marker.model.label),
+               "the hover tooltip describes the visible marker")
+        verify(presenter.toolTipText.includes(" · Track ") || presenter.toolTipText.includes(" · File · "),
+               "the tooltip names the event scope and formatted time")
+        var tooltip = findChild(testCase.surface, "timelineOtherEventsToolTip")
+        tryCompare(tooltip, "visible", true)
+        testCase.rollInput().forceActiveFocus()
+        mouseClick(input, marker.model.x, band.height / 2)
+        compare(testCase.rollInput().activeFocus, true,
+                "clicking the event band does not steal the roll's keyboard focus")
+        var ruler = findChild(testCase.surface, "timelineRulerInput")
+        mouseMove(ruler, ruler.width / 2, ruler.height / 2)
+        tryCompare(presenter, "toolTipVisible", false)
+        mouseMove(input, marker.model.x, band.height / 2)
+        tryCompare(presenter, "toolTipVisible", true)
+        session.cancelGridInput(1)
+        tryCompare(presenter, "toolTipVisible", false, 1000,
+                   "cancelling input also retires the band tooltip")
+        var oldScroll = grid.cameraScrollX
+        mouseWheel(input, input.width / 2, input.height / 2,
+                   0, -120, Qt.NoButton, Qt.ShiftModifier)
+        tryVerify(function() { return grid.cameraScrollX > oldScroll },
+                  1000, "the marker plot routes Shift-wheel into horizontal grid scrolling")
+        compare(markers.count, presenter.markerCount,
+                "camera scrolling refreshes only the visible event markers")
+        grid.setCameraHScroll(0)
+        mouseWheel(gutter, gutter.width / 2, gutter.height / 2,
+                   0, -120, Qt.NoButton, Qt.ShiftModifier)
+        tryVerify(function() { return grid.cameraScrollX > 0 },
+                  1000, "the gutter routes Shift-wheel into the shared camera")
+        grid.setCameraHScroll(0)
+    }
+
     function initTestCase() {
         verify(bootstrap.start("mus_route101"), "the staged route101 project starts opening")
         var waited = 0
@@ -347,7 +437,7 @@ TestCase {
     function rollInput() { return findChild(testCase.surface, "swiftRollInput") }
     function hintStatus() { return findChild(testCase.surface, "mouseHintStatus") }
     function editorHeight() {
-        return findChild(testCase.surface, "timelineHorizontalScrollBar")
+        return findChild(testCase.surface, "timelineOtherEventsBand")
             .mapToItem(testCase.surface, 0, 0).y
     }
     function rollBand() { return findChild(testCase.surface, "swiftRollBand") }
@@ -539,7 +629,8 @@ TestCase {
             var bar = testCase.bar()
             var status = testCase.hintStatus()
             var timeline = findChild(testCase.surface, "timelineHorizontalScrollBar")
-            if (!presenter || !container || !band || !bar || !status || !timeline)
+            var other = findChild(testCase.surface, "timelineOtherEventsBand")
+            if (!presenter || !container || !band || !bar || !status || !timeline || !other)
                 return false
             if (container.height !== presenter.height)
                 return false
@@ -547,6 +638,7 @@ TestCase {
             var drawerOrigin = container.mapToItem(testCase.surface, 0, 0)
             var statusOrigin = status.mapToItem(testCase.surface, 0, 0)
             var timelineOrigin = timeline.mapToItem(testCase.surface, 0, 0)
+            var otherOrigin = other.mapToItem(testCase.surface, 0, 0)
             if (!status.visible || status.height <= 0
                 || rollOrigin.x !== 0 || rollOrigin.y !== 0
                 || drawerOrigin.x !== 0 || statusOrigin.x !== 0
@@ -554,7 +646,9 @@ TestCase {
                 || container.width !== testCase.surface.width
                 || status.width !== testCase.surface.width
                 || band.height !== drawerOrigin.y
-                || drawerOrigin.y + container.height !== timelineOrigin.y
+                || drawerOrigin.y + container.height !== otherOrigin.y
+                || otherOrigin.y + other.height !== timelineOrigin.y
+                || other.height !== testCase.surface.otherEventsPresenter.bandHeight
                 || timelineOrigin.y + timeline.height !== statusOrigin.y
                 || !timeline.visible || timeline.width <= 0
                 || timeline.height !== testCase.surface.headersModel.scrollbarWidth
@@ -982,9 +1076,9 @@ TestCase {
                 - testCase.surface.scrollbarBreadth,
                 "the drawer plot shares the roll viewport beside the scrollbar")
         compare(testCase.rollBand().height, testCase.editorHeight(),
-                "the roll fills the editor above the horizontal scrollbar")
+                "the roll fills the editor above the other-events band")
         compare(testCase.rollInput().height, testCase.editorHeight() - testCase.surface.gridModel.rulerHeight,
-                "the roll input fills the editor below the ruler and above the scrollbar")
+                "the roll input stops at the drawer above the other-events band")
     }
 
     // Three real pages host through the production seam: chrome and stacking

@@ -4,6 +4,10 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/host/tst_hostadapter.cpp
 Original SHA-256: 6e63b0766e5899601bb5a68b18a516715fe0669549a1929c4bc43ddb550c1bbe
 Swift counterpart: src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedRulerRollVelocityAndDrawerChromeGeometry
+Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml (converted QML drawer lane)
+Additional Swift counterpart: src/checks/rollqml/tst_SwiftRollPlots.qml (converted QML roll lane)
+Additional Swift counterpart: src/checks/drawerpresentation/other_events_band.swift
+Additional Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 
@@ -11,6 +15,8 @@ NATIVE is no longer used: every site that observed a native-window, embedding, d
 
 Command: deno task verify:qml-roll --filter swiftroll-window
 Result: PASS 1/1 ok (post-merge fc39ba34, quoted verification).
+Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --verbose (editorqml-drawer); deno task verify:qml-roll --verbose
+Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/swiftcore-projectsession.json, editorqml-drawer.json and swiftroll-window.json record the predicate messages and test functions anchored as S001-S022 below.
 
 A001 | syntheticFixtureConstructsHost | src/checks/host/tst_hostadapter.cpp:63
 Disposition: RETIRED-REPRESENTATION
@@ -164,8 +170,8 @@ Original expression:
   QVERIFY(trackHeaders->plotRect.isEmpty())
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S002/S003 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) place the other-events band rect between the drawer bottom and the horizontal scrollbar and S015 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll band to the canonical band layout; unproved: the same layout geometry for the ruler and velocity bands (their mounted asserts carry no message anchor).
 Source context since previous assertion:
   ;
           for (songview::TimelineBand band :
@@ -177,8 +183,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A028 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:137
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S003/S005 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) give the other-events band a top at the drawer bottom, a bottom at the horizontal scrollbar and the presenter's font-derived height, so its rect is non-empty; unproved: the ruler and velocity band rects (their mounted asserts carry no message anchor).
 Source context since previous assertion:
   ;
 
@@ -186,8 +192,8 @@ Original expression:
   QVERIFY(!geometry->rect.isEmpty())
 
 A029 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:138
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S007/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) give the other-events band a timelineSplitX-wide gutter and a marker input spanning the remaining roll plot width, and S016 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll input rect to the canonical plot column; unproved: the ruler and velocity band plot rects.
 Source context since previous assertion:
   ;
 
@@ -195,8 +201,8 @@ Original expression:
   QVERIFY(!geometry->plotRect.isEmpty())
 
 A030 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:139
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S016 (src/checks/rollqml/tst_SwiftRollPlots.qml :: test_rollBandGeometryAndLifecycle, mounted) matches the roll input to the canonical plot column whose origin is the track-header width plus the keyboard width; unproved: the plot origin of the other-events, ruler and velocity bands (the mounted ruler/roll/velocity plot-x asserts carry no message anchor).
 Source context since previous assertion:
   ;
 
@@ -204,8 +210,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
 
 A031 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S003/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) bound the other-events band between the drawer bottom and the horizontal scrollbar and span its marker input across the roll plot; unproved: the clause that the plot right edge equals the band rect right edge (the mounted plot/rect edge asserts carry no message anchor).
 Source context since previous assertion:
   ;
 
@@ -213,8 +219,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
 
 A032 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:141
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
+Disposition: PARTIAL
+Mapping/reason: S007/S008 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) put the other-events gutter input on the shared header and keyboard width and the marker input across the roll plot, so the two surfaces tile the band; unproved: the non-intersection predicate itself for every band (the mounted header/plot adjacency asserts carry no message anchor).
 Source context since previous assertion:
   ;
 
@@ -222,8 +228,8 @@ Original expression:
   QVERIFY(!trackHeaders->rect.intersects(geometry->plotRect))
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerSectionGeometry owns the band rect published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
+Disposition: PARTIAL
+Mapping/reason: S002/S005 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsBandMountsBetweenDrawerAndScrollbar, mounted) assert the other-events band rect through the mounted item's layout (drawer bottom to horizontal scrollbar, presenter bandHeight) instead of the seven root properties this row reads; unproved: the root-property projection and the ruler/automation/velocity/voice-changes/track-headers entries.
 Source context since previous assertion:
   ;
           }
@@ -421,15 +427,8 @@ A067 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_
 Disposition: RETIRED-REPRESENTATION
 
 A068 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:255
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
-Source context since previous assertion:
-  ;
-          const auto other = view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
-          const auto velocity = view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
-
-Original expression:
-  QVERIFY(other.has_value())
+Disposition: MATCHED
+Mapping: S001, S002
 
 A069 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:256
 Disposition: GAP
@@ -461,13 +460,8 @@ A073 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_
 Disposition: MATCHED
 
 A074 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:263
-Disposition: GAP
-Mapping/reason: feature not yet ported: OtherEvents band
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(drawer->overlayRect().bottom() < other->rect.top())
+Disposition: MATCHED
+Mapping: S002
 
 A075 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:264
 Disposition: MATCHED
@@ -843,21 +837,12 @@ A121 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst
 Disposition: RETIRED-REPRESENTATION
 
 A122 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:433
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry presence (with input discovery); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          auto *input = root->findChild<songview::TimelineInputItem *>(
-              QStringLiteral("timelineOtherEventsInput"));
-          const auto geometry =
-              view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
-
-Original expression:
-  QVERIFY(input && geometry.has_value())
+Disposition: MATCHED
+Mapping: S009, S002
 
 A123 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:437
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip surface discovery and its initially hidden state; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S013 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) discovers the production tooltip and asserts it describes the hovered marker; unproved: the mounted tooltip surface's initially hidden state (the case asserts the hidden path without a message anchor) and the retired OtherStrip identity.
 Source context since previous assertion:
   ;
           QQuickItem *toolTip =
@@ -868,58 +853,24 @@ Original expression:
   QVERIFY(toolTip && otherStrip && !toolTip->isVisible())
 
 A124 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:438
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired strip model had to expose the hovered marker before any tooltip text could be observed; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!view.model().strip.empty())
+Disposition: MATCHED
+Mapping: S006
 
 A125 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:444
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events input containment of the tooltip hover point; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-          const StripItem &marker = view.model().strip.front();
-          const qreal x = view.camera().displayX(double(marker.tick), geometry->plotRect.x(),
-                                                 input->devicePixelRatio());
-          const QPointF inputPoint =
-              input->mapFromScene(QPointF{x, qreal(geometry->rect.center().y())});
-
-Original expression:
-  QVERIFY(input->contains(inputPoint))
+Disposition: MATCHED
+Mapping: S011, S013
 
 A126 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:454
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip visibility after a hover enter; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-          const QPointF windowPoint = input->mapToScene(inputPoint);
-          QEnterEvent enter(windowPoint, windowPoint,
-                            QPointF(quick->quickWindow()->mapToGlobal(windowPoint.toPoint())));
-          QCoreApplication::sendEvent(quick->quickWindow(), &enter);
-          QMouseEvent move(QEvent::MouseMove, windowPoint, windowPoint,
-                           quick->quickWindow()->mapToGlobal(windowPoint.toPoint()), Qt::NoButton,
-                           Qt::NoButton, Qt::NoModifier);
-          QCoreApplication::sendEvent(quick->quickWindow(), &move);
-          settle();
-
-Original expression:
-  QVERIFY(otherStrip->toolTipVisible())
+Disposition: MATCHED
+Mapping: S013
 
 A127 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:455
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired tooltip text had to contain the hovered marker label; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(otherStrip->toolTipText().contains(marker.label))
+Disposition: MATCHED
+Mapping: S013
 
 A128 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:456
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip position matched to the hover point; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S011/S019 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel and src/checks/drawerpresentation/other_events_band.swift :: runOtherEventsBandChecks) assert the marker x follows the shared camera projection of its tick, which is the hover point the case uses; unproved: the published tooltip position (no predicate reads the presenter's toolTipX/toolTipY or the tooltip anchor).
 Source context since previous assertion:
   ;
 
@@ -927,8 +878,8 @@ Original expression:
   QCOMPARE(otherStrip->toolTipPosition(), inputPoint)
 
 A129 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:457
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip item visibility after the hover; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S013 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) asserts the hover tooltip describes the visible marker and the same case inspects the mounted tooltip item; unproved: the item's own visibility assertion, which carries no message anchor.
 Source context since previous assertion:
   ;
 
@@ -936,8 +887,8 @@ Original expression:
   QVERIFY(toolTip->isVisible())
 
 A130 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:464
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the rendered other-events tooltip text containing the marker label; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S013 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) asserts the published tooltip text contains the hovered marker's label; unproved: the rendered tooltip text (no predicate reads the mounted item's text).
 Source context since previous assertion:
   ;
           const auto renderedText = [](QQuickItem &item) {
@@ -951,8 +902,8 @@ Original expression:
   QVERIFY(renderedText(*toolTip).contains(marker.label))
 
 A131 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:478
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired OtherStrip tooltip surface: feature not yet ported: other-strip tooltip/loop markers; the retired tooltip had to clear on leave (async wait result); no equivalent predicate established.
+Disposition: PARTIAL
+Mapping/reason: S014 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) asserts a cancelled input retires the band tooltip; unproved: the pointer-leave path and its async wait result (the leave assert carries no message anchor) and the empty-text conjunct.
 Source context since previous assertion:
   ;
           const QPointF outside = root->property("rulerBandRect").toRectF().center();
@@ -973,8 +924,8 @@ Original expression:
   QCOMPARE(hidden, checks::async_wait::Result::Ready)
 
 A132 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:480
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip cleared after leave; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S013/S014 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) cover the hover and cancel paths; unproved: the pointer-leave clearing of both the visible flag and the text (the leave assert carries no message anchor and no predicate reads the cleared text).
 Source context since previous assertion:
   ;
           settle();
@@ -983,8 +934,8 @@ Original expression:
   QVERIFY(!otherStrip->toolTipVisible() && otherStrip->toolTipText().isEmpty())
 
 A133 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:481
-Disposition: GAP
-Mapping/reason: Swift EventListPresenter owns the other-events tooltip item hidden after leave; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
+Disposition: PARTIAL
+Mapping/reason: S014 (src/checks/editorqml/tst_EditorDrawer.qml :: test_otherEventsProjectionHoverAndWheel, mounted) asserts the cancelled hover retires the band tooltip; unproved: the mounted tooltip item's own hidden state, which carries no message anchor.
 Source context since previous assertion:
   ;
 
@@ -995,32 +946,16 @@ A134 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_
 Disposition: RETIRED-REPRESENTATION
 
 A135 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:492
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry presence for the raster probe; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
-Source context since previous assertion:
-  ;
-          SongView &view = host.view();
-          const auto geometry =
-              view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
-
-Original expression:
-  QVERIFY(geometry.has_value())
+Disposition: MATCHED
+Mapping: S001, S002
 
 A136 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:496
-Disposition: GAP
-Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the other-events band geometry rect probed by this raster capture; no equivalent Swift/QML geometry predicate established; native harness unexecuted.
-Source context since previous assertion:
-  ;
-          QString captureError;
-          const QImage baseline =
-              checks::support::captureQuickBand(view, geometry->rect, &captureError);
-
-Original expression:
-  QVERIFY2(!baseline.isNull(), qPrintable(captureError))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane captured the other-events band raster and guarded the capture; no Swift predicate captures band pixels.
 
 A137 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:500
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop timeline had to exist for the loop-marker scenario; no equivalent predicate established.
+Disposition: PARTIAL
+Mapping/reason: S021 (src/checks/rollcheck/ruler_loop_menu.swift :: checkRulerLoopSetAndUndo) builds the playback timeline from a document whose loop markers were set and asserts its loop fields; unproved: the native timeline handle guard itself (Swift's PlaybackTimeline.build is non-optional, so the null case has no counterpart).
 Source context since previous assertion:
   ;
           host.document().setLoopTick(false, 6);
@@ -1031,22 +966,12 @@ Original expression:
   QVERIFY(loopTimeline)
 
 A138 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:501
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop start tick reaching the timeline; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(loopTimeline->loopStartTick, uint64_t{6})
+Disposition: MATCHED
+Mapping: S021
 
 A139 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:502
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the loop end tick reaching the timeline; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(loopTimeline->loopEndTick, uint64_t{18})
+Disposition: MATCHED
+Mapping: S022
 
 A140 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:507
 Disposition: GAP
@@ -1062,25 +987,12 @@ Original expression:
   QVERIFY(updated.has_value())
 
 A141 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:509
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the post-update band raster capture validity guard; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-          const QImage after = checks::support::captureQuickBand(view, updated->rect, &captureError);
-
-Original expression:
-  QVERIFY2(!after.isNull(), qPrintable(captureError))
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane captured the band raster again after the loop update and guarded the capture; no Swift predicate captures band pixels.
 
 A142 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:512
-Disposition: GAP
-Mapping/reason: Swift has no counterpart for the retired loop-marker raster surface: feature not yet ported: other-strip tooltip/loop markers; the other-events raster equality after the loop markers changed; no equivalent predicate established.
-Source context since previous assertion:
-  ;
-          // The timeline fields above are primary; this raster comparison guards
-          // the absence of loop-marker leakage into the Other Events strip.
-
-Original expression:
-  QCOMPARE(after, baseline)
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: the retired native lane compared two captured band rasters; the loop-marker leak it guarded is covered by S017 (src/checks/drawerpresentation/other_events_band.swift :: runOtherEventsBandChecks) and no Swift predicate captures band pixels.
 
 A143 | automationTempoRangeDelegatesTheSelectionScope | src/checks/host/tst_hostadapter.cpp:519
 Disposition: RETIRED-REPRESENTATION
@@ -1419,3 +1331,71 @@ Remaining original source (closing sequence and helper bodies):
   }
 
   #include "tst_hostadapter.moc"
+
+Swift assertion predicates (task-27 other-events band revision):
+
+S001 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band mounts in the production editor"
+
+S002 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band starts at the drawer bottom"
+
+S003 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the other-events band ends at the horizontal scrollbar"
+
+S004 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the band remains mounted when every drawer section is collapsed"
+
+S005 | test_otherEventsBandMountsBetweenDrawerAndScrollbar | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the mounted band uses its presenter's font-derived height"
+
+S006 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the route101 fixture publishes the full strip count"
+
+S007 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the gutter input spans the shared header and keyboard width"
+
+S008 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the marker input spans the roll plot"
+
+S009 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the band exposes its rendered marker and pointer surfaces"
+
+S010 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "visible markers match the camera projection"
+
+S011 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the marker follows the same tick projection as the roll"
+
+S012 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the marker receives a track or file palette color"
+
+S013 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the hover tooltip describes the visible marker"
+
+S014 | test_otherEventsProjectionHoverAndWheel | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "cancelling input also retires the band tooltip"
+
+S015 | test_rollBandGeometryAndLifecycle | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the band rect matches the canonical band layout"
+
+S016 | test_rollBandGeometryAndLifecycle | src/checks/rollqml/tst_SwiftRollPlots.qml
+Anchor: message "the input rect matches the canonical plot column"
+
+S017 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "recognized loop-marker metas never enter the strip"
+
+S018 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "track markers use the stable track-identity fill"
+
+S019 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "marker x is the shared camera content position of its tick"
+
+S020 | runOtherEventsBandChecks | src/checks/drawerpresentation/other_events_band.swift
+Anchor: message "hover lines format timestamp, File or one-based Track, and the event label"
+
+S021 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A009: setting loop start moves its marker to the cell edge"
+
+S022 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "A015/A017: the end marker is one snap cell later and changes the song"
