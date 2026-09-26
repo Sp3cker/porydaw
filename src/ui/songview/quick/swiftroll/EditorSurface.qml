@@ -49,6 +49,7 @@ Item {
     property point timeSelectionMenuPosition: Qt.point(0, 0)
     property bool timeMenuFocus: false
     property bool menuDismissReturnsFocus: false
+    property bool menuHostHeldFocus: false
     property bool insertPromptHadFocus: false
     readonly property int menuHorizontalPadding: applicationSession.timeSigHost.layoutSpaces.two
     readonly property int menuVerticalPadding: applicationSession.timeSigHost.layoutSpaces.half
@@ -142,10 +143,13 @@ Item {
         function onIsOpenChanged() {
             if (root.rulerMenu.isOpen) {
                 root.menuDismissReturnsFocus = false
+                root.menuHostHeldFocus = !!(timeSigMenuLoader.item
+                                             && timeSigMenuLoader.item.activeFocus)
                 return
             }
-            const returnFocus = root.menuDismissReturnsFocus
+            const returnFocus = root.menuDismissReturnsFocus || root.menuHostHeldFocus
             root.menuDismissReturnsFocus = false
+            root.menuHostHeldFocus = false
             if (root.timeSigHost && root.timeSigHost.timeSigMenuOpen)
                 root.timeSigHost.closeTimeSigMenu()
             if (root.timeMenuFocus) {
@@ -306,7 +310,7 @@ Item {
                             rulerMoves.flush()
                             if (mouse.button !== Qt.LeftButton)
                                 return
-                            const tick = root.timeSigHost.timeSigChipTick(mouse.x)
+                            const tick = root.timeSigHost.timeSigChipTick(mouse.x, mouse.y)
                             if (tick >= 0)
                                 root.timeSigHost.openTimeSigPrompt(tick)
                         }
@@ -884,6 +888,12 @@ Item {
         sourceComponent: Component {
             Item {
                 focus: true
+                onActiveFocusChanged: {
+                    if (activeFocus)
+                        root.menuHostHeldFocus = true
+                    else if (root.rulerMenu.isOpen)
+                        root.menuHostHeldFocus = false
+                }
                 Keys.onEscapePressed: (event) => {
                     root.menuDismissReturnsFocus = true
                     root.timeSigHost.closeTimeSigMenu()

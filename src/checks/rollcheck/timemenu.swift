@@ -11,6 +11,7 @@ func runTimemenuChecks(_ report: CheckReport, session: DocumentSession) {
     checkTimeMenuClipboardRetirement(report, session: session)
     checkEmptyTimeSelectionNudge(report, session: session)
     checkRejectedTimeMenuPaste(report, session: session)
+    checkAdmittedTimeMenuPaste(report, session: session)
     checkNoteDuplicateArming(report, session: session)
 }
 
@@ -33,6 +34,8 @@ private func checkTimeMenuInsertTime(_ report: CheckReport, session: DocumentSes
         report.fail(id, "the resize seed note was not found")
         return
     }
+    report.expect(seed.tick == seedTick && seed.pitch == 60 && seed.duration == 6,
+                  cppID: id, message: "the time insertion fixture seeds its shifted note")
     let snapCell: Tick = 6
     document.nudgeNotes([seed.id], byTicks: Int64(snapCell), byKeys: 0)
     let insertStart = seed.tick + snapCell
@@ -63,6 +66,8 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
     let automation = AutomationPage(baseFontPx: grid.baseFontPx)
     automation.attach(session: session, palette: palette)
     defer { automation.detach() }
+    let previousClipboard = drawerAutomationPorydawSelectionClipboardState()
+    defer { previousClipboard.restore() }
     let menu = RulerMenuPresenter(session: session, grid: grid, automation: automation)
     let previousTrack = session.selectedTrack
     if previousTrack == nil { session.selectPrimaryTrack(0) }
@@ -79,6 +84,9 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
         report.fail(id, "could not seed a note in the insertion range")
         return
     }
+    report.expect(session.document.note(added[0]).map {
+        $0.track == (session.selectedTrack ?? 0) && $0.tick == start + 6 && $0.pitch == 30
+    } == true, cppID: id, message: "the time insertion fixture seeds its selected note")
     defer { _ = session.document.history.undoDocument() }
     let midpoint = session.camera.contentX(tick: Double((start + end) / 2))
     automation.applyTimeSelection(AutomationTimeSelection(
@@ -89,6 +97,15 @@ private func checkTimeSelectionMenuCommands(_ report: CheckReport, session: Docu
                   && menu.rows.count == 9
                   && menu.rows[3].actionId == 1 && menu.rows[3].enabled,
                   cppID: id, message: "a selected interval opens an enabled Insert Time row")
+    _ = menu.activate(actionId: 11)
+    let copiedNote = GridClipboard().read()?.clip.tracks
+        .first(where: { $0.track == (session.selectedTrack ?? 0) })?
+        .notes.first(where: { $0.key == 30 })
+    report.expect(copiedNote?.relTick == 6, cppID: id,
+                  message: "the copied time range stores the covered note relative to its start")
+    report.expect(copiedNote?.key == 30, cppID: id,
+                  message: "the copied time range preserves the covered note pitch")
+    menu.openTimeSelection(contentX: midpoint)
     let before = session.document.history.currentIdentity
     let bytes = coreTimeBytes(session.document)
     let selection = session.timeSelection
@@ -205,6 +222,16 @@ private func checkRejectedTimeMenuPaste(_ report: CheckReport, session: Document
     if oldTrack == nil { session.selectPrimaryTrack(0) }
     let destination = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
     let track = session.selectedTrack ?? 0
+    guard let seeded = try? session.document.addNotes([
+        NewNote(track: track, tick: destination, pitch: 30, duration: 6, velocity: 100)
+    ]), let seedID = seeded.first else {
+        report.fail(id, "could not seed the rejected-paste fixture note")
+        return
+    }
+    report.expect(session.document.note(seedID).map {
+        $0.track == track && $0.tick == destination && $0.pitch == 30
+    } == true, cppID: id, message: "the rejected-paste fixture seeds its note at the track and tick")
+    defer { _ = session.document.history.undoDocument() }
     let conflicting = [
         ClipNote(relTick: 0, key: 55, duration: 12, velocity: 91),
         ClipNote(relTick: 1, key: 55, duration: 12, velocity: 91)
@@ -268,6 +295,74 @@ private func openRejectedPasteRulerMenu(_ menu: RulerMenuPresenter, at contentX:
 }
 
 @MainActor
+private func checkAdmittedTimeMenuPaste(_ report: CheckReport, session: DocumentSession) {
+    let id = "swiftcore/PianoRoll::timeSelectionMenuPaste"
+    let saved = drawerAutomationPorydawSelectionClipboardState()
+    defer { saved.restore() }
+    let previousTrack = session.selectedTrack
+    if previousTrack == nil { session.selectPrimaryTrack(0) }
+    defer { session.selectedTrack = previousTrack }
+    let previousCursor = session.editCursor
+    defer { session.editCursor = previousCursor; session.clearTimeSelection() }
+    let grid = PianoGrid(session: session)
+    let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+    automation.attach(session: session, palette: grid.palette)
+    defer { automation.detach() }
+    let track = session.selectedTrack ?? 0
+    let destination = Tick(grid.snapTickDown(Double(session.timeline.lengthTicks + 96)))
+    let clipboard = GridClipboard()
+    let note = ClipNote(relTick: 6, key: 55, duration: 6, velocity: 91)
+    for span: Tick in [24, 0] {
+        session.editCursor = destination
+        if span > 0 {
+            session.applyTimeSelection(AutomationTimeSelection(
+                range: TimeRange(startTick: destination, endTick: destination + span),
+                scope: .tracks([track])))
+        } else {
+            session.clearTimeSelection()
+        }
+        guard clipboard.write(PorydawClip(span: span, tracks: [
+            ClipTrack(track: track, notes: [note])
+        ]), ticksPerBeat: UInt32(session.document.ticksPerBeat)) else {
+            report.fail(id, "the admitted clip could not reach the clipboard")
+            return
+        }
+        let before = coreTimeBytes(session.document)
+        let index = session.document.history.undoIndex
+        let previousChange = session.onChange
+        var cursorPublications = 0
+        session.onChange = { change in
+            if change.domains.contains(.cursor) { cursorPublications += 1 }
+            previousChange?(change)
+        }
+        let consumed = automation.consumeSelectionCommand(command: .paste)
+        session.onChange = previousChange
+        let after = coreTimeBytes(session.document)
+        let nextCursor = destination + (span > 0 ? span : Tick(note.relTick + note.duration))
+        report.expect(consumed && session.document.history.undoIndex == index + 1
+                      && after != before && cursorPublications == 1,
+                      cppID: id, message: "an admitted paste publishes exactly one cursor move")
+        report.expect(session.editCursor == nextCursor, cppID: id,
+                      message: span > 0 ? "an admitted range paste advances the cursor by the clip span"
+                          : "an admitted note-clip paste advances the cursor past the pasted notes")
+        if span > 0 {
+            report.expect(session.timeSelection == nil, cppID: id,
+                          message: "an admitted range paste drops the time selection")
+        } else {
+            report.expect(!session.selectedNotes.isEmpty, cppID: id,
+                          message: "an admitted note-clip paste selects the inserted notes")
+        }
+        let undone = session.document.history.undoDocument()
+        let restored = coreTimeBytes(session.document) == before
+        let redone = session.document.history.redoDocument()
+        let replayed = coreTimeBytes(session.document) == after
+        report.expect(undone && restored && redone && replayed, cppID: id,
+                      message: "one undo and redo restore the exact song bytes after an admitted paste")
+        _ = session.document.history.undoDocument()
+    }
+}
+
+@MainActor
 private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: DocumentSession) {
     let id = "swiftcore/PianoRoll::emptyTimeSelectionNudge"
     let grid = PianoGrid(session: session)
@@ -287,9 +382,14 @@ private func checkEmptyTimeSelectionNudge(_ report: CheckReport, session: Docume
     let revision = session.document.revision
     let undoIndex = session.document.history.undoIndex
     let undoCount = session.document.history.undoCount
+    let expectedStart = Tick(grid.snapTickDown(Double(start + Tick(max(1, grid.snapTicks)))))
     report.expect(automation.consumeSelectionCommand(command: .nudgeRight)
                   && (session.timeSelection?.range.startTick ?? start) > start,
                   cppID: id, message: "an empty-content nudge moves the band past the song end")
+    report.expect(session.timeSelection?.range.startTick == expectedStart,
+                  cppID: id, message: "an empty-band nudge moves the start to the next snap tick")
+    report.expect(session.timeSelection?.range.endTick == expectedStart + 24,
+                  cppID: id, message: "an empty-band nudge moves the end to start plus the band length")
     report.expect(coreTimeBytes(session.document) == bytes
                   && session.document.revision == revision
                   && session.document.history.undoIndex == undoIndex

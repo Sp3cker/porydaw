@@ -109,7 +109,7 @@ public final class RulerMenuPresenter {
         let raw = session.camera.tickAtContentX(contentX)
         guard raw.isFinite else { return }
         if isOpen { close() }
-        let chip = signatureTick(at: contentX)
+        let chip = signatureTick(at: contentX, pointerY: pointerY)
         rulerPress = (raw, chip)
     }
 
@@ -148,7 +148,7 @@ public final class RulerMenuPresenter {
                      RulerMenuRow(Action.setLoopEnd.rawValue),
                      RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
                      .divider(), RulerMenuRow(Action.editTimeSignature.rawValue)]
-            let explicit = session.document.timeSignatures.contains { $0.tick == tick }
+            let explicit = press.chip == tick
             items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, explicit))
         }
         if automation.hasMenu { automation.dismissMenu() }
@@ -377,8 +377,9 @@ public final class RulerMenuPresenter {
         return mask
     }
 
-    func signatureTick(at contentX: Double) -> Tick? {
-        guard contentX.isFinite else { return nil }
+    func signatureTick(at contentX: Double, pointerY: Double) -> Tick? {
+        guard contentX.isFinite, pointerY >= 0, pointerY < grid.rulerMarkerRowHeight
+        else { return nil }
         let tolerance = max(4, grid.baseFontPx * 0.5)
         for signature in session.document.timeSignatures.reversed() {
             let x = session.camera.contentX(tick: Double(signature.tick))

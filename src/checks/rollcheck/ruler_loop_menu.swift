@@ -59,13 +59,19 @@ private func checkRulerMenuRetirement(_ report: CheckReport, session: DocumentSe
     session.document.setLoop(end: false, tick: 48)
     report.expect(!menu.isOpen && session.document.revision != revision,
                   cppID: id, message: "a document edit retires the open ruler menu")
+    report.expect(session.timeline.loopStartTick == 48
+                  && session.timeline.loopEndTick == TimeDefaults.noTick,
+                  cppID: id, message: "a document-edit dismissal writes no loop marker beyond the edit")
     _ = session.document.history.undoDocument()
+    let selectionBytes = coreTimeBytes(session.document)
     openRulerMenu(menu, at: at)
     let selection = AutomationTimeSelection(range: TimeRange(startTick: 48, endTick: 72),
                                             scope: .tracks([session.selectedTrack ?? 0]))
     session.applyTimeSelection(selection)
     report.expect(!menu.isOpen && session.timeSelection == selection,
                   cppID: id, message: "a selection change retires the open ruler menu")
+    report.expect(coreTimeBytes(session.document) == selectionBytes,
+                  cppID: id, message: "a selection-change dismissal writes no markers")
     session.clearTimeSelection()
 }
 
@@ -174,6 +180,10 @@ private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSe
         report.fail(id, "resize fixture note is absent")
         return
     }
+    report.expect(document.notes(in: 0).contains {
+        $0.tick == rulerSeedTick && $0.duration == 6 && $0.pitch == 60
+            && $0.velocity == 100
+    }, cppID: id, message: "the ruler fixture seeds its snap-aligned range")
     let snapCell: Tick = 6
     let startTick = note.tick + note.duration
     let endTick = startTick + snapCell
@@ -181,16 +191,21 @@ private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSe
     document.setLoop(end: false, tick: nil)
     document.setLoop(end: true, tick: nil)
     let before = coreTimeBytes(document)
+    let initialIndex = document.history.undoIndex
     let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
     report.expect(timeline.loopStartTick == TimeDefaults.noTick &&
                   timeline.loopEndTick == TimeDefaults.noTick,
                   cppID: id, message: "A004: both markers begin absent")
 
     document.setLoop(end: false, tick: Int64(startTick))
+    report.expect(document.history.undoIndex == initialIndex + 1,
+                  cppID: id, message: "Set Loop Start writes exactly one undo entry")
     report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick == startTick,
                   cppID: id, message: "A009: setting loop start moves its marker to the cell edge")
     let afterStart = document.history.currentIdentity
     document.setLoop(end: true, tick: Int64(endTick))
+    report.expect(document.history.undoIndex == initialIndex + 2,
+                  cppID: id, message: "Set Loop End advances the undo index by exactly one")
     let afterSets = coreTimeBytes(document)
     report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopEndTick == endTick &&
                   document.history.currentIdentity != afterStart && afterSets != before,
@@ -199,6 +214,8 @@ private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSe
     // Production removal performs two commands: start first, end second.
     document.setLoop(end: false, tick: nil)
     document.setLoop(end: true, tick: nil)
+    report.expect(document.history.undoIndex == initialIndex + 4,
+                  cppID: id, message: "Remove Loop Markers advances the undo index by exactly two")
     let afterRemoval = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
     report.expect(afterRemoval.loopStartTick == TimeDefaults.noTick &&
                   afterRemoval.loopEndTick == TimeDefaults.noTick,
@@ -216,8 +233,11 @@ private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSe
                   cppID: id, message: "A025/A026: second undo restores both markers and song bytes")
 
     let selectionStart = startTick - snapCell
+    let selectionIndex = document.history.undoIndex
     document.setLoop(end: false, tick: Int64(selectionStart))
     document.setLoop(end: true, tick: Int64(startTick))
+    report.expect(document.history.undoIndex == selectionIndex + 2,
+                  cppID: id, message: "Loop from Selection advances the undo index by exactly two")
     let selected = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
     report.expect(selected.loopStartTick == selectionStart && selected.loopEndTick == startTick,
                   cppID: id, message: "A030: the selection bounds become the loop markers")
@@ -228,6 +248,10 @@ private func checkRulerLoopSetAndUndo(_ report: CheckReport, session: DocumentSe
     _ = document.history.undoDocument()
     report.expect(coreTimeBytes(document) == afterSets, cppID: id,
                   message: "A033: second selection undo restores the manual markers")
+    _ = document.history.undoDocument()
+    _ = document.history.undoDocument()
+    report.expect(coreTimeBytes(document) == before, cppID: id,
+                  message: "the ruler loop round trip restores the exact song bytes")
 }
 
 @MainActor
@@ -241,7 +265,10 @@ private func checkRulerSignatureRemoval(_ report: CheckReport, session: Document
         .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
                   message: "A037: the explicit 5/4 signature exists at the snap cell")
     let before = coreTimeBytes(document)
+    let undoIndex = document.history.undoIndex
     document.deleteTimeSignature(at: chipTick)
+    report.expect(document.history.undoIndex == undoIndex + 1, cppID: id,
+                  message: "removing an explicit time signature writes exactly one undo entry")
     report.expect(!PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
         .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
                   message: "A050: removing the chip deletes the exact event")
@@ -262,6 +289,9 @@ private func checkRulerInsertTime(_ report: CheckReport, session: DocumentSessio
         return
     }
     document.nudgeNotes([note.id], byTicks: Int64(snapCell), byKeys: 0)
+    report.expect(document.notes(in: 0).contains {
+        $0.tick == insertStart && $0.pitch == note.pitch
+    }, cppID: id, message: "the ruler insert fixture seeds its shifted note")
     guard document.notes(in: 0).contains(where: { $0.tick == insertStart && $0.pitch == note.pitch }) else {
         report.fail(id, "the moved fixture note did not land at the selected seam")
         return
@@ -381,11 +411,18 @@ private func checkRenderedRulerMenuCommands(_ report: CheckReport, session: Docu
     report.expect((0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 5 && menu.rows[$0].enabled })
                   && !(0..<menu.rows.count).contains(where: { menu.rows[$0].actionId == 2 }), cppID: id,
                   message: "a swept range replaces positional rows with selection rows")
+    let staleBytes = coreTimeBytes(session.document)
+    let staleIndex = session.document.history.undoIndex
+    let staleCount = session.document.history.undoCount
     automation.clearTimeSelection()
     let identity = session.document.history.currentIdentity
     _ = menu.activate(actionId: 5)
     report.expect(identity == session.document.history.currentIdentity && !menu.isOpen,
                   cppID: id, message: "a stale selection click dismisses without a document write")
+    report.expect(coreTimeBytes(session.document) == staleBytes
+                  && session.document.history.undoIndex == staleIndex
+                  && session.document.history.undoCount == staleCount,
+                  cppID: id, message: "dismissing the ruler menu preserves the exact song bytes and history depth")
 }
 
 @MainActor
@@ -661,6 +698,13 @@ private func checkRulerChip(
     report.expect(session.editCursor == chipOff && menu.isOpen && menu.menuKind == 1,
                   cppID: id,
                   message: "A059: an off-grid chip press commits the chip's exact event tick")
+    let tickRowY = fixture.grid.rulerMarkerRowHeight
+    menu.captureRulerPress(contentX: session.camera.contentX(tick: Double(chipOff)),
+                           pointerY: tickRowY)
+    menu.openRulerAtRelease()
+    report.expect(menu.isOpen && !menu.rows.contains(where: {
+        $0.actionId == 10 && $0.enabled
+    }), cppID: id, message: "a tick-row ruler press ignores the signature chip")
     menu.close()
     report.expect(session.document.history.undoDocument()
                   && coreTimeBytes(session.document) == preSigBytes, cppID: id,
@@ -675,6 +719,12 @@ private func checkRulerChip(
                   }),
                   cppID: id,
                   message: "A039: a snap-aligned chip press commits the chip tick and enables Remove Time Signature")
+    menu.captureRulerPress(contentX: session.camera.contentX(tick: Double(endTick)),
+                           pointerY: fixture.grid.rulerMarkerRowHeight / 2)
+    menu.openRulerAtRelease()
+    report.expect(menu.targetTick() == Double(endTick) && menu.rows.contains(where: {
+        $0.actionId == 10 && $0.enabled
+    }), cppID: id, message: "a marker-row press commits the chip's exact tick")
     menu.close()
     report.expect(session.document.history.undoDocument()
                   && coreTimeBytes(session.document) == preSigBytes, cppID: id,

@@ -92,6 +92,15 @@ private func withKeyboardSeed(
         $0.track == track && $0.tick == tick && Int($0.pitch) == pitch
             && $0.duration == duration
     } == true, cppID: id, message: "the seeded keyboard note is present")
+    let postSeedBytes = coreTimeBytes(document)
+    let postSeedIdentity = document.history.currentIdentity
+    defer {
+        while document.history.currentIdentity != postSeedIdentity && document.history.canUndo {
+            guard document.history.undoDocument() else { break }
+        }
+        report.expect(coreTimeBytes(document) == postSeedBytes, cppID: id,
+                      message: "the scenario unwind restores the slot's post-seed bytes")
+    }
     body(grid, KeyboardSeed(id: noteID, track: track, tick: tick,
                             duration: duration, pitch: pitch, snap: snap))
 }
@@ -488,6 +497,9 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
             return
         }
         let ring = 3.0 / grid.devicePixelRatio
+        report.expect(session.document.note(seed.id).map {
+            $0.track == seed.track && $0.tick == seed.tick && Int($0.pitch) == seed.pitch
+        } == true, cppID: id, message: "the time-shortcut fixture seeds its covered note")
         session.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .tracks([seed.track, other])))
@@ -512,6 +524,19 @@ private func checkTimeSelectionHighlights(_ report: CheckReport, session: Docume
                 && renderingNear(rect.height, session.camera.snapshot.rollHeight)
         } && overlay.filter { $0.fillColor == grid.palette.selectionEdge }.count >= 2,
         cppID: id, message: "the covered selected track publishes its range band and edges")
+        let bandEnd = seed.tick + seed.duration
+        let automation = AutomationPage(baseFontPx: grid.baseFontPx)
+        automation.attach(session: session, palette: grid.palette)
+        defer { automation.detach() }
+        report.expect(automation.consumeSelectionCommand(command: .transposeUp)
+                      && session.document.note(seed.id).map { Int($0.pitch) == seed.pitch + 1 } == true,
+                      cppID: id, message: "Up over an active time selection transposes the covered notes")
+        report.expect(automation.consumeSelectionCommand(command: .nudgeRight)
+                      && session.document.note(seed.id).map { $0.tick == seed.tick + seed.snap } == true
+                      && session.timeSelection?.range.startTick == seed.tick + seed.snap
+                      && session.timeSelection?.range.endTick == bandEnd + seed.snap,
+                      cppID: id,
+                      message: "Right over an active time selection nudges the covered notes and advances the band start")
         session.applyTimeSelection(AutomationTimeSelection(
             range: TimeRange(startTick: seed.tick, endTick: seed.tick + seed.duration),
             scope: .lanes, tempo: true))

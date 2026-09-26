@@ -358,8 +358,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs.publishTimeSigFlags()
     }
 
-    public func timeSigChipTick(contentX: Double) -> Double {
-        guard let workspace, let tick = workspace.rulerMenu.signatureTick(at: contentX)
+    public func timeSigChipTick(contentX: Double, pointerY: Double) -> Double {
+        guard let workspace, let tick = workspace.rulerMenu.signatureTick(
+            at: contentX, pointerY: pointerY)
         else { return -1 }
         return Double(tick)
     }

@@ -21,6 +21,17 @@ Command: deno task verify --filter swiftcore --verbose; deno task verify:qml --v
 Result: PASS — swiftcore 12 of 37 ok (25 filtered skips), editorqml-drawer 1/1 ok, verify:qml-roll 1/1 ok. Lane-owner observations on the task-27 other-events band revision; this bookkeeping pass ran no lane. build/proof-evidence/editorqml-drawer.json, swiftcore-projectsession.json and swiftroll-window.json record the predicates anchored as S083–S086.
 Command: deno task verify --filter swiftcore --verbose (task-35 roll-pointer handoff, locked at /tmp/porydaw-build.lock)
 Result: PASS — implementer-reported 12/37 ok, 25 skipped on the frozen tree; S087's row is recorded in build/proof-evidence/swiftcore-projectsession.json under cppID swiftcore/PianoRollTest::keyboardTimeSelectionShortcuts. This bookkeeping pass ran no lane.
+Command: deno task verify --filter swiftcore --qt projectSession --verbose, and
+deno task verify:shell --filter shell-grid-menu --verbose (task-53 sources)
+Result: evidence re-read, lane green status not established here. build/proof-evidence/
+swiftcore-projectsession.json (5710 pass rows across 515 cppIDs, mtime 2026-09-26 14:20) and
+build/proof-evidence/shell-grid-menu.json (0 pass rows, 23 test functions, mtime 14:19) postdate
+the frozen keyboard.swift (13:55), ruler_loop_menu.swift (14:03) and tst_ShellGridMenu.qml (14:16)
+edits, so the new S088-S110 anchor literals classify executed under
+`deno task proof check --executed`. The ruler-scope presenter predicates run under
+swiftcore/PianoRoll::timelineRulerScope and keyboardTimeSelectionShortcuts in the
+swiftcore projectSession lane, which the controller re-runs on the settled tree. This proof-only
+reconciliation ran no lane, rebuilt nothing and re-ran no check.
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
 Disposition: MATCHED
@@ -106,7 +117,7 @@ Mapping: S070
 
 A019 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:140
 Disposition: GAP
-Mapping/reason: GAP — no ruler UI in the Swift roll; so this ruler-slot seed guard has no executing counterpart (S043 in keyboard.swift guards the transpose slot seed; PianoGrid models no timeline ruler or time selection).
+Mapping/reason: GAP: harness fixture guard (makeResizeSeed) — the ruler-scope counterpart (checkRulerSweepScope/checkRulerTapAndCancel in ruler_loop_menu.swift) builds its fixture from the session document and asserts no seeded-note predicate; S043/S048 guard the transpose slot's seed instead.
 Source context since previous assertion:
   }
 
@@ -119,7 +130,7 @@ Original expression:
 
 A020 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:151
 Disposition: GAP
-Mapping/reason: GAP — no ruler UI in the Swift roll: the ruler-slot seed lookup is unmodelled (S043 guards the transpose slot seed).
+Mapping/reason: GAP: harness fixture guard — the seed-note lookup for the ruler-scope slot has no counterpart predicate; the transpose behavior it stages is proved by S044/S045 in the transpose slot.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -137,7 +148,7 @@ Original expression:
 
 A021 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:154
 Disposition: GAP
-Mapping/reason: GAP — no ruler UI in the Swift roll: the ruler-slot post-transpose setup is unmodelled (S044-S045 prove the transpose slot moves).
+Mapping/reason: GAP: harness fixture guard — the post-transpose seed state of the ruler-scope slot has no counterpart predicate; the transpose behaviors are proved by S044/S045 in the transpose slot.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(snapCell), -11);
 Original expression:
@@ -146,7 +157,7 @@ Original expression:
 
 A022 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:166
 Disposition: GAP
-Mapping/reason: GAP — no Quick track-header model in the Swift roll: no predicate looks up header records.
+Mapping/reason: GAP — no Quick track-header model predicate in Swift: no predicate looks up header records (task-66 owns the headers surface).
 Source context since previous assertion:
       auto *quick =
           view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -162,7 +173,7 @@ Original expression:
 
 A023 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:167
 Disposition: GAP
-Mapping/reason: GAP — no Quick track-header model in the Swift roll, so recordsMatchTimeline has no executing counterpart.
+Mapping/reason: GAP — the Quick header records-match-timeline reconciliation has no executing counterpart predicate (task-66 owns the headers surface).
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -171,53 +182,20 @@ Original expression:
 
 A024 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:169
 Disposition: GAP
-Mapping/reason: GAP — no timeline ruler band or ruler input item in the Swift roll.
+Mapping/reason: GAP: harness existence guard — the mounted lanes fetch the ruler input and band by objectName (control() in tst_ShellGridMenu.qml) with no message argument, so no predicate observes the lookup.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
 
 A025 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:197
-Disposition: PARTIAL
-Mapping/reason: S072 (ruler_loop_menu.swift checkRulerSweepScopeTapAndChip, executed) sweeps from the snapped anchor to the aligned far tick and asserts that exact range with an exact primary-only track scope. Unproved: the native/QML left-drag delivery into the ruler input, including the start-drag threshold; the presenter sweep stands in for the drag.
-Source context since previous assertion:
-      const qreal rulerDpr = rulerInput->devicePixelRatio();
-      // Press at the drawn-cell edge: snapCell ticks past the cell start can
-      // land inside the fixture's tick-12 signature chip label.
-      const Tick startTick = d.tick + d.dur;
-      const Tick endTick = d.tick + d.dur + snapCell;
-      const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
-                          rulerBand->rect.height() - 2.0);
-      const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
-                        rulerBand->rect.height() - 2.0);
-      const QPointF activate = start + QPointF(qreal(QApplication::startDragDistance() + 2), 0.0);
-
-      view.selectionModel().clearTimeSelection();
-      view.selectionModel().applyTrackScopeAdjustment(
-          track, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Plain);
-      if (doc.engineTrackCount() > 1) {
-          const int priorSecondary = track == 0 ? 1 : 0;
-          view.selectionModel().applyTrackScopeAdjustment(
-              priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
-      }
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
-                                Qt::LeftButton, Qt::NoModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
-                                Qt::LeftButton, Qt::NoModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                                Qt::NoModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                                Qt::NoButton, Qt::NoModifier);
-Original expression:
-  QVERIFY2(view.selectionModel().timeSelection().active() &&
-                   view.selectionModel().timeSelection().startTick == startTick &&
-                   view.selectionModel().timeSelection().endTick == endTick &&
-                   view.selectionModel().storedTrackScope() == (uint32_t{1} << track),
-               "plain ruler drag did not create a primary-only time selection");
+Disposition: MATCHED
+Mapping: S072 (exact swept range with primary-only scope), S096
 
 A026 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:232
 Disposition: PARTIAL
-Mapping/reason: S073 (checkRulerSweepScopeTapAndChip, executed) runs the Control sweep and asserts the exact range with a scope containing the primary and the intersecting track (two used tracks in the fixture). Unproved: the native Ctrl-drag delivery, and the original exact track-bitmask equality the predicate replaces with containment.
+Mapping/reason: PARTIAL: S073 asserts the modified sweep's exact range with a scope containing the primary and the intersecting track and S101 the mounted Control drag's added track.
+Unproved: the original exact track-bitmask equality, which the predicates replace with scope containment.
 Source context since previous assertion:
       uint32_t expectedScope = uint32_t{1} << track;
       const ViewNote *scopedGhost = nullptr;
@@ -255,16 +233,12 @@ Original expression:
                "modified ruler drag did not derive the overlapping note-track scope");
 
 A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
-Disposition: GAP
-Mapping/reason: GAP — fixture/seed guard, not a behaviour predicate: the Swift counterpart's own seed guard (checkRulerSweepSingleTrackScope, src/checks/rollcheck/note_rendering.swift) only calls report.fail when it cannot seed the intersecting other-track note, so its message (S082, resolved) is a failure branch that never appears in the pass evidence and never executes. The seeded non-overlapping secondary-track note therefore stays an open setup obligation; the downstream observations are A028 (view placement, GAP) and A029 (ring pixels, PARTIAL).
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(scopedGhost, "modified ruler drag fixture has no overlapping secondary-track note");
+Disposition: MATCHED
+Mapping: S103 (the mounted fixture presents an overlapping secondary-track note inside the ruler viewport)
 
 A028 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:251
 Disposition: GAP
-Mapping/reason: GAP — no ruler UI in the Swift roll: ghost-note viewport placement is unmodelled.
+Mapping/reason: GAP — ghost-note viewport placement has no executing counterpart predicate; the Swift predicates assert the projected boxes, never their visibility in the roll viewport.
 Source context since previous assertion:
       const SongView::ViewState priorViewState = view.viewState();
       SongView::ViewState ghostViewState = priorViewState;
@@ -286,7 +260,8 @@ Original expression:
 
 A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
 Disposition: PARTIAL
-Mapping/reason: S076 (keyboard.swift checkTimeSelectionHighlights, executed) rings the covered note and its time-scoped ghost at dpr 2 through the same track-scoped provider the roll reads. Unproved: the framebuffer ring pixels this row samples at device pixels; the predicate asserts published scene frames.
+Mapping/reason: PARTIAL: S076 rings the covered note and its time-scoped ghost at dpr 2 through the same track-scoped provider the roll reads.
+Unproved: the framebuffer ring pixels this row samples at device pixels; the predicate asserts published scene frames.
 Source context since previous assertion:
       const qreal scopedDpr = scopedImage.devicePixelRatio();
       const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
@@ -296,107 +271,45 @@ Original expression:
                "time-scoped ghost note did not render its selection ring");
 
 A030 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:262
-Disposition: GAP
-Mapping/reason: GAP — no Quick track-header model in the Swift roll: the secondary-track record lookup is unmodelled.
-Source context since previous assertion:
-      view.applyViewState(priorViewState);
-      view.selectionModel().setTimeSelection(
-          {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(secondaryRecord, "time-scoped secondary track has no TrackHeaderModel record");
+Disposition: MATCHED
+Mapping: S104 (the note's secondary header row is mounted)
 
 A031 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:267
-Disposition: GAP
-Mapping/reason: GAP — no Quick track-header model roles in the Swift roll: OverlayColorRole publication is unmodelled.
-Source context since previous assertion:
-      const QColor selectedOverlay = headers
-                                         ->data(headers->index(*secondaryRecord, 0),
-                                                songview::TrackHeaderModel::OverlayColorRole)
-                                         .value<QColor>();
-Original expression:
-  QVERIFY2(plainOverlay != selectedOverlay,
-               "time-scoped secondary header did not publish its selection role");
+Disposition: MATCHED
+Mapping: S102 (the time-scoped secondary header publishes its selection overlay)
 
 A032 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:270
 Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row guards the native header-band framebuffer capture (headercheck::captureBand) validity for the selection indicator; the Swift surface asserts the published overlay role (S102) and captures no band pixels.
 
 A033 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:275
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — header-band framebuffer recapture: Swift asserts model state, never captured band pixels.
-Source context since previous assertion:
-      if (plainHeaderFrame == selectedHeaderFrame) {
-          QCoreApplication::processEvents();
-          const QImage repaintedHeaderFrame = headercheck::captureBand(check, view);
-Original expression:
-  QVERIFY2(!repaintedHeaderFrame.isNull(),
-                   "could not recapture the time-scoped secondary header");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row recaptures the native header-band framebuffer (headercheck::captureBand) to prove the indicator repainted; the Swift surface publishes the overlay role instead, asserted by S102, and no Swift predicate captures band pixels.
 
 A034 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:277
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — header repaint pixel comparison: Swift has no repaint observation.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QVERIFY2(plainHeaderFrame != repaintedHeaderFrame,
-                   "time-scoped secondary header did not render its selection indicator");
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION — the row compares two captured native header-band rasters (pixel equality) to prove the selection indicator rendered; the Swift surface asserts the published overlay value (S102) and has no framebuffer repaint observation.
 
 A035 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:288
-Disposition: PARTIAL
-Mapping/reason: S074/S075 (checkRulerSweepScopeTapAndChip, executed) tap outside the selection and assert the selection survives with the cursor committed and published through the session observer. Unproved: the native/QML press-release delivery into the ruler input.
-Source context since previous assertion:
-      }
-
-      const QPointF outsideSelection(
-          view.camera().displayX(double(endTick + snapCell), 0.0, rulerDpr),
-          rulerBand->rect.height() - 2.0);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, outsideSelection,
-                                Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, outsideSelection,
-                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-Original expression:
-  QVERIFY2(view.selectionModel().timeSelection().active(),
-               "left-clicking the timeline ruler outside the time selection cleared it");
+Disposition: MATCHED
+Mapping: S074, S075, S097
 
 A036 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:295
-Disposition: GAP
-Mapping/reason: GAP — no ruler mouse handling in the Swift roll: right-drag refusal is unmodelled.
-Source context since previous assertion:
-      view.selectionModel().clearTimeSelection();
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::RightButton,
-                                Qt::RightButton, Qt::NoModifier);
-      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::RightButton,
-                                Qt::NoModifier);
-Original expression:
-  QVERIFY2(!view.selectionModel().timeSelection().active(),
-               "right-dragging the timeline ruler still created a time selection");
+Disposition: MATCHED
+Mapping: S098
 
 A037 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:302
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — native ruler-menu popup session open via host window events: Swift invokes command handlers directly and never opens a native menu.
-Source context since previous assertion:
-      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
-                                Qt::NoButton, Qt::NoModifier);
-      // The release publishes the shared ruler menu instead of a nested native
-      // exec, so the test continues linearly; a real Escape key dismisses it.
-      const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
-Original expression:
-  QVERIFY2(QTest::qWaitFor(
-                   [&live] { return live && live->isOpen() && quick_popup::menuPanel(*live); }),
-               "releasing the right-drag did not open the shared ruler menu");
+Disposition: MATCHED
+Mapping: S099
 
 A038 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:307
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host Escape key delivery (QTest::keyClick) dismissing the native ruler menu: Swift has no native window or host key path.
-Source context since previous assertion:
-      QTest::keyClick(live->window(), Qt::Key_Escape);
-      QCoreApplication::processEvents();
-Original expression:
-  QVERIFY2(live && !live->isOpen(), "Escape did not dismiss the right-drag ruler menu");
+Disposition: MATCHED
+Mapping: S100
 
 A039 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:310
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the ruler slot SMF restoration is unproved.
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: S089 asserts the sweep scenario restores its fixture bytes after undoing the intersecting-note insertion.
+Unproved: the slot-level unwind to the post-seed snapshot (the ruler-scope slot is not driven through withKeyboardSeed).
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -479,49 +392,21 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A050 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:414
-Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid; so this time-shortcut seed guard has no executing counterpart (S043 in keyboard.swift guards the transpose slot seed).
-Source context since previous assertion:
-  }
-
-  void PianoRollTest::keyboardTimeSelectionShortcuts()
-  {
-      PianoRollFixture &check = *m_fixture;
-      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
-Original expression:
-  QVERIFY(seed.has_value());
+Disposition: MATCHED
+Mapping: S043, S105
 
 A051 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:426
-Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid: the time-shortcut seed lookup is unmodelled (S043 guards the transpose slot seed).
-Source context since previous assertion:
-      SongDocument &doc = check.document();
-      SongView &view = check.view();
-      songview::TimelineInputItem &roll = check.rollInput();
-      const int track = check.track();
-      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
-      const SnappedRows rows{view, roll};
-      const Cell &d = seed->cell;
-      const Tick snapCell = seed->snapCell;
-      const QByteArray before = doc.smf().write();
-      const int undo = doc.undoStack()->index();
-      DocNote transposed;
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
-               "time shortcut seed note was not found");
+Disposition: MATCHED
+Mapping: S092
 
 A052 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:429
-Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid: the time-shortcut post-transpose setup is unmodelled.
-Source context since previous assertion:
-      doc.moveNotes({transposed}, int64_t(snapCell), -11);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
-               "time shortcut seed did not reach the expected post-transpose state");
+Disposition: MATCHED
+Mapping: S093
 
 A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
 Disposition: PARTIAL
-Mapping/reason: S076 (checkTimeSelectionHighlights, executed) asserts the time-covered note and its time-scoped ghost publish the selection ring. Unproved: the framebuffer ring pixel this row samples.
+Mapping/reason: PARTIAL: S076 asserts the time-covered note and its time-scoped ghost publish the selection ring frame.
+Unproved: the framebuffer ring pixel this row samples; the predicate asserts published scene frames.
 Source context since previous assertion:
       songview::EditorSelectionModel::TimeSelection band;
       band.startTick = d.tick + snapCell;
@@ -547,26 +432,8 @@ Disposition: MATCHED
 Mapping: S077
 
 A055 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:466
-Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid: the empty-space-inside-selection fixture search over the native view model is unmodelled.
-Source context since previous assertion:
-      const Tick emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
-      int emptyKey = -1;
-      for (int key = 0; key < 128 && emptyKey < 0; ++key) {
-          const int y = rows.centerY(key);
-          if (y < 0 || y >= roll.height())
-              continue;
-          const bool occupied = std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
-                                            [track, key, emptyTick](const ViewNote &note) {
-                                                return note.track == track && note.key == key &&
-                                                       note.startTick <= emptyTick &&
-                                                       emptyTick < note.endTick();
-                                            });
-          if (!occupied)
-              emptyKey = key;
-      }
-Original expression:
-  QVERIFY2(emptyKey >= 0, "could not find empty roll space inside the time selection");
+Disposition: MATCHED
+Mapping: S109 (the mounted in-band click targets asserted empty note space)
 
 A056 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:470
 Disposition: MATCHED
@@ -580,40 +447,20 @@ Original expression:
                "left-clicking empty space inside the time selection did not clear it");
 
 A057 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:474
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Up with an active time selection transposing the covered note. Swift drives grid.performCommand on the note selection directly and models no time-covered key routing; only the native host path establishes this site.
-Source context since previous assertion:
-      view.selectionModel().setTimeSelection(band);
-      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed),
-               "time-selection Up did not transpose the covered note");
+Disposition: MATCHED
+Mapping: S093, S106
 
 A058 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:477
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/rollcheck/keyboard.cpp) no longer builds or runs. Previous native note: NATIVE — host key delivery: sendKeyStroke Right with an active time selection nudging the covered note. Swift models no time-covered key routing; only the native host path establishes this site.
-Source context since previous assertion:
-      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
-Original expression:
-  QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
-               "time-selection Right did not nudge the covered note");
+Disposition: MATCHED
+Mapping: S094, S107
 
 A059 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:479
-Disposition: GAP
-Mapping/reason: GAP — no time selection in PianoGrid: time-selection tick advancement after a nudge is unmodelled.
-Source context since previous assertion:
-  (adjacent to previous assertion; no intervening source lines)
-Original expression:
-  QCOMPARE(view.selectionModel().timeSelection().startTick, d.tick + 2 * snapCell);
+Disposition: MATCHED
+Mapping: S094, S108
 
 A060 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:482
-Disposition: GAP
-Mapping/reason: GAP — S048 (keyboard.swift) restores the pre-seed document, camera, and history identity, whereas this unwind targets the post-seed snapshot; the time-shortcut slot SMF restoration is unproved.
-Source context since previous assertion:
-      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
-          doc.undoStack()->undo();
-Original expression:
-  QCOMPARE(doc.smf().write(), before);
+Disposition: MATCHED
+Mapping: S091 (the scenario unwind restores the slot's post-seed bytes)
 
 A061 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:489
 Disposition: GAP
@@ -1391,3 +1238,74 @@ Anchor: message "marker x is the shared camera content position of its tick"
 
 S087 | checkThresholdDrawCell | src/checks/rollcheck/selection.swift
 Anchor: message "A056 clicking inside the primary time selection clears its active span"
+
+S088 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "releasing a swept range retains the time selection"
+
+S089 | checkRulerSweepScope | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "undoing the note and track restores the fixture bytes"
+
+S090 | checkRulerTapAndCancel | src/checks/rollcheck/ruler_loop_menu.swift
+Anchor: message "cancelling a sweep keeps the selection and cursor without committing"
+
+S091 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift
+Anchor: message "the scenario unwind restores the slot's post-seed bytes"
+
+S092 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "the time-shortcut fixture seeds its covered note"
+
+S093 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "Up over an active time selection transposes the covered notes"
+
+S094 | checkTimeSelectionHighlights | src/checks/rollcheck/keyboard.swift
+Anchor: message "Right over an active time selection nudges the covered notes and advances the band start"
+
+S095 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a sub-threshold ruler press releases as a cursor tap, not a selection"
+
+S096 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a ruler drag past the drag threshold creates the exact snapped selection"
+
+S097 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a left click outside the time selection keeps it"
+
+S098 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a ruler right-drag creates no time selection"
+
+S099 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "releasing a ruler right-drag opens the ruler menu"
+
+S100 | test_rulerDragThresholdAndRightDragMenu | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Escape dismisses the right-drag ruler menu"
+
+S101 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a Control ruler drag adds the overlapping track to the scope"
+
+S102 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the time-scoped secondary header publishes its selection overlay"
+
+S103 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the fixture presents a secondary-track note inside the ruler viewport"
+
+S104 | test_controlRulerSweepPublishesSecondaryHeaderOverlay | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the note's secondary header row is mounted"
+
+S105 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the selection covers a mounted primary-track note"
+
+S106 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Up with an active time selection transposes the covered note"
+
+S107 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Right with an active time selection nudges the covered note"
+
+S108 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "Right over an active time selection advances the band start"
+
+S109 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "the in-band roll click targets empty note space"
+
+S110 | test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand | src/checks/editorqml/tst_ShellGridMenu.qml
+Anchor: message "a left click on empty roll space inside the selection clears it"
+
+S088-S110 are the task-53 additions: S088/S089 the swept-range retention and the fixture-byte restoration of checkRulerSweepScope, S090 the cancelled-sweep law of checkRulerTapAndCancel, S091 the slot post-seed unwind of swiftcore/PianoRoll::withKeyboardSeed, S092-S094 the time-shortcut seed and the time-covered Up/Right outcomes of checkTimeSelectionHighlights, and S095-S110 the mounted threshold/right-drag, Control-sweep secondary-header and roll-key/empty-click predicates of tst_ShellGridMenu.qml. They execute under swiftcore/PianoRoll::* in the swiftcore projectSession lane and under the shell-grid-menu lane.

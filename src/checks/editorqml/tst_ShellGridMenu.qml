@@ -21,6 +21,9 @@ TestCase {
     FontMetrics { id: baseMetrics; font: Qt.application.font }
 
     ShellQmlBootstrap { id: bootstrap }
+    GridInputClipProbe { id: clipProbe }
+    SignalSpy { id: menuCursorSpy; signalName: "editCursorTickChanged" }
+    SignalSpy { id: menuStatusSpy; signalName: "statusTextChanged" }
     Component {
         id: shellComponent
         ShellWindow {
@@ -857,10 +860,10 @@ TestCase {
         var ruler = control("timelineRulerInput")
         var grid = surface().gridModel
         var markerY = ruler.height * 0.25
-        var tickY = ruler.height * 0.75
+        var tickY = grid.rulerMarkerRowHeight
         var cell = Math.max(1, grid.snapTicks)
         var seedX = ruler.width * 0.35
-        verify(timeSigHost.timeSigChipTick(seedX) < 0)
+        verify(timeSigHost.timeSigChipTick(seedX, markerY) < 0)
 
         var menu = clearRulerLoop(seedX, markerY)
         var chipTick = grid.editCursorTick
@@ -908,7 +911,7 @@ TestCase {
         }, 3000, "Remove Time Signature deletes the explicit chip at its exact tick")
 
         var f3X = rulerTickX(chipTick + 2 * cell)
-        verify(timeSigHost.timeSigChipTick(f3X) < 0)
+        verify(timeSigHost.timeSigChipTick(f3X, markerY) < 0)
         revision = grid.appliedRevisionText
         menu = openRulerMenu(f3X, tickY)
         compare(grid.editCursorTick, chipTick + 2 * cell)
@@ -926,6 +929,9 @@ TestCase {
         session.requestUndo()
         verify(waitForNative(function() { return rulerLabelAt("5/4", chipTick) }, 5000),
                "one undo restores the removed F1 chip")
+        menu = openRulerMenu(rulerTickX(chipTick), markerY)
+        clickRow(menu, rulerRowIndex(menu, 10))
+        tryVerify(rulerMenuGone, 3000)
 
         timeSigHost.openTimeSigPrompt(chipTick + 1)
         tryCompare(timeSigHost, "timeSigPromptOpen", true)
@@ -941,8 +947,22 @@ TestCase {
         verify(rulerRowEnabled(menu, 10),
                "F2: Remove Time Signature renders enabled at the exact off-grid chip tick")
         keyClick(Qt.Key_Escape)
+        compare(timeSigHost.timeSigChipTick(rulerTickX(chipTick + 1), markerY),
+                chipTick + 1, "a marker-row press commits the chip's exact tick")
         tryVerify(rulerMenuGone, 3000,
                   "Escape dismisses the exact-chip ruler menu")
+        var offgridX = rulerTickX(chipTick + 1)
+        mouseClick(ruler, offgridX, tickY, Qt.RightButton)
+        tryVerify(rulerMenuShown, 3000)
+        menu = rulerPanel()
+        compare(grid.editCursorTick, chipTick + 1,
+                "a tick-row ruler press ignores the signature chip")
+        compare(rulerRowEnabled(menu, 10), false,
+                "Remove Time Signature is disabled at the tick row while a chip exists")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+        compare(timeSigHost.timeSigChipTick(offgridX, tickY), -1,
+                "a tick-row double-click cannot target the signature chip")
     }
 
     function test_rulerClipboardRowsFollowClipAndTimeSelection() {
@@ -1076,6 +1096,280 @@ TestCase {
         verify(waitForNative(function() { return noteLayout() === layout }, 5000),
                "one undo restores the rendered notes before the time-menu insertion")
     }
+
+    function test_timeMenuRenderedPasteRejectsOverlapWithoutEmissions() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var range = sweepNoteRange()
+        var notes = JSON.parse(grid.noteSummary)
+        var latest = 0
+        for (var index = 0; index < notes.length; ++index)
+            latest = Math.max(latest, notes[index].tick + notes[index].duration)
+        var destination = Math.ceil((latest + grid.snapTicks) / grid.snapTicks)
+            * grid.snapTicks
+        var clip = {
+            format: 1, ticksPerBeat: grid.ticksPerBeat, span: 24, wholeLane: false,
+            tracks: [{ track: grid.trackIndex, notes: [
+                { relTick: 0, key: 55, duration: 12, velocity: 91 },
+                { relTick: 1, key: 55, duration: 12, velocity: 91 }
+            ] }], lanes: [], tempo: []
+        }
+        verify(clipProbe.writeClipJson(JSON.stringify(clip)))
+        grid.setEditCursorTick(destination)
+        var menu = openTimeMenu(range.midX)
+        menuCursorSpy.target = grid
+        menuStatusSpy.target = grid
+        menuCursorSpy.clear()
+        menuStatusSpy.clear()
+        var before = grid.noteSummary
+        var revision = grid.appliedRevisionText
+        clickRow(menu, rulerRowIndex(menu, 13))
+        compare(grid.noteSummary, before,
+                "a conflicting range paste via the rendered row preserves the notes")
+        compare(grid.appliedRevisionText, revision,
+                "a conflicting range paste via the rendered row preserves the revision")
+        compare(menuCursorSpy.count, 0,
+                "a conflicting range paste via the rendered row emits no cursor movement")
+        compare(menuStatusSpy.count, 0,
+                "a conflicting range paste via the rendered row emits no status announcement")
+        menuCursorSpy.target = null
+        menuStatusSpy.target = null
+    }
+
+    function test_timeMenuRenderedRangePasteClearsSelectionAndAdvancesCursor() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var range = sweepNoteRange()
+        var notes = JSON.parse(grid.noteSummary)
+        var latest = 0
+        for (var index = 0; index < notes.length; ++index)
+            latest = Math.max(latest, notes[index].tick + notes[index].duration)
+        var destination = Math.ceil((latest + grid.snapTicks) / grid.snapTicks)
+            * grid.snapTicks
+        var span = 2 * Math.max(1, grid.snapTicks)
+        var clip = {
+            format: 1, ticksPerBeat: grid.ticksPerBeat, span: span, wholeLane: false,
+            tracks: [{ track: grid.trackIndex, notes: [
+                { relTick: 0, key: 55, duration: span, velocity: 91 }
+            ] }], lanes: [], tempo: []
+        }
+        verify(clipProbe.writeClipJson(JSON.stringify(clip)))
+        grid.setEditCursorTick(destination)
+        var menu = openTimeMenu(range.midX)
+        menuCursorSpy.target = grid
+        menuStatusSpy.target = grid
+        menuCursorSpy.clear()
+        menuStatusSpy.clear()
+        var revision = grid.appliedRevisionText
+        clickRow(menu, rulerRowIndex(menu, 13))
+        tryVerify(rulerMenuGone, 3000)
+        tryVerify(function() { return grid.appliedRevisionText !== revision }, 3000)
+        compare(session.gridCommandAvailable(17), false,
+                "an admitted range paste drops the time selection")
+        compare(grid.editCursorTick, destination + span,
+                "an admitted range paste via the rendered row advances by the clip span")
+        compare(menuCursorSpy.count, 1,
+                "an admitted paste publishes exactly one cursor move")
+        compare(menuStatusSpy.count, 1,
+                "an admitted paste publishes exactly one status update")
+        verify(JSON.parse(grid.noteSummary).some(function(note) {
+            return note.tick === destination && note.pitch === 55 && note.duration === span
+        }), "an admitted range paste writes its note at the captured cursor")
+        menuCursorSpy.target = null
+        menuStatusSpy.target = null
+    }
+
+
+    function test_rulerDragThresholdAndRightDragMenu() {
+        openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var start = ruler.width * 0.3
+        var end = ruler.width * 0.45
+        var y = ruler.height * 0.75
+        mousePress(ruler, start, y, Qt.LeftButton)
+        mouseMove(ruler, start + grid.dragDistance / 3, y, -1, Qt.LeftButton)
+        mouseRelease(ruler, start + grid.dragDistance / 3, y, Qt.LeftButton)
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), false,
+                "a sub-threshold ruler press releases as a cursor tap, not a selection")
+        mousePress(ruler, start, y, Qt.LeftButton)
+        mouseMove(ruler, end, y, -1, Qt.LeftButton)
+        mouseRelease(ruler, end, y, Qt.LeftButton)
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), true,
+                "a ruler drag past the drag threshold creates the exact snapped selection")
+        mouseClick(ruler, ruler.width * 0.8, y, Qt.LeftButton)
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), true,
+                "a left click outside the time selection keeps it")
+        mousePress(ruler, start, y, Qt.RightButton)
+        mouseMove(ruler, end, y, -1, Qt.RightButton)
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), true,
+                "a ruler right-drag creates no time selection")
+        mouseRelease(ruler, end, y, Qt.RightButton)
+        tryVerify(rulerMenuShown, 3000,
+                  "releasing a ruler right-drag opens the ruler menu")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000,
+                  "Escape dismisses the right-drag ruler menu")
+    }
+
+    function test_controlRulerSweepPublishesSecondaryHeaderOverlay() {
+        openSong()
+        var grid = surface().gridModel
+        var ruler = control("timelineRulerInput")
+        var rows = control("timelineTrackHeaderRows")
+        var notes = JSON.parse(grid.noteSummary)
+        var note = null
+        for (var index = 0; index < notes.length && note === null; ++index) {
+            var candidate = notes[index]
+            if (candidate.track !== grid.trackIndex
+                && rulerTickX(candidate.tick) > ruler.width * 0.15
+                && rulerTickX(candidate.tick + candidate.duration) < ruler.width * 0.6)
+                note = candidate
+        }
+        verify(note !== null,
+               "the fixture presents a secondary-track note inside the ruler viewport")
+        var row = null
+        for (var rowIndex = 0; rowIndex < rows.count; ++rowIndex) {
+            if (rows.itemAt(rowIndex) && rows.itemAt(rowIndex).track === note.track) {
+                row = rows.itemAt(rowIndex)
+                break
+            }
+        }
+        verify(row !== null, "the note's secondary header row is mounted")
+        compare(row.overlayColor.a, 0)
+        var startX = rulerTickX(note.tick) - rulerCellPixels()
+        var endX = rulerTickX(note.tick + note.duration) + rulerCellPixels()
+        var y = ruler.height * 0.75
+        mousePress(ruler, startX, y, Qt.LeftButton, Qt.ControlModifier)
+        mouseMove(ruler, endX, y, -1, Qt.LeftButton, Qt.ControlModifier)
+        mouseRelease(ruler, endX, y, Qt.LeftButton, Qt.ControlModifier)
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), true,
+                "a Control ruler drag adds the overlapping track to the scope")
+        tryVerify(function() { return row.overlayColor.a > 0 }, 3000,
+                  "the time-scoped secondary header publishes its selection overlay")
+    }
+
+    function test_rollKeysEditTimeScopedNotesAndEmptyClickClearsBand() {
+        var session = openSong()
+        var grid = surface().gridModel
+        var roll = control("swiftRollInput")
+        var range = sweepNoteRange()
+        var initial = JSON.parse(grid.noteSummary)
+        var covered = null
+        for (var index = 0; index < initial.length && covered === null; ++index) {
+            var note = initial[index]
+            if (!note.ghost && note.track === grid.trackIndex
+                && rulerTickX(note.tick) > range.startX
+                && rulerTickX(note.tick + note.duration) < range.endX)
+                covered = note
+        }
+        verify(covered !== null, "the selection covers a mounted primary-track note")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Up)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === covered.id && note.pitch === covered.pitch + 1
+            })
+        }, 3000, "Up with an active time selection transposes the covered note")
+        keyClick(Qt.Key_Right)
+        tryVerify(function() {
+            return JSON.parse(grid.noteSummary).some(function(note) {
+                return note.id === covered.id && note.tick === covered.tick + grid.snapTicks
+            })
+        }, 3000, "Right with an active time selection nudges the covered note")
+        compare(session.gridCommandAvailable(17), true,
+                "Right with an active time selection retains the moved band")
+        var oldStartX = range.startX + rulerCellPixels() / 2
+        surface().rulerMenu.openTimeSelection(oldStartX)
+        compare(surface().rulerMenu.menuKind, 0,
+                "Right over an active time selection advances the band start")
+        surface().rulerMenu.openTimeSelection(oldStartX + rulerCellPixels())
+        compare(surface().rulerMenu.menuKind, 2,
+                "the nudged time band still accepts a press inside its new bounds")
+        surface().rulerMenu.close()
+        var emptyX = oldStartX + rulerCellPixels()
+        var emptyY = roll.height * 0.85
+        var occupied = false
+        var after = JSON.parse(grid.noteSummary)
+        for (var noteIndex = 0; noteIndex < after.length; ++noteIndex) {
+            var tile = findChild(surface(), "gridNote_" + after[noteIndex].id)
+            if (!tile || after[noteIndex].ghost)
+                continue
+            var corner = tile.mapToItem(roll, 0, 0)
+            occupied = occupied || (emptyX >= corner.x && emptyX < corner.x + tile.width
+                                    && emptyY >= corner.y && emptyY < corner.y + tile.height)
+        }
+        verify(!occupied, "the in-band roll click targets empty note space")
+        mouseClick(roll, emptyX, emptyY, Qt.LeftButton)
+        compare(session.gridCommandAvailable(17), false,
+                "a left click on empty roll space inside the selection clears it")
+        compare(JSON.parse(grid.noteSummary).some(function(note) { return note.selected }), false,
+                "time-selection keys and the empty click do not leak a note selection")
+    }
+
+    function test_rulerClearSelectionAndRetirementFocus() {
+        var session = openSong()
+        var ruler = control("timelineRulerInput")
+        var grid = surface().gridModel
+        var range = sweepNoteRange()
+        mouseClick(ruler, range.midX, ruler.height * 0.75, Qt.RightButton)
+        tryVerify(rulerMenuShown, 3000)
+        var menu = rulerPanel()
+        clickRow(menu, rulerRowIndex(menu, 8))
+        tryVerify(rulerMenuGone, 3000,
+                  "the Clear Time Selection row closes the menu and drops the selection")
+        compare(session.gridCommandAvailable(17), false)
+        menu = openRulerMenu(range.midX, ruler.height * 0.75)
+        compare(rulerRowIndex(menu, 8), -1,
+                "the rebuilt ruler menu drops selection-scoped rows after Clear Time Selection")
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000)
+        menu = clearRulerLoop(range.startX, ruler.height * 0.75)
+        clickRow(menu, rulerRowIndex(menu, 2))
+        var markerTick = grid.editCursorTick
+        tryVerify(function() { return loopMarkerAt("loopStartMarker", markerTick) }, 3000)
+        menu = openRulerMenu(range.startX, ruler.height * 0.75)
+        tryVerify(function() { return menu.parent.activeFocus }, 3000,
+                  "the ruler menu host owns focus before the Undo edit")
+        verify(surface().menuHostHeldFocus,
+               "the menu focus witness is armed before the window Undo")
+        verify(shell.shellPresenter.actionEnabled("edit.undo"),
+               "Undo remains enabled at window level while the ruler menu is open")
+        var undoRevision = grid.appliedRevisionText
+        shell.shellPresenter.activate("edit.undo")
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== undoRevision
+                && loopMarkerAbsent("loopStartMarker")
+        }, 5000), "the window Undo edits the open ruler menu's document")
+        tryVerify(rulerMenuGone, 3000,
+                  "a document edit retires the open ruler menu and refocuses the ruler band")
+        tryVerify(function() { return loopMarkerAbsent("loopStartMarker") }, 3000)
+        tryCompare(ruler, "activeFocus", true)
+        menu = openRulerMenu(range.midX, ruler.height * 0.75)
+        surface().rulerMenu.beginSweep(range.startX, ruler.height * 0.75, 0)
+        surface().rulerMenu.updateSweep(range.endX, ruler.height * 0.75)
+        surface().rulerMenu.endSweep(range.endX, ruler.height * 0.75)
+        tryVerify(rulerMenuGone, 3000,
+                  "a selection change retires the open ruler menu and refocuses the ruler band")
+        tryCompare(ruler, "activeFocus", true)
+    }
+
+    function test_timeMenuEscapePreservesSelectionAndRefocuses() {
+        openSong()
+        var range = sweepNoteRange()
+        var grid = surface().gridModel
+        var revision = grid.appliedRevisionText
+        openTimeMenu(range.midX)
+        keyClick(Qt.Key_Escape)
+        tryVerify(rulerMenuGone, 3000, "Escape dismisses the time menu")
+        compare(shell.shellPresenter.session.gridCommandAvailable(17), true,
+                "the time selection survives a time-menu Escape")
+        compare(grid.appliedRevisionText, revision,
+                "a time-menu Escape writes nothing")
+        tryCompare(control("swiftRollInput"), "activeFocus", true, 3000,
+                   "a time-menu Escape refocuses the roll band")
+    }
+
 
     function test_forkRulerAndTimeMenuWordingAndHints() {
         openSong()

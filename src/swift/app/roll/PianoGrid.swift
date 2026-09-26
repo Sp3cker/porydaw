@@ -110,6 +110,7 @@ public final class PianoGrid {
     @QtTracked public var keyboardWidth = 56.0
     @QtTracked public var trackHeaderWidth = fontPx(GridCameraPolicy.seedBaseFontPx, 17.5)
     @QtTracked public var rulerHeight = 0.0
+    @QtTracked public var rulerMarkerRowHeight = 0.0
     @QtTracked public var ticksPerBeat = GridMetrics.ticksPerBeat
     @QtTracked public var snapTicks = 6
     @QtTracked public var visibleGridTicks = 12
@@ -452,20 +453,6 @@ public final class PianoGrid {
     public func commandAvailable(command: Int) -> Bool {
         guard let command = EditCommand(rawValue: command) else { return false }
         return commands.isAvailable(command)
-    }
-
-    func routeKey(command: Int, autoRepeat: Bool) -> Int {
-        guard let command = EditCommand(rawValue: command) else {
-            return EditKeyDecision.decline.rawValue
-        }
-        let surface = EditSurfaceState(
-            pointerGestureActive: interactionActive,
-            timeSelectionActive: false,
-            noteSelectionEmpty: session.selectedNotes.isEmpty,
-            origin: .timeline,
-            autoRepeat: autoRepeat,
-            commandAvailable: commands.isAvailable(command))
-        return EditKeyArbiter.decide(command: command, surface: surface).rawValue
     }
 
     public func performCommand(command: Int) {
@@ -1248,8 +1235,12 @@ public final class PianoGrid {
             fonts: measurementFonts, rowHeight: cameraRowHeight, pixel: metrics.pixel)
         typography = measured
         typographyKey = key
-        if rulerHeight != measured.boldHeight + 1 + measured.rulerHeight + 1 {
-            rulerHeight = measured.boldHeight + 1 + measured.rulerHeight + 1
+        let markerRowHeight = measured.boldHeight + 1
+        if rulerMarkerRowHeight != markerRowHeight {
+            rulerMarkerRowHeight = markerRowHeight
+        }
+        if rulerHeight != markerRowHeight + measured.rulerHeight + 1 {
+            rulerHeight = markerRowHeight + measured.rulerHeight + 1
         }
         return true
     }
