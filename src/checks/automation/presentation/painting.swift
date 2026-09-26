@@ -140,6 +140,34 @@ let drawerAutomationPaintingModelID = "swiftcore/AutomationPage::presentationPai
 @MainActor
 func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: DocumentSession,
                                               service: ProjectService) {
+    for (mode, node, resting, outline) in [
+        ("vanilla", "#EA3C3C", "#E7E1DB", "#8C857F"),
+        ("dark-neutral-high", "#FF4D47", "#51555E", "#62666F"),
+        ("immaterial", "#FF91C3", "#4A4E59", "#616571"),
+    ] {
+        let colors = GridPalette()
+        ShellAppearance.apply(to: colors, mode: mode, contrast: 50)
+        report.expect(colors.automationNodeInk == node, cppID: drawerAutomationPaintingModelID,
+                      message: "\(mode) automation node ink matches the native preset")
+        report.expect(colors.automationTabBackground == resting,
+                      cppID: drawerAutomationPaintingModelID,
+                      message: "\(mode) resting automation tab matches the native preset")
+        report.expect(colors.automationTabOutline == outline,
+                      cppID: drawerAutomationPaintingModelID,
+                      message: "\(mode) automation tab border matches the native preset")
+        for (pair, text, background) in [
+            ("checked label/count on pressed tab", colors.buttonPressedText,
+             colors.tabPressedBackground),
+            ("hover label/count on hover tab", colors.windowText,
+             colors.tabHoverBackground),
+            ("resting label/count on resting tab", colors.windowText,
+             colors.automationTabBackground),
+        ] {
+            let ratio = PaletteMath.contrastRatio(text, background)
+            report.expect(ratio >= 4.5, cppID: drawerAutomationPaintingModelID,
+                          message: "\(mode) \(pair) contrast \(ratio):1 meets 4.5:1")
+        }
+    }
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
                                     volume: [(0, 127), (96, 64)], pan: [(24, 64), (120, 40)],
                                     tempo: [(0, 500_000), (48, 400_000)])
@@ -187,6 +215,10 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
     report.expect(page.publishedCurveRuns.allSatisfy { $0.primitiveName == "automationCurve" },
                   cppID: drawerAutomationPaintingModelID,
                   message: "an unpinned lane draws no ghost curve")
+    report.expect(page.publishedCurveRuns.contains { $0.primitiveName == "automationCurve" }
+                      && page.publishedCurveRuns.allSatisfy { $0.fillColor == "#EA3C3C" },
+                  cppID: drawerAutomationPaintingModelID,
+                  message: "active vanilla automation curve runs use #EA3C3C node ink")
     fixture.activate(fixture.modulationLane)
     report.expectEqual(expected: 0, actual: page.nodeCount, cppID: drawerAutomationPaintingModelID,
                        what: "an empty lane draws no markers")
@@ -214,6 +246,12 @@ func drawerAutomationPresentationPaintingModel(_ report: CheckReport, suite: Doc
         .allSatisfy { $0.primitiveName == "automationCurve" },
                   cppID: drawerAutomationPaintingModelID,
                   message: "the active tail keeps its own runs on top")
+    report.expect(page.publishedCurveRuns.dropLast(activeRuns).contains {
+        $0.primitiveName == "automationGhostCurve"
+    } && page.publishedCurveRuns.dropLast(activeRuns).allSatisfy {
+        $0.fillColor == "#80EA3C3C"
+    }, cppID: drawerAutomationPaintingModelID,
+                  message: "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink")
     report.expect(page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
                   message: "the ghost unpins")
     report.expectEqual(expected: activeRuns, actual: page.publishedCurveRuns.count, cppID: drawerAutomationPaintingModelID,

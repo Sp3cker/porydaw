@@ -204,11 +204,11 @@ public enum PaletteMath {
         contrastRatio(fill, light) >= contrastRatio(fill, dark) ? light : dark
     }
 
-    static func ghostFill(track: Int, accidentalRow: Bool) -> String {
+    static func ghostFill(track: Int, accidentalRow: Bool,
+                          rollBackground: String, accidentalLane: String) -> String {
         let identity = trackIdentityOklab(track)
-        let background = accidentalRow
-            ? oklab(r: 0xB4, g: 0xAC, b: 0xA6)
-            : oklab(r: 0xD4, g: 0xCC, b: 0xC7)
+        let backdrop = channels(accidentalRow ? accidentalLane : rollBackground)
+        let background = oklab(r: backdrop.r, g: backdrop.g, b: backdrop.b)
         let weight = 60.0 / 255.0
         let offset = min(0.055, max(-0.055,
                                     (identity.lightness - background.lightness) * weight))
@@ -289,6 +289,9 @@ public final class GridPalette {
     public var tabSelectedBackground: String = "#B9E8EE"
     public var tabPressedBackground: String = "#F5B61C"
     public var tabSeparator: String = "#9E9893"
+    public var automationNodeInk: String = "#EA3C3C"
+    public var automationTabBackground: String = "#E7E1DB"
+    public var automationTabOutline: String = "#8C857F"
 
     public var keyboardNatural: String = "#F4F4F4"
     public var keyboardBlack: String = "#202224"

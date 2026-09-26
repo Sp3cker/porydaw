@@ -8,7 +8,7 @@ Swift counterpart: src/checks/drawerpresentation/drawer_resize.swift
 Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
 Swift counterpart: src/checks/drawerpresentation/EditorDrawerChecks.swift
 QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: f94f6e02531bddc9d87eafc034638213ec72c23382e5e3cfc3286a4285eb9c70
+QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
 
 
 

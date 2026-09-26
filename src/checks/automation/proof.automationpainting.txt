@@ -12,6 +12,7 @@ Additional Swift counterpart: src/checks/automation/automationselection.swift
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — deno task verify --filter swiftcore --verbose on this worktree at 470231af (1/14 harnesses selected; swiftcore green, including the predicates cited below). Evidence supplied by the lane controller for this settled source snapshot; this ledger task did not re-run the suite.
 Delta snapshot: the automationcanvasediting.swift and automationselection.swift hashes above were re-pinned for the delta (double-click-once deletion moved the selection file; keyboard-ingress/band-escape predicates extended the canvasediting file), and every indexed S anchor was re-audited against the pinned sources with no drift. This ledger's dispositions are unchanged.
+Task-25 delta: drawerAutomationPresentationPaintingModel (src/checks/automation/presentation/painting.swift) now also pins the drawer curve ink — every published active run #EA3C3C and every published pinned-ghost run #80EA3C3C, vanilla — indexed as S038/S039 and cited by A016/A037 for the ink half of those layer-probe clauses. A018/A038 keep GAP because the presenter's node handles still publish palette.primaryText/secondaryText, not the node ink. The added predicates executed in the implementer's deno task verify --filter swiftcore --verbose run on this snapshot; this ledger pass read that evidence (build/proof-evidence/swiftcore-projectsession.json) and did not re-run the lane.
 Converted-window command: deno task verify:qml --verbose
 
 A001 | AutomationEditingTest::emptyTempoStorageComposesNoLeadIn | src/checks/automation/automationpainting.cpp:109
@@ -129,8 +130,8 @@ Disposition: MATCHED
 Mapping: S035
 
 A016 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:171
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
+Disposition: PARTIAL
+Mapping/reason: S038 — src/checks/automation/presentation/painting.swift drawerAutomationPresentationPaintingModel asserts every published active curve run carries the lane ink (#EA3C3C vanilla, the role value the probe's tempo.color resolves to), so the ink half of this clause executes on the presented rects; unproved: the rendered lead-in segment at lineProbe(leadMid, ...) and the AutomationCurves layer pixels — no executing predicate observes the rendered mesh.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -161,7 +162,7 @@ Original expression:
 
 A018 | AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve | src/checks/automation/automationpainting.cpp:177
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
+Mapping/reason: No equivalent Swift predicate: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: the layerHasColorIn probe observes the rendered node marker's ring, which the fork paints in the lane ink (automationnodelanequick.cpp:503 passes context.color = song_view_automation_node_ink to addNodes; addNode fills the disc with window_background and rings it in that colour). The Swift presenter publishes its node handles with fillColor palette.primaryText/secondaryText and outlineColor palette.noteBorder (src/swift/app/drawer/automation/AutomationContentPublication.swift:297-299) and no predicate observes a published node colour, so this node-ink clause stays unported; the rendered mesh remains the converted-window obligation.
 Source context since previous assertion:
 
 
@@ -316,8 +317,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A037 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:265
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
+Disposition: PARTIAL
+Mapping/reason: S038 — src/checks/automation/presentation/painting.swift drawerAutomationPresentationPaintingModel asserts every published active curve run carries the lane ink (#EA3C3C vanilla, the role value the probe's lane.color resolves to), so the ink half of this clause executes on the presented rects; unproved: the rendered step-curve segment at lineProbe(mid, ...) and the AutomationCurves layer pixels — no executing predicate observes the rendered mesh.
 Source context since previous assertion:
 
       const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
@@ -335,7 +336,7 @@ Original expression:
 
 A038 | AutomationEditingTest::stepCurvesAndNodesComposed | src/checks/automation/automationpainting.cpp:268
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: The Quick scene-graph colour/ring probes (layerHasColorIn, layerHasRingAt) observe the rendered curve segments, reticles and rings. No Swift presenter predicate observes the rendered mesh; the retained obligation is the converted-window lane.
+Mapping/reason: No equivalent Swift predicate: the native C++ lane (src/checks/automation/automationpainting.cpp) no longer builds or runs. Previous native note: the layerHasColorIn probe observes the rendered node marker's ring, which the fork paints in the lane ink (automationnodelanequick.cpp:503 passes context.color = song_view_automation_node_ink to addNodes; addNode fills the disc with window_background and rings it in that colour). The Swift presenter publishes its node handles with fillColor palette.primaryText/secondaryText and outlineColor palette.noteBorder (src/swift/app/drawer/automation/AutomationContentPublication.swift:297-299) and no predicate observes a published node colour, so this node-ink clause stays unported; the rendered mesh remains the converted-window obligation.
 Source context since previous assertion:
 
 
@@ -690,3 +691,9 @@ Anchor: message "banding writes nothing"
 
 S037 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift
 Anchor: message "blank hover deletion changes nothing"
+
+S038 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "active vanilla automation curve runs use #EA3C3C node ink"
+
+S039 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink"

@@ -333,7 +333,7 @@ Original expression:
 
 A017 | PianoRollTest::ghostNoteRaster | src/checks/rollcheck/note_rendering.cpp:248
 Disposition: PARTIAL
-Mapping/reason: S018/S019 (checkGhostNotes, executed) map the clause to the published scene at dpr 2: the other-track face carries the track-identity ghost mix and publishes no border or ring rect at its box. Unproved: the legacy Quick surface's framebuffer edge/interior pixels; the predicate observes published scene rectangles, not rendered pixels.
+Mapping/reason: S018/S019/S023 (checkGhostNotes, executed) map the clause to the published scene at dpr 2: the other-track face carries the track-identity ghost mix (S018, blended against the themed rollBackground/accidentalLane backdrop; S023 proves the same face re-mixes into the immaterial lane) and publishes no border or ring rect at its box. Unproved: the legacy Quick surface's framebuffer edge/interior pixels; the predicates observe published scene rectangles, not rendered pixels.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -1046,7 +1046,13 @@ Quick Test predicate
 The retired swiftrollgated C++ source (notevisuals.cpp) that the former S001..S041 entries
 indexed is not on disk and is not registered in this checkout; its live equivalent is S013.
 Predicate presence alone does not close an A entry: each mapping requires corresponding
-execution and equivalent setup.
+execution and equivalent setup. S023/S024 are report.expect predicates added by task 25
+(ghost fill blends against the themed lane; the shipped immaterial identity note fill for
+track 6 at velocity 100) and executed by the implementer's
+deno task verify --filter swiftcore --verbose run on this snapshot, recorded in
+build/proof-evidence/swiftcore-projectsession.json. S023 is cited by A017; S024 pins the
+note-fill value for the shipped identity law, whose original rows assert alpha, hue and the
+endpoints rather than this value, so it cites no A entry.
 
 S001 | checkNoteBorders | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A007/A012 3px contiguous selection ring stops at inset"
@@ -1113,3 +1119,9 @@ Anchor: message "A036 ghost notes are never labeled"
 
 S022 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
 Anchor: message "A016 a distinct other track exists for the ghost seed"
+
+S023 | checkGhostNotes | src/checks/rollcheck/note_rendering.swift
+Anchor: message "A017 immaterial ghost face mixes into its themed roll lane"
+
+S024 | checkIdentityNoteColors | src/checks/rollcheck/note_rendering.swift
+Anchor: message "immaterial track-six velocity-100 native note color"

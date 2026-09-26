@@ -149,7 +149,7 @@ Item {
                             Layout.preferredWidth: root.baseFontPx / 2
                             Layout.preferredHeight: width
                             radius: width / 2
-                            color: root.pagePalette.primaryText
+                            color: root.pagePalette.automationNodeInk
                         }
                         Text {
                             objectName: "automationParameterTabText"
@@ -160,7 +160,7 @@ Item {
                             minimumPixelSize: Math.round(root.pageModel.baseFontPx / 2)
                             elide: Text.ElideNone
                             Layout.fillWidth: true
-                            color: tab.checked ? root.pagePalette.selectionText : tab.hovered ? root.pagePalette.windowText : root.pagePalette.secondaryText
+                            color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                         Text {
                             objectName: "automationParameterEventCount"
@@ -168,7 +168,7 @@ Item {
                             text: tab.model.eventCount === 1 ? qsTr("1 event") : qsTr("%1 events").arg(tab.model.eventCount)
                             textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
-                            color: root.pagePalette.selectionText
+                            color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                         Text {
                             objectName: tab.tempoParameter ? "automationTempoTapDraft" : ""
@@ -176,14 +176,15 @@ Item {
                             text: root.pageModel.tapTempoTapCount >= 2 ? qsTr("%1 BPM").arg(root.pageModel.tapTempoDraftBpm) : "..."
                             textFormat: Text.PlainText
                             font: Qt.font(root.pageModel.captionFont)
-                            color: tab.checked ? root.pagePalette.selectionText : tab.hovered ? root.pagePalette.windowText : root.pagePalette.secondaryText
+                            color: tab.checked ? root.pagePalette.buttonPressedText : root.pagePalette.windowText
                         }
                     }
                     background: Rectangle {
-                        color: tab.checked ? root.pagePalette.selectionRing
-                            : tab.hovered ? root.pagePalette.selectionFill : root.pagePalette.chromeBackground
+                        color: tab.checked ? root.pagePalette.tabPressedBackground
+                            : tab.hovered ? root.pagePalette.tabHoverBackground
+                                          : root.pagePalette.automationTabBackground
                         border.width: root.stroke
-                        border.color: root.pagePalette.outline
+                        border.color: root.pagePalette.automationTabOutline
                         Rectangle {
                             visible: tab.model.ghosted
                             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
@@ -192,11 +193,12 @@ Item {
                             color: root.pagePalette.outline
                         }
                         Rectangle {
+                            objectName: "automationParameterInclusionBar"
                             visible: tab.model.included && !tab.checked
                             anchors.top: parent.top; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: root.stroke
                             width: root.baseFontPx / 2
-                            color: root.pagePalette.selectionRing
+                            color: root.pagePalette.tabPressedBackground
                         }
                         Rectangle {
                             anchors.fill: parent

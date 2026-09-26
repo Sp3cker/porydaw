@@ -167,6 +167,8 @@ public final class GridScene {
         var pixel: Double
         var velocityColorMode: Bool
         var velocityZeroColor: String
+        var rollBackground: String
+        var accidentalLane: String
     }
 
     private struct CachedNoteGeometry {
@@ -704,7 +706,9 @@ public final class GridScene {
             dpr: input.metrics.dpr, noteMinWidth: input.metrics.noteMinWidth,
             noteMinHeight: input.metrics.noteMinHeight, pixel: input.metrics.pixel,
             velocityColorMode: input.velocityColorMode,
-            velocityZeroColor: input.palette.noteVelocityZero)
+            velocityZeroColor: input.palette.noteVelocityZero,
+            rollBackground: input.palette.rollBackground,
+            accidentalLane: input.palette.accidentalLane)
         if !input.geometryStable || key != noteFillKey {
             let built = buildNoteFills(input)
             cachedNoteFills = built.fills
@@ -767,8 +771,8 @@ public final class GridScene {
                 let fillColor: String
                 if ghostPass {
                     fillColor = PaletteMath.ghostFill(
-                        track: note.track,
-                        accidentalRow: GridScene.isBlackKey(pitch))
+                        track: note.track, accidentalRow: GridScene.isBlackKey(pitch),
+                        rollBackground: p.rollBackground, accidentalLane: p.accidentalLane)
                 } else if input.velocityColorMode {
                     fillColor = PaletteMath.velocityNoteColor(
                         velocity: note.velocity, zeroColor: p.noteVelocityZero)
@@ -865,6 +869,74 @@ public final class GridScene {
             overlay.append(SceneRect(
                 x: x1 - m.pixel / 2, y: 0, width: m.pixel, height: snapshot.rollHeight,
                 fillColor: p.selectionEdge))
+        }
+        let startTick = m.timeAxis.loopStartTick
+        let endTick = m.timeAxis.loopEndTick
+        let hasStart = startTick != TimeDefaults.noTick
+        let hasEnd = endTick != TimeDefaults.noTick
+        if (hasStart || hasEnd), snapshot.viewportWidth > 0, snapshot.rollHeight > 0 {
+            let x0 = hasStart
+                ? camera.displayX(tick: Double(startTick), origin: 0, dpr: m.dpr) : 0
+            let x1 = hasEnd
+                ? camera.displayX(tick: Double(endTick), origin: 0, dpr: m.dpr)
+                : snapshot.viewportWidth
+            if x1 > 0, x0 < snapshot.viewportWidth {
+                let glowWidth = min(2 * m.baseFontPx, x1 - x0)
+                let ink = PaletteMath.channels(p.selectionRing)
+                let bandWidth = max(1, m.spaceHalf)
+                func appendGlow(at left: Double, fadesRight: Bool, name: String) {
+                    guard glowWidth > 0 else { return }
+                    let firstBand = max(0, Int(floor(-left / bandWidth)))
+                    var band = firstBand
+                    while left + Double(band) * bandWidth < min(left + glowWidth, snapshot.viewportWidth) {
+                        let bandLeft = left + Double(band) * bandWidth
+                        let bandRight = min(left + Double(band + 1) * bandWidth, left + glowWidth)
+                        let midpoint = (bandLeft + bandRight) / 2
+                        let fraction = fadesRight
+                            ? (midpoint - left) / glowWidth
+                            : (left + glowWidth - midpoint) / glowWidth
+                        let alpha = fraction <= 0.2
+                            ? 150 + (18 - 150) * fraction / 0.2
+                            : 18 * (1 - fraction) / 0.8
+                        let visibleLeft = max(0, bandLeft)
+                        let visibleRight = min(snapshot.viewportWidth, bandRight)
+                        if visibleRight > visibleLeft {
+                            overlay.append(SceneRect(
+                                x: visibleLeft, y: 0, width: visibleRight - visibleLeft,
+                                height: snapshot.rollHeight,
+                                fillColor: PaletteMath.hex(
+                                    r: ink.r, g: ink.g, b: ink.b,
+                                    a: Int(alpha.rounded(.toNearestOrAwayFromZero))),
+                                primitiveName: name))
+                        }
+                        band += 1
+                    }
+                }
+                if hasStart {
+                    appendGlow(at: x0, fadesRight: true, name: "loopGlowStart")
+                }
+                if hasEnd {
+                    appendGlow(at: x1 - glowWidth, fadesRight: false, name: "loopGlowEnd")
+                }
+                if hasStart {
+                    let left = max(0, x0 - m.pixel / 2)
+                    let right = min(snapshot.viewportWidth, x0 + m.pixel / 2)
+                    if right > left {
+                        overlay.append(SceneRect(
+                            x: left, y: 0, width: right - left, height: snapshot.rollHeight,
+                            fillColor: p.selectionRing, primitiveName: "loopEdgeStart"))
+                    }
+                }
+                if hasEnd {
+                    let left = max(0, x1 - m.pixel / 2)
+                    let right = min(snapshot.viewportWidth, x1 + m.pixel / 2)
+                    if right > left {
+                        overlay.append(SceneRect(
+                            x: left, y: 0, width: right - left, height: snapshot.rollHeight,
+                            fillColor: p.selectionRing, primitiveName: "loopEdgeEnd"))
+                    }
+                }
+            }
         }
         sync(pianoDrawPreviewFill, preview)
         sync(pianoOverlay, overlay)

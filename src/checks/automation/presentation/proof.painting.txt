@@ -4,6 +4,29 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/presentation/painting.cpp
 Original SHA-256: 159ac9525ae9956c17b2648674383eccba7e8dc64498ab9fa0c5f02964f78926
 Swift counterpart: src/checks/automation/presentation/painting.swift
+QML counterpart: src/checks/editorqml/tst_EditorDrawer.qml
+
+Task-25 delta: this commit rebuilt the drawer's automation tab and curve colours. New predicates
+on this snapshot: src/checks/automation/presentation/painting.swift drawerAutomationPresentationPaintingModel
+pins every published active curve run to #EA3C3C and every published pinned-ghost run to #80EA3C3C
+(vanilla) — S116/S117, cited by A056/A057/A066 and A072/A074/A075; the mounted page
+(src/checks/editorqml/tst_EditorDrawer.qml test_productionAutomationPageMountsAndRenders) pins the tab
+states — S118-S125: checked surface tabPressedBackground, resting surface/border automationTabBackground
+and automationTabOutline, hovered surface tabHoverBackground, label/count ink buttonPressedText when
+checked and windowText otherwise (S118 cites A101, S121 cites A100/A102/A103).
+The pinned Swift properties carry the fork's presets with values verified equal: tabPressedBackground =
+control_pressed_background (#F5B61C/#00D3F2/#F98CBE) = the fork's song_view_automation_tab_active_background;
+automationTabBackground (#E7E1DB/#51555E/#4A4E59) and automationTabOutline (#8C857F/#62666F/#616571) = the
+fork's automation_tab_background/automation_tab_outline; automationNodeInk = automation_ink
+(#EA3C3C/#FF4D47/#FF91C3). Two pairs deliberately diverge under the 2026-09-25 contrast ruling: the hovered
+surface is tabHoverBackground (controlHover #ECE7E1/#5C5C5C/#52555E) instead of the fork's
+automation_tab_hover_background, and the checked label/count ink is buttonPressedText instead of the fork's
+tab_selected_text (window_text); no A row asserts either pair. The inclusion bar keeps the fork's role
+(tabPressedBackground = the fork's tabSelectedBackground) and is pinned by S126-S128, cited by A106/A107.
+Execution evidence: the implementer's deno task verify:qml --verbose (editorqml-drawer lane,
+build/proof-evidence/editorqml-drawer.json) and deno task verify --filter swiftcore --verbose
+(build/proof-evidence/swiftcore-projectsession.json) runs; this ledger pass read that evidence and
+re-ran neither lane. The retired C++ raster pixels stay unexecuted.
 
 A001 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:119
 Disposition: MATCHED
@@ -221,14 +244,14 @@ Mapping: S041, S042
 
 A056 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:296
 Disposition: PARTIAL
-Mapping/reason: S085/S084 — tst_EditorDrawer.qml/4187 assert the active pipeline's curve and nodes on the volume lane; unproved: the Tempo lane's own active curve run in the node ink (Tempo's curve run is asserted only in its pinned-ghost form, S087).
+Mapping/reason: S085/S084/S116 — tst_EditorDrawer.qml/4187 assert the active pipeline's curve and nodes on the volume lane, and S116 pins every published active curve run to the node ink (#EA3C3C vanilla), so the ink half of this clause executes on the presented rects; unproved: the Tempo lane's own active curve run in the node ink (Tempo's curve run is asserted only in its pinned-ghost form, S087) and the body-region raster pixels.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(body), QPoint{}, tempoColor))
 
 A057 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:298
 Disposition: PARTIAL
-Mapping/reason: S085 — tst_EditorDrawer.qml, "the lane with written events drew its curve" observes the curve ink at the item level; unproved: the absence of any trackIdentityColor(kTrack % count) pixel inside the body QRegion on the AutomationCurves raster — no executing predicate samples that layer for the non-identity colour.
+Mapping/reason: S085/S116 — tst_EditorDrawer.qml, "the lane with written events drew its curve" observes the curve at the item level, and S116 pins every published active curve run to the node ink, so the presenter's runs carry no trackIdentityColor fill; unproved: the absence of any trackIdentityColor(kTrack % count) pixel inside the body QRegion on the AutomationCurves raster — no executing predicate samples that layer for the non-identity colour.
 Original expression:
   QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                QRegion(body), QPoint{},
@@ -267,7 +290,7 @@ Mapping: S076, S059
 
 A066 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:328
 Disposition: PARTIAL
-Mapping/reason: S085/S084 — tst_EditorDrawer.qml/4187 assert the active pipeline on the volume lane; unproved: the Tempo lane's own active curve run (Tempo's curve is asserted only as the pinned ghost, S087).
+Mapping/reason: S085/S084/S116 — tst_EditorDrawer.qml/4187 assert the active pipeline on the volume lane, and S116 pins every published active curve run to the node ink (#EA3C3C vanilla); unproved: the Tempo lane's own active curve run (Tempo's curve is asserted only as the pinned ghost, S087) and the tempo-body raster pixels.
 Original expression:
   QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
                                   QRegion(tempoBody), QPoint{}, tempoColor))
@@ -292,7 +315,7 @@ Mapping: S048
 
 A072 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:355
 Disposition: MATCHED
-Mapping: S047, S085
+Mapping: S047, S085, S116
 
 A073 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:358
 Disposition: MATCHED
@@ -300,11 +323,11 @@ Mapping: S080
 
 A074 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:360
 Disposition: MATCHED
-Mapping: S087, S086, S051
+Mapping: S087, S086, S051, S117
 
 A075 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:362
 Disposition: MATCHED
-Mapping: S088, S089
+Mapping: S088, S089, S116
 
 A076 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:365
 Disposition: MATCHED
@@ -398,42 +421,34 @@ Mapping: S097, S080
 
 A098 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:483
 Disposition: PARTIAL
-Mapping/reason: S097 — tst_EditorDrawer.qml, "the parameter tab has bounds" finds the Pan tab with positive bounds, and S029 — painting.swift publishes the selected inactive parameters; unproved: the Pan tab's background QQuickItem and its tabSelectedBackground fill pixels inside the tab rect — no executing predicate resolves tab.background or samples its colour.
+Mapping/reason: S097/S118 — tst_EditorDrawer.qml, "the parameter tab has bounds" finds the Pan tab with positive bounds, and S118 resolves the drawn active tab's background and compares it with the active-tab surface (pagePalette.tabPressedBackground, the Swift name of the fork's song_view_automation_tab_active_background preset); unproved: the Pan tab's own instance (the mounted fixture does not pin its active parameter to Pan) and the background fill pixels inside its tab rect.
 Original expression:
   QVERIFY(panBackground)
 
 A099 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:484
 Disposition: PARTIAL
-Mapping/reason: S097 — tst_EditorDrawer.qml finds the LFO tab (see A098); unproved: the LFO tab's background QQuickItem and its tabBackground fill pixels inside the tab rect — no executing predicate resolves tab.background or samples its colour.
+Mapping/reason: S097/S121 — tst_EditorDrawer.qml finds the LFO tab (see A098), and S121 resolves the drawn resting Tempo tab's background against automationTabBackground; unproved: the LFO tab's own background instance and its fill pixels inside the tab rect.
 Original expression:
   QVERIFY(lfoBackground)
 
 A100 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:485
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Qt Quick Control backgroundItem internals; see A098.
-Original expression:
-  QVERIFY(tempoBackground)
+Disposition: MATCHED
+Mapping: S121
 
 A101 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:487
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabSelectedBackground role): the model-level selection is asserted (S029/S115); the drawn role colour is owned by the QML theme and no executing predicate samples it.
-Original expression:
-  QCOMPARE(panBackground->property("color").value<QColor>(),
-               appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>())
+Disposition: MATCHED
+Mapping: S118
 
 A102 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:489
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabBackground role); see A101.
+Disposition: PARTIAL
+Mapping/reason: S121 — tst_EditorDrawer.qml pins the drawn resting Tempo tab's background to automationTabBackground (the Swift name of the fork's automation_tab_background role; both presets #E7E1DB/#51555E/#4A4E59), so the inactive-tab surface binding executes; unproved: the LFO tab's own background instance and its fill pixels.
 Original expression:
   QCOMPARE(lfoBackground->property("color").value<QColor>(),
                appearance.value(QStringLiteral("tabBackground")).value<QColor>())
 
 A103 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:491
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/presentation/painting.cpp) no longer builds or runs. Previous native note: Tab background colour identity (the tabBackground role); see A101.
-Original expression:
-  QCOMPARE(tempoBackground->property("color").value<QColor>(),
-               appearance.value(QStringLiteral("tabBackground")).value<QColor>())
+Disposition: MATCHED
+Mapping: S121
 
 A104 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:496
 Disposition: GAP
@@ -449,14 +464,14 @@ Original expression:
 
 A106 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:517
 Disposition: PARTIAL
-Mapping/reason: S029 — painting.swift publishes the selected inactive parameters; unproved: the drawn shared-selection indicator inside the inactive label's rect.
+Mapping/reason: S029/S127/S128 — painting.swift publishes the selected inactive parameters, and S127/S128 (tst_EditorDrawer.qml, test_productionAutomationTabSwitchAndGhosts, mounted) resolve the included inactive lane tab's inclusion bar (objectName automationParameterInclusionBar), assert it visible, and compare its colour with pagePalette.tabPressedBackground — the Swift name of the fork's tab-active role this row samples (song_view_automation_tab_active_background → control_pressed_background, values equal); unproved: the retired C++ pixel scan inside the LFO tab's rect (framebuffer) and the LFO instance itself.
 Original expression:
   QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
                "the inactive LFO label has no visible shared-selection indicator")
 
 A107 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:519
 Disposition: PARTIAL
-Mapping/reason: S029 — painting.swift publishes the selected inactive parameters; unproved: the drawn shared-selection indicator inside the inactive Tempo label's rect.
+Mapping/reason: S029/S127/S128 — painting.swift publishes the selected inactive parameters, and S127/S128 (tst_EditorDrawer.qml, test_productionAutomationTabSwitchAndGhosts, mounted) resolve the included inactive lane tab's inclusion bar (objectName automationParameterInclusionBar), assert it visible, and compare its colour with pagePalette.tabPressedBackground — the Swift name of the fork's tab-active role this row samples (song_view_automation_tab_active_background → control_pressed_background, values equal); unproved: the retired C++ pixel scan inside the Tempo tab's rect (framebuffer) and the Tempo instance itself.
 Original expression:
   QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
                "the inactive Tempo label has no visible shared-selection indicator")
@@ -1209,3 +1224,42 @@ Anchor: message "switching parameters wrote nothing to the lane"
 
 S115 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the explicit selection survives a parameter switch"
+
+S116 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "active vanilla automation curve runs use #EA3C3C node ink"
+
+S117 | drawerAutomationPresentationPaintingModel | src/checks/automation/presentation/painting.swift
+Anchor: message "pinned vanilla ghost curve runs use #80EA3C3C half-alpha ink"
+
+S118 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "checked automation tab paints the pressed surface"
+
+S119 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "checked automation tab label paints pressed-surface ink"
+
+S120 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "checked automation tab count paints pressed-surface ink"
+
+S121 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resting automation tab paints its dedicated surface"
+
+S122 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resting automation tab label paints window ink"
+
+S123 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "resting automation tab uses its dedicated border"
+
+S124 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "hovered automation tab paints the contrast-safe hover surface"
+
+S125 | test_productionAutomationPageMountsAndRenders | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "hovered automation tab label paints window ink"
+
+S126 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selector composes the inclusion bar"
+
+S127 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the selected occupied lane stays included after switching to an empty lane"
+
+S128 | test_productionAutomationTabSwitchAndGhosts | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the inclusion bar uses the pressed automation tab color"

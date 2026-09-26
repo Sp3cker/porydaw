@@ -4572,6 +4572,15 @@ TestCase {
         compare(activeTab.Accessible.selected, true, "the active parameter reports itself selected")
         compare(String(activeTab.Accessible.name).length > 0, true,
                 "a tab publishes its accessible name ('" + activeTab.Accessible.name + "')")
+        compare(String(activeTab.background.color).toLowerCase(),
+                testCase.drawerPalette().tabPressedBackground.toLowerCase(),
+                "checked automation tab paints the pressed surface")
+        compare(String(findChild(activeTab, "automationParameterTabText").color).toLowerCase(),
+                testCase.drawerPalette().buttonPressedText.toLowerCase(),
+                "checked automation tab label paints pressed-surface ink")
+        compare(String(findChild(activeTab, "automationParameterEventCount").color).toLowerCase(),
+                testCase.drawerPalette().buttonPressedText.toLowerCase(),
+                "checked automation tab count paints pressed-surface ink")
         var tempoTab = testCase.automationTab(model.tabCount - 1)
         verify(tempoTab, "the Tempo tab is drawn last")
         compare(bootstrap.automationTabLabels().split(",").slice(-1)[0],
@@ -4582,6 +4591,27 @@ TestCase {
         verify(tapControl, "the Tempo row composed its Tap control")
         compare(tapControl.Accessible.role, Accessible.Button, "the Tap control is a button")
         compare(tapControl.Accessible.name, "Tap tempo", "the Tap control names its action")
+        tempoTab = testCase.revealAutomationTab(model.tabCount - 1)
+        mouseMove(testCase.automationPlotInput(), 4, 4)
+        tryCompare(tempoTab, "hovered", false)
+        compare(String(tempoTab.background.color).toLowerCase(),
+                testCase.drawerPalette().automationTabBackground.toLowerCase(),
+                "resting automation tab paints its dedicated surface")
+        compare(String(findChild(tempoTab, "automationParameterTabText").color).toLowerCase(),
+                testCase.drawerPalette().windowText.toLowerCase(),
+                "resting automation tab label paints window ink")
+        compare(String(tempoTab.background.border.color).toLowerCase(),
+                testCase.drawerPalette().automationTabOutline.toLowerCase(),
+                "resting automation tab uses its dedicated border")
+        mouseMove(tempoTab, tempoTab.width / 2, tempoTab.height / 2)
+        tryCompare(tempoTab, "hovered", true)
+        compare(String(tempoTab.background.color).toLowerCase(),
+                testCase.drawerPalette().tabHoverBackground.toLowerCase(),
+                "hovered automation tab paints the contrast-safe hover surface")
+        compare(String(findChild(tempoTab, "automationParameterTabText").color).toLowerCase(),
+                testCase.drawerPalette().windowText.toLowerCase(),
+                "hovered automation tab label paints window ink")
+        mouseMove(testCase.automationPlotInput(), 4, 4)
 
         // The plot's own facts: the grid, the value axis and the lane's nodes.
         verify(findChild(page, "automationGridLines"), "the page composed its time grid")
@@ -4685,6 +4715,14 @@ TestCase {
         testCase.clickAutomationTab(emptyTab)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === emptyTab }, 2000,
                   "a second tab click switched again")
+        var includedTab = testCase.automationTab(trackTab)
+        var inclusionBar = findChild(includedTab, "automationParameterInclusionBar")
+        verify(inclusionBar, "the selector composes the inclusion bar")
+        tryCompare(inclusionBar, "visible", true, 2000,
+                   "the selected occupied lane stays included after switching to an empty lane")
+        compare(String(inclusionBar.color).toLowerCase(),
+                testCase.drawerPalette().tabPressedBackground.toLowerCase(),
+                "the inclusion bar uses the pressed automation tab color")
         testCase.clickAutomationTab(trackTab)
         tryVerify(function() { return bootstrap.automationActiveParameterIndex() === trackTab }, 2000,
                   "the tab switched back")

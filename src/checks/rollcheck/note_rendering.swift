@@ -232,6 +232,10 @@ private func checkIdentityNoteColors(_ report: CheckReport, session: DocumentSes
                   message: "A024 published middle velocity is opaque")
     report.expect(midpoint != zero && midpoint != minimum && midpoint != maximum, cppID: id,
                   message: "A025 published middle velocity differs from both endpoints")
+    let immaterial = GridPalette()
+    ShellAppearance.apply(to: immaterial, mode: "immaterial", contrast: 50)
+    report.expectEqual(expected: "#7DC36B", actual: immaterial.noteFill(track: 6, velocity: 100),
+                       cppID: id, what: "immaterial track-six velocity-100 native note color")
 }
 
 /// Independent transcription of SongView::velocityNoteColor
@@ -363,7 +367,8 @@ private func checkVelocityColorMode(_ report: CheckReport, session: DocumentSess
                        notes: [ghost], velocityColorMode: velocityMode)
     }
     let expectedGhost = PaletteMath.ghostFill(
-        track: track, accidentalRow: GridScene.isBlackKey(Int(note.pitch)))
+        track: track, accidentalRow: GridScene.isBlackKey(Int(note.pitch)),
+        rollBackground: palette.rollBackground, accidentalLane: palette.accidentalLane)
     grid.scene.rebuildNotes(ghostInput(velocityMode: true))
     let ghostOn = grid.scene.pianoNoteFills.asArray.filter {
         $0.primitiveName == "gridNote_\(noteID.rawValue)"
@@ -641,10 +646,29 @@ private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
         report.fail(id, "ghost fixture has no projected scene box")
         return
     }
-    let expectedGhost = PaletteMath.ghostFill(track: other,
-                                              accidentalRow: GridScene.isBlackKey(ghost.pitch))
+    let expectedGhost = PaletteMath.ghostFill(
+        track: other, accidentalRow: GridScene.isBlackKey(ghost.pitch),
+        rollBackground: grid.palette.rollBackground, accidentalLane: grid.palette.accidentalLane)
     report.expect(ghostFill(named: "gridNote_\(ghost.id.rawValue)") == expectedGhost,
                   cppID: id, message: "A017 ghost face uses the track-identity mix")
+    ShellAppearance.apply(to: grid.palette, mode: "immaterial", contrast: 50)
+    grid.refreshFromSession()
+    let themedBackdrop = GridScene.isBlackKey(ghost.pitch)
+        ? grid.palette.accidentalLane : grid.palette.rollBackground
+    let backdropChannels = PaletteMath.channels(themedBackdrop)
+    let backdrop = PaletteMath.oklab(r: backdropChannels.r, g: backdropChannels.g,
+                                     b: backdropChannels.b)
+    let identity = PaletteMath.trackIdentityOklab(other)
+    let weight = 60.0 / 255.0
+    let lightness = backdrop.lightness
+        + min(0.055, max(-0.055, (identity.lightness - backdrop.lightness) * weight))
+    let immaterialGhost = PaletteMath.hex(PaletteMath.Oklab(
+        lightness: lightness, a: backdrop.a + (identity.a - backdrop.a) * weight,
+        b: backdrop.b + (identity.b - backdrop.b) * weight))
+    report.expect(ghostFill(named: "gridNote_\(ghost.id.rawValue)") == immaterialGhost,
+                  cppID: id, message: "A017 immaterial ghost face mixes into its themed roll lane")
+    ShellAppearance.apply(to: grid.palette, mode: "vanilla", contrast: 50)
+    grid.refreshFromSession()
     let ring = 3.0 / grid.devicePixelRatio
     let border = 2.0 / grid.devicePixelRatio
     session.setSelectedNotes([plain.id])
@@ -670,8 +694,10 @@ private func checkGhostNotes(_ report: CheckReport, session: DocumentSession) {
                       && projected(ghost.id)?.ghost == false,
                   cppID: id, message: "selecting the other track swaps plain and ghost roles")
     report.expect(ghostFill(named: "gridNote_\(plain.id.rawValue)")
-                      == PaletteMath.ghostFill(track: primary,
-                                              accidentalRow: GridScene.isBlackKey(plain.pitch))
+                      == PaletteMath.ghostFill(
+                          track: primary, accidentalRow: GridScene.isBlackKey(plain.pitch),
+                          rollBackground: grid.palette.rollBackground,
+                          accidentalLane: grid.palette.accidentalLane)
                       && ghostFill(named: "gridNote_\(ghost.id.rawValue)")
                       == grid.palette.noteFill(track: other, velocity: 100),
                   cppID: id, message: "swapped faces follow their new roles")

@@ -5,7 +5,7 @@ Original: src/checks/automation/automationtaptempo.cpp
 Original SHA-256: 0b180392f9c46d3eb011e0ba238a1fddeb96d0f2833b3fd84aff06f5fb52077d
 Swift counterpart: src/checks/automation/automationtaptempo.swift
 QML lane counterpart: src/checks/editorqml/tst_EditorDrawer.qml :: test_productionAutomationTapTempoThroughInput
-QML SHA-256: 081c61933828125649cdcc40ba91d7a3d70a5cd917cea918235f0669ab0553c7
+QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
 
 
 

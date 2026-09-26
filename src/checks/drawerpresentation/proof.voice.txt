@@ -8,7 +8,7 @@ Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Converted-window counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-QML SHA-256: 819923b2a7855cb9c4497b6cbc295958a1afbddab5144e38f9cf2a6bd82626f5
+QML SHA-256: ba79ea1a7375d60e6733806d73388a4d6dd0740317a4b2dd30b330cb53033036
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 

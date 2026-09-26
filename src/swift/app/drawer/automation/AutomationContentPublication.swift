@@ -228,7 +228,14 @@ extension AutomationPage {
                      isGhost: Bool, into runs: inout [SceneRect]) {
         guard !lane.points.isEmpty else { return }
         let stroke = 2.0
-        let color = isGhost ? palette.outline : palette.primaryText
+        let ink = palette.automationNodeInk
+        let color: String
+        if isGhost {
+            let channels = PaletteMath.channels(ink)
+            color = PaletteMath.hex(r: channels.r, g: channels.g, b: channels.b, a: 128)
+        } else {
+            color = ink
+        }
         let name = isGhost ? "automationGhostCurve" : "automationCurve"
         let limit = max(0, plotWidth)
         func x(_ tick: Tick) -> Double { projection.x(tick) }

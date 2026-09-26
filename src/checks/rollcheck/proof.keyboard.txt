@@ -248,8 +248,8 @@ Original expression:
                "modified ruler drag did not derive the overlapping note-track scope");
 
 A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
-Disposition: MATCHED
-Mapping: S082
+Disposition: GAP
+Mapping/reason: GAP — fixture/seed guard, not a behaviour predicate: the Swift counterpart's own seed guard (checkRulerSweepSingleTrackScope, src/checks/rollcheck/note_rendering.swift) only calls report.fail when it cannot seed the intersecting other-track note, so its message (S082, resolved) is a failure branch that never appears in the pass evidence and never executes. The seeded non-overlapping secondary-track note therefore stays an open setup obligation; the downstream observations are A028 (view placement, GAP) and A029 (ring pixels, PARTIAL).
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:

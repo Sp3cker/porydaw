@@ -28,6 +28,9 @@ public enum ShellAppearance {
         let accidental: String
         let keyboardSeparator: String
         let keyboardLabel: String
+        let automationNodeInk: String
+        let automationTabBackground: String
+        let automationTabOutline: String
     }
 
     // Secondary ink is the preset's own secondary walked toward black until it
@@ -43,7 +46,9 @@ public enum ShellAppearance {
         item: "#D2D0CA", itemHover: "#E7E2DC", secondary: "#4D4742",
         input: "#F3F0ED", scrollbar: "#A49D97", alternate: "#D1CBC5", warning: "#644100", error: "#8D1B1F",
         grid: "#3F040000", roll: "#D4CCC7", accidental: "#B4ACA6",
-        keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#BCB4AF", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#EA3C3C", automationTabBackground: "#E7E1DB",
+        automationTabOutline: "#8C857F")
 
     private static let darkNeutralHigh = Colors(
         window: "#373737", text: "#D8D8D8", disabledText: "#A0A0A0",
@@ -53,7 +58,9 @@ public enum ShellAppearance {
         item: "#424242", itemHover: "#5B5B5B", secondary: "#BDBDBD",
         input: "#252525", scrollbar: "#262626", alternate: "#575757", warning: "#E2A854", error: "#F09999",
         grid: "#54030303", roll: "#454545", accidental: "#303030",
-        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#FF4D47", automationTabBackground: "#51555E",
+        automationTabOutline: "#62666F")
 
     private static let immaterial = Colors(
         window: "#2E3138", text: "#CBCBCD", disabledText: "#979AA3",
@@ -63,7 +70,9 @@ public enum ShellAppearance {
         item: "#393C43", itemHover: "#51545C", secondary: "#A5A8B0",
         input: "#25272B", scrollbar: "#212225", alternate: "#52545C", warning: "#E2A854", error: "#F09999",
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
-        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
+        keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A",
+        automationNodeInk: "#FF91C3", automationTabBackground: "#4A4E59",
+        automationTabOutline: "#616571")
 
     public static func mode(_ stored: String) -> String {
         switch stored {
@@ -139,6 +148,9 @@ public enum ShellAppearance {
         palette.tabHoverBackground = colors.controlHover
         palette.tabSelectedBackground = colors.selection
         palette.tabPressedBackground = colors.controlPressed
+        palette.automationNodeInk = colors.automationNodeInk
+        palette.automationTabBackground = colors.automationTabBackground
+        palette.automationTabOutline = colors.automationTabOutline
         palette.scrollbarHandle = colors.scrollbar
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.
