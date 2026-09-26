@@ -148,6 +148,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
             session.editCursor = tick
             _ = session.mutateCamera { $0.ensureTickVisible(UInt64(tick), dpr: dpr) }
         }
+        eventList.onRevealVoiceRequested = { [voiceList] program in
+            voiceList.revealSlot(slot: program)
+        }
+        eventList.onPerformEventListCommand = { [weak self] command in
+            self?.performEventListCommand(command: command)
+        }
         voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
             guard (0..<128).contains(voice), (0..<128).contains(key),
                   (0..<128).contains(velocity) else { return }

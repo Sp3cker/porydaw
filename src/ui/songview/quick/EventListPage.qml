@@ -1257,6 +1257,10 @@ FocusScope {
                     rootLevel: true
                     menuModel: page.controller.menuItems
                     rowObjectNamePrefix: "eventListMenuRow_"
+                    readonly property bool showsShortcuts: page.controller.menuShortcutText.length > 0
+                    readonly property real shortcutWidth: controlMetrics.advanceWidth(
+                                                              page.controller.menuShortcutText)
+                    readonly property int separatorCount: page.controller.menuSeparatorCount
                     appearance: ({
                         background: page.buttonBackground,
                         outline: page.buttonOutline,
@@ -1266,16 +1270,25 @@ FocusScope {
                         pressedBackground: page.buttonPressedBackground,
                         pressedText: page.buttonPressedText,
                         disabledText: page.disabledText,
+                        separator: page.buttonOutline,
                         font: page.controlFont
                     })
                     rowHeight: page.rowHeight
                     checkX: page.cellHorizontalPadding / 2
                     checkWidth: page.cellHorizontalPadding
                     textX: page.cellHorizontalPadding * 2
-                    textRight: menuWidth - page.cellHorizontalPadding
-                    menuWidth: Math.min(parent.width, headerMetrics.advanceWidth(
-                                            qsTr("Channel aftertouch")) * 2)
-                    menuHeight: Math.min(parent.height, rowCount * rowHeight + 2)
+                    textRight: showsShortcuts ? menuWidth - shortcutWidth
+                                                 - page.cellHorizontalPadding * 2
+                                              : menuWidth - page.cellHorizontalPadding
+                    shortcutRight: showsShortcuts ? menuWidth - page.cellHorizontalPadding : -1
+                    menuWidth: Math.min(parent.width, Math.max(
+                                            headerMetrics.advanceWidth(qsTr("Channel aftertouch")) * 2,
+                                            showsShortcuts ? controlMetrics.advanceWidth(
+                                                                 qsTr("Move Event Down (Same Tick)"))
+                                                            + shortcutWidth
+                                                            + page.cellHorizontalPadding * 4 : 0))
+                    menuHeight: Math.min(parent.height, (rowCount - separatorCount) * rowHeight
+                                         + separatorCount * separatorHeight + 2)
                     menuOrigin: Qt.point(
                         Math.max(0, Math.min(page.controller.menuX, width - menuWidth)),
                         Math.max(0, Math.min(page.controller.menuY, height - menuHeight)))

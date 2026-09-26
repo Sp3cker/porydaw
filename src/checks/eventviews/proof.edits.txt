@@ -12,19 +12,24 @@ Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
 Production counterpart: src/swift/core/EventEditing.swift
 Production SHA-256: b57268432916d1edba50c9facc7527915156d719fe210565126f296d3905b6d1
 Event-list production counterpart: src/swift/app/eventlist/EventListEditing.swift
-Event-list production SHA-256: c11bec00c9401b164b3b64d5a8ea1622c8c50a825f83f366416194c188686f7f
+Event-list production SHA-256: b4512b1a4c826e4303085aa91e947e3e7986e2c9290adca0ab77193c5710e4f1
 Event-list production counterpart: src/swift/app/eventlist/EventListPresenter.swift
-Event-list production SHA-256: 210df589920d25bf22771b9e02da9be001549ec966f8ff831d3dfcdf11ea0777
+Event-list production SHA-256: ae343bd9d4fdcdbf7f76d4a8741957fabc8a723dd40171c2469e3bec981e06ec
 Event-list production counterpart: src/ui/songview/quick/EventListPage.qml
-Event-list production SHA-256: 620094dc762138baded25063a2e932c3679d9b44d7828c7e4cac8c2f4e52634b
+Event-list production SHA-256: 9b95a18d867c45913cd00e82a66d4062dcde6c05fc25d8efca1e6a4e006b2a06
+Event-list production counterpart: src/swift/app/eventlist/EventListMenus.swift
+Event-list production SHA-256: d8a292d52bc0fbec711b9e9080f557c575ff7db9814d8a369dd301c58cb632ac
+Event-list production counterpart: src/swift/app/eventlist/EventListSelection.swift
+Event-list production SHA-256: c7537b0f54685556b14e78246bdc11aeb310eeeefcfde0960287b117bfaaa084
 Note: the event-list production hash lines were re-pinned for the frozen task-28 write set; task-28's event-list rows and Swift predicate index live in src/checks/eventviews/proof.chrome.txt.
 Task 33 note: EventListPresenter.swift and EventListPage.qml are re-pinned again for the session-role typography re-source (EventListAppearance reads session.typography; the toolbar binds page.controlFont; the QML application-font/monospace fallbacks are gone), and the mounted QML counterpart src/checks/editorqml/tst_ShellEventList.qml is pinned at the hash below. The rows and citations below are unchanged: no A row in this ledger asserts a font face or size.
-QML SHA-256: c31733e82178d3a0dbcbc97c4f5e48551ee3379b6c0228ed41a0b5dbf9f8649a
+QML SHA-256: ba7051df35f95f8877b9eb8fe2c3d3e97fa3a4d4abcd0b2a837b09695b2f6fa6
+Task 39 note (ledger pass, no lane re-run): the fork row menu, the move-destination law, the delete cursor law and the reveal seam landed; EventListPageChecks.swift gained eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract and tst_ShellEventList.qml gained test_rowMenuActionAndVoiceReveal, test_dragReordersOnlySameTickRows and test_drawerFocusCommitsAndOwnsDelete. This pass indexed the new predicates as S256-S280 and re-pinned the event-list production and QML hashes above (EventListMenus.swift and EventListSelection.swift are now pinned too). Row changes: A125/A128/A134/A137 (real drag delivery, cursor follow, refused cross-tick drop), A147/A151/A153/A155 (row-menu session, canonical command routing, single reorder), A163/A165 (Alt+Down focus route and the registry binding), A178/A179 (Control-click selection) and A194/A195/A198/A199/A200 (drawer focus loss) are MATCHED. A073/A077/A078/A079/A084/A085/A089/A090/A092/A097/A098/A103/A104/A108/A109/A110 (presenter tempo projections), A180/A181/A182/A183/A185/A186 (delete matrix) and A189/A191/A193/A197 (drawer) are PARTIAL: their clause lives inside a compound presenter predicate that is not shared across sites, so each needs a per-clause predicate. Fixture guards, the pinned-note and before-run-start drag deliveries, the menu dismissal, the clicked-row echo, the projected tick-zero tempo row and the message-less focus/editing asserts stay GAP with the missing observable named in the reason. No row outside the four task-39 families changed.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shell-event-list --verbose; deno task verify:bridge
-Result: PASS on the frozen task-19 write set (evidence provided by the implementer/controller handoff; this ledger pass re-ran only `deno task proof check`) - `deno task verify --filter swiftcore --verbose`: 12/37 ok, 25 skipped, zero failures, every new eventListCellCommitContract predicate passing; `deno task verify:shell --filter shell-event-list --verbose`: PASS 4/4 including test_tickBoundariesThroughMountedEditor; `deno task verify:bridge`: 0 findings. Insert-copy EOT predicates S241/S242 and the tempo-copy predicate S240 failed before their repairs (implementer RED evidence).
+Command: deno task verify --filter swiftcore-projectsession --verbose; deno task verify:shell --filter shell-event-list --verbose; deno task verify:bridge
+Result: PASS on the frozen task-39 write set (implementer-reported lanes; this ledger pass re-ran only `deno task proof check` and `deno task proof check --executed` against the fresh build/proof-evidence) - `deno task verify --filter swiftcore-projectsession --verbose`: 1/37 ok, 36 skipped, zero failures, every new eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract predicate passing (5, 3 and 8 evidence rows); `deno task verify:shell --filter shell-event-list --verbose`: 1/26 ok, 25 skipped with the bridge analyzer at 0 findings; RED evidence (implementer): the single-delete cursor predicate failed before the EventListEditing repair. The task-19 insert-copy predicates S240-S242 and their RED evidence above remain as recorded.
 
 A001 | typeDigits (file-local helper) | src/checks/eventviews/edits.cpp:57
 Disposition: RETIRED-REPRESENTATION
@@ -866,7 +871,7 @@ QVERIFY(!originalTickZeroMeta.empty())
 
 A070 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:320
 Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: The presenter tempo fixture carries marker metas at ticks 0 and 48 and no tick-zero tempo point, so no Swift predicate observes the native Tempo fixture's projected tick-zero tempo row.
 Source context since previous assertion:
 ;
 
@@ -889,8 +894,8 @@ Original expression:
 QVERIFY(rawRow >= 0)
 
 A073 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:346
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S256 (marker-to-tempo commit is one step preserving tick-zero metas) accepts the same presenter type commit; unproved at row granularity: the accepted-commit clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -916,8 +921,8 @@ Disposition: MATCHED
 Mapping: S119
 
 A077 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:351
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S256 asserts the projected tempo row at the converted tick inside its commit contract; unproved at row granularity: no predicate is anchored to that projection alone.
 Source context since previous assertion:
 ;
 
@@ -925,8 +930,8 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A078 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:352
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S256 asserts that no raw event remains at the converted tick; unproved at row granularity: the absent projected meta row needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -936,7 +941,7 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
 
 A079 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:354
 Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: the model setData conversion path and the projected tempo rows.
+Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 and S256 (the presenter commit keeps a tick-zero event); unproved: exact tick-zero meta set equality through the presenter path and the projected tempo rows.
 Source context since previous assertion:
 ;
 
@@ -945,7 +950,7 @@ QVERIFY(tickZeroMeta(document.smf().tracks[0]) == originalTickZeroMeta)
 
 A080 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:355
 Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: The presenter tempo fixture carries marker metas at ticks 0 and 48 and no tick-zero tempo point, so no Swift predicate observes the native Tempo fixture's projected tick-zero tempo row.
 Source context since previous assertion:
 ;
 
@@ -965,8 +970,8 @@ Disposition: MATCHED
 Mapping: S127
 
 A084 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:362
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S257 asserts the raw marker event returns at the converted tick when the conversion is undone; unproved at row granularity: the restored projected meta row needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -975,8 +980,8 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
                                                   eventlist::TypeMeta) >= 0)
 
 A085 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:364
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S257 undoes the conversion; unproved at row granularity: the absent projected tempo row after the undo needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -996,8 +1001,8 @@ Disposition: MATCHED
 Mapping: S133
 
 A089 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:371
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S257 redoes the conversion and asserts the projected tempo row at the converted tick; unproved at row granularity: no predicate is anchored to that projection alone.
 Source context since previous assertion:
 ;
 
@@ -1005,8 +1010,8 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A090 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:372
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S257 redoes the conversion and asserts no raw marker event at the converted tick; unproved at row granularity: the absent projected meta row needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1027,8 +1032,8 @@ Original expression:
 QVERIFY(tempoRow >= 0)
 
 A092 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:378
-Disposition: GAP
-Mapping/reason: Controller/model commit-result predicate (commitCellEdit/setData return); Swift calls document APIs directly and has no commit-result predicate.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 accepts the same presenter reverse type commit; unproved at row granularity: the accepted tempo-to-meta commit clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1060,8 +1065,8 @@ Original expression:
 QVERIFY(rawRow >= 0)
 
 A097 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:386
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 removes the tempo point and restores the raw marker event; unproved at row granularity: the absent projected tempo row needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1070,7 +1075,7 @@ QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick), -1)
 
 A098 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:387
 Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: the model setData conversion path and the projected tempo rows.
+Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 and S258 (the presenter reverse commit restores the raw marker); unproved: exact tick-zero meta set equality through the presenter path and the projected tempo rows.
 Source context since previous assertion:
 ;
 
@@ -1079,7 +1084,7 @@ QVERIFY(tickZeroMeta(document.smf().tracks[0]) == originalTickZeroMeta)
 
 A099 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:388
 Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: The presenter tempo fixture carries marker metas at ticks 0 and 48 and no tick-zero tempo point, so no Swift predicate observes the native Tempo fixture's projected tick-zero tempo row.
 Source context since previous assertion:
 ;
 
@@ -1099,8 +1104,8 @@ Disposition: MATCHED
 Mapping: S146
 
 A103 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:395
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 restores the tempo point when its commit is undone; unproved at row granularity: the restored projected tempo row at the native conversion tick needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1108,8 +1113,8 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick) >= 0, true)
 
 A104 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:396
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 restores the tempo point when its commit is undone; unproved at row granularity: the absent projected meta row after that undo needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1130,8 +1135,8 @@ Disposition: MATCHED
 Mapping: S152
 
 A108 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:404
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 redoes the reverse commit; unproved at row granularity: the restored projected meta row after the redo needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1140,8 +1145,8 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
                                                   eventlist::TypeMeta) >= 0)
 
 A109 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:406
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S258 records the reverse commit state before its undo leg; unproved at row granularity: the absent projected tempo row after the redo needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1150,7 +1155,7 @@ QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick), -1)
 
 A110 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:407
 Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: the model setData conversion path and the projected tempo rows.
+Mapping/reason: Related Swift tempo/raw cross-conversion predicates S071–S078 and S258 (the presenter reverse commit restores the raw marker); unproved: exact tick-zero meta set equality through the presenter path and the projected tempo rows.
 Source context since previous assertion:
 ;
 
@@ -1159,7 +1164,7 @@ QVERIFY(tickZeroMeta(document.smf().tracks[0]) == originalTickZeroMeta)
 
 A111 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:408
 Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Mapping/reason: The presenter tempo fixture carries marker metas at ticks 0 and 48 and no tick-zero tempo point, so no Swift predicate observes the native Tempo fixture's projected tick-zero tempo row.
 Source context since previous assertion:
 ;
 
@@ -1321,8 +1326,8 @@ Disposition: MATCHED
 Mapping: S159
 
 A125 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:472
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S269
 Source context since previous assertion:
 ;
 
@@ -1341,8 +1346,8 @@ Disposition: MATCHED
 Mapping: S161
 
 A128 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:475
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S270
 Source context since previous assertion:
 ;
 
@@ -1351,7 +1356,7 @@ QTRY_COMPARE(widgets.controller->currentRow(), second)
 
 A129 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:481
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Mapping/reason: The mounted lane has no drop before the run start; its only refused drop is cross-tick, so the native before-run-start drag delivery has no counterpart.
 Source context since previous assertion:
 ;
 
@@ -1373,7 +1378,7 @@ Mapping: S164
 
 A132 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:485
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Mapping/reason: Same missing stimulus: no Swift predicate delivers a drop before the run start, so the release-consumption clause is unanchored.
 Source context since previous assertion:
 ;
 
@@ -1395,8 +1400,8 @@ Original expression:
 QVERIFY(crossTarget >= 0)
 
 A134 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:492
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S271
 Source context since previous assertion:
 ;
 
@@ -1412,8 +1417,8 @@ Disposition: MATCHED
 Mapping: S166
 
 A137 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:496
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S272
 Source context since previous assertion:
 ;
 
@@ -1422,7 +1427,7 @@ QVERIFY(!widgets.controller->isEditing())
 
 A138 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:517
 Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Mapping/reason: The mounted lane drives no pinned-note drag, so the pinned note-end row lookup is not re-established.
 Source context since previous assertion:
 ;
 
@@ -1455,7 +1460,7 @@ Mapping: S167
 
 A140 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:520
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the real pointer-drag gesture delivery through the Quick window; presenter-level Swift cannot establish it.
+Mapping/reason: The mounted lane drives no pinned-note drag; its refused drop is cross-tick, so the native pinned drag delivery has no counterpart.
 Source context since previous assertion:
 ;
     const int orderBeforePin = undoCount(document);
@@ -1513,8 +1518,8 @@ Original expression:
 QVERIFY(!menuCell.isNull())
 
 A147 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:539
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S265
 Source context since previous assertion:
 ;
     QTest::mouseClick(widgets.quickWindow, Qt::RightButton, Qt::NoModifier, menuCell.toPoint());
@@ -1524,7 +1529,7 @@ QTRY_VERIFY(widgets.controller->menuOpen())
 
 A148 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:540
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Mapping/reason: The mounted row-menu tests right-click a row but never assert the clicked row became the current row, so no Swift predicate establishes this echo.
 Source context since previous assertion:
 ;
 
@@ -1552,8 +1557,9 @@ Original expression:
 QVERIFY(menuModel)
 
 A151 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:551
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S261
+Mapping/reason: The presenter predicate activates the menu's Move row and observes the canonical EditCommand.moveEventDown routed exactly once (S261); the native action-backed MoveEventDown projection maps to that row.
 Source context since previous assertion:
 ;
     int moveDownRow = -1;
@@ -1578,8 +1584,8 @@ Original expression:
 QVERIFY(triggered.isValid())
 
 A153 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:555
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S266
 Source context since previous assertion:
 ;
 
@@ -1588,7 +1594,7 @@ QVERIFY(quick_popup::clickMenuRow(*widgets.popupSession, moveDownRow))
 
 A154 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:556
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Mapping/reason: The mounted lane closes the menu after activation through a tryCompare that carries no message anchor, so the dismissal clause has no predicate.
 Source context since previous assertion:
 ;
 
@@ -1596,8 +1602,9 @@ Original expression:
 QTRY_VERIFY(!widgets.controller->menuOpen())
 
 A155 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:557
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the live row-menu session (open, projection, click, dismissal, single trigger); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S267
+Mapping/reason: One undo restores the menu's single reorder (S267), the native triggered-count == 1 clause.
 Source context since previous assertion:
 ;
 
@@ -1644,8 +1651,9 @@ Original expression:
 QVERIFY(quick)
 
 A163 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:572
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S268
+Mapping/reason: The mounted lane gives the page active focus and the canonical Alt+Down command then reaches the same move (S268); the presenter-level registry binding is S262.
 Source context since previous assertion:
 ;
 
@@ -1665,8 +1673,9 @@ QVERIFY2(checks::async_wait::waitUntil([] { return true; },
              "the event-list input did not acquire Quick focus")
 
 A165 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:580
-Disposition: GAP
-Mapping/reason: Keymap-lookup result with no Swift predicate.
+Disposition: MATCHED
+Mapping: S262
+Mapping/reason: The presenter predicate resolves eventlist.move_down to one native keybinding sequence (S262), the native single-binding lookup.
 Source context since previous assertion:
 ;
     widgets.controller->selectRow(first, Qt::NoModifier);
@@ -1775,8 +1784,9 @@ Original expression:
 QVERIFY(opened.fixture->view().quickView() != nullptr)
 
 A178 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:628
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S263
+Mapping/reason: The presenter predicate selects the first control then Ctrl-adds the second and keeps both selected (S263), the native first-row membership clause.
 Source context since previous assertion:
 ;
     opened.fixture->view().quickView()->focusEventListInput(Qt::OtherFocusReason);
@@ -1787,8 +1797,9 @@ Original expression:
 QTRY_VERIFY(widgets.controller->selectedRows().contains(first))
 
 A179 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:629
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: MATCHED
+Mapping: S264
+Mapping/reason: The presenter predicate selects the two intended rows while the note stays session-selected (S264), the native second-row membership clause.
 Source context since previous assertion:
 ;
 
@@ -1797,7 +1808,7 @@ QTRY_VERIFY(widgets.controller->selectedRows().contains(second))
 
 A180 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:632
 Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the Key_Delete delivery path through the controller selection.
+Mapping/reason: Related Swift predicate S259 (multi delete clears selection and cursor in one step) removes both selected rows in the presenter lane; unproved: the key-delivered Delete ingress is not mounted, and the removed-row clause needs its own predicate.
 Source context since previous assertion:
 ;
     QTest::keyClick(widgets.quickWindow, Qt::Key_Delete);
@@ -1808,7 +1819,7 @@ QTRY_COMPARE(countMatching(document.smf().tracks[chunk], firstEvent), 0)
 
 A181 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:633
 Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the Key_Delete delivery path through the controller selection.
+Mapping/reason: Related Swift predicate S259 removes both selected rows in the presenter lane; unproved: the key-delivered Delete ingress is not mounted, and the second removed-row clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1816,8 +1827,8 @@ Original expression:
 QCOMPARE(countMatching(document.smf().tracks[chunk], secondEvent), 0)
 
 A182 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:634
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S259 asserts the cleared selection after a presenter multi-delete; unproved: the key-delivered Delete ingress is not mounted, and the cleared-selection clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1825,8 +1836,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->selectedRows().isEmpty())
 
 A183 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:635
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S259 asserts the cleared cursor after a presenter multi-delete; unproved: the key-delivered Delete ingress is not mounted, and the cleared-cursor clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1848,7 +1859,7 @@ QVERIFY(single >= 0)
 
 A185 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:645
 Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the Key_Delete delivery path through the controller selection.
+Mapping/reason: Related Swift predicate S260 removes the single selected row in the presenter lane; unproved: the key-delivered Delete ingress is not mounted, and the removed-row clause needs its own predicate.
 Source context since previous assertion:
 ;
     widgets.controller->selectRow(single, Qt::NoModifier);
@@ -1860,8 +1871,8 @@ Original expression:
 QTRY_COMPARE(countMatching(document.smf().tracks[chunk], firstEvent), 0)
 
 A186 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:647
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S260 keeps a valid cursor after the single presenter delete; unproved: the key-delivered Delete ingress is not mounted, and the valid-cursor clause needs its own predicate.
 Source context since previous assertion:
 ;
     const int currentRow = widgets.controller->currentRow();
@@ -1897,8 +1908,8 @@ Original expression:
 QVERIFY(widgets)
 
 A189 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:661
-Disposition: GAP
-Mapping/reason: Lookup, computation, or harness-object guard with no Swift predicate.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S280 resolves the mounted journey's own tick-zero control row; unproved: the native tick-12 NoteOn target lookup is not re-established.
 Source context since previous assertion:
 ;
     const int row =
@@ -1911,8 +1922,8 @@ A190 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventvie
 Disposition: RETIRED-REPRESENTATION
 
 A191 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:666
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor (open/selectAll) and typed key delivery; presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S273 asserts the pending typed tick text; unproved at row granularity: the selectAll replacement clause needs its own predicate.
 Source context since previous assertion:
 ;
 
@@ -1921,7 +1932,7 @@ QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"))
 
 A192 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:672
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Mapping/reason: The mounted lane locates the editor drawer's velocity toggle rather than the native drawerBarInput item; the native item lookup has no counterpart.
 Source context since previous assertion:
 ;
     typeDigits(*widgets.quickWindow, QStringLiteral("15"));
@@ -1934,8 +1945,8 @@ Original expression:
 QVERIFY(drawer)
 
 A193 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:673
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S274 asserts the drawer's focusable velocity toggle; unproved at row granularity: the drawer's focus acquisition is asserted only by a message-less tryCompare and needs an anchored predicate.
 Source context since previous assertion:
 ;
 
@@ -1943,8 +1954,9 @@ Original expression:
 QVERIFY(checks::eventviews::focusSurface(widgets, *drawer))
 
 A194 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:675
-Disposition: GAP
-Mapping/reason: Event-table model observation (row lookup, cell data, tempo-row projection) with no Swift predicate; Swift has no event-table model.
+Disposition: MATCHED
+Mapping: S275
+Mapping/reason: The mounted predicate republishes the committed row at the new tick after focus leaves the cell (S275).
 Source context since previous assertion:
 ;
 
@@ -1954,8 +1966,9 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 15, eventlist:
                 0)
 
 A195 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:677
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the focus-loss commit path from the rendered tick editor.
+Disposition: MATCHED
+Mapping: S278
+Mapping/reason: The mounted predicate shows the focus-loss edit owns an undo step at drawer focus (S278).
 Source context since previous assertion:
 ;
 
@@ -1964,7 +1977,7 @@ QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1)
 
 A196 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:678
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture (drag, key, or focus change) took effect; only the native delivery path establishes it.
+Mapping/reason: The mounted lane clears the editor through a tryCompare on the presenter's editing flag that carries no message anchor, so the closed-editor clause has no predicate.
 Source context since previous assertion:
 ;
 
@@ -1972,8 +1985,8 @@ Original expression:
 QVERIFY(!widgets.controller->isEditing())
 
 A197 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:679
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: Related Swift predicate S275 names the focus not being reclaimed but asserts only the republished commit row; unproved at row granularity: the drawer's active focus after the commit needs an anchored predicate.
 Source context since previous assertion:
 ;
 
@@ -1981,8 +1994,9 @@ Original expression:
 QVERIFY(drawer->hasActiveFocus())
 
 A198 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:686
-Disposition: GAP
-Mapping/reason: Drawer-focus Delete routing has no Swift predicate; drawer suites cover different presenters.
+Disposition: MATCHED
+Mapping: S276
+Mapping/reason: The mounted predicate counts event rows across the drawer-focus Delete (S276).
 Source context since previous assertion:
 ;
 
@@ -1996,8 +2010,9 @@ Original expression:
 QCOMPARE(widgets.model->rowCount(), rowsBefore)
 
 A199 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:687
-Disposition: GAP
-Mapping/reason: Drawer-focus Delete routing has no Swift predicate; drawer suites cover different presenters.
+Disposition: MATCHED
+Mapping: S279
+Mapping/reason: One undo restores the edit, so the drawer-focus Delete pushed no step (S279).
 Source context since previous assertion:
 ;
 
@@ -2005,8 +2020,9 @@ Original expression:
 QCOMPARE(opened.fixture->document().undoStack()->index(), undoBeforeDelete)
 
 A200 | EventViewsEditsTest::drawerClickAfterEditOwnsDelete | src/checks/eventviews/edits.cpp:688
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/edits.cpp) no longer builds or runs. Previous native note: Observes Quick active-focus arbitration (event-list input vs drawer surface); presenter-level Swift cannot establish it.
+Disposition: MATCHED
+Mapping: S277
+Mapping/reason: The mounted predicate asserts the drawer's toggle retains active focus after the Delete (S277).
 Source context since previous assertion:
 ;
 
@@ -2792,3 +2808,78 @@ Anchor: message "the EOT label resolves muted ink for the base stripe or row ink
 
 S255 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
 Anchor: message "the flipped stripe parity keeps the muted EOT ink AA against its fill"
+
+S256 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo commit is one step preserving tick-zero metas"
+
+S257 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "marker-to-tempo undo and redo round trip"
+
+S258 | eventListTempoContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "tempo-to-meta commit is one reversible undo step"
+
+S259 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "multi delete clears selection and cursor in one step"
+
+S260 | eventListDeleteMatrix | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "single delete keeps the cursor on a valid row"
+
+S261 | eventListRowMenuContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "menu Move row routes the canonical command exactly once"
+
+S262 | eventListRowMenuContract | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "A165 eventlist.move_down resolves to one native keybinding sequence"
+
+S263 | runEventListPageChecks | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "Control-click adds the second control without dropping the first"
+
+S264 | runEventListPageChecks | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "the two intended victim rows, not the note, are selected"
+
+S265 | test_rowMenuActionAndVoiceReveal | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "real right release opens the program row menu"
+
+S266 | test_rowMenuActionAndVoiceReveal | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "menu Move row moves the current event through the canonical command once"
+
+S267 | test_rowMenuActionAndVoiceReveal | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "one undo restores the menu's single reorder"
+
+S268 | test_rowMenuActionAndVoiceReveal | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Alt+Down reaches the same move command"
+
+S269 | test_dragReordersOnlySameTickRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "real row drag swaps same-tick event neighbors"
+
+S270 | test_dragReordersOnlySameTickRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the row drag cursor follows its moved event"
+
+S271 | test_dragReordersOnlySameTickRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "cross-tick pointer gap is refused"
+
+S272 | test_dragReordersOnlySameTickRows | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "a refused drag does not enter cell editing"
+
+S273 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the edited tick is pending on focus loss"
+
+S274 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the drawer has a focusable velocity toggle"
+
+S275 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "focus leaving the cell commits its tick without reclaiming focus"
+
+S276 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Delete under drawer focus leaves event rows untouched"
+
+S277 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "drawer retains focus after Delete"
+
+S278 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "focus-loss edit has an undo step after drawer Delete"
+
+S279 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "one undo restores the edit; drawer Delete pushed no step"
+
+S280 | test_drawerFocusCommitsAndOwnsDelete | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the fixture exposes a tick-zero control to edit"

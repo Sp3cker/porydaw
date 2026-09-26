@@ -6,7 +6,8 @@ Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70
 Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
 Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
-QML SHA-256: c31733e82178d3a0dbcbc97c4f5e48551ee3379b6c0228ed41a0b5dbf9f8649a
+QML SHA-256: ba7051df35f95f8877b9eb8fe2c3d3e97fa3a4d4abcd0b2a837b09695b2f6fa6
+Task 39 note (ledger pass, no lane re-run): tst_ShellEventList.qml gained the row-menu, drag and drawer-focus tests and EventListPageChecks.swift gained eventListTempoContract, eventListDeleteMatrix and eventListRowMenuContract; the QML counterpart hash above is re-pinned for that write set. The typography rows S003-S007, S009 and S014 and every disposition in this ledger are unchanged, and no font or geometry behaviour moved.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 

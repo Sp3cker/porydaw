@@ -54,6 +54,8 @@ public final class EventListPresenter {
     }
     @QtTracked public var selectionRevision = 0
     public var menuItems: QListModel<EventListMenuItem> = QListModel()
+    @QtTracked public var menuShortcutText = ""
+    @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
     @QtTracked public var menuY = 0.0
     public var appearance: [String: QVariantSettable] = [:]
@@ -80,6 +82,8 @@ public final class EventListPresenter {
     public private(set) var mouseButtons = 0
     @QtIgnored public internal(set) var model = EventListModel()
     @QtIgnored public var onScrollToRow: ((Int) -> Void)?
+    @QtIgnored public var onRevealVoiceRequested: ((Int) -> Void)?
+    @QtIgnored public var onPerformEventListCommand: ((Int) -> Void)?
 
     @QtIgnored var selectionAnchor = -1
     @QtIgnored var menuKind: EventListMenuKind?

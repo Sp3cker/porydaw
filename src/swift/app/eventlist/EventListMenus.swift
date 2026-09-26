@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import QtBridge
 import PorydawAppEventList
+import PorydawAppCommands
 
 @MainActor
 @QtBridgeable
@@ -11,14 +12,19 @@ public final class EventListMenuItem {
     public let enabled: Bool
     public let checkable: Bool
     public let checked: Bool
+    public let separator: Bool
+    public let shortcutText: String
 
     init(_ id: Int, _ text: String, enabled: Bool = true,
-         checkable: Bool = false, checked: Bool = false) {
+         checkable: Bool = false, checked: Bool = false,
+         separator: Bool = false, shortcutText: String = "") {
         actionId = id
         self.text = text
         self.enabled = enabled
         self.checkable = checkable
         self.checked = checked
+        self.separator = separator
+        self.shortcutText = shortcutText
     }
 }
 
@@ -93,18 +99,31 @@ extension EventListPresenter {
         guard visible else { return }
         menuKind = .row
         menuRow = currentRow
-        let row = model.row(at: currentRow)
-        let movable = row?.eventIndex.flatMap { index in
-            session?.document.rawMoveBounds(chunk: chunkIndex, index: index)
+        let row = model.row(at: menuRow)
+        let keybindings = KeybindingRegistry()
+        let deletable = selectedRows.filter {
+            guard let selected = model.row(at: $0) else { return false }
+            return selected.eventIndex != nil || selected.tempo != nil
+        }.count
+        var items = [EventListMenuItem(1, "Insert event")]
+        if row?.kind == .program, row?.eventIndex != nil {
+            items.append(EventListMenuItem(2, "Show voice in voicegroup"))
         }
-        openMenu(x: x, y: y, items: [
-            EventListMenuItem(1, "Insert event", enabled: chunkIndex >= 0),
-            EventListMenuItem(2, "Move up", enabled: movable.map {
-                (row?.eventIndex ?? -1) > $0.lowerBound } ?? false),
-            EventListMenuItem(3, "Move down", enabled: movable.map {
-                (row?.eventIndex ?? -1) < $0.upperBound } ?? false),
-            EventListMenuItem(4, "Delete", enabled: !selectedRows.isEmpty),
-        ])
+        if row?.eventIndex != nil {
+            items.append(EventListMenuItem(0, "", enabled: false, separator: true))
+            items.append(EventListMenuItem(3, "Move Event Up (Same Tick)",
+                                           enabled: moveDestination(delta: -1) != nil,
+                                           shortcutText: keybindings.sequences("eventlist.move_up")
+                                               .first?.nativeText ?? ""))
+            items.append(EventListMenuItem(4, "Move Event Down (Same Tick)",
+                                           enabled: moveDestination(delta: 1) != nil,
+                                           shortcutText: keybindings.sequences("eventlist.move_down")
+                                               .first?.nativeText ?? ""))
+        }
+        items.append(EventListMenuItem(0, "", enabled: false, separator: true))
+        items.append(EventListMenuItem(5, deletable > 0 ? "Delete \(deletable) event(s)" : "Delete",
+                                       enabled: deletable > 0))
+        openMenu(x: x, y: y, items: items)
     }
 
     func dispatchOpenTypeMenu(x: Double, y: Double) {
@@ -124,6 +143,10 @@ extension EventListPresenter {
     private func openMenu(x: Double, y: Double, items: [EventListMenuItem]) {
         menuX = x
         menuY = y
+        menuShortcutText = items.max(by: {
+            $0.shortcutText.count < $1.shortcutText.count
+        })?.shortcutText ?? ""
+        menuSeparatorCount = items.filter(\.separator).count
         menuItems.reset(to: items)
         menuOpen = true
     }
@@ -133,11 +156,13 @@ extension EventListPresenter {
         menuKind = nil
         menuRow = -1
         menuItems.reset(to: [])
+        menuShortcutText = ""
+        menuSeparatorCount = 0
     }
 
     func dispatchActivateMenuAction(actionId: Int) {
         guard menuOpen, menuItems.asArray.contains(where: {
-            $0.actionId == actionId && $0.enabled
+            $0.actionId == actionId && $0.enabled && !$0.separator
         }),
               let kind = menuKind else { return }
         switch kind {
@@ -146,12 +171,16 @@ extension EventListPresenter {
         case .type: _ = commitCellEdit(row: menuRow, column: 1, text: String(actionId))
         case .row:
             switch actionId {
-            case 1: addEvent()
-            case 2, 3:
-                guard let index = model.row(at: menuRow)?.eventIndex, let session else { break }
-                session.document.moveRawEvent(chunk: chunkIndex, index: index,
-                                              to: index + (actionId == 2 ? -1 : 1))
-            case 4: deleteSelected()
+            case 1: insertCopyOfRow(row: menuRow)
+            case 2:
+                guard let row = model.row(at: menuRow), row.kind == .program,
+                      row.eventIndex != nil, let event = row.event,
+                      case let .channel(_, program, _) = event.payload,
+                      program < 128 else { break }
+                onRevealVoiceRequested?(Int(program))
+            case 3: onPerformEventListCommand?(EditCommand.moveEventUp.rawValue)
+            case 4: onPerformEventListCommand?(EditCommand.moveEventDown.rawValue)
+            case 5: deleteSelected()
             default: break
             }
         }

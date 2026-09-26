@@ -146,13 +146,25 @@ extension EventListPresenter {
         }
     }
 
-    func moveEvent(delta: Int) {
-        guard let session, !session.isClosed,
+    func moveDestination(delta: Int) -> Int? {
+        guard visible, !editing, let session, !session.isClosed,
               let source = model.row(at: currentRow)?.eventIndex,
+              let adjacent = model.row(at: currentRow + delta),
+              let destination = adjacent.eventIndex,
+              session.document.rawChunks.indices.contains(chunkIndex) else { return nil }
+        let events = session.document.rawChunks[chunkIndex].events
+        guard events.indices.contains(source), events.indices.contains(destination),
+              events[source].tick == events[destination].tick,
               let bounds = session.document.rawMoveBounds(chunk: chunkIndex, index: source),
-              bounds.contains(source + delta) else { return }
-        session.document.moveRawEvent(chunk: chunkIndex, index: source, to: source + delta)
-        if let row = model.rows.firstIndex(where: { $0.eventIndex == source + delta }) {
+              bounds.contains(destination), destination != source else { return nil }
+        return destination
+    }
+
+    func moveEvent(delta: Int) {
+        guard let destination = moveDestination(delta: delta), let session,
+              let source = model.row(at: currentRow)?.eventIndex else { return }
+        session.document.moveRawEvent(chunk: chunkIndex, index: source, to: destination)
+        if let row = model.rows.firstIndex(where: { $0.eventIndex == destination }) {
             focusRow(row: row)
             selectedRows = [row]
             selectionAnchor = row

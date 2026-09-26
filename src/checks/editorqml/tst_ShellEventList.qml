@@ -708,4 +708,260 @@ TestCase {
             return Qt.colorEqual(page.tableBackground, session.palette.menuBackground)
         }, 3000, "the mounted table returns to the dark item surface")
     }
+    function openEventListFixture() {
+        settings.setString("lastProjectDir", "")
+        shell = shellComponent.createObject(null)
+        verify(shell !== null)
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen || session.lastSaveError.length > 0
+        }, 30000), "event-list fixture loads")
+        verify(session.songOpen, session.lastSaveError)
+        shell.shellPresenter.activate("view.event_list")
+        tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)
+        let page = null
+        tryVerify(function() {
+            page = findChild(shell.sceneLoader.item, "eventListPage")
+            return page !== null && page.visible
+        }, 3000, "event-list page mounts")
+        const table = findChild(page, "eventListTable")
+        verify(table, "event-list table mounts")
+        return { session: session, page: page, table: table,
+                 presenter: session.eventListPresenter() }
+    }
+
+    function cellAt(table, row, column) {
+        table.positionViewAtRow(row, TableView.Contain)
+        table.forceLayout()
+        tryVerify(function() {
+            return table.itemAtCell(Qt.point(column, row)) !== null
+        }, 3000, "the target event cell is rendered")
+        return table.itemAtCell(Qt.point(column, row))
+    }
+
+    function test_rowMenuActionAndVoiceReveal() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const table = fixture.table
+        let program = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 4 && presenter.tickString(row) === "0") {
+                program = row
+                break
+            }
+        }
+        verify(program >= 0, "track-one program row is present")
+        const voice = fixture.session.voiceListController()
+        const beforeReveal = voice.revealRequest
+        const source = cellAt(table, program, 0)
+        mouseClick(source, source.width / 2, source.height / 2, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", true, 3000,
+                   "real right release opens the program row menu")
+        let menu = null
+        tryVerify(function() {
+            menu = findChild(page, "quickMenuPanelRoot")
+            return menu !== null && menu.rowCount === 7
+        }, 3000, "program menu renders all seven fork rows")
+        const show = findChild(page, "eventListMenuRow_2")
+        verify(show && show.active && show.itemData.text === "Show voice in voicegroup",
+               "program row exposes the rendered voice reveal action")
+        mouseClick(show, show.width / 2, show.height / 2)
+        tryCompare(voice, "revealRequest", beforeReveal + 1, 3000,
+                   "rendered Show voice requests the mounted voicegroup")
+        compare(voice.revealSlotId, 0, "track-one program points at voice zero")
+        compare(voice.currentSlot, 0, "the voicegroup selects voice zero")
+        tryCompare(presenter, "menuOpen", false, 3000)
+
+        let movable = -1
+        for (let row = 1; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 3 && presenter.rowType(row - 1) === 3
+                && presenter.tickString(row) === "0"
+                && presenter.cellDisplay(row, 6) !== presenter.cellDisplay(row - 1, 6)
+                && presenter.isLegalDrop(row, row - 1)) {
+                movable = row
+                break
+            }
+        }
+        verify(movable > 0, "fixture offers adjacent same-tick controls")
+        const earlier = presenter.cellDisplay(movable - 1, 6)
+        const moved = presenter.cellDisplay(movable, 6)
+        const movingCell = cellAt(table, movable, 0)
+        mouseClick(movingCell, movingCell.width / 2, movingCell.height / 2, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        let up = null
+        tryVerify(function() {
+            const currentMenu = findChild(page, "quickMenuPanelRoot")
+            up = currentMenu && currentMenu.rowCount === 6 ? currentMenu.rowItem(2) : null
+            return up && up.active && up.itemData.text === "Move Event Up (Same Tick)"
+        }, 3000, "the rendered move action uses the canonical label")
+        const menuWithShortcuts = findChild(page, "quickMenuPanelRoot")
+        verify(up.itemData.shortcutText.length > 0, "Move action has a native shortcut")
+        compare(menuWithShortcuts.showsShortcuts, true,
+                "the Event List allocates a shortcut column")
+        let shortcutPainted = false
+        for (const child of up.children) {
+            if (child.text === up.itemData.shortcutText && child.visible
+                && child.width > 0 && child.text.length > 0)
+                shortcutPainted = true
+        }
+        verify(shortcutPainted, "the native Move shortcut is painted beside its menu label")
+        mouseClick(up, up.width / 2, up.height / 2)
+        tryCompare(presenter, "menuOpen", false, 3000)
+        compare(presenter.cellDisplay(movable - 1, 6), moved,
+                "menu Move row moves the current event through the canonical command once")
+        compare(presenter.cellDisplay(movable, 6), earlier,
+                "the displaced neighbor follows the moved row")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "menu move undo reaches document history")
+        compare(presenter.cellDisplay(movable - 1, 6), earlier,
+                "one undo restores the menu's single reorder")
+        compare(presenter.cellDisplay(movable, 6), moved,
+                "the displaced event returns after menu undo")
+
+        presenter.selectRow(movable - 1, Qt.NoModifier)
+        page.forceActiveFocus(Qt.OtherFocusReason)
+        keyClick(Qt.Key_Down, Qt.AltModifier)
+        compare(presenter.cellDisplay(movable, 6), earlier,
+                "Alt+Down reaches the same move command")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "shortcut move undo reaches document history")
+        compare(presenter.cellDisplay(movable - 1, 6), earlier,
+                "one undo restores the shortcut's reorder")
+        compare(presenter.cellDisplay(movable, 6), moved,
+                "the displaced event returns after shortcut undo")
+        const firstSelected = cellAt(table, movable - 1, 0)
+        mouseClick(firstSelected, firstSelected.width / 2, firstSelected.height / 2)
+        const control = cellAt(table, movable, 0)
+        mouseClick(control, control.width / 2, control.height / 2,
+                   Qt.LeftButton, Qt.ControlModifier)
+        mouseClick(control, control.width / 2, control.height / 2, Qt.RightButton)
+        tryCompare(presenter, "menuOpen", true, 3000)
+        let deleteRow = null
+        tryVerify(function() {
+            const currentMenu = findChild(page, "quickMenuPanelRoot")
+            deleteRow = currentMenu && currentMenu.rowCount === 6
+                        ? currentMenu.rowItem(5) : null
+            return deleteRow && deleteRow.itemData.text === "Delete 2 event(s)"
+        }, 3000, "two control-clicked raw rows publish the mounted Delete count")
+    }
+
+    function test_dragReordersOnlySameTickRows() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const table = fixture.table
+        let sourceRow = -1
+        for (let row = 1; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 3 && presenter.rowType(row - 1) === 3
+                && presenter.tickString(row) === "0"
+                && presenter.isLegalDrop(row, row - 1)
+                && presenter.cellDisplay(row, 6) !== presenter.cellDisplay(row - 1, 6)) {
+                sourceRow = row
+                break
+            }
+        }
+        verify(sourceRow > 0, "the table has draggable same-tick neighbors")
+        const earlier = presenter.cellDisplay(sourceRow - 1, 6)
+        const moved = presenter.cellDisplay(sourceRow, 6)
+        const cell = cellAt(table, sourceRow, 0)
+        mousePress(cell, cell.width / 2, cell.height / 2)
+        mouseMove(cell, cell.width / 2, -page.rowHeight)
+        mouseRelease(cell, cell.width / 2, -page.rowHeight)
+        compare(presenter.cellDisplay(sourceRow - 1, 6), moved,
+                "real row drag swaps same-tick event neighbors")
+        compare(presenter.currentRow, sourceRow - 1,
+                "the row drag cursor follows its moved event")
+        verify(fixture.session.canUndo, "drag creates an undoable transaction")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "drag undo reaches document history")
+        compare(presenter.cellDisplay(sourceRow - 1, 6), earlier,
+                "one undo restores the dragged row")
+        compare(presenter.cellDisplay(sourceRow, 6), moved,
+                "the displaced row returns after drag undo")
+        let crossGap = -1
+        for (let row = sourceRow + 1; row < presenter.rowCount; ++row) {
+            if (presenter.tickString(row) !== "0") {
+                crossGap = row
+                break
+            }
+        }
+        verify(crossGap > sourceRow && !presenter.isLegalDrop(sourceRow, crossGap),
+               "the next tick is not a legal row-drop destination")
+        const refused = cellAt(table, sourceRow, 0)
+        const dropY = (crossGap - sourceRow + 0.5) * page.rowHeight
+        mousePress(refused, refused.width / 2, refused.height / 2)
+        mouseMove(refused, refused.width / 2, dropY)
+        compare(page.dragDropGap, -1, "cross-tick pointer gap is refused")
+        mouseRelease(refused, refused.width / 2, dropY)
+        compare(presenter.cellDisplay(sourceRow - 1, 6), earlier,
+                "a cross-tick row drop leaves the neighbors in place")
+        compare(fixture.session.canRedo, true, "refused drop pushes no undo step")
+        compare(presenter.editing, false, "a refused drag does not enter cell editing")
+    }
+    function test_drawerFocusCommitsAndOwnsDelete() {
+        const fixture = openEventListFixture()
+        const presenter = fixture.presenter
+        const page = fixture.page
+        const table = fixture.table
+        let sourceRow = -1
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.rowType(row) === 3 && presenter.tickString(row) === "0") {
+                sourceRow = row
+                break
+            }
+        }
+        verify(sourceRow >= 0, "the fixture exposes a tick-zero control to edit")
+        const moved = presenter.cellDisplay(sourceRow, 6)
+
+        page.forceActiveFocus(Qt.OtherFocusReason)
+        page.currentColumn = 0
+        presenter.selectRow(sourceRow, Qt.NoModifier)
+        cellAt(table, sourceRow, 0)
+        keyClick(Qt.Key_F2)
+        tryCompare(presenter, "editing", true, 3000)
+        const editor = findChild(page, "eventListTickEditor")
+        verify(editor && editor.activeFocus, "F2 focuses the mounted tick editor")
+        keyClick(Qt.Key_A, Qt.ControlModifier)
+        keyClick(Qt.Key_6)
+        keyClick(Qt.Key_0)
+        compare(editor.text, "60", "the edited tick is pending on focus loss")
+        const tab = findChild(shell.sceneLoader.item,
+                              "songTab_" + fixture.session.songTabs.selectedId)
+        const drawer = findChild(tab, "editorDrawer")
+        const toggle = drawer ? findChild(drawer, "drawerToggle_velocity") : null
+        verify(toggle && toggle.visible, "the drawer has a focusable velocity toggle")
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2)
+        toggle.forceActiveFocus(Qt.MouseFocusReason)
+        tryCompare(toggle, "activeFocus", true, 3000)
+        tryCompare(presenter, "editing", false, 3000)
+        let committed = false
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) === "60"
+                && presenter.cellDisplay(row, 6) === moved)
+                committed = true
+        }
+        verify(committed, "focus leaving the cell commits its tick without reclaiming focus")
+        const beforeDelete = presenter.rowCount
+        keyClick(Qt.Key_Delete)
+        compare(presenter.rowCount, beforeDelete,
+                "Delete under drawer focus leaves event rows untouched")
+        compare(toggle.activeFocus, true, "drawer retains focus after Delete")
+        fixture.session.requestUndo()
+        verify(waitForNative(function() { return fixture.session.canRedo }, 3000),
+               "focus-loss edit has an undo step after drawer Delete")
+        let restored = false
+        for (let row = 0; row < presenter.rowCount - 1; ++row) {
+            if (presenter.tickString(row) === "0"
+                && presenter.cellDisplay(row, 6) === moved)
+                restored = true
+        }
+        verify(restored, "one undo restores the edit; drawer Delete pushed no step")
+    }
 }

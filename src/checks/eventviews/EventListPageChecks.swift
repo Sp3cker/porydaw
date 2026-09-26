@@ -3,6 +3,7 @@ import Foundation
 import QtBridge
 import PorydawCore
 import PorydawAppEventList
+import PorydawAppCommands
 
 private let pageID = "swiftcore/EventList::pageInteraction"
 private let cellCommitContractID = "swiftcore/EventList::cellCommitContract"
@@ -121,6 +122,9 @@ internal func runEventListPageChecks(_ report: CheckReport, session suite: Docum
     eventListSummaryParity(report, suite: suite, service: service)
     eventListCellCommitContract(report, suite: suite, service: service)
     eventListChunkLabelParity(report, suite: suite, service: service)
+    eventListTempoContract(report, suite: suite, service: service)
+    eventListDeleteMatrix(report, suite: suite, service: service)
+    eventListRowMenuContract(report, suite: suite, service: service)
 }
 
 @MainActor
@@ -707,4 +711,212 @@ private func eventListCellCommitContract(_ report: CheckReport, suite: DocumentS
                        actual: document.rawChunks[0].events.count,
                        cppID: cellCommitContractID,
                        what: "A119 EOT-row insert adds no event")
+}
+
+@MainActor
+internal func eventListTempoContract(_ report: CheckReport, suite: DocumentSession,
+                                     service: ProjectService) {
+    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [
+        .meta(tick: 0, type: 6, data: [1]),
+        .meta(tick: 48, type: 6, data: [2]),
+    ], endTick: 96)])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source,
+                                trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName,
+                                  sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
+    presenter.attach(session: session)
+    presenter.setVisible(visible: true)
+    let id = "swiftcore/EventList::tempoContract"
+    guard let marker = presenter.model.rows.firstIndex(where: { $0.tick == 48 }) else {
+        report.expect(false, cppID: id, message: "the marker row exists for atomic conversion")
+        return
+    }
+    let before = document.history.undoIndex
+    report.expect(presenter.beginEditing(row: marker, column: 1)
+                  && presenter.finishEditing(text: "9", commit: true)
+                  && document.history.undoIndex == before + 1
+                  && presenter.model.rows.contains(where: { $0.tempo?.tick == 48 })
+                  && !document.rawChunks[0].events.contains(where: { $0.tick == 48 })
+                  && document.rawChunks[0].events.contains(where: { $0.tick == 0 }),
+                  cppID: id, message: "marker-to-tempo commit is one step preserving tick-zero metas")
+    report.expect(document.history.undoDocument()
+                  && document.rawChunks[0].events.contains(where: { $0.tick == 48 })
+                  && document.history.redoDocument()
+                  && presenter.model.rows.contains(where: { $0.tempo?.tick == 48 }),
+                  cppID: id, message: "marker-to-tempo undo and redo round trip")
+    guard let tempo = presenter.model.rows.firstIndex(where: { $0.tempo?.tick == 48 }) else {
+        report.expect(false, cppID: id, message: "the converted tempo row is editable")
+        return
+    }
+    let beforeBPM = document.history.undoIndex
+    report.expect(presenter.beginEditing(row: tempo, column: 5)
+                  && !presenter.finishEditing(text: "19", commit: true)
+                  && presenter.editing && !presenter.finishEditing(text: "256", commit: true)
+                  && document.history.undoIndex == beforeBPM
+                  && presenter.finishEditing(text: "140", commit: true)
+                  && document.state.tempo.contains(where: {
+                      $0.tick == 48 && $0.microsecondsPerQuarterNote == 428_571
+                  })
+                  && document.history.undoIndex == beforeBPM + 1,
+                  cppID: id, message: "tempo BPM refuses outside 20 to 255 and commits 140 atomically")
+    let beforeTick = document.history.undoIndex
+    report.expect(presenter.beginEditing(row: tempo, column: 0)
+                  && presenter.finishEditing(text: "60", commit: true)
+                  && presenter.model.rows.contains(where: {
+                      $0.tempo?.tick == 60
+                          && $0.tempo?.microsecondsPerQuarterNote == 428_571
+                  })
+                  && document.history.undoIndex == beforeTick + 1,
+                  cppID: id, message: "tempo tick commit relocates the same microseconds in one step")
+    guard let moved = presenter.model.rows.firstIndex(where: { $0.tempo?.tick == 60 }) else {
+        report.expect(false, cppID: id, message: "the moved tempo row is editable")
+        return
+    }
+    let beforeRaw = document.history.undoIndex
+    report.expect(presenter.beginEditing(row: moved, column: 1)
+                  && presenter.finishEditing(text: "10", commit: true)
+                  && document.state.tempo.allSatisfy { $0.tick != 60 }
+                  && document.rawChunks[0].events.contains(where: { $0.tick == 60 && $0.isMeta })
+                  && document.history.undoIndex == beforeRaw + 1
+                  && document.history.undoDocument()
+                  && document.state.tempo.contains(where: { $0.tick == 60 })
+                  && document.history.redoDocument(),
+                  cppID: id, message: "tempo-to-meta commit is one reversible undo step")
+}
+
+@MainActor
+internal func eventListDeleteMatrix(_ report: CheckReport, suite: DocumentSession,
+                                    service: ProjectService) {
+    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [
+        .meta(tick: 0, type: 6, data: [1]),
+        .channel(tick: 12, status: 0xB0, data0: 7, data1: 80),
+        .channel(tick: 24, status: 0xB0, data0: 10, data1: 40),
+        .channel(tick: 36, status: 0xB0, data0: 1, data1: 20),
+    ], endTick: 96)])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source,
+                                trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName,
+                                  sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
+    presenter.attach(session: session)
+    presenter.setVisible(visible: true)
+    let id = "swiftcore/EventList::deleteMatrix"
+    guard let first = presenter.model.rows.firstIndex(where: { $0.tick == 12 }),
+          let second = presenter.model.rows.firstIndex(where: { $0.tick == 24 }) else {
+        report.expect(false, cppID: id, message: "the two deletion targets exist")
+        return
+    }
+    presenter.selectRow(row: first, modifiers: 0)
+    presenter.selectRow(row: second, modifiers: 0x0400_0000)
+    let before = document.history.undoIndex
+    presenter.deleteSelected()
+    report.expect(document.history.undoIndex == before + 1
+                  && !document.rawChunks[0].events.contains(where: { $0.tick == 12 || $0.tick == 24 })
+                  && presenter.selectedRows.isEmpty && presenter.currentRow == -1,
+                  cppID: id, message: "multi delete clears selection and cursor in one step")
+    guard let single = presenter.model.rows.firstIndex(where: { $0.tick == 36 }) else {
+        report.expect(false, cppID: id, message: "the single deletion target survives")
+        return
+    }
+    presenter.selectRow(row: single, modifiers: 0)
+    presenter.deleteSelected()
+    report.expect(!document.rawChunks[0].events.contains(where: { $0.tick == 36 })
+                  && (0..<presenter.rowCount).contains(presenter.currentRow),
+                  cppID: id, message: "single delete keeps the cursor on a valid row")
+    presenter.selectRow(row: presenter.rowCount - 1, modifiers: 0)
+    let beforeEOT = document.history.undoIndex
+    presenter.deleteSelected()
+    report.expect(document.history.undoIndex == beforeEOT
+                  && presenter.currentRow == presenter.rowCount - 1,
+                  cppID: id, message: "end-of-track-only delete leaves document and cursor unchanged")
+}
+
+@MainActor
+internal func eventListRowMenuContract(_ report: CheckReport, suite: DocumentSession,
+                                       service: ProjectService) {
+    let file = MidiFile(division: 24, chunks: [MidiChunk(events: [
+        .channel(tick: 0, status: 0xC0, data0: 5),
+        .channel(tick: 0, status: 0xB0, data0: 7, data1: 80),
+        .channel(tick: 0, status: 0xB0, data0: 10, data1: 40),
+    ], endTick: 96)])
+    let document = SongDocument(file: file, config: suite.document.state.config,
+                                source: suite.document.source,
+                                trackBudget: suite.document.trackBudget)
+    let session = DocumentSession(document: document, service: service,
+                                  lease: suite.bankLease, slots: suite.bankSlots,
+                                  dirty: false, loadName: suite.bankLoadName,
+                                  sampleRate: 48_000)
+    let presenter = EventListPresenter()
+    session.onChange = { [weak presenter] change in presenter?.documentDidChange(change) }
+    presenter.attach(session: session)
+    presenter.setVisible(visible: true)
+    let id = "swiftcore/EventList::rowMenuContract"
+    var revealed = -1
+    presenter.onRevealVoiceRequested = { revealed = $0 }
+    presenter.selectRow(row: 0, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    report.expect(presenter.menuItems.asArray.map(\.actionId) == [1, 2, 0, 3, 4, 0, 5],
+                  cppID: id, message: "program row menu exposes Insert Show voice separators Move and Delete")
+    let programItems = presenter.menuItems.asArray
+    let bindings = KeybindingRegistry()
+    let up = bindings.sequences("eventlist.move_up").first
+    let down = bindings.sequences("eventlist.move_down").first
+    report.expect(down?.strokes.count == 1 && down?.nativeText.isEmpty == false,
+                  cppID: id, message: "A165 eventlist.move_down resolves to one native keybinding sequence")
+    report.expect(programItems.map(\.text)
+                  == ["Insert event", "Show voice in voicegroup", "",
+                      "Move Event Up (Same Tick)", "Move Event Down (Same Tick)",
+                      "", "Delete 1 event(s)"]
+                  && programItems[2].separator && programItems[5].separator
+                  && !programItems[3].enabled && programItems[4].enabled
+                  && programItems[3].shortcutText == up?.nativeText
+                  && programItems[4].shortcutText == down?.nativeText,
+                  cppID: id, message: "program menu paints canonical move labels bindings separators and availability")
+    let source = document.rawChunks[0].events[0]
+    let originals = document.rawChunks[0].events.filter { $0 == source }.count
+    let beforeInsert = document.history.undoIndex
+    session.editCursor = 72
+    presenter.activateMenuAction(actionId: 1)
+    report.expect(document.rawChunks[0].events.filter { $0 == source }.count == originals + 1
+                  && document.history.undoIndex == beforeInsert + 1
+                  && !document.rawChunks[0].events.contains(where: {
+                      $0.tick == 72 && $0.payload == source.payload
+                  }),
+                  cppID: id, message: "row-menu Insert copies the source at its own tick in one step")
+    _ = document.history.undoDocument()
+    presenter.selectRow(row: 0, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    presenter.activateMenuAction(actionId: 2)
+    report.expect(revealed == 5, cppID: id,
+                  message: "Show voice requests the program slot from the selected row")
+    var routed: [Int] = []
+    presenter.onPerformEventListCommand = { routed.append($0) }
+    presenter.selectRow(row: 1, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    presenter.activateMenuAction(actionId: 4)
+    report.expect(routed == [EditCommand.moveEventDown.rawValue], cppID: id,
+                  message: "menu Move row routes the canonical command exactly once")
+    presenter.selectRow(row: 1, modifiers: 0)
+    presenter.selectRow(row: 2, modifiers: 0x0400_0000)
+    presenter.openRowMenu(x: 0, y: 0)
+    report.expect(presenter.menuItems.asArray.map(\.text)
+                  .contains("Delete 2 event(s)")
+                  && !presenter.menuItems.asArray.contains(where: { $0.actionId == 2 }),
+                  cppID: id, message: "control row menu hides Show voice and counts two deletable rows")
+    presenter.dismissMenu()
+    presenter.selectRow(row: presenter.rowCount - 1, modifiers: 0)
+    presenter.openRowMenu(x: 0, y: 0)
+    report.expect(presenter.menuItems.asArray.map(\.actionId) == [1, 0, 5]
+                  && presenter.menuItems.asArray[1].separator
+                  && !presenter.menuItems.asArray[2].enabled,
+                  cppID: id, message: "end row menu has Insert and disabled Delete without Move")
 }
