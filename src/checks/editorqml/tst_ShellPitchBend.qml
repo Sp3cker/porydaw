@@ -139,6 +139,134 @@ TestCase {
             ? { x: (left + right) / 2, y: (top + bottom) / 2, id: target.id } : null
     }
 
+    function strokePitchCanvas(graph, x0f, y0f, x1f, y1f, modifiers) {
+        const rect = graph.canvasRect
+        verify(rect.width > 0 && rect.height > 0, "the pitch graph presents a real canvas")
+        const from = Qt.point(rect.x + rect.width * x0f, rect.y + rect.height * y0f)
+        const to = Qt.point(rect.x + rect.width * x1f, rect.y + rect.height * y1f)
+        mousePress(graph, from.x, from.y, Qt.LeftButton, modifiers)
+        mouseMove(graph, to.x, to.y, -1, Qt.LeftButton, modifiers)
+        mouseRelease(graph, to.x, to.y, Qt.LeftButton, modifiers)
+    }
+
+    function openPitchEditor() {
+        const app = openSong()
+        const view = surface()
+        const grid = view.gridModel
+        const roll = findChild(view, "swiftRollInput")
+        const plot = findChild(view, "timelineQuickRollPlot")
+        verify(roll !== null && plot !== null)
+        const note = visibleNote(view, grid, roll, plot)
+        verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
+        mouseClick(roll, note.x, note.y, Qt.LeftButton)
+        grid.performCommand(6)
+        const editor = view.pitchBendPresenter
+        tryCompare(editor, "isOpen", true)
+        tryVerify(function() { return findChild(view, "pitchBendPopup") !== null }, 5000,
+                  "the popup loader realizes the published open state")
+        const popup = findChild(view, "pitchBendPopup")
+        const graph = findChild(view, "pitchBendGraph")
+        verify(popup !== null && graph !== null)
+        verify(graph.activeFocus, "the popup graph holds the keyboard focus")
+        return { app: app, editor: editor, graph: graph, grid: grid,
+                 popup: popup, view: view }
+    }
+
+    function test_committedStrokeKeepsEditorOpen() {
+        const opened = openPitchEditor()
+        const grid = opened.grid
+        const before = grid.appliedRevisionText
+        strokePitchCanvas(opened.graph, 0.25, 0.70, 0.75, 0.25, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== before
+        }, 5000), "a committed freehand stroke republishes the document")
+        verify(opened.editor.isOpen, "a committed stroke keeps the editor open")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "the popup instance survives its own stroke")
+        keyClick(Qt.Key_Enter)
+        tryVerify(function() { return opened.editor.isOpen }, 3000,
+                  "Enter while the graph is focused retains the open popup")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "Enter keeps the same mounted popup")
+    }
+
+    function test_keyboardUndoWhileOpenRestoresCurve() {
+        const opened = openPitchEditor()
+        const grid = opened.grid
+        const app = opened.app
+        const original = opened.graph.curveSegmentCount
+        const before = grid.appliedRevisionText
+        strokePitchCanvas(opened.graph, 0.25, 0.70, 0.75, 0.25, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== before
+        }, 5000), "the drawn stroke republishes the document")
+        const edited = grid.appliedRevisionText
+        const modified = opened.graph.curveSegmentCount
+        verify(modified !== original, "the stroke changes the rendered curve")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== edited
+                && opened.graph.curveSegmentCount === original
+                && app.canRedo
+        }, 5000), "the undo shortcut restores the original curve while open")
+        verify(opened.editor.isOpen, "the popup survives undoing its curve")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "undo keeps the same mounted popup")
+        verify(opened.graph.activeFocus, "undo keeps the graph focused")
+    }
+
+    function test_navigationKeysLeaveCurveUntouched() {
+        const opened = openPitchEditor()
+        const grid = opened.grid
+        const before = grid.appliedRevisionText
+        const original = opened.graph.curveSegmentCount
+        const keys = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Home, Qt.Key_End,
+                      Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_0]
+        for (let i = 0; i < keys.length; ++i)
+            keyClick(keys[i])
+        waitForNative(function() { return true }, 200)
+        compare(grid.appliedRevisionText, before,
+                "navigation keys leave the serialized curve untouched")
+        compare(opened.graph.curveSegmentCount, original,
+                "navigation keys leave the rendered curve untouched")
+        verify(opened.editor.isOpen, "navigation keys keep the editor open")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "navigation keys keep the same mounted popup")
+    }
+
+    function test_mountedStackedStrokesUndoIndependently() {
+        const opened = openPitchEditor()
+        const grid = opened.grid
+        const app = opened.app
+        const baseline = grid.appliedRevisionText
+        const originalSegments = opened.graph.curveSegmentCount
+        strokePitchCanvas(opened.graph, 0.25, 0.70, 0.75, 0.25, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== baseline
+        }, 5000), "the first stroke republishes the document")
+        const first = grid.appliedRevisionText
+        const firstSegments = opened.graph.curveSegmentCount
+        strokePitchCanvas(opened.graph, 0.10, 0.25, 0.40, 0.75, Qt.NoModifier)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== first
+        }, 5000), "the second stroke republishes the document")
+        const second = grid.appliedRevisionText
+        verify(app.canUndo, "stacked strokes remain undoable")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== second
+                && opened.graph.curveSegmentCount === firstSegments
+        }, 5000), "the first undo restores the first stroke's curve")
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return grid.appliedRevisionText !== first
+                && opened.graph.curveSegmentCount === originalSegments
+        }, 5000), "the second undo restores the pre-stroke curve")
+        verify(opened.editor.isOpen, "stacked undos keep the editor open")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "stacked undos keep the same mounted popup")
+    }
+
     function test_cancelReopenAndOutsideClickDoNotEdit() {
         openSong()
         const view = surface()

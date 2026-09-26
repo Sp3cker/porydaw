@@ -3,12 +3,38 @@ Assertion correspondence: pitchbend/curve.cpp
 Reference revision: 4ae6619dda9405bf0a3352e4171d9da54ef04f1f
 Original: src/checks/pitchbend/curve.cpp
 Original SHA-256: ede144e8a9476a21a34c2dce6a58f2cffa2b9879c675a004601f295b0d135a0e
-Swift counterpart: none identified
+Swift counterpart: src/checks/rollcheck/pitch_bend.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellPitchBend.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
+Scope: A001-A057 are closed against the native document predicates in
+src/checks/rollcheck/pitch_bend.swift (registered as checkcatalog.cpp:124,
+swiftcore-projectsession) and the mounted predicates in
+src/checks/editorqml/tst_ShellPitchBend.qml (ShellQmlTests.swift:64-65, lane
+shell-pitch-bend); A058-A123 stay GAP for the deferred ED10 slices. Disclosed
+deviations: the native navigation predicate calls presenter.routeUnclaimedKey
+directly instead of the mounted window key event (mounted coverage S050-S053);
+the native undo rows call document.history.undoDocument() where the mounted lane
+fires the real StandardKey.Undo binding (mounted coverage S046-S049, S057-S060);
+the native check does not wire session.onChange to presenter.documentDidChange, so
+popup liveness through undo is proved on the mounted lane only.
+Disposition tally: 123 sites: 55 MATCHED, 2 PARTIAL, 66 GAP.
 
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run.
+Result: PASS - run_checks PASS; swiftcore-projectsession ok and every new
+PitchBendEditingTest predicate emitted its PASS line. Controller-accepted
+implementer run on this frozen tree; the ledger agent did not re-run the lane.
+Command: deno task verify:shell --filter shell-pitch-bend --verbose
+Result: PASS - ok, 9/9 tests. Controller-accepted implementer run on this frozen
+tree; the ledger agent did not re-run the lane.
+Command: deno task verify:bridge
+Result: PASS - 0 findings. Controller-accepted implementer run; not re-run here.
+
+Verification: the native predicates execute on the swiftcore-projectsession lane
+(SessionChecks.swift:68 passes the suite's DocumentSession) and the mounted
+predicates on the shell-pitch-bend lane; this bookkeeping pass read the recorded
+evidence at build/proof-evidence/swiftcore-projectsession.json and
+build/proof-evidence/shell-pitch-bend.json and did not execute either lane.
 
 PitchBendEditingTest::popup/pitchGraph/modGraph/drawPitchCurve/drawModCurve
 and PitchBendFixture helpers live in src/checks/pitchbend/fixture.cpp with
@@ -16,8 +42,8 @@ declarations in src/checks/pitchbend/tst_pitchbendediting.h
 (SHA-256 7580a8bae6dab536e3f3a4ceeb170a23d047ee5cf3459bb5e1584e4b2e64b895).
 
 A001 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:36
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S004 - the BENDR write pushes exactly one history entry under cppID swiftcore/PitchBendEditingTest::bendrFixtureUndoPreservation
 Source context since previous assertion:
   #include "checks/pitchbend/tst_pitchbendediting.h"
 
@@ -58,40 +84,40 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A002 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:37
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S005 - the written BENDR point is visible in the lane
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(0x14, m_fixture.note().tick, 12));
 
 A003 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:39
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S006 - undo restores the history index; the C++ row also used the API undo, not the shortcut
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A004 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:40
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S007 - undo restores the serialized song bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A005 | PitchBendEditingTest::bendrFixtureUndoPreservation | src/checks/pitchbend/curve.cpp:41
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S008 - pitchBendSpanAlive re-reads the note by id and asserts track/tick/endTick/pitch survive the lane undo (the C++ row asserted containsNoteSpan)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.document().containsNoteSpan(0, m_fixture.note(), m_fixture.endTick()));
 
 A006 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:47
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: shiftLineID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey; the Swift editor object is the presenter, so popup existence rides the route result
 Source context since previous assertion:
   }
 
@@ -102,8 +128,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A007 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:49
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S003 - the Shift journey's pitchGraph() presents a real canvas (canvasWidth/Height > 0)
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
@@ -113,8 +139,8 @@ A008 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/cur
 Disposition: MATCHED
 
 A009 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:55
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S009 - one Shift-line stroke pushes exactly one history entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -124,16 +150,16 @@ A010 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/cur
 Disposition: MATCHED
 
 A011 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:62
-Disposition: PARTIAL
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls asserts rendered curve segments exceed the two endpoints after Shift drag; it does not inspect the serialized interior lane points.
+Disposition: MATCHED
+Mapping/reason: S011 - PARTIAL upgrade: the serialized interior lane points (count >= 2) are asserted natively, not only the rendered curveSegmentCount
 Source context since previous assertion:
       const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(DOC_CC_BEND);
 Original expression:
       QVERIFY(interior.size() >= 2);
 
 A012 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:63
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S012 - adjacent interior lane points never share one value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -143,16 +169,16 @@ Original expression:
                                  }) == interior.cend());
 
 A013 | PitchBendEditingTest::shiftDragDrawsLinearRamp | src/checks/pitchbend/curve.cpp:68
-Disposition: PARTIAL
-Mapping/reason: tst_ShellPitchBend.qml test_noteScopedCurveAndControls checks Undo restores the original rendered pitch curve and Redo restores the edit at the history tip, but does not compare encoded MIDI bytes.
+Disposition: MATCHED
+Mapping/reason: S013 - PARTIAL upgrade: byte equality after undo (coreTimeBytes == before), not only the rendered curve
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A014 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:74
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: freehandID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -163,56 +189,56 @@ Original expression:
       QVERIFY(editorResult);
 
 A015 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:76
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S040 - openPitchEditor asserts the mounted pitchBendGraph exists and holds focus in test_committedStrokeKeepsEditorOpen, which then strokes it (S040)
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
       QVERIFY(graph);
 
 A016 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:78
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S040 - the mounted committed stroke republishes the document, so drawPitchCurve was applied
 Source context since previous assertion:
       const int index = m_fixture.document().undoStack()->index();
 Original expression:
       QVERIFY(drawPitchCurve(*graph));
 
 A017 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:79
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S014 - one freehand stroke pushes exactly one history entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
 
 A018 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:81
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S041 (mounted: the committed stroke keeps the editor open) + S015 (native: a committed freehand stroke keeps the editor open)
 Source context since previous assertion:
       QPointer<songview::PitchBendEditor> alive = editorResult;
 Original expression:
       QVERIFY(alive && alive->isOpen());
 
 A019 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:83
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S043 - Enter while the graph is focused retains the open popup
 Source context since previous assertion:
       QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Enter);
 Original expression:
       QVERIFY(alive && alive->isOpen());
 
 A020 | PitchBendEditingTest::freehandStrokePushesSingleUndoCommand | src/checks/pitchbend/curve.cpp:84
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S044 - Enter keeps the same mounted popup instance (findChild identity)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.popup() == alive);
 
 A021 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:90
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: undoShortcutID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -223,16 +249,16 @@ Original expression:
       QVERIFY(editorResult);
 
 A022 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:92
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S045 - openPitchEditor asserts the mounted pitchBendGraph exists and holds focus in test_keyboardUndoWhileOpenRestoresCurve, which then strokes it (S045)
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
       QVERIFY(graphResult);
 
 A023 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:96
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S045 - the mounted drawn stroke republishes the document, so drawPitchCurve was applied
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray before = m_fixture.smf();
@@ -241,32 +267,32 @@ Original expression:
       QVERIFY(drawPitchCurve(graph));
 
 A024 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:97
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S046 - the real StandardKey.Undo binding restores the original curve while open, so the shortcut was delivered and handled; the native counterpart uses document.history.undoDocument()
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.sendUndo());
 
 A025 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:98
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - S046 proves the mounted StandardKey.Undo restores the curve and revision text, and S017 proves the index restore through the API undo path (document.history.undoDocument() lands on the pre-stroke index); no predicate executes the window shortcut and reads the history index together
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A026 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:99
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: PARTIAL
+Mapping/reason: PARTIAL - S018 proves byte equality through the API undo path and S045/S046 prove the mounted shortcut restores the curve and revision text; no predicate joins the shortcut to the serialized bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A027 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:104
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S047 (mounted: the popup survives undoing its curve) + S019 (native: the editor survives undoing its curve)
 Source context since previous assertion:
       // Acquiring Undo focus can dismiss a closing popup; guard the liveness
       // assertions.
@@ -276,16 +302,16 @@ Original expression:
       QVERIFY(alive && alive->isOpen());
 
 A028 | PitchBendEditingTest::standardUndoShortcutRestoresCurve | src/checks/pitchbend/curve.cpp:105
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S049 - undo keeps the graph focused
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(guardedGraph && guardedGraph->hasActiveFocus());
 
 A029 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:128
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: navigationID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -313,8 +339,8 @@ Original expression:
       QVERIFY(editorResult);
 
 A030 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:133
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S020 + S050 - S020 is the native per-key index predicate (presenter.routeUnclaimedKey directly); S050 is the mounted test that delivers the real key events, so the mounted route is covered
 Source context since previous assertion:
       songview::PitchBendEditor &editor = *editorResult;
       const QByteArray before = m_fixture.smf();
@@ -324,24 +350,24 @@ Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), index);
 
 A031 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:134
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S021 + S050 - S021 is the native per-key serialized-song predicate; S050 is the mounted navigation-keys test
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), before);
 
 A032 | PitchBendEditingTest::navigationKeysDoNotModifyCurve | src/checks/pitchbend/curve.cpp:135
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S022 + S052 - S022 is the native keep-open predicate; S052 is the mounted navigation-keys keep-open predicate
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(editor.isOpen());
 
 A033 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:140
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: stackedID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -351,16 +377,16 @@ Original expression:
       QVERIFY(popup());
 
 A034 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:142
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S054 - openPitchEditor asserts the mounted pitchBendGraph exists and holds focus in test_mountedStackedStrokesUndoIndependently, which then strokes it (S054)
 Source context since previous assertion:
       songview::PitchBendGraph *graphResult = pitchGraph();
 Original expression:
       QVERIFY(graphResult);
 
 A035 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:146
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S054 - the mounted first stroke republishes the document, so drawPitchCurve was applied
 Source context since previous assertion:
       songview::PitchBendGraph &graph = *graphResult;
       const QByteArray baseline = m_fixture.smf();
@@ -369,8 +395,8 @@ Original expression:
       QVERIFY(drawPitchCurve(graph));
 
 A036 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:149
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S023 - the first stroke pushes one independent history entry
 Source context since previous assertion:
       const QByteArray first = m_fixture.smf();
       const int firstIndex = m_fixture.document().undoStack()->index();
@@ -378,8 +404,8 @@ Original expression:
       QCOMPARE(firstIndex, baselineIndex + 1);
 
 A037 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:150
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S055 - the mounted second stroke republishes the document, so the second drawPitchCurve/stroke pair was applied
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
@@ -387,56 +413,56 @@ Original expression:
           m_fixture.stroke(graph, canvasPoint(graph, 0.10, 0.25), canvasPoint(graph, 0.40, 0.75)));
 
 A038 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:152
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S024 - the second stroke pushes its own history entry
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), firstIndex + 1);
 
 A039 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:153
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S025 + S057 - stacked strokes serialize different curves, and the mounted complement walks the second stroke back to the first stroke's curve
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.smf() != first);
 
 A040 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:155
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S026 - the first undo returns to the first stroke's index
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), firstIndex);
 
 A041 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:156
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S027 - the first undo restores the first stroke's bytes
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), first);
 
 A042 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:158
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S028 - the second undo returns to the pre-stroke index
 Source context since previous assertion:
       m_fixture.document().undoStack()->undo();
 Original expression:
       QCOMPARE(m_fixture.document().undoStack()->index(), baselineIndex);
 
 A043 | PitchBendEditingTest::stackedStrokesPushIndependentUndoCommands | src/checks/pitchbend/curve.cpp:159
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S029 + S058 - the second undo restores the pre-stroke bytes; the mounted complement walks the rendered curve back to the pre-stroke state
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QCOMPARE(m_fixture.smf(), baseline);
 
 A044 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:164
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: confinementID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -446,16 +472,16 @@ Original expression:
       QVERIFY(popup());
 
 A045 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:166
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S031 - the confinement journey has no graph-existence predicate (presenter.pitchGraph() is a non-optional production accessor); S039 realizes and focuses the mounted pitchBendGraph for the same popup and S031 executes in this journey by writing an interior point through that graph
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
       QVERIFY(graph);
 
 A046 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:169
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S033 - the confinement journey's stroke pushed its own history entry (undoDocument() true from index 0), so drawPitchCurve was applied
 Source context since previous assertion:
       const int endValue = m_fixture.effectiveLaneValue(DOC_CC_BEND, m_fixture.endTick(), 0);
       const std::vector<DocLanePoint> before = m_fixture.document().lanePoints(0, DOC_CC_BEND);
@@ -463,8 +489,8 @@ Original expression:
       QVERIFY(drawPitchCurve(*graph));
 
 A047 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:178
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S030 - every new curve point stays inside the note span (tick >= note start)
 Source context since previous assertion:
       bool wroteInside = false;
       for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
@@ -478,16 +504,16 @@ Original expression:
           QVERIFY(point.tick >= m_fixture.note().tick);
 
 A048 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:179
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S030 - every new curve point stays inside the note span (tick <= note end)
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
           QVERIFY(point.tick <= m_fixture.endTick());
 
 A049 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:183
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S031 - the freehand stroke writes a nonzero interior point
 Source context since previous assertion:
           if (point.tick < m_fixture.endTick() && point.value != 0)
               wroteInside = true;
@@ -496,16 +522,16 @@ Original expression:
       QVERIFY(wroteInside);
 
 A050 | PitchBendEditingTest::freehandStrokeConfinedToNoteSpan | src/checks/pitchbend/curve.cpp:184
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S032 - the note-off lane point keeps its effective value
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(m_fixture.hasLanePoint(DOC_CC_BEND, m_fixture.endTick(), endValue));
 
 A051 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:189
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S001 + S002 - pitchBendCheckScene(report, cppID: smfID) asserts the Edit route opens the selected note's editor and keeps it open for this row's journey
 Source context since previous assertion:
   }
 
@@ -515,32 +541,32 @@ Original expression:
       QVERIFY(popup());
 
 A052 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:191
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S039 + S038 - the smf journey has no graph-existence predicate (presenter.pitchGraph() is a non-optional production accessor); S039 realizes and focuses the mounted pitchBendGraph for the same popup and S038 executes in this journey (the stroke drawn through that graph pushed and undid its command)
 Source context since previous assertion:
       songview::PitchBendGraph *graph = pitchGraph();
 Original expression:
       QVERIFY(graph);
 
 A053 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:192
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S038 - the smf journey's stroke pushed its own history entry, so drawPitchCurve was applied
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
       QVERIFY(drawPitchCurve(*graph));
 
 A054 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:194
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping/reason: S034 - the note's track maps to a serialized chunk (usedTrackCount/midiChunk present, the equivalent of smfTrack >= 0)
 Source context since previous assertion:
       const int smfTrack = m_fixture.document().smfTrackFor(0);
 Original expression:
       QVERIFY(smfTrack >= 0);
 
 A055 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:200
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S035 - pitch-wheel data0 stays within 7 bits
 Source context since previous assertion:
       bool found = false;
       for (const SmfEvent &event : m_fixture.document().smf().tracks[size_t(smfTrack)].events) {
@@ -551,16 +577,16 @@ Original expression:
               QVERIFY(event.data0 <= 0x7F);
 
 A056 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:201
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S036 - pitch-wheel data1 stays within 7 bits
 Source context since previous assertion:
   (none: assertion opens the file segment)
 Original expression:
               QVERIFY(event.data1 <= 0x7F);
 
 A057 | PitchBendEditingTest::pitchWheelSerializesValidSmfEvents | src/checks/pitchbend/curve.cpp:204
-Disposition: GAP
-Mapping/reason: feature not yet ported: pitch-bend editor
+Disposition: MATCHED
+Mapping: S037 - the note span serializes at least one pitch-wheel event
 Source context since previous assertion:
           }
       }
@@ -1185,6 +1211,186 @@ Remaining original source (closing sequence and helper bodies):
       return QTest::qExec(&test, arguments);
   }
 
-Swift assertion predicates
-None: no Swift counterpart file carries report.expect*/expectEqual predicates
-for this suite.
+Swift assertion predicates (native predicates execute through the
+swiftcore-projectsession lane; mounted predicates through the shell-pitch-bend
+lane; the native C++ rows above are not retired)
+
+S001 | pitchBendCheckScene | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the Edit→Pitch Bend route opens the selected note's editor"
+
+S002 | pitchBendCheckScene | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the opened editor stays open"
+
+S003 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the pitch graph presents a real canvas"
+
+S004 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "one BENDR write pushes exactly one history entry"
+
+S005 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the written BENDR point is visible in the lane"
+
+S006 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the BENDR write restores the history index"
+
+S007 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the BENDR write restores the serialized song"
+
+S008 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the note span survives its lane undo"
+
+S009 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "one Shift-line stroke pushes exactly one history entry"
+
+S010 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "rendering the Shift line keeps the editor open"
+
+S011 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the Shift line serializes interior lane points"
+
+S012 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "adjacent interior lane points never share one value"
+
+S013 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the Shift line restores the serialized song"
+
+S014 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "one freehand stroke pushes exactly one history entry"
+
+S015 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "a committed freehand stroke keeps the editor open"
+
+S016 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the freehand stroke's history entry undoes"
+
+S017 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the drawn curve restores the history index"
+
+S018 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "undoing the drawn curve restores the serialized song"
+
+S019 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the editor survives undoing its curve"
+
+S020 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "navigation key \(key) pushes no history entry"
+
+S021 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "navigation key \(key) leaves the serialized song"
+
+S022 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "navigation keys keep the editor open"
+
+S023 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the first stroke pushes one independent history entry"
+
+S024 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the second stroke pushes its own history entry"
+
+S025 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "stacked strokes serialize different curves"
+
+S026 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the first undo returns to the first stroke's index"
+
+S027 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the first undo restores the first stroke's bytes"
+
+S028 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the second undo returns to the pre-stroke index"
+
+S029 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the second undo restores the pre-stroke bytes"
+
+S030 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "every new curve point stays inside the note span"
+
+S031 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the freehand stroke writes a nonzero interior point"
+
+S032 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the note-off lane point keeps its effective value"
+
+S033 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the confined stroke's history entry undoes"
+
+S034 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the note's track maps to a serialized chunk"
+
+S035 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "pitch-wheel data0 stays within 7 bits"
+
+S036 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "pitch-wheel data1 stays within 7 bits"
+
+S037 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the note span serializes at least one pitch-wheel event"
+
+S038 | pitchBendDocumentPredicates | src/checks/rollcheck/pitch_bend.swift
+Anchor: message "the serialized stroke's history entry undoes"
+
+S039 | openPitchEditor | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup graph holds the keyboard focus"
+
+S040 | test_committedStrokeKeepsEditorOpen | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a committed freehand stroke republishes the document"
+
+S041 | test_committedStrokeKeepsEditorOpen | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "a committed stroke keeps the editor open"
+
+S042 | test_committedStrokeKeepsEditorOpen | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup instance survives its own stroke"
+
+S043 | test_committedStrokeKeepsEditorOpen | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Enter while the graph is focused retains the open popup"
+
+S044 | test_committedStrokeKeepsEditorOpen | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "Enter keeps the same mounted popup"
+
+S045 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the drawn stroke republishes the document"
+
+S046 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the undo shortcut restores the original curve while open"
+
+S047 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the popup survives undoing its curve"
+
+S048 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo keeps the same mounted popup"
+
+S049 | test_keyboardUndoWhileOpenRestoresCurve | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "undo keeps the graph focused"
+
+S050 | test_navigationKeysLeaveCurveUntouched | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "navigation keys leave the serialized curve untouched"
+
+S051 | test_navigationKeysLeaveCurveUntouched | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "navigation keys leave the rendered curve untouched"
+
+S052 | test_navigationKeysLeaveCurveUntouched | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "navigation keys keep the editor open"
+
+S053 | test_navigationKeysLeaveCurveUntouched | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "navigation keys keep the same mounted popup"
+
+S054 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the first stroke republishes the document"
+
+S055 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the second stroke republishes the document"
+
+S056 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "stacked strokes remain undoable"
+
+S057 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the first undo restores the first stroke's curve"
+
+S058 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "the second undo restores the pre-stroke curve"
+
+S059 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "stacked undos keep the editor open"
+
+S060 | test_mountedStackedStrokesUndoIndependently | src/checks/editorqml/tst_ShellPitchBend.qml
+Anchor: message "stacked undos keep the same mounted popup"
