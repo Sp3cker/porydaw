@@ -14,9 +14,10 @@ Production SHA-256: b57268432916d1edba50c9facc7527915156d719fe210565126f296d3905
 Event-list production counterpart: src/swift/app/eventlist/EventListEditing.swift
 Event-list production SHA-256: c11bec00c9401b164b3b64d5a8ea1622c8c50a825f83f366416194c188686f7f
 Event-list production counterpart: src/swift/app/eventlist/EventListPresenter.swift
-Event-list production SHA-256: d404509b548cb377ceae16282a471877f36b94912127f9904db12a9e0e15af80
+Event-list production SHA-256: 1875ea4728d9cc567817a2579f722794a95c38e8054f2635a67a0368a25eb1fe
 Event-list production counterpart: src/ui/songview/quick/EventListPage.qml
-Event-list production SHA-256: ea8bdd47f03a36f6f69faaf24f31118bd2f13ed2d73e0abe52c326818bdedcb4
+Event-list production SHA-256: dd7cb007262a0df1c0107c8ae622e488501202cc0ffeae99fb8dba71d9cbf80a
+Note: the event-list production hash lines were re-pinned for the frozen task-28 write set; task-28's event-list rows and Swift predicate index live in src/checks/eventviews/proof.chrome.txt.
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 

@@ -33,6 +33,7 @@ public final class EventListRowHandle {
 @MainActor
 @QtBridgeable
 public final class EventListPresenter {
+    private static let defaultWidthSeeds = [70.0, 120.0, 36.0, 56.0, 56.0, 140.0]
     public var rows: QListModel<EventListRowHandle> = QListModel()
     @QtTracked public var tableRevision = 0
     @QtTracked public var visible = false
@@ -43,10 +44,11 @@ public final class EventListPresenter {
     @QtTracked public var countText = ""
     @QtTracked public var headerLabels = ["Tick", "Type", "Ch", "Data 1",
                                           "Data 2", "Data", "Summary"]
-    @QtIgnored public var columnWidths: [Double] = [70, 120, 36, 56, 56, 140] {
+    @QtIgnored public var columnWidths: [Double] = [] {
         didSet { columnWidthsRevision &+= 1 }
     }
     @QtTracked public var columnWidthsRevision = 0
+    @QtIgnored var resizedColumns: Set<Int> = []
     @QtIgnored public var selectedRows: [Int] = [] {
         didSet { selectionRevision &+= 1 }
     }
@@ -84,14 +86,22 @@ public final class EventListPresenter {
     @QtIgnored var menuRow = -1
     @QtIgnored weak var session: DocumentSession?
     private var appearancePalette: GridPalette
+    private var baseFontPx = 13.0
 
     public init(palette: GridPalette = GridPalette()) {
         appearancePalette = palette
-        appearance = EventListAppearance.roles(palette: palette)
+        appearance = EventListAppearance.roles(palette: palette, baseFontPx: baseFontPx)
     }
 
     public func refreshAppearance() {
-        appearance = EventListAppearance.roles(palette: appearancePalette)
+        appearance = EventListAppearance.roles(palette: appearancePalette, baseFontPx: baseFontPx)
+    }
+    public func configureTypography(baseFontPx: Double) {
+        let resolved = max(1, baseFontPx)
+        guard self.baseFontPx != resolved else { return }
+        self.baseFontPx = resolved
+        refreshAppearance()
+        columnWidthsRevision &+= 1
     }
 
     /// Installs one document and rebuilds its configured chunk synchronously.
@@ -300,8 +310,13 @@ public final class EventListPresenter {
     public func headerAlignment(column: Int) -> Int {
         dispatchHeaderAlignment(column: column)
     }
+    func defaultColumnWidth(column: Int) -> Double {
+        guard Self.defaultWidthSeeds.indices.contains(column) else { return 0 }
+        return fontPx(baseFontPx, Self.defaultWidthSeeds[column] / 13.0)
+    }
     public func savedColumnWidth(column: Int) -> Double {
-        columnWidths.indices.contains(column) ? columnWidths[column] : 0
+        resizedColumns.contains(column) && columnWidths.indices.contains(column)
+            ? columnWidths[column] : defaultColumnWidth(column: column)
     }
     public func resizeColumn(column: Int, width: Double) {
         dispatchResizeColumn(column: column, width: width)

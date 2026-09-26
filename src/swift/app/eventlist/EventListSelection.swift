@@ -75,10 +75,19 @@ extension EventListPresenter {
     }
 
     func dispatchResizeColumn(column: Int, width: Double) {
-        guard (0..<columnWidths.count).contains(column), width.isFinite else { return }
+        guard (0..<6).contains(column), width.isFinite else { return }
         let next = max(24, width)
-        guard columnWidths[column] != next else { return }
-        columnWidths[column] = next
+        guard savedColumnWidth(column: column) != next else { return }
+        var widths = columnWidths
+        if widths.count < 6 {
+            widths.reserveCapacity(6)
+            for index in widths.count..<6 {
+                widths.append(defaultColumnWidth(column: index))
+            }
+        }
+        widths[column] = next
+        resizedColumns.insert(column)
+        columnWidths = widths
     }
 
     public func toggleFilter(bit: Int) {

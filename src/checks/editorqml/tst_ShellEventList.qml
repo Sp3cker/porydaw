@@ -17,6 +17,8 @@ TestCase {
 
     property var shell: null
     property var settings: null
+    property var typographyPage: null
+    FontMetrics { id: eventTableMetrics; font: typographyPage ? typographyPage.tableFont : Qt.application.font }
     ShellQmlBootstrap { id: bootstrap }
     SignalSpy { id: copySpy; signalName: "activated" }
     Component { id: settingsComponent; Settings {} }
@@ -59,6 +61,7 @@ TestCase {
             }, 5000), "the scene is released")
         }
         copySpy.target = null
+        typographyPage = null
         shell.destroy()
         shell = null
         wait(0)
@@ -309,6 +312,30 @@ TestCase {
         tryCompare(presenter, "visible", true, 3000)
         const page = findChild(tab, "eventListPage")
         verify(page !== null, "existing event-list page is rendered")
+        typographyPage = page
+        tryVerify(function() {
+            return page.headerFont.pixelSize === presenter.appearance.headerFont.pixelSize
+        }, 3000, "mounted caption follows the current presenter typography")
+        compare(page.tableFont.family, "Atkinson Hyperlegible Mono",
+                "mounted table uses the fork mono face")
+        compare(page.controlFont.family, "Atkinson Hyperlegible Next",
+                "mounted controls use the fork proportional face")
+        compare(page.tableFont.pixelSize, page.controlFont.pixelSize,
+                "mono table and control fonts share the body size")
+        verify(page.headerFont.pixelSize < page.controlFont.pixelSize,
+               "caption is smaller than the mounted body font")
+        verify(Math.abs(page.tableFont.letterSpacing + page.headerFont.pixelSize / 26)
+               < 1 / 64 + 1e-6,
+               "mounted table tracks at minus one twenty-sixth of the base after font quantization")
+        const forkWidths = [70, 120, 36, 56, 56, 140]
+        for (let column = 0; column < forkWidths.length; ++column) {
+            compare(page.persistedColumnWidth(column),
+                    Math.max(page.minimumColumnWidth(column),
+                             Math.round(page.headerFont.pixelSize * forkWidths[column] / 13)),
+                    "mounted column " + column + " derives from the base font")
+        }
+        compare(page.rowHeight, Math.ceil(eventTableMetrics.height + 6),
+                "mounted rows follow the compact mono metrics")
         const surface = findChild(tab, "swiftRollOverlay")
         verify(surface !== null, "editor stays mounted beneath the event list")
         const band = findChild(surface, "swiftRollBand")
@@ -391,6 +418,32 @@ TestCase {
         compare(table.columns, 7)
         tryVerify(function() { return table.rows === presenter.rowCount }, 3000,
                   "the seven-column table syncs to the published rows")
+        const horizontalScroll = findChild(page, "eventListHorizontalScrollBar")
+        const summaryLabel = findChild(page, "eventListColumnHeaderLabel6")
+        verify(horizontalScroll && summaryLabel,
+               "mounted Summary header and horizontal scroll lane are addressable")
+        const originalWidth = shell.width
+        const fittingWidth = originalWidth + Math.max(0,
+            Math.ceil(page.persistedColumnsWidth() + page.summaryMinimumWidth - table.width)) + 1
+        shell.width = fittingWidth
+        tryVerify(function() { return table.contentWidth <= table.width + 0.5 },
+                  3000, "Summary consumes the remaining table width without overflow")
+        compare(horizontalScroll.maximum, 0,
+                "fitting Summary has no horizontal scroll range")
+        compare(summaryLabel.truncated, false,
+                "fitting Summary heading is readable without truncation")
+        verify(page.columnOffset(6) + page.columnWidth(6) <= table.width + 0.5,
+               "fitting Summary right edge stays within the table")
+        shell.width = originalWidth
+        tryVerify(function() {
+            return page.columnWidth(6) === page.summaryMinimumWidth
+                && horizontalScroll.maximum > 0
+        }, 3000, "narrowing the window pins Summary and opens the scroll range")
+        compare(summaryLabel.truncated, false,
+                "minimum Summary column still fits its own label under table overflow")
+        shell.width = fittingWidth
+        tryCompare(horizontalScroll, "maximum", 0, 3000,
+                   "restoring the window removes horizontal overflow")
         verify(presenter.rowCount > 1, "fixture contains editable events")
         compare(presenter.rowKind(presenter.rowCount - 1), 2,
                 "end-of-track remains the last row")
@@ -484,6 +537,8 @@ TestCase {
         verify(presenter.rowCount >= 3, "fixture has editable rows and an EOT sentinel")
         const table = findChild(page, "eventListTable")
         verify(table !== null, "the mounted table is available for in-cell editing")
+        tryCompare(table, "rows", presenter.rowCount, 3000,
+                   "EOT fixture rows populate the mounted table before cell lookup")
 
         function eotLabel() {
             const eotRow = presenter.rowCount - 1
@@ -497,7 +552,11 @@ TestCase {
             return null
         }
         function mountedEotLabel() {
-            table.positionViewAtRow(presenter.rowCount - 1, TableView.Contain)
+            table.positionViewAtRow(presenter.rowCount - 1, TableView.AlignBottom)
+            table.forceLayout()
+            tryVerify(function() {
+                return table.itemAtCell(Qt.point(1, presenter.rowCount - 1)) !== null
+            }, 3000, "the EOT Type cell is instantiated")
             tryVerify(function() { return eotLabel() !== null }, 3000,
                       "the EOT label cell is rendered")
             return eotLabel()

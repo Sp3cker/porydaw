@@ -20,7 +20,6 @@ FocusScope {
 
     readonly property int columnCount: 7
     readonly property int resizableColumnCount: 6
-    readonly property var defaultColumnWidths: [70, 120, 36, 56, 56, 140]
 
     property int currentColumn: 0
     // Window-wide shortcuts must only operate while that input owns navigation.
@@ -140,7 +139,7 @@ FocusScope {
     function persistedColumnWidth(column) {
         const revision = controller ? controller.columnWidthsRevision : 0
         const candidate = controller ? Number(controller.savedColumnWidth(column))
-                                     : defaultColumnWidths[column]
+                                     : minimumColumnWidth(column)
         return Math.max(minimumColumnWidth(column), candidate)
     }
 
@@ -821,6 +820,7 @@ FocusScope {
                         }
 
                         Text {
+                            objectName: "eventListColumnHeaderLabel" + section.sectionColumn
                             anchors.fill: parent
                             anchors.leftMargin: page.headerHorizontalPadding
                             anchors.rightMargin: page.headerHorizontalPadding

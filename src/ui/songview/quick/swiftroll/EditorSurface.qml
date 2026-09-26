@@ -114,6 +114,16 @@ Item {
         id: applicationFontMetrics
         font: root.applicationFont
     }
+    FontInfo {
+        id: applicationFontInfo
+        font: root.applicationFont
+    }
+    onApplicationFontChanged: {
+        if (root.eventListPresenter)
+            root.eventListPresenter.configureTypography(
+                Math.max(1, Math.round(applicationFontInfo.pixelSize)))
+    }
+
 
     onWidthChanged: configureViewport()
     onHeightChanged: configureViewport()
@@ -495,8 +505,11 @@ Item {
                 anchors.fill: parent
                 active: false
                 onLoaded: {
-                    if (root.eventListPresenter)
+                    if (root.eventListPresenter) {
+                        root.eventListPresenter.configureTypography(
+                            Math.max(1, Math.round(applicationFontInfo.pixelSize)))
                         root.eventListPresenter.setVisible(root.showEvents)
+                    }
                     if (root.showEvents && root.visible)
                         Qt.callLater(function() {
                             if (root.showEvents && eventPage.item)

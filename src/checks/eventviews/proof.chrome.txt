@@ -4,11 +4,13 @@ Reference revision: 9f1bdd1b021196289b916074dd8eda12e80b7cc2
 Original: src/checks/eventviews/chrome.cpp
 Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70d5
 Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
+Additional Swift counterpart: src/checks/eventviews/EventListPageChecks.swift
+Additional Swift counterpart: src/checks/editorqml/tst_ShellEventList.qml
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
 
-Command: deno task verify --filter swiftcore --verbose
-Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level).
+Command: deno task verify --filter swiftcore --verbose; deno task verify:shell --filter shell-event-list --verbose
+Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level). Task 28 (event-list typography and Summary geometry) carries implementer-reported lane results: `deno task verify --filter swiftcore --verbose` PASS (12/37 ok, 25 skipped) and `deno task verify:shell --filter shell-event-list --verbose` PASS (1/26 ok, 25 skipped); this ledger pass re-ran only `deno task proof check`.
 
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
 Disposition: RETIRED-REPRESENTATION
@@ -108,8 +110,8 @@ Original expression:
 QVERIFY(widgets)
 
 A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's Qt::FontRole family matched the table mono face. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
+Disposition: PARTIAL
+Mapping/reason: S005 pins the fork mono family and body size in the published map and S016 pins that family on the mounted page font the numeric cell delegates bind (cellFont = page.tableFont for Tick, Ch, Data 1 and Data 2, EventListPage.qml:1012-1013, rendered at 471). Unproved: the instantiated cell font and its QFontInfo-resolved family are not read by any predicate.
 Source context since previous assertion:
 ;
 
@@ -126,8 +128,8 @@ Original expression:
 QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
 
 A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's letter-spacing type was absolute. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
+Disposition: PARTIAL
+Mapping/reason: S006 and S020 pin the seed letter spacing and the mounted table tracking, but the absolute spacing mode has no Swift observable and no predicate: the QML font value type documents letterSpacing in pixels with no spacing-mode property, so nothing distinguishes absolute from percentage spacing. Unproved: the spacing-mode clause itself.
 Source context since previous assertion:
 ;
 
@@ -135,17 +137,12 @@ Original expression:
 QCOMPARE(cell.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A014 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:118
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered cell's letter spacing was -0.5. The Swift page is now mounted, but no predicate asserts the event-list cell font role.
-Source context since previous assertion:
-;
-
-Original expression:
-QCOMPARE(cell.letterSpacing(), -0.5)
+Disposition: MATCHED
+Mapping: S006, S020 (the seed map pins letterSpacing -0.5 exactly and the mounted table font tracks at -base/26 within Qt's 1/64 px quantization; the numeric cells bind those fonts, EventListPage.qml:471, 1012-1013)
 
 A015 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:124
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: S031 proves the mounted tick editor (objectName eventListTickEditor) is open and holds text focus in the shell lane. Unproved: the native double-click delivery the fixture helper performs - openCellEditor opens the editor with a real double-click, while the mounted lane reaches the editor by F2.
 Source context since previous assertion:
 ;
         }
@@ -159,8 +156,8 @@ QVERIFY(checks::eventviews::openCellEditor(widgets, 0, eventlist::EventTableMode
                                                QStringLiteral("eventListTickEditor"), &editor))
 
 A016 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:127
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: S005 pins the fork mono family and body size in the published map and S016 pins that family on the mounted page font the tick editor binds (font: cell.cellFont, EventListPage.qml:500, with cellFont = page.tableFont for column 0 at 1012-1013). Unproved: the instantiated editor item's own font property, which the original read as editor->property("font"), and its resolved family.
 Source context since previous assertion:
 ;
     const QFont editorFont = editor->property("font").value<QFont>();
@@ -169,8 +166,8 @@ Original expression:
 QCOMPARE(QFontInfo(editorFont).family(), expectedInfo.family())
 
 A017 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:128
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: S006 pins the seed tracking value on the editor font source, but no predicate reads the rendered editor item's spacing mode and the QML font value type exposes none (letterSpacing is documented in pixels). Unproved: the editor's absolute spacing clause.
 Source context since previous assertion:
 ;
 
@@ -178,8 +175,8 @@ Original expression:
 QCOMPARE(editorFont.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A018 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:129
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Disposition: PARTIAL
+Mapping/reason: S006 and S020 pin the -0.5 seed tracking on the font the tick editor binds (EventListPage.qml:500, 1012-1013). Unproved: the rendered editor item's own font property, which the original read after a real double-click.
 Source context since previous assertion:
 ;
 
@@ -218,7 +215,7 @@ Disposition: RETIRED-REPRESENTATION
 
 A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's persisted column widths (at least two entries). The Swift page is now mounted and the presenter publishes columnWidths, but no predicate reads them.
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: guard on the controller's persisted column widths (at least two entries). The Swift store starts empty and savedColumnWidth derives every column from the configured base (S008 pins the six seed widths, S012/S013 the post-resize widths), so the retired pre-seeded list has no analogue and no predicate guards a minimum entry count.
 Source context since previous assertion:
 ;
     const QList<double> initial = widgets.controller->columnWidths();
@@ -227,8 +224,8 @@ Original expression:
 QVERIFY(initial.size() >= 2)
 
 A023 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:160
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S012 proves the resize entry point persists a Type width of 200 (above its 70px default) through the padded six-entry store and a later typography change, and S013 proves the untouched columns keep their derived widths. Unproved: a real mounted drag on the Type handle - EventListPage.qml:844-876 exposes eventListColumnResizeHandle1 and routes drag updates to controller.resizeColumn, but no predicate drives it.
 Source context since previous assertion:
 ;
 
@@ -250,8 +247,8 @@ Original expression:
 QTRY_VERIFY(widgets.controller->columnWidths().value(1) > initial.value(1) + 20.0)
 
 A024 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:161
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Disposition: PARTIAL
+Mapping/reason: S013 proves the untouched Tick and Ch columns keep their font-derived widths after the Type resize, the observable half of the fork's fixed-width-count invariant. Unproved: the store's entry count after a resize - the Swift store starts empty and dispatchResizeColumn pads it to six from the current defaults (EventListSelection.swift:77-91), and no predicate reads that count.
 Source context since previous assertion:
 ;
 
@@ -833,7 +830,7 @@ QTRY_VERIFY(controller.menuOpen())
 
 A075 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:391
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered Data-column cell centre for row 0 resolved to a scene point. No predicate asserts the mounted table's cell geometry; the shell lane asserts the seven-column table and its row sync only.
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered Data-column cell centre for row 0 resolved to a scene point. The shell lane now pins the mounted column widths (S021, which covers the Data column at column 5) and the Summary fit geometry (S024-S027), but no predicate instantiates or locates a Data-column cell, so the cell-centre observation stays unproved.
 Source context since previous assertion:
 ;
     const QPointF tablePoint =
@@ -931,7 +928,7 @@ QVERIFY(row >= 0)
 
 A084 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:417
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. No predicate asserts the mounted cell geometry.
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. S021 pins the mounted Data column width, but no predicate instantiates or locates a Data-column cell; the shell lane's itemAtCell polls cover the Tick and Type columns of the editor journey only.
 Source context since previous assertion:
 ;
     const QPointF cell =
@@ -1255,7 +1252,7 @@ QVERIFY(sourceRow >= 0)
 
 A116 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:503
 Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. No predicate asserts the mounted cell geometry.
+Mapping/reason: No executing check: the native C++ lane (src/checks/eventviews/chrome.cpp) no longer builds or runs. Previous native note: the rendered tick-60 Data cell resolved to a scene point. S021 pins the mounted Data column width, but no predicate instantiates or locates a Data-column cell; the shell lane's itemAtCell polls cover the Tick and Type columns of the editor journey only.
 Source context since previous assertion:
 ;
     const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
@@ -1457,3 +1454,90 @@ Anchor: message "shape \(index) has one EOT row after its events"
 
 S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift
 Anchor: message "shape \(index) EOT tick mirrors the chunk end"
+
+S003 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "seed body font is Atkinson Next at 15px"
+
+S004 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "seed control font matches the body face and size"
+
+S005 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "seed table font uses Atkinson Mono at body size"
+
+S006 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "table numerals use negative tracking and no hinting"
+
+S007 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "caption uses the proportional base-size face"
+
+S008 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "seed column \(column) follows the fork fraction"
+
+S009 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "base 26 scales body caption and mono tracking"
+
+S010 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "base 26 doubles default column \(column)"
+
+S011 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "base 10 rounds default column \(column)"
+
+S012 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "user-resized Type column survives font changes"
+
+S013 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "untouched columns rederive after Type resize"
+
+S014 | eventListTypographyParity | src/checks/eventviews/EventListPageChecks.swift
+Anchor: message "theme refresh retains the configured typography base"
+
+S015 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted caption follows the current presenter typography"
+
+S016 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted table uses the fork mono face"
+
+S017 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted controls use the fork proportional face"
+
+S018 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mono table and control fonts share the body size"
+
+S019 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "caption is smaller than the mounted body font"
+
+S020 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted table tracks at minus one twenty-sixth of the base after font quantization"
+
+S021 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message " derives from the base font"
+
+S022 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted rows follow the compact mono metrics"
+
+S023 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "mounted Summary header and horizontal scroll lane are addressable"
+
+S024 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "Summary consumes the remaining table width without overflow"
+
+S025 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "fitting Summary has no horizontal scroll range"
+
+S026 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "fitting Summary heading is readable without truncation"
+
+S027 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "fitting Summary right edge stays within the table"
+
+S028 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "narrowing the window pins Summary and opens the scroll range"
+
+S029 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "minimum Summary column still fits its own label under table overflow"
+
+S030 | test_filterAndEditOnMountedPage | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "restoring the window removes horizontal overflow"
+
+S031 | test_tickBoundariesThroughMountedEditor | src/checks/editorqml/tst_ShellEventList.qml
+Anchor: message "the tick editor takes text focus"

@@ -32,8 +32,22 @@ enum EventListMenuKind {
 
 @MainActor
 enum EventListAppearance {
-    static func roles(palette: GridPalette = GridPalette()) -> [String: QVariantSettable] {
-        ["tableBackground": palette.menuBackground,
+    static func roles(palette: GridPalette, baseFontPx: Double)
+        -> [String: QVariantSettable]
+    {
+        let bodyPx = Int(fontPx(baseFontPx, 1.125))
+        let body = GridFontSpec(family: gridBodyFamily, pixelSize: bodyPx,
+                                weight: 400, letterSpacing: 0).map
+        let table = GridFontSpec(family: gridMonoFamily, pixelSize: bodyPx,
+                                 weight: 400, letterSpacing: baseFontPx * (-1.0 / 26.0)).map
+        let header = GridFontSpec(family: gridBodyFamily,
+                                  pixelSize: Int(fontPx(baseFontPx, 1.0)),
+                                  weight: 400, letterSpacing: 0).map
+        return ["bodyFont": body,
+         "controlFont": body,
+         "tableFont": table,
+         "headerFont": header,
+         "tableBackground": palette.menuBackground,
          "tableAlternateBackground": palette.alternateBackground,
          "tableText": palette.windowText,
          "tableSecondaryText": palette.secondaryText,
