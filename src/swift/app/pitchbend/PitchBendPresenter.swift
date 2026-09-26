@@ -60,7 +60,8 @@ public final class PitchBendPresenter {
             "trackColor": palette.noteFill(track: note?.track ?? 0, velocity: 127),
             "titleFont": ["pixelSize": fontPx, "bold": true] as [String: QVariantSettable],
             "captionFont": ["pixelSize": fontPx * 0.85] as [String: QVariantSettable],
-            "monospaceFont": ["pixelSize": fontPx] as [String: QVariantSettable],
+            "monospaceFont": ["family": gridMonoFamily,
+                              "pixelSize": fontPx] as [String: QVariantSettable],
             "dragInput": [
                 "background": palette.buttonBackground,
                 "text": palette.buttonText,

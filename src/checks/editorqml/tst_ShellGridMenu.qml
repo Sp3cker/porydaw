@@ -213,6 +213,33 @@ TestCase {
         compare(grid.tripletGrid, true)
     }
 
+    function test_gridControlsShowComboboxAffordance() {
+        openSong()
+        var palette = surface().gridModel.palette
+        var pairs = [["timelineRulerDivisionControl", "gridDivisionControlText"],
+                     ["timelineRulerFeelControl", "gridFeelControlText"]]
+        for (var i = 0; i < pairs.length; ++i) {
+            var item = control(pairs[i][0])
+            var background = findChild(item, "gridControlBackground")
+            verify(background !== null)
+            verify(background.border.width > 0)
+            verify(Qt.colorEqual(background.border.color, palette.outline))
+            verify(Qt.colorEqual(background.color, palette.buttonHoverBackground))
+            var arrow = findChild(item, "gridControlArrow")
+            verify(arrow !== null)
+            compare(arrow.text, "▾")
+            verify(Qt.colorEqual(arrow.color, palette.buttonText))
+            var label = findChild(item, "gridControlLabel")
+            verify(label !== null)
+            compare(label.text, surface().gridModel[pairs[i][1]])
+            verify(Qt.colorEqual(label.color, palette.buttonText))
+        }
+        var gridLabel = findChild(surface(), "timelineRulerGridLabel")
+        verify(gridLabel !== null)
+        compare(gridLabel.text, "Grid")
+        verify(Qt.colorEqual(gridLabel.color, palette.primaryText))
+    }
+
     function test_actionRowsCloseBeforePromptAndDisabledRowsStayOpen() {
         var session = openSong()
         var ruler = control("timelineRulerInput")

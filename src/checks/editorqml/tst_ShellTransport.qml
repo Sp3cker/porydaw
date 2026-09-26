@@ -1,10 +1,11 @@
 import QtQuick
 import QtCore
 import QtTest
+import "GatedVisualsHelpers.js" as Helpers
+import "NativeWait.js" as NativeWait
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
-import "NativeWait.js" as NativeWait
 
 TestCase {
     id: testCase
@@ -497,6 +498,44 @@ TestCase {
             captured = result.saveToFile(bootstrap.transportCapturePath(data.fontPx))
         }), "transport capture starts")
         tryVerify(function() { return captured }, 3000, "the mounted pane screenshot is saved")
+    }
+
+    function glyphRendersInk(bar, item, expectedHex) {
+        waitForRendering(bar)
+        var image = grabImage(bar)
+        verify(image.width > 0 && image.height > 0,
+               "the transport bar renders a frame for " + item.objectName)
+        var dpr = image.width / bar.width
+        var origin = item.mapToItem(bar, 0, 0)
+        var expected = Helpers.channels(expectedHex)
+        var x0 = Math.max(0, Math.floor(origin.x * dpr))
+        var y0 = Math.max(0, Math.floor(origin.y * dpr))
+        var x1 = Math.min(image.width - 1,
+                          Math.floor((origin.x + item.width) * dpr))
+        var y1 = Math.min(image.height - 1,
+                          Math.floor((origin.y + item.height) * dpr))
+        for (var y = y0; y <= y1; ++y)
+            for (var x = x0; x <= x1; ++x)
+                if (Helpers.colorsNear(
+                        [image.red(x, y), image.green(x, y), image.blue(x, y)],
+                        expected, 40))
+                    return true
+        return false
+    }
+
+    function test_transportGlyphTintMatchesEnabledState() {
+        var bar = openShell()
+        openSong()
+        var play = findChild(bar, "transport.play")
+        var pause = findChild(bar, "transport.pause")
+        verify(play !== null, "the play button is mounted")
+        verify(pause !== null, "the pause button is mounted")
+        tryCompare(play, "actionable", true, 3000)
+        verify(!pause.actionable, "pause stays disabled while stopped")
+        verify(glyphRendersInk(bar, play, bar.colors.buttonText),
+               "the enabled play glyph renders in buttonText ink")
+        verify(glyphRendersInk(bar, pause, bar.colors.disabledText),
+               "the disabled pause glyph renders in disabledText ink")
     }
 
     function rollSurface() {

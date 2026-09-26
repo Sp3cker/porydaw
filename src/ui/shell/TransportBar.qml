@@ -77,7 +77,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.go-to-start"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Go to Start"); symbol: "◀◀"
+            label: qsTr("Go to Start"); symbol: ""; iconSource: "qrc:/icons/transport-gotostart.svg"
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.go_to_start")
@@ -113,7 +113,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.stop"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Stop"); symbol: "■"
+            label: qsTr("Stop"); symbol: ""; iconSource: "qrc:/icons/transport-stop.svg"
             actionable: {
                 bar.actionRevision
                 return bar.shell.actionEnabled("transport.stop")
@@ -157,7 +157,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.resonance"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Suppress Resonances"); symbol: "◖))"
+            label: qsTr("Suppress Resonances"); symbol: ""; iconSource: "qrc:/icons/transport-resonance.svg"
             checked: {
                 bar.actionRevision
                 bar.presenter.resonanceSuppression

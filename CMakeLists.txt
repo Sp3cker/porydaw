@@ -323,6 +323,9 @@ qt_add_resources(porydaw_app "transport_icons"
         resources/transport-pause.svg
         resources/transport-loop.svg
         resources/transport-follow.svg
+        resources/transport-gotostart.svg
+        resources/transport-stop.svg
+        resources/transport-resonance.svg
 )
 
 qt_add_resources(porydaw_app "drawer_cursors"

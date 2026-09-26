@@ -200,54 +200,6 @@ Item {
                     height: parent.height
                     rects: root.gridModel.scene.rulerGutterChrome
                 }
-                Item {
-                    objectName: "timelineRulerDivisionControl"
-                    width: root.gridModel.keyboardWidth
-                    height: parent.height / 2
-                    Text {
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: root.gridModel.gridDivisionControlText
-                        color: root.gridModel.palette.primaryText
-                        font: Qt.font({ family: root.applicationFont.family,
-                                        pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
-                                        hintingPreference: Font.PreferNoHinting })
-                        elide: Text.ElideRight
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            root.gridMenuPosition = mapToItem(root, width / 2, height)
-                            root.gridModel.openGridMenu(1)
-                        }
-                    }
-                }
-
-                Item {
-                    objectName: "timelineRulerFeelControl"
-                    y: parent.height / 2
-                    width: root.gridModel.keyboardWidth
-                    height: parent.height - y
-                    Text {
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: root.gridModel.gridFeelControlText
-                        color: root.gridModel.palette.primaryText
-                        font: Qt.font({ family: root.applicationFont.family,
-                                        pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
-                                        hintingPreference: Font.PreferNoHinting })
-                        elide: Text.ElideRight
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            root.gridMenuPosition = mapToItem(root, width / 2, height)
-                            root.gridModel.openGridMenu(2)
-                        }
-                    }
-                }
 
                 Item {
                     x: root.gridModel.keyboardWidth
@@ -557,6 +509,129 @@ Item {
                         presenter: root.eventListPresenter
                     }
                 }
+            }
+        }
+
+        Item {
+            id: rulerControls
+            objectName: "timelineRulerControls"
+            width: root.headersModel.trackHeaderWidth
+                + root.gridModel.keyboardWidth
+            height: root.gridModel.rulerHeight
+            clip: true
+            readonly property real controlsInset:
+                Math.max(1, Math.round(root.gridModel.baseFontPx * 0.6))
+            readonly property real controlsGap:
+                Math.max(1, Math.round(root.gridModel.baseFontPx * 0.3))
+            readonly property real controlsStroke:
+                1 / (root.gridModel.devicePixelRatio > 0
+                     ? root.gridModel.devicePixelRatio : 1)
+            readonly property font controlsFont: Qt.font({
+                family: root.applicationFont.family,
+                pixelSize: Math.round(root.gridModel.baseFontPx * 0.8),
+                hintingPreference: Font.PreferNoHinting })
+            readonly property real gridLabelWidth:
+                Math.min(gridLabel.implicitWidth,
+                         Math.max(0, width - controlsInset))
+            readonly property real controlWidth:
+                Math.max(0, (Math.max(0, width - controlsInset
+                                      - gridLabelWidth - controlsGap)
+                             - controlsGap) / 2)
+
+            component GridRowControl: Item {
+                id: gridControl
+                required property string controlText
+                required property int menuKind
+                readonly property bool controlPressed: gridArea.pressed
+
+                Rectangle {
+                    id: gridControlBackground
+                    objectName: "gridControlBackground"
+                    anchors.fill: parent
+                    color: gridControl.controlPressed
+                        ? root.gridModel.palette.buttonPressedBackground
+                        : root.gridModel.palette.buttonHoverBackground
+                    border.width: rulerControls.controlsStroke
+                    border.color: root.gridModel.palette.outline
+                }
+                Text {
+                    id: gridControlLabel
+                    objectName: "gridControlLabel"
+                    anchors.left: parent.left
+                    anchors.leftMargin: rulerControls.controlsGap
+                    anchors.right: gridControlArrow.left
+                    anchors.rightMargin: rulerControls.controlsGap / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    clip: true
+                    color: root.gridModel.palette.buttonText
+                    font: rulerControls.controlsFont
+                    text: gridControl.controlText
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                    verticalAlignment: Text.AlignVCenter
+                }
+                Text {
+                    id: gridControlArrow
+                    objectName: "gridControlArrow"
+                    anchors.right: parent.right
+                    anchors.rightMargin: rulerControls.controlsGap
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: root.gridModel.palette.buttonText
+                    font: rulerControls.controlsFont
+                    text: "▾"
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                }
+                MouseArea {
+                    id: gridArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: {
+                        root.gridMenuPosition = mapToItem(root, width / 2, height)
+                        root.gridModel.openGridMenu(gridControl.menuKind)
+                    }
+                }
+            }
+
+            Text {
+                id: gridLabel
+                objectName: "timelineRulerGridLabel"
+                x: rulerControls.controlsInset
+                width: rulerControls.gridLabelWidth
+                anchors.verticalCenter: parent.verticalCenter
+                clip: true
+                color: root.gridModel.palette.primaryText
+                font: rulerControls.controlsFont
+                text: qsTr("Grid")
+                textFormat: Text.PlainText
+                renderType: Text.NativeRendering
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+            GridRowControl {
+                objectName: "timelineRulerDivisionControl"
+                x: rulerControls.controlsInset + rulerControls.gridLabelWidth
+                    + rulerControls.controlsGap
+                y: Math.max(0, (parent.height - height) / 2)
+                width: rulerControls.controlWidth
+                height: Math.min(parent.height,
+                    gridLabel.implicitHeight + rulerControls.controlsInset)
+                controlText: root.gridModel.gridDivisionControlText
+                menuKind: 1
+            }
+            GridRowControl {
+                objectName: "timelineRulerFeelControl"
+                x: rulerControls.controlsInset + rulerControls.gridLabelWidth
+                    + rulerControls.controlsGap + rulerControls.controlWidth
+                    + rulerControls.controlsGap
+                y: Math.max(0, (parent.height - height) / 2)
+                width: rulerControls.controlWidth
+                height: Math.min(parent.height,
+                    gridLabel.implicitHeight + rulerControls.controlsInset)
+                controlText: root.gridModel.gridFeelControlText
+                menuKind: 2
             }
         }
     }

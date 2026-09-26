@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Effects
+import QtQuick.Controls.impl as QtControlsImpl
 import QtQuick.Layouts
 import Porydaw.Ui
 
@@ -43,22 +43,15 @@ Rectangle {
     readonly property color foreground: actionable ? (checked ? colors.buttonPressedText
                                                               : colors.buttonText)
                                                    : colors.disabledText
-    Image {
+    QtControlsImpl.IconImage {
         id: icon
         anchors.centerIn: parent
-        height: glyph.font.pixelSize
+        height: Math.round(Math.min(control.baseFontPx, 12) * 1.9)
         width: height
         sourceSize: Qt.size(width, height)
-        fillMode: Image.PreserveAspectFit
         source: control.iconSource
-        visible: false
-    }
-    MultiEffect {
-        anchors.fill: icon
-        source: icon
+        color: control.foreground
         visible: !glyph.visible
-        colorization: 1
-        colorizationColor: control.foreground
     }
     HoverHandler { id: hover }
     TapHandler {

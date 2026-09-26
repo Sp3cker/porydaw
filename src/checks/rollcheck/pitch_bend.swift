@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawCore
+import QtBridge
 
 @MainActor
 func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
@@ -71,7 +72,7 @@ func runPitchBendChecks(_ report: CheckReport, session: DocumentSession) {
                   + geometry.canvasHeight) == 0,
                   cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
                   message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
-
+    pitchBendReadoutPredicates(report, session: session)
     pitchBendDocumentPredicates(report, session: session)
 }
 
@@ -153,6 +154,41 @@ private func pitchBendSpanAlive(_ session: DocumentSession, note: Note,
     guard let current = session.document.note(note.id) else { return false }
     return current.track == note.track && current.tick == note.tick
         && current.endTick == UInt64(noteEnd) && current.pitch == note.pitch
+}
+
+@MainActor
+private func pitchBendReadoutPredicates(_ report: CheckReport, session: DocumentSession) {
+    let readoutID = "swiftcore/PitchBendEditingTest::liveValueReadout"
+    if let scene = pitchBendCheckScene(report, cppID: readoutID, session: session) {
+        defer { scene.presenter.cancelAndClose() }
+        let monoFont = scene.presenter.appearance["monospaceFont"]
+            as? [String: QVariantSettable]
+        report.expectEqual(expected: "Atkinson Hyperlegible Mono",
+                           actual: monoFont?["family"] as? String ?? "",
+                           cppID: readoutID,
+                           what: "the monospaceFont appearance entry carries the bundled "
+                               + "mono family")
+        report.expectEqual(expected: "0 st", actual: scene.presenter.pitchGraph().liveValueText,
+                           cppID: readoutID,
+                           what: "the pitch readout at rest is 0 st")
+        report.expectEqual(expected: "0", actual: scene.presenter.modGraph().liveValueText,
+                           cppID: readoutID,
+                           what: "the modulation readout at rest is the plain decimal")
+    }
+
+    let geometry = PitchBendGeometry(fontPx: 14, lineSpacing: 17, dpr: 2)
+    let pitch = PitchBendLane(
+        kernel: PitchBendKernel(lane: .pitch, geometry: geometry,
+                                startTick: 96, endTick: 192,
+                                snapTicks: 12, fineTicks: 1,
+                                points: [96: 4096, 192: 0], endValue: 0),
+        palette: GridPalette(), track: 0)
+    pitch.bendRange = 5
+    pitch.rebuild()
+    report.expectEqual(expected: "+2.50 st", actual: pitch.liveValueText,
+                       cppID: readoutID,
+                       what: "the pitch readout formats liveValue 4096 at bendRange 5 "
+                           + "as +2.50 st")
 }
 
 @MainActor

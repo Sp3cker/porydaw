@@ -26,6 +26,9 @@ struct GridFontSpec {
 
 let fontPreferNoHinting = 1
 
+let gridBodyFamily = "Atkinson Hyperlegible Next"
+let gridMonoFamily = "Atkinson Hyperlegible Mono"
+
 @MainActor
 struct GridTypography {
     let rulerAscent: Double
@@ -97,8 +100,8 @@ struct GridTypography {
 
     static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
         let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
-        let next = "Atkinson Hyperlegible Next"
-        let mono = "Atkinson Hyperlegible Mono"
+        let next = gridBodyFamily
+        let mono = gridMonoFamily
         func spec(_ family: String, _ px: Double, _ weight: Int, _ spacing: Double = 0)
             -> GridFontSpec
         {
