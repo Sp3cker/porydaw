@@ -907,7 +907,7 @@ Mapping: S092
 A072 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:340
 Disposition: MATCHED
 Mapping: S299, S298
-Mapping/reason: The Swift journey reports failure when the tick-121 raw meta row is missing (S299), the native rawRow >= 0 lookup re-established inside its own journey.
+Mapping/reason: The Swift journey asserts its tick-121 raw meta row exists (S299), the native rawRow >= 0 lookup re-established inside its own journey.
 Source context since previous assertion:
 ;
     int rawRow =
@@ -1054,7 +1054,7 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
 A091 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:377
 Disposition: MATCHED
 Mapping: S300, S301
-Mapping/reason: The Swift journey guards the converted tick-121 tempo row and reports failure when it is unavailable (S300), the native tempoRowForExactTick(conversionTick) >= 0 lookup.
+Mapping/reason: The Swift journey asserts the converted tick-121 tempo row is available (S300), the native tempoRowForExactTick(conversionTick) >= 0 lookup.
 Source context since previous assertion:
 ;
 
@@ -1804,7 +1804,7 @@ QVERIFY(widgets)
 A175 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:621
 Disposition: MATCHED
 Mapping: S313, S319
-Mapping/reason: The Swift delete matrix reports failure when either the tick-12 or the tick-24 deletion target is missing (S313), the native first >= 0 lookup.
+Mapping/reason: The Swift delete matrix asserts both the tick-12 and the tick-24 deletion targets exist (S313), the native first >= 0 lookup.
 Source context since previous assertion:
 ;
     SongDocument &document = opened.fixture->document();
@@ -1824,7 +1824,7 @@ QVERIFY(first >= 0)
 A176 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:622
 Disposition: MATCHED
 Mapping: S313, S319
-Mapping/reason: The same combined Swift guard covers the second deletion target (S313), the native second >= 0 lookup.
+Mapping/reason: The same combined Swift guard asserts the second deletion target (S313), the native second >= 0 lookup.
 Source context since previous assertion:
 ;
 
@@ -1909,7 +1909,7 @@ QCOMPARE(widgets.controller->currentRow(), -1)
 A184 | EventViewsEditsTest::deleteMatrix | src/checks/eventviews/edits.cpp:640
 Disposition: MATCHED
 Mapping: S314, S260
-Mapping/reason: The Swift delete matrix reports failure when the tick-36 single deletion target is missing (S314), the native single >= 0 lookup.
+Mapping/reason: The Swift delete matrix asserts the tick-36 single deletion target survives (S314), the native single >= 0 lookup.
 Source context since previous assertion:
 ;
 

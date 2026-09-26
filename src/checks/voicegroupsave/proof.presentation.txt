@@ -19,7 +19,7 @@ Command: deno task verify --filter swiftcore-projectsession --verbose
 Result: the task-62 handoff records its voicelist/header assertions passing, but the suite failed in unrelated concurrent swiftcore/PianoRoll::timeMenuNoteDuplicateAvailability (artifact://10182 line 1722) and was not re-run; the presenter and track-header anchors cited below ride that suite.
 
 Command: deno task proof check
-Result: 0 errors for this ledger - all 49 cited S anchors resolve to a message literal in the named function of the named counterpart file; deno task proof check --executed leaves no MATCHED row without an executed predicate (S010's report.fail guard is the one predicate with no executed pass row, because it only fires on a red run).
+Result: 0 errors for this ledger - all 49 cited S anchors resolve to a message literal in the named function of the named counterpart file; deno task proof check --executed leaves no MATCHED row without an executed predicate (AnchorFix pass: S010 is now the deterministic report.expect "fixture slot 3 is a blank draft" and executes every lane run).
 
 Verification: reused from the task-62 implementer handoff (agent://Task62); no lane was re-run for this reconciliation. Execution is per-predicate as resolved by deno task proof check.
 
@@ -704,7 +704,7 @@ QVERIFY2(
 
 A048 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:305
 Disposition: MATCHED
-Mapping/reason: fixture guard: S035 asserts the mounted blank row (title [Blank], empty type, no glyph key) and S020 the resident presenter's blank template row, so the lane's bank provides an undefined slot; S010 is the block's failure-path guard (report.fail "fixture slot 3 is not a blank draft"), the native firstBlankSlot() precondition.
+Mapping/reason: fixture guard: S035 asserts the mounted blank row (title [Blank], empty type, no glyph key) and S020 the resident presenter's blank template row, so the lane's bank provides an undefined slot; S010 is the deterministic guard (report.expect "fixture slot 3 is a blank draft"), the native firstBlankSlot() precondition.
 Source context since previous assertion:
 ;
     }
@@ -1139,9 +1139,9 @@ Line: 344
 Predicate: report.expect(session.bankLease.bankToken != originalToken && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2, cppID: selectorID)
 
 S010 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
-Anchor: message "fixture slot 3 is not a blank draft"
-Line: 223
-Predicate: guard let draft = list.voiceDraft(3), draft.materializesBlank else { report.fail(blankID, "fixture slot 3 is not a blank draft") }; failure-path guard - the message appears only on a red run, so it has no executed pass row and is cited beside the executed blank-slot predicates
+Anchor: message "fixture slot 3 is a blank draft"
+Line: 221
+Predicate: report.expect(list.voiceDraft(3)?.materializesBlank == true, cppID: blankID, message: "fixture slot 3 is a blank draft"); deterministic fixture guard with a bare guard return on miss, so it executes every lane run
 
 S011 | runVoiceListSessionChecks | src/checks/voicelist/voicelist_session.swift
 Anchor: message "distinct families carry distinct glyphs"

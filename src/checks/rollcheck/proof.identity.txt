@@ -7,7 +7,7 @@ Swift counterpart: src/checks/rollcheck/identity.swift
 Additional Swift counterpart: src/checks/rollcheck/presentation.swift
 Deleted in: 67544720bed2e63b0093314273d15ef5d11a2be5 checks: retire unexecuted native rows, refresh proof pins, delete dead C++ check sources
 
-Disposition tally: 14 sites: 5 MATCHED, 0 PARTIAL, 6 GAP, 3 NATIVE.
+Disposition tally: 14 sites: 5 MATCHED, 0 PARTIAL, 6 GAP, 3 RETIRED-REPRESENTATION.
 
 Command: deno task verify --filter swiftcore --verbose
 Result: PASS — 1/14 ok (controller-recorded post-change run); the swiftcore
@@ -51,8 +51,9 @@ Disposition: MATCHED
 Mapping: S004
 
 A008 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:117
-Disposition: PARTIAL
-Mapping: S005 selects both duplicates, switches the active track header and asserts the duplicate-note selection clears, but like the original it is guarded by a second used track and the single-track fixture never enters that branch, so the predicate does not execute; unproved condition: the track-switch clear on a multi-track song.
+Disposition: MATCHED
+Mapping: S005
+Mapping/reason: AnchorFix pass: checkDuplicateNoteIdentity provisions a second engine track when the fixture has only one, so the track-switch branch executes deterministically; S005 selects both duplicates, switches the active track header and asserts the duplicate-note selection clears, the native track-switch clear.
 Source context since previous assertion:
       }
 

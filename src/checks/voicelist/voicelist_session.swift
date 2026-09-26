@@ -217,10 +217,9 @@ internal func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expectEqual(expected: "2 3 12 4", actual: list.rows[0].adsr, cppID: editID,
                        what: "voice edit undo restores the row")
 
-    // Blank materialization through the same canonical path.
     let blankID = "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably"
+    report.expect(list.voiceDraft(3)?.materializesBlank == true, cppID: blankID, message: "fixture slot 3 is a blank draft")
     guard let draft = list.voiceDraft(3), draft.materializesBlank else {
-        report.fail(blankID, "fixture slot 3 is not a blank draft")
         return
     }
     do {

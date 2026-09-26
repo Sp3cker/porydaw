@@ -42,8 +42,8 @@ func rulerScopeHeaderRecordsGuard(_ report: CheckReport, suite: DocumentSession,
         return
     }
     fx.document.moveNotes([seed.id], byTicks: 24, byKeys: -11)
+    report.expect(fx.rowForTrack(0) != nil, cppID: id, message: "the Quick track-header model resolves for the ruler scope")
     guard fx.rowForTrack(0) != nil else {
-        report.fail(id, "could not find the Quick track-header model")
         return
     }
     let document = fx.document

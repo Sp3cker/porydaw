@@ -205,10 +205,10 @@ private func eventListTempoShapeAtomic(_ report: CheckReport, suite: DocumentSes
     let id = "eventviews/EventViewsEditsTest::rawTempoAtomic"
     report.expect(presenter.model.rows.first?.tempo?.tick == 0, cppID: id,
                   message: "a tick-zero tempo point projects the first table row")
+    report.expect(presenter.model.rows.contains(where: { $0.tick == tick && $0.event?.isMeta == true }), cppID: id, message: "the Tempo journey re-establishes its own fixture rows")
     guard let raw = presenter.model.rows.firstIndex(where: {
         $0.tick == tick && $0.event?.isMeta == true
     }) else {
-        report.expect(false, cppID: id, message: "the Tempo journey re-establishes its own fixture rows")
         return
     }
     let beforeTempo = document.history.undoIndex
@@ -237,10 +237,10 @@ private func eventListTempoShapeAtomic(_ report: CheckReport, suite: DocumentSes
                   && rowFor(presenter, tick: tick, kind: .meta) == nil
                   && document.rawChunks[0].events.filter({ $0.tick == 0 && $0.isMeta }) == original,
                   cppID: id, message: "redo restores the tempo without changing tick-zero metas")
+    report.expect(presenter.model.rows.contains(where: { $0.tick == tick && $0.tempo != nil }), cppID: id, message: "the converted tempo row is available")
     guard let tempo = presenter.model.rows.firstIndex(where: {
         $0.tick == tick && $0.tempo != nil
     }) else {
-        report.expect(false, cppID: id, message: "the converted tempo row is available")
         return
     }
     let beforeRaw = document.history.undoIndex

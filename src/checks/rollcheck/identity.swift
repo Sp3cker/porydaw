@@ -75,9 +75,16 @@ private func checkDuplicateNoteIdentity(_ report: CheckReport, session: Document
         message: "undo restores both duplicate values without replacing their identities")
 
     session.setSelectedNotes(duplicates)
+    var provisionedTrack: Int? = nil
+    if session.document.engineTracks.usedTrackCount <= 1, session.document.canAddTrack {
+        provisionedTrack = session.document.addTrack(voice: 0)
+    }
     if session.document.engineTracks.usedTrackCount > 1 {
         session.adjustTrackScope(track: track == 0 ? 1 : 0, action: .plain)
         report.expect(session.selectedNotes.isEmpty, cppID: id,
                       message: "switching track headers clears duplicate-note selection")
+    }
+    if provisionedTrack != nil {
+        _ = session.document.history.undoDocument()
     }
 }

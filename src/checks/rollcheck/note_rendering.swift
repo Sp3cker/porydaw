@@ -1219,11 +1219,11 @@ private func checkRulerSweepSingleTrackScope(_ report: CheckReport, session: Doc
         alignSteps += 1
     }
     let document = session.document
+    report.expect(document.canAddTrack, cppID: id, message: "the sweep fixture can provision the intersecting other-track note")
     guard document.canAddTrack, let other = document.addTrack(voice: 0), other != primary,
           let overlapIDs = try? document.addNotes([NewNote(
               track: other, tick: anchor, pitch: 60,
               duration: Tick(cell * 4), velocity: 90)]), !overlapIDs.isEmpty else {
-        report.fail(id, "single-track sweep fixture cannot seed the intersecting other-track note")
         return
     }
     defer {

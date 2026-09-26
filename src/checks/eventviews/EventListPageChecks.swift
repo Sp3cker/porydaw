@@ -852,9 +852,9 @@ internal func eventListDeleteMatrix(_ report: CheckReport, suite: DocumentSessio
     presenter.attach(session: session)
     presenter.setVisible(visible: true)
     let id = "swiftcore/EventList::deleteMatrix"
+    report.expect(presenter.model.rows.contains(where: { $0.tick == 12 }) && presenter.model.rows.contains(where: { $0.tick == 24 }), cppID: id, message: "the two deletion targets exist")
     guard let first = presenter.model.rows.firstIndex(where: { $0.tick == 12 }),
           let second = presenter.model.rows.firstIndex(where: { $0.tick == 24 }) else {
-        report.expect(false, cppID: id, message: "the two deletion targets exist")
         return
     }
     presenter.selectRow(row: first, modifiers: 0)
@@ -869,8 +869,8 @@ internal func eventListDeleteMatrix(_ report: CheckReport, suite: DocumentSessio
                   message: "multi delete clears selection and cursor in one step")
     report.expect(presenter.currentRow == -1, cppID: id,
                   message: "multi delete clears the current row")
+    report.expect(presenter.model.rows.contains(where: { $0.tick == 36 }), cppID: id, message: "the single deletion target survives")
     guard let single = presenter.model.rows.firstIndex(where: { $0.tick == 36 }) else {
-        report.expect(false, cppID: id, message: "the single deletion target survives")
         return
     }
     presenter.selectRow(row: single, modifiers: 0)
